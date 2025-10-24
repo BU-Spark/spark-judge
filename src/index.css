@@ -1,0 +1,259 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fira+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --border: rgba(0, 0, 0, 0.1);
+  --primary: #f97316;
+  --primary-foreground: #ffffff;
+  --secondary: #6b7280;
+  --secondary-foreground: #ffffff;
+  --accent: #8b5cf6;
+  --accent-foreground: #ffffff;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --card: rgba(255, 255, 255, 0.03);
+    --card-foreground: #ededed;
+    --border: rgba(255, 255, 255, 0.1);
+    --primary: #f97316;
+    --primary-foreground: #ffffff;
+    --secondary: #4b5563;
+    --secondary-foreground: #ffffff;
+    --accent: #8b5cf6;
+    --accent-foreground: #ffffff;
+    --muted: rgba(255, 255, 255, 0.05);
+    --muted-foreground: rgba(255, 255, 255, 0.6);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.font-heading {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.font-body {
+  font-family: 'Fira Sans', system-ui, -apple-system, sans-serif;
+}
+
+/* Monospace for code elements */
+code, pre, kbd, samp {
+  font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-feature-settings: "calt" 1, "liga" 1;
+  font-variant-ligatures: contextual;
+}
+
+/* Custom animations */
+.text-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: revealText 0.8s ease-out forwards;
+}
+
+.text-reveal-delay {
+  animation-delay: 0.2s;
+}
+
+.fade-in {
+  opacity: 0;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.slide-up {
+  transform: translate3d(0, 12px, 0);
+  opacity: 0;
+  animation: slideUp 0.45s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes revealText {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Custom scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(249, 115, 22, 0.5) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.5);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(249, 115, 22, 0.8);
+}
+
+/* Glass morphism effects */
+.glass {
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-hover {
+  transition: all 300ms;
+}
+
+.glass-hover:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Button styles */
+.btn-primary {
+  @apply px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-100;
+}
+
+.btn-secondary {
+  @apply px-6 py-3 border border-border rounded-xl font-semibold transition-all duration-200 hover:bg-muted;
+}
+
+.btn-secondary:hover {
+  border-color: rgba(var(--foreground), 0.2);
+}
+
+.btn-ghost {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:bg-muted;
+}
+
+/* Card styles */
+.card {
+  @apply bg-card border border-border rounded-xl p-6 transition-all duration-300 hover:shadow-xl;
+}
+
+.card-static {
+  @apply bg-card border border-border rounded-xl p-6;
+}
+
+.card-glass {
+  @apply rounded-xl p-6;
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 300ms;
+}
+
+.card-glass:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.card-glass.no-card-hover:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+/* Input styles */
+.input {
+  @apply w-full px-4 py-3 bg-muted border border-border rounded-xl outline-none transition-all duration-200 focus:border-primary focus:ring-2;
+}
+
+.input:focus {
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+}
+
+/* Badge styles */
+.badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  background: rgba(249, 115, 22, 0.1);
+  color: var(--primary);
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-gradient-to-r from-orange-500 to-purple-600 bg-clip-text text-transparent;
+}
+
+/* Elevated header depth */
+.header-depth {
+  /* subtle drop shadow for depth */
+  box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.35);
+  /* hairline bottom edge for separation */
+  box-shadow: inset 0 -1px 0 0 var(--border), 0 10px 30px -15px rgba(0, 0, 0, 0.35);
+  /* glass effect for modern depth */
+  -webkit-backdrop-filter: saturate(160%) blur(10px);
+  backdrop-filter: saturate(160%) blur(10px);
+}

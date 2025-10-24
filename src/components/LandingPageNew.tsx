@@ -200,6 +200,7 @@ function EventSection({
   emptyMessage,
   animationDelay,
   isActiveSection,
+  isPastSection,
 }: {
   title: string;
   events: Array<any>;
@@ -233,7 +234,7 @@ function EventSection({
               onAddTeam={onAddTeam}
               isJoining={joiningEvents.has(event._id)}
               isActiveSection={isActiveSection}
-              isPastSection={Boolean(isPastSection ?? false)}
+              isPastSection={Boolean(isPastSection)}
               animationDelay={animationDelay + index * 0.1}
             />
           ))}

@@ -6,8 +6,8 @@ import { SignInForm } from "../SignInFormNew";
 import { useState } from "react";
 import { JudgeCodeModal } from "./JudgeCodeModalNew";
 import { TeamSubmissionModal } from "./TeamSubmissionModalNew";
-import { LoadingState } from "../ui/LoadingState";
-import { ErrorState } from "../ui/ErrorState";
+import { LoadingState } from "./ui/LoadingState";
+import { ErrorState } from "./ui/ErrorState";
 
 export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) => void }) {
   const events = useQuery(api.events.listEvents);

@@ -56,16 +56,35 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     totalTeams === 0 ? 0 : Math.round((completedCount / totalTeams) * 100);
   const scoringComplete = totalTeams > 0 && completedCount >= totalTeams;
 
-  // Filter teams by search query
+  // Filter teams by search query (only show unassigned teams or searching)
   const filteredTeams = useMemo(() => {
-    if (!searchQuery) return visibleTeams;
-    return visibleTeams.filter((team: any) =>
-      team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      team.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [visibleTeams, searchQuery]);
+    const baseTeams = searchQuery 
+      ? visibleTeams.filter((team: any) =>
+          team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          team.description.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : visibleTeams;
+    
+    // If searching, show all matching teams. Otherwise show teams not in my queue
+    if (searchQuery) return baseTeams;
+    return baseTeams.filter((team: any) => !myAssignments?.includes(team._id));
+  }, [visibleTeams, searchQuery, myAssignments]);
+
+  // Get assigned teams (for the "My Queue" section)
+  const assignedTeams = useMemo(() => {
+    return visibleTeams.filter((team: any) => myAssignments?.includes(team._id));
+  }, [visibleTeams, myAssignments]);
+
+  // Check if judge has submitted scores (to lock queue)
+  const hasSubmittedScores = myScores && myScores.length > 0;
 
   const handleToggleTeam = async (teamId: Id<"teams">, isAssigned: boolean) => {
+    // Prevent changes after scores have been submitted
+    if (hasSubmittedScores && isAssigned) {
+      alert("You cannot remove teams from your queue after submitting scores.");
+      return;
+    }
+    
     try {
       if (isAssigned) {
         await removeTeamFromAssignment({ eventId, teamId });
@@ -142,18 +161,20 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       {event.status === "active" && enableCohorts && myAssignments && (
         <TeamSelectionSection
           teams={filteredTeams}
-          myAssignments={myAssignments}
+          assignedTeams={assignedTeams}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           onToggleTeam={(teamId, isAssigned) => {
             void handleToggleTeam(teamId, isAssigned);
           }}
           onStartScoring={() => {
-            if (myAssignments.length > 0) {
+            if (myAssignments && myAssignments.length > 0) {
               setShowWizard(true);
             }
           }}
-          canStart={myAssignments.length > 0}
+          canStart={(myAssignments?.length ?? 0) > 0}
+          locked={!!hasSubmittedScores}
+          myScores={myScores}
         />
       )}
 
@@ -164,7 +185,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
               <div>
                 <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
                   {scoringComplete ? "Scoring Complete!" : completedCount > 0 ? "Keep Scoring" : "Ready to Score?"}
-                </h2>
+          </h2>
                 {scoringComplete ? (
                   <p className="text-emerald-600 dark:text-emerald-400">
                     Thank you for judging. All teams have been scored.
@@ -185,7 +206,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
                   <p className="text-xs text-muted-foreground mt-1">Your scores were submitted successfully.</p>
                 )}
               </div>
-              <button
+                  <button
                 onClick={() => setShowWizard(true)}
                 className={scoringComplete ? "btn-secondary" : "btn-primary"}
                 disabled={(enableCohorts && myAssignments.length === 0) || totalTeams === 0 || scoringComplete}
@@ -199,8 +220,8 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
                   : enableCohorts && myAssignments.length === 0
                   ? "Select Teams First"
                   : "Start Scoring"}
-              </button>
-            </div>
+                  </button>
+                </div>
             <div>
               <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                 <div
@@ -221,7 +242,13 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       {scoringComplete && myScores && myScores.length > 0 && (
         <div className="card mb-8 fade-in">
           <h2 className="text-xl font-heading font-semibold mb-4">Your Score Summary</h2>
-          <ScoreSummary scores={myScores} categories={event.categories.map(c => c.name)} />
+          <ScoreSummary 
+            scores={myScores.map(score => {
+              const team = visibleTeams.find(t => t._id === score.teamId);
+              return { ...score, teamName: team?.name || 'Unknown Team' };
+            })} 
+            categories={event.categories.map(c => c.name)} 
+          />
         </div>
       )}
 
@@ -447,7 +474,7 @@ function ScoreSummary({ scores, categories }: ScoreSummaryProps) {
           {scores.map((score) => (
             <div key={score.teamId} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
               <div className="flex items-center gap-3">
-                <span className="font-medium">Team {score.teamId.slice(-4)}</span>
+                <span className="font-medium">{score.teamName || 'Unknown Team'}</span>
                 <div className="flex gap-1">
                   {score.categoryScores.map((cs: any, index: number) => (
                     <span 
@@ -472,21 +499,29 @@ function ScoreSummary({ scores, categories }: ScoreSummaryProps) {
 
 function TeamSelectionSection({
   teams,
-  myAssignments,
+  assignedTeams,
   searchQuery,
   setSearchQuery,
   onToggleTeam,
   onStartScoring,
   canStart,
+  locked,
+  myScores,
 }: {
   teams: Array<any>;
-  myAssignments: Id<"teams">[];
+  assignedTeams: Array<any>;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onToggleTeam: (teamId: Id<"teams">, isAssigned: boolean) => void;
   onStartScoring: () => void;
   canStart: boolean;
+  locked: boolean;
+  myScores?: Array<any>;
 }) {
+  const getTeamScoreStatus = (teamId: Id<"teams">) => {
+    if (!myScores) return null;
+    return myScores.find((score: any) => score.teamId === teamId);
+  };
   return (
     <div className="card mb-8 fade-in">
       <div className="space-y-4">
@@ -513,60 +548,97 @@ function TeamSelectionSection({
           />
         </div>
 
-        {/* Selected Teams Count */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            Selected: <span className="font-semibold text-foreground">{myAssignments.length} teams</span>
-          </span>
-          <button
-            onClick={onStartScoring}
-            className="btn-primary"
-            disabled={!canStart}
-          >
-            Start Scoring Selected Teams
-          </button>
-        </div>
-
-        {/* Teams List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-          {teams.map((team: any) => {
-            const isAssigned = myAssignments.includes(team._id);
-            return (
-              <div
-                key={team._id}
-                className={`border rounded-xl p-4 transition-all hover:shadow-md ${
-                  isAssigned
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-background"
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-foreground">{team.name}</h3>
-                  <button
-                    onClick={() => onToggleTeam(team._id, isAssigned)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      isAssigned
-                        ? "bg-primary/20 text-primary"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    }`}
+        {/* My Queue Section */}
+        {assignedTeams.length > 0 && (
+          <div>
+            <h3 className="text-lg font-heading font-semibold text-foreground mb-3">
+              My Queue ({assignedTeams.length} teams)
+            </h3>
+            <div className="divide-y divide-border bg-muted/30 rounded-lg overflow-hidden">
+              {assignedTeams.map((team: any) => {
+                const score = getTeamScoreStatus(team._id);
+                return (
+                  <div
+                    key={team._id}
+                    className="px-4 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors"
                   >
-                    {isAssigned ? (
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
+                    <div className="flex items-center gap-3 flex-1">
+                      {score && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                      )}
+                      <div>
+                        <span className="font-medium text-foreground">{team.name}</span>
+                        {score && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Scored: {score.totalScore} points
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {!locked && (
+                      <button
+                        onClick={() => onToggleTeam(team._id, true)}
+                        className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     )}
-                  </button>
-                </div>
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {team.description}
-                </p>
-              </div>
-            );
-          })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Add Teams Section */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-heading font-semibold text-foreground">
+              Browse Teams
+            </h3>
+            <button
+              onClick={onStartScoring}
+              className="btn-primary"
+              disabled={!canStart || locked}
+            >
+              {locked ? "Scoring Complete" : "Start Scoring Selected Teams"}
+            </button>
+          </div>
+
+          {teams.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              {searchQuery ? "No teams match your search" : "All teams have been added to your queue"}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+              {teams.map((team: any) => {
+                return (
+                  <div
+                    key={team._id}
+                    className="border border-border rounded-xl p-4 transition-all hover:shadow-md bg-background"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-foreground">{team.name}</h3>
+                      <button
+                        onClick={() => onToggleTeam(team._id, false)}
+                        className="p-2 bg-muted text-muted-foreground hover:bg-muted/80 rounded-lg transition-colors"
+                        disabled={locked}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                      </button>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {team.description}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -619,6 +619,67 @@ function ScoringDashboard({
   viewMode: 'table' | 'chart';
   setViewMode: (mode: 'table' | 'chart') => void;
 }) {
+  const [sortColumn, setSortColumn] = useState<string>('averageScore');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (column: string) => {
+    if (column === sortColumn) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const sortedRankings = [...scores.teamRankings].sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortColumn) {
+      case 'rank':
+        // Keep rank order by original index
+        comparison = 0;
+        break;
+      case 'name':
+        comparison = a.team.name.localeCompare(b.team.name);
+        break;
+      case 'averageScore':
+        comparison = a.averageScore - b.averageScore;
+        break;
+      case 'judges':
+        comparison = a.judgeCount - b.judgeCount;
+        break;
+      default:
+        // Category columns
+        if (scores.categories.includes(sortColumn)) {
+          const aScore = a.categoryAverages[sortColumn] || 0;
+          const bScore = b.categoryAverages[sortColumn] || 0;
+          comparison = aScore - bScore;
+        }
+        break;
+    }
+    
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) {
+      return (
+        <svg className="w-4 h-4 inline-block ml-1 text-muted-foreground opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      );
+    }
+    return sortDirection === 'asc' ? (
+      <svg className="w-4 h-4 inline-block ml-1 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    ) : (
+      <svg className="w-4 h-4 inline-block ml-1 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* View Toggle */}
@@ -663,17 +724,48 @@ function ScoringDashboard({
               <table className="min-w-full">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-foreground">Rank</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-foreground">Team Name</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-foreground">Avg Score</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-foreground">Judges</th>
+                    <th 
+                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
+                      onClick={() => handleSort('rank')}
+                    >
+                      Rank
+                      <SortIcon column="rank" />
+                    </th>
+                    <th 
+                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
+                      onClick={() => handleSort('name')}
+                    >
+                      Team Name
+                      <SortIcon column="name" />
+                    </th>
+                    <th 
+                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
+                      onClick={() => handleSort('averageScore')}
+                    >
+                      Avg Score
+                      <SortIcon column="averageScore" />
+                    </th>
+                    <th 
+                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
+                      onClick={() => handleSort('judges')}
+                    >
+                      Judges
+                      <SortIcon column="judges" />
+                    </th>
                     {scores.categories.map((cat) => (
-                      <th key={cat} className="px-6 py-4 text-left text-sm font-bold text-foreground">{cat}</th>
+                      <th 
+                        key={cat} 
+                        className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
+                        onClick={() => handleSort(cat)}
+                      >
+                        {cat}
+                        <SortIcon column={cat} />
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {scores.teamRankings.map((ranking, index) => (
+                  {sortedRankings.map((ranking, index) => (
                     <tr 
                       key={ranking.team._id}
                       className={index % 2 === 0 ? 'bg-gray-50 dark:bg-white/[0.03]' : 'bg-gray-100 dark:bg-white/[0.08]'}

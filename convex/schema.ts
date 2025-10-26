@@ -22,8 +22,14 @@ const applicationTables = {
     ),
     startDate: v.number(),
     endDate: v.number(),
-    categories: v.array(v.string()), // Awards/categories for judging
+    categories: v.array(
+      v.object({
+        name: v.string(),
+        weight: v.number(), // 0-2 multiplier
+      })
+    ), // Awards/categories for judging
     tracks: v.optional(v.array(v.string())), // Tracks for team registration (optional, defaults to categories)
+    enableCohorts: v.optional(v.boolean()), // Enable multiple judging cohorts (judges select their teams)
     resultsReleased: v.boolean(),
     judgeCode: v.optional(v.string()),
     overallWinner: v.optional(v.id("teams")),
@@ -70,6 +76,17 @@ const applicationTables = {
     .index("by_user", ["userId"])
     .index("by_event", ["eventId"])
     .index("by_user_and_event", ["userId", "eventId"]),
+
+  judgeAssignments: defineTable({
+    judgeId: v.id("judges"),
+    eventId: v.id("events"),
+    teamId: v.id("teams"),
+    addedAt: v.number(),
+  })
+    .index("by_judge", ["judgeId"])
+    .index("by_event", ["eventId"])
+    .index("by_judge_and_event", ["judgeId", "eventId"])
+    .index("by_judge_and_team", ["judgeId", "teamId"]),
 
   scores: defineTable({
     judgeId: v.id("judges"),

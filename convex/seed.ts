@@ -27,11 +27,11 @@ export const seedEvents = mutation({
         endDate: now.getTime() + day,
         status: "active" as const,
         categories: [
-          "Innovation",
-          "Technical Implementation",
-          "Design",
-          "Impact",
-          "Presentation",
+          { name: "Innovation", weight: 1 },
+          { name: "Technical Implementation", weight: 1.2 },
+          { name: "Design", weight: 1 },
+          { name: "Impact", weight: 1.3 },
+          { name: "Presentation", weight: 0.8 },
         ],
         resultsReleased: false,
         teamCount: 42,
@@ -44,11 +44,11 @@ export const seedEvents = mutation({
         endDate: now.getTime() + 2 * day,
         status: "active" as const,
         categories: [
-          "AI Innovation",
-          "Technical Complexity",
-          "User Experience",
-          "Scalability",
-          "Presentation",
+          { name: "AI Innovation", weight: 1.2 },
+          { name: "Technical Complexity", weight: 1.4 },
+          { name: "User Experience", weight: 1.1 },
+          { name: "Scalability", weight: 1 },
+          { name: "Presentation", weight: 0.9 },
         ],
         resultsReleased: false,
         teamCount: 28,
@@ -63,11 +63,11 @@ export const seedEvents = mutation({
         endDate: now.getTime() + 9 * day,
         status: "upcoming" as const,
         categories: [
-          "Smart Contract Security",
-          "DApp Usability",
-          "Innovation",
-          "Technical Excellence",
-          "Presentation",
+          { name: "Smart Contract Security", weight: 1.3 },
+          { name: "DApp Usability", weight: 1.1 },
+          { name: "Innovation", weight: 1 },
+          { name: "Technical Excellence", weight: 1.2 },
+          { name: "Presentation", weight: 0.8 },
         ],
         resultsReleased: false,
         teamCount: 0,
@@ -80,11 +80,11 @@ export const seedEvents = mutation({
         endDate: now.getTime() + 16 * day,
         status: "upcoming" as const,
         categories: [
-          "Clinical Impact",
-          "Innovation",
-          "Technical Implementation",
-          "User Experience",
-          "Scalability",
+          { name: "Clinical Impact", weight: 1.5 },
+          { name: "Innovation", weight: 1 },
+          { name: "Technical Implementation", weight: 1.2 },
+          { name: "User Experience", weight: 1.1 },
+          { name: "Scalability", weight: 0.9 },
         ],
         resultsReleased: false,
         teamCount: 0,
@@ -97,11 +97,11 @@ export const seedEvents = mutation({
         endDate: now.getTime() + 22 * day,
         status: "upcoming" as const,
         categories: [
-          "Environmental Impact",
-          "Innovation",
-          "Technical Solution",
-          "Feasibility",
-          "Presentation",
+          { name: "Environmental Impact", weight: 1.5 },
+          { name: "Innovation", weight: 1 },
+          { name: "Technical Solution", weight: 1.2 },
+          { name: "Feasibility", weight: 1 },
+          { name: "Presentation", weight: 0.8 },
         ],
         resultsReleased: false,
         teamCount: 0,
@@ -116,11 +116,11 @@ export const seedEvents = mutation({
         endDate: now.getTime() - 58 * day,
         status: "past" as const,
         categories: [
-          "Innovation",
-          "Technical Excellence",
-          "Design",
-          "Impact",
-          "Presentation",
+          { name: "Innovation", weight: 1 },
+          { name: "Technical Excellence", weight: 1.3 },
+          { name: "Design", weight: 1 },
+          { name: "Impact", weight: 1.2 },
+          { name: "Presentation", weight: 0.9 },
         ],
         resultsReleased: true,
         teamCount: 52,
@@ -133,11 +133,11 @@ export const seedEvents = mutation({
         endDate: now.getTime() - 28 * day,
         status: "past" as const,
         categories: [
-          "Financial Impact",
-          "Innovation",
-          "Security",
-          "User Experience",
-          "Scalability",
+          { name: "Financial Impact", weight: 1.3 },
+          { name: "Innovation", weight: 1 },
+          { name: "Security", weight: 1.4 },
+          { name: "User Experience", weight: 1.1 },
+          { name: "Scalability", weight: 1 },
         ],
         resultsReleased: true,
         teamCount: 35,
@@ -150,11 +150,11 @@ export const seedEvents = mutation({
         endDate: now.getTime() - 88 * day,
         status: "past" as const,
         categories: [
-          "Gameplay",
-          "Graphics",
-          "Sound Design",
-          "Innovation",
-          "Fun Factor",
+          { name: "Gameplay", weight: 1.5 },
+          { name: "Graphics", weight: 1.1 },
+          { name: "Sound Design", weight: 0.9 },
+          { name: "Innovation", weight: 1 },
+          { name: "Fun Factor", weight: 1.4 },
         ],
         resultsReleased: true,
         teamCount: 24,
@@ -228,8 +228,6 @@ export const seedEvents = mutation({
           projectUrl: `https://github.com/team${j}/hackathon-project`,
           githubUrl: "",
           track: "",
-          submittedBy: "uiuu" as Id<"users">,
-          submittedAt: 0,
         });
       }
     }
@@ -320,17 +318,20 @@ export const seedJudgeScores = mutation({
 
         for (let i = 0; i < teamsToScore; i++) {
           const team = teams[i];
-          const categoryScores = event.categories.map((category) => ({
-            category,
+          const categoryScores = event.categories.map((catObj) => ({
+            category: catObj.name,
             // Random scores between 1-5, with a bias toward 3-4
             score:
               Math.floor(Math.random() * 3) + 2 + (Math.random() > 0.7 ? 1 : 0),
           }));
 
-          const totalScore = categoryScores.reduce(
-            (sum, cs) => sum + cs.score,
-            0
-          );
+          const totalScore = categoryScores.reduce((sum, cs) => {
+            const category = event.categories.find(
+              (c) => c.name === cs.category
+            );
+            const weight = category?.weight ?? 1;
+            return sum + cs.score * weight;
+          }, 0);
 
           await ctx.db.insert("scores", {
             judgeId,
@@ -615,11 +616,11 @@ export const seedEverything = mutation({
         endDate: now.getTime() + day,
         status: "active" as const,
         categories: [
-          "Innovation",
-          "Technical Implementation",
-          "Design",
-          "Impact",
-          "Presentation",
+          { name: "Innovation", weight: 1 },
+          { name: "Technical Implementation", weight: 1.2 },
+          { name: "Design", weight: 1 },
+          { name: "Impact", weight: 1.3 },
+          { name: "Presentation", weight: 0.8 },
         ],
         resultsReleased: false,
         teamCount: 15,
@@ -632,11 +633,11 @@ export const seedEverything = mutation({
         endDate: now.getTime() + 2 * day,
         status: "active" as const,
         categories: [
-          "AI Innovation",
-          "Technical Complexity",
-          "User Experience",
-          "Scalability",
-          "Presentation",
+          { name: "AI Innovation", weight: 1.2 },
+          { name: "Technical Complexity", weight: 1.4 },
+          { name: "User Experience", weight: 1.1 },
+          { name: "Scalability", weight: 1 },
+          { name: "Presentation", weight: 0.9 },
         ],
         resultsReleased: false,
         teamCount: 12,
@@ -648,7 +649,12 @@ export const seedEverything = mutation({
         startDate: now.getTime() - 3 * day,
         endDate: now.getTime() + day,
         status: "active" as const,
-        categories: ["Innovation", "Security", "User Experience", "Impact"],
+        categories: [
+          { name: "Innovation", weight: 1 },
+          { name: "Security", weight: 1.5 },
+          { name: "User Experience", weight: 1.1 },
+          { name: "Impact", weight: 1.2 },
+        ],
         resultsReleased: false,
         teamCount: 10,
       },
@@ -727,7 +733,7 @@ export const seedEverything = mutation({
           ],
           projectUrl: `https://github.com/team${j}/hackathon-project`,
           githubUrl: `https://github.com/team${j}/hackathon-project`,
-          track: event.categories[j % event.categories.length],
+          track: event.categories[j % event.categories.length].name,
           submittedBy: userId,
           submittedAt: now.getTime() - day,
         });
@@ -782,17 +788,20 @@ export const seedEverything = mutation({
 
         for (let i = 0; i < teamsToScore; i++) {
           const team = teams[i];
-          const categoryScores = event.categories.map((category) => ({
-            category,
+          const categoryScores = event.categories.map((catObj) => ({
+            category: catObj.name,
             // Random scores between 2-5, with a bias toward 3-4
             score:
               Math.floor(Math.random() * 3) + 2 + (Math.random() > 0.7 ? 1 : 0),
           }));
 
-          const totalScore = categoryScores.reduce(
-            (sum, cs) => sum + cs.score,
-            0
-          );
+          const totalScore = categoryScores.reduce((sum, cs) => {
+            const category = event.categories.find(
+              (c) => c.name === cs.category
+            );
+            const weight = category?.weight ?? 1;
+            return sum + cs.score * weight;
+          }, 0);
 
           await ctx.db.insert("scores", {
             judgeId,

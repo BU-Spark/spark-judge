@@ -3,6 +3,8 @@ import { api } from "../../convex/_generated/api";
 import { useState, Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 import { Id } from "../../convex/_generated/dataModel";
+import { LoadingState } from "./ui/LoadingState";
+import { ErrorState } from "./ui/ErrorState";
 
 type SortField = "name" | "status" | "teamCount" | "startDate";
 type SortDirection = "asc" | "desc";
@@ -54,27 +56,18 @@ export function AdminDashboard({ onBackToLanding }: { onBackToLanding: () => voi
 
   // Show loading state while checking admin status
   if (isAdmin === undefined) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingState label="Verifying admin access..." />;
   }
 
   // Show error if user is not an admin
   if (!isAdmin) {
     return (
-      <div className="max-w-md mx-auto mt-16 px-4">
-        <div className="card text-center">
-          <h2 className="text-2xl font-heading font-bold mb-4">Access Denied</h2>
-          <p className="text-muted-foreground mb-6">
-            You don't have admin privileges to access this dashboard.
-          </p>
-          <button onClick={onBackToLanding} className="btn-primary">
-            Back to Events
-          </button>
-        </div>
-      </div>
+      <ErrorState
+        title="Access denied"
+        description="You need admin privileges to access this dashboard."
+        actionLabel="Back to events"
+        onAction={onBackToLanding}
+      />
     );
   }
 
@@ -127,11 +120,18 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
     direction: "asc",
   });
 
+  if (events === undefined) {
+    return <LoadingState label="Loading events..." />;
+  }
+
   if (!events) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
+      <ErrorState
+        title="Unable to load events"
+        description="Something went wrong while loading events. Please refresh and try again."
+        actionLabel="Refresh"
+        onAction={() => window.location.reload()}
+      />
     );
   }
 
@@ -325,22 +325,28 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
   const createEvent = useMutation(api.events.createEvent);
   const [submitting, setSubmitting] = useState(false);
   const [useTracksAsAwards, setUseTracksAsAwards] = useState(true);
+  const [categories, setCategories] = useState([
+    { name: "Innovation", weight: 1 },
+    { name: "Technical Complexity", weight: 1 },
+    { name: "Design", weight: 1 },
+    { name: "Presentation", weight: 1 },
+    { name: "Impact", weight: 1 },
+  ]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     status: "upcoming" as "upcoming" | "active" | "past",
     startDate: "",
     endDate: "",
-    categories: "Innovation,Technical Complexity,Design,Presentation,Impact",
     tracks: "AI/ML,Web Development,Hardware,Mobile,Other",
     judgeCode: "",
+    enableCohorts: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const categories = formData.categories.split(",").map((c) => c.trim()).filter(Boolean);
       const tracks = useTracksAsAwards 
         ? undefined 
         : formData.tracks.split(",").map((t) => t.trim()).filter(Boolean);
@@ -354,6 +360,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
         categories,
         tracks,
         judgeCode: formData.judgeCode || undefined,
+        enableCohorts: formData.enableCohorts || undefined,
       });
       toast.success("Event created successfully!");
       onClose();
@@ -446,18 +453,59 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Awards/Judging Categories (comma-separated)
+              Judging Categories & Weights
             </label>
-            <input
-              type="text"
-              required
-              value={formData.categories}
-              onChange={(e) => setFormData({ ...formData, categories: e.target.value })}
-              className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
-              placeholder="Innovation, Technical Complexity, Design..."
-            />
+            <div className="space-y-2">
+              {categories.map((cat, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    required
+                    value={cat.name}
+                    onChange={(e) => {
+                      const newCats = [...categories];
+                      newCats[index].name = e.target.value;
+                      setCategories(newCats);
+                    }}
+                    className="flex-1 px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                    placeholder="Category name"
+                  />
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={cat.weight}
+                    onChange={(e) => {
+                      const newCats = [...categories];
+                      newCats[index].weight = parseFloat(e.target.value) || 1;
+                      setCategories(newCats);
+                    }}
+                    className="w-24 px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                    placeholder="Weight"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                    className="p-3 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setCategories([...categories, { name: "", weight: 1 }])}
+                className="btn-ghost text-sm"
+              >
+                + Add Category
+              </button>
+            </div>
             <p className="text-xs text-muted-foreground mt-2">
-              These are the categories judges will score teams on
+              Weight range: 0-2. Higher weights increase the category's impact on the total score.
             </p>
           </div>
 
@@ -492,6 +540,23 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                 </p>
               </>
             )}
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 mb-3">
+              <input
+                type="checkbox"
+                checked={formData.enableCohorts}
+                onChange={(e) => setFormData({ ...formData, enableCohorts: e.target.checked })}
+                className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
+              />
+              <span className="text-sm font-medium text-foreground">
+                Enable Multiple Judging Cohorts
+              </span>
+            </label>
+            <p className="text-xs text-muted-foreground ml-6 mb-4">
+              Judges will select their own teams to judge (for large events with 40+ teams)
+            </p>
           </div>
 
           <div>
@@ -1126,7 +1191,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
         <SelectWinnersModal
           eventId={eventId}
           teams={event.teams}
-          categories={event.categories}
+          categories={event.categories.map(c => c.name)}
           onClose={() => setShowSelectWinners(false)}
           onSubmit={setWinners}
         />

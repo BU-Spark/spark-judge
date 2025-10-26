@@ -83,7 +83,9 @@ export const submitTeam = mutation({
     }
 
     // Validate track (use tracks if defined, otherwise fall back to categories)
-    const availableTracks = event.tracks || event.categories;
+    const availableTracks =
+      event.tracks ||
+      event.categories.map((c: any) => (typeof c === "string" ? c : c.name));
     if (!availableTracks.includes(args.track)) {
       throw new Error("Invalid track");
     }
@@ -172,7 +174,9 @@ export const updateTeam = mutation({
       const event = await ctx.db.get(team.eventId);
       if (!event) throw new Error("Event not found");
 
-      const availableTracks = event.tracks || event.categories;
+      const availableTracks =
+        event.tracks ||
+        event.categories.map((c: any) => (typeof c === "string" ? c : c.name));
       if (!availableTracks.includes(args.track)) {
         throw new Error("Invalid track");
       }

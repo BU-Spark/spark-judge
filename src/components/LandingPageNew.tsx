@@ -6,6 +6,8 @@ import { SignInForm } from "../SignInFormNew";
 import { useState } from "react";
 import { JudgeCodeModal } from "./JudgeCodeModalNew";
 import { TeamSubmissionModal } from "./TeamSubmissionModalNew";
+import { LoadingState } from "../ui/LoadingState";
+import { ErrorState } from "../ui/ErrorState";
 
 export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) => void }) {
   const events = useQuery(api.events.listEvents);
@@ -84,11 +86,18 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
     });
   };
 
+  if (events === undefined) {
+    return <LoadingState label="Loading events..." />;
+  }
+
   if (!events) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
+      <ErrorState
+        title="Unable to load events"
+        description="We couldn't fetch the list of events right now. Please refresh the page to try again."
+        actionLabel="Refresh"
+        onAction={() => window.location.reload()}
+      />
     );
   }
 
@@ -266,10 +275,11 @@ function EventCard({
   const userRole = event.userRole?.role;
   const isJudge = userRole === "judge";
   const isParticipant = userRole === "participant";
+  const judgeProgress = event.judgeProgress as { completedTeams: number; totalTeams: number } | undefined;
+  const hasCompletedScoring = Boolean(
+    judgeProgress && judgeProgress.totalTeams > 0 && judgeProgress.completedTeams >= judgeProgress.totalTeams
+  );
   
-  // Debug logging
-  console.log(`Event: ${event.name}, userRole:`, event.userRole, `isJudge: ${isJudge}, isActiveSection: ${isActiveSection}`);
-
   return (
     <div
       className="group card-glass"
@@ -328,13 +338,31 @@ function EventCard({
             ) : isActiveSection ? (
               <button
                 onClick={() => onStartScoring(event)}
-                className="btn-primary w-full"
+                className={`w-full btn-primary transition-all ${hasCompletedScoring ? 'opacity-60 cursor-not-allowed hover:none' : ''}`}
+                disabled={hasCompletedScoring}
               >
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  Start Scoring
+                  {hasCompletedScoring ? (
+                    <>
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Scoring Complete
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      {judgeProgress && judgeProgress.completedTeams > 0
+                        ? `Resume Scoring (${judgeProgress.completedTeams}/${judgeProgress.totalTeams})`
+                        : "Start Scoring"}
+                    </>
+                  )}
                 </span>
               </button>
             ) : (

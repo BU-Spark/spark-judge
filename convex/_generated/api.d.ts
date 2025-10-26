@@ -17,6 +17,7 @@ import type * as auth from "../auth.js";
 import type * as events from "../events.js";
 import type * as helpers from "../helpers.js";
 import type * as http from "../http.js";
+import type * as judgeAssignments from "../judgeAssignments.js";
 import type * as migrations from "../migrations.js";
 import type * as participants from "../participants.js";
 import type * as router from "../router.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   helpers: typeof helpers;
   http: typeof http;
+  judgeAssignments: typeof judgeAssignments;
   migrations: typeof migrations;
   participants: typeof participants;
   router: typeof router;

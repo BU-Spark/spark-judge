@@ -24,6 +24,10 @@ export const listEvents = query({
 
         // Check user's role for this event
         let userRole = null;
+        let judgeProgress: {
+          completedTeams: number;
+          totalTeams: number;
+        } | null = null;
         if (userId) {
           const judge = await ctx.db
             .query("judges")
@@ -34,6 +38,15 @@ export const listEvents = query({
 
           if (judge) {
             userRole = { role: "judge" as const, isAdmin: userIsAdmin };
+            const judgeScores = await ctx.db
+              .query("scores")
+              .withIndex("by_event", (q) => q.eq("eventId", event._id))
+              .filter((q) => q.eq(q.field("judgeId"), judge._id))
+              .collect();
+            judgeProgress = {
+              completedTeams: judgeScores.length,
+              totalTeams: teams.length,
+            };
           } else {
             const participant = await ctx.db
               .query("participants")
@@ -52,6 +65,7 @@ export const listEvents = query({
           ...event,
           teamCount: teams.length,
           userRole,
+          judgeProgress,
           requiresJudgeCode: event.status === "active" && !!event.judgeCode,
         };
       })
@@ -186,9 +200,15 @@ export const createEvent = mutation({
     ),
     startDate: v.number(),
     endDate: v.number(),
-    categories: v.array(v.string()),
+    categories: v.array(
+      v.object({
+        name: v.string(),
+        weight: v.number(),
+      })
+    ),
     tracks: v.optional(v.array(v.string())),
     judgeCode: v.optional(v.string()),
+    enableCohorts: v.optional(v.boolean()),
   },
   returns: v.id("events"),
   handler: async (ctx, args) => {
@@ -312,6 +332,37 @@ export const duplicateEvent = mutation({
     });
 
     return newEventId;
+  },
+});
+
+export const updateEventCategories = mutation({
+  args: {
+    eventId: v.id("events"),
+    categories: v.array(
+      v.object({
+        name: v.string(),
+        weight: v.number(),
+      })
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(args.eventId, { categories: args.categories });
+    return null;
+  },
+});
+
+export const updateEventCohorts = mutation({
+  args: {
+    eventId: v.id("events"),
+    enableCohorts: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(args.eventId, { enableCohorts: args.enableCohorts });
+    return null;
   },
 });
 

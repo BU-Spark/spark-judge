@@ -27,10 +27,15 @@ export const submitScore = mutation({
 
     if (!judge) throw new Error("Not a judge for this event");
 
-    const totalScore = args.categoryScores.reduce(
-      (sum, cs) => sum + cs.score,
-      0
-    );
+    // Fetch event to get category weights
+    const event = await ctx.db.get(args.eventId);
+    if (!event) throw new Error("Event not found");
+
+    const totalScore = args.categoryScores.reduce((sum, cs) => {
+      const category = event.categories.find((c) => c.name === cs.category);
+      const weight = category?.weight ?? 1;
+      return sum + cs.score * weight;
+    }, 0);
 
     const existing = await ctx.db
       .query("scores")
@@ -105,10 +110,11 @@ export const submitBatchScores = mutation({
 
     await Promise.all(
       args.scores.map(async (entry) => {
-        const totalScore = entry.categoryScores.reduce(
-          (sum, cs) => sum + cs.score,
-          0
-        );
+        const totalScore = entry.categoryScores.reduce((sum, cs) => {
+          const category = event.categories.find((c) => c.name === cs.category);
+          const weight = category?.weight ?? 1;
+          return sum + cs.score * weight;
+        }, 0);
 
         const existing = await ctx.db
           .query("scores")
@@ -309,13 +315,15 @@ export const getDetailedEventScores = query({
 
       // Calculate average per category
       const categoryAverages: Record<string, number> = {};
-      event.categories.forEach((category) => {
+      event.categories.forEach((catObj) => {
         const categoryScores = teamScoresList
-          .map((s) => s.categoryScores.find((cs) => cs.category === category))
+          .map((s) =>
+            s.categoryScores.find((cs) => cs.category === catObj.name)
+          )
           .filter((cs) => cs !== undefined)
           .map((cs) => cs!.score);
 
-        categoryAverages[category] =
+        categoryAverages[catObj.name] =
           categoryScores.length > 0
             ? categoryScores.reduce((sum, score) => sum + score, 0) /
               categoryScores.length
@@ -335,16 +343,16 @@ export const getDetailedEventScores = query({
 
     // Calculate category-specific rankings
     const categoryRankings: Record<string, any[]> = {};
-    event.categories.forEach((category) => {
+    event.categories.forEach((catObj) => {
       const categoryTeams = teamRankings
         .map((tr) => ({
           team: tr.team,
-          categoryAverage: tr.categoryAverages[category],
+          categoryAverage: tr.categoryAverages[catObj.name],
           judgeCount: tr.judgeCount,
         }))
         .sort((a, b) => b.categoryAverage - a.categoryAverage);
 
-      categoryRankings[category] = categoryTeams;
+      categoryRankings[catObj.name] = categoryTeams;
     });
 
     // Judge breakdown
@@ -368,7 +376,7 @@ export const getDetailedEventScores = query({
       teamRankings,
       categoryRankings,
       judgeBreakdown,
-      categories: event.categories,
+      categories: event.categories.map((c) => c.name),
     };
   },
 });

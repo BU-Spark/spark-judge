@@ -635,10 +635,6 @@ function ScoringDashboard({
     let comparison = 0;
     
     switch (sortColumn) {
-      case 'rank':
-        // Keep rank order by original index
-        comparison = 0;
-        break;
       case 'name':
         comparison = a.team.name.localeCompare(b.team.name);
         break;
@@ -724,12 +720,8 @@ function ScoringDashboard({
               <table className="min-w-full">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th 
-                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
-                      onClick={() => handleSort('rank')}
-                    >
+                    <th className="px-6 py-4 text-left text-sm font-bold text-foreground">
                       Rank
-                      <SortIcon column="rank" />
                     </th>
                     <th 
                       className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"

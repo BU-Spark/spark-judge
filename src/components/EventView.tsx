@@ -248,6 +248,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
               return { ...score, teamName: team?.name || 'Unknown Team' };
             })} 
             categories={event.categories.map(c => c.name)} 
+            categoryWeights={event.categories}
           />
         </div>
       )}
@@ -377,9 +378,13 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
 type ScoreSummaryProps = {
   scores: any[];
   categories: string[];
+  categoryWeights?: Array<{ name: string; weight: number }>;
 };
 
-function ScoreSummary({ scores, categories }: ScoreSummaryProps) {
+function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps) {
+  // Calculate max possible weighted score
+  const maxPossibleWeightedScore = categoryWeights?.reduce((sum, cat) => sum + (5 * cat.weight), 0) || categories.length * 5;
+  
   // Calculate statistics
   const totalScores = scores.length;
   const averageScore = totalScores > 0 
@@ -397,9 +402,13 @@ function ScoreSummary({ scores, categories }: ScoreSummaryProps) {
     return { category, average: avg };
   });
 
-  // Score distribution
+  // Score distribution (use weighted max score for buckets)
   const scoreDistribution = [1, 2, 3, 4, 5].map(score => {
-    const count = scores.filter(s => s.totalScore === score * categories.length).length;
+    const threshold = score * (maxPossibleWeightedScore / 5);
+    const count = scores.filter(s => {
+      // Bucket by approximate position in the range
+      return s.totalScore >= (threshold - maxPossibleWeightedScore / 10) && s.totalScore < (threshold + maxPossibleWeightedScore / 10);
+    }).length;
     return { score, count, percentage: totalScores > 0 ? (count / totalScores) * 100 : 0 };
   });
 
@@ -417,7 +426,7 @@ function ScoreSummary({ scores, categories }: ScoreSummaryProps) {
         </div>
         <div className="text-center p-4 bg-muted/30 rounded-lg">
           <div className="text-2xl font-bold text-primary">
-            {Math.round((averageScore / (categories.length * 5)) * 100)}%
+            {Math.round((averageScore / maxPossibleWeightedScore) * 100)}%
           </div>
           <div className="text-sm text-muted-foreground">Score Ratio</div>
         </div>

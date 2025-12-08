@@ -24,8 +24,10 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
     isOpen: boolean;
     eventId: Id<"events"> | null;
     tracks: string[];
+    courseCodes: string[];
+    eventMode: "hackathon" | "demo_day";
     existingTeam: any;
-  }>({ isOpen: false, eventId: null, tracks: [], existingTeam: null });
+  }>({ isOpen: false, eventId: null, tracks: [], courseCodes: [], eventMode: "hackathon", existingTeam: null });
 
   const handleJoinAsJudge = async (eventId: Id<"events">) => {
     if (!loggedInUser) {
@@ -66,13 +68,18 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
     }
   };
 
+  // Demo Day events can be browsed without signing in
+  const handleBrowseDemoDay = (eventId: Id<"events">) => {
+    onSelectEvent(eventId);
+  };
+
   const handleJudgeCodeSuccess = () => {
     if (judgeCodeModal.eventId) {
       onSelectEvent(judgeCodeModal.eventId);
     }
   };
 
-  const handleAddTeam = (event: { _id: any; tracks: any; categories: any; }) => {
+  const handleAddTeam = (event: { _id: any; tracks: any; categories: any; courseCodes?: string[]; mode?: "hackathon" | "demo_day"; }) => {
     if (!loggedInUser) {
       setShowSignIn(true);
       return;
@@ -82,6 +89,8 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
       isOpen: true,
       eventId: event._id,
       tracks: event.tracks || event.categories, // Use tracks if defined, otherwise categories
+      courseCodes: event.courseCodes || [],
+      eventMode: event.mode || "hackathon",
       existingTeam: null, // Modal will fetch team itself
     });
   };
@@ -118,6 +127,7 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
           events={events.active}
           onJoinAsJudge={handleJoinAsJudge}
           onStartScoring={handleStartScoring}
+          onBrowseDemoDay={handleBrowseDemoDay}
           onAddTeam={handleAddTeam}
           joiningEvents={joiningEvents}
           emptyMessage="No active events at the moment"
@@ -131,6 +141,7 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
           events={events.upcoming}
           onJoinAsJudge={handleJoinAsJudge}
           onStartScoring={handleStartScoring}
+          onBrowseDemoDay={handleBrowseDemoDay}
           onAddTeam={handleAddTeam}
           joiningEvents={joiningEvents}
           emptyMessage="No upcoming events scheduled"
@@ -144,6 +155,7 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
           events={events.past}
           onJoinAsJudge={handleJoinAsJudge}
           onStartScoring={handleStartScoring}
+          onBrowseDemoDay={handleBrowseDemoDay}
           onAddTeam={handleAddTeam}
           joiningEvents={joiningEvents}
           emptyMessage="No past events"
@@ -189,9 +201,11 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
       {teamSubmissionModal.eventId && (
         <TeamSubmissionModal
           isOpen={teamSubmissionModal.isOpen}
-          onClose={() => setTeamSubmissionModal({ isOpen: false, eventId: null, tracks: [], existingTeam: null })}
+          onClose={() => setTeamSubmissionModal({ isOpen: false, eventId: null, tracks: [], courseCodes: [], eventMode: "hackathon", existingTeam: null })}
           eventId={teamSubmissionModal.eventId}
           tracks={teamSubmissionModal.tracks}
+          courseCodes={teamSubmissionModal.courseCodes}
+          eventMode={teamSubmissionModal.eventMode}
           existingTeam={teamSubmissionModal.existingTeam}
         />
       )}
@@ -204,6 +218,7 @@ function EventSection({
   events,
   onJoinAsJudge,
   onStartScoring,
+  onBrowseDemoDay,
   onAddTeam,
   joiningEvents,
   emptyMessage,
@@ -215,6 +230,7 @@ function EventSection({
   events: Array<any>;
   onJoinAsJudge: (eventId: Id<"events">) => void;
   onStartScoring: (event: any) => void;
+  onBrowseDemoDay: (eventId: Id<"events">) => void;
   onAddTeam: (event: any) => void;
   joiningEvents: Set<Id<"events">>;
   emptyMessage: string;
@@ -240,6 +256,7 @@ function EventSection({
               event={event}
               onJoinAsJudge={onJoinAsJudge}
               onStartScoring={onStartScoring}
+              onBrowseDemoDay={onBrowseDemoDay}
               onAddTeam={onAddTeam}
               isJoining={joiningEvents.has(event._id)}
               isActiveSection={isActiveSection}
@@ -257,6 +274,7 @@ function EventCard({
   event,
   onJoinAsJudge,
   onStartScoring,
+  onBrowseDemoDay,
   onAddTeam,
   isJoining,
   isActiveSection,
@@ -266,6 +284,7 @@ function EventCard({
   event: any;
   onJoinAsJudge: (eventId: Id<"events">) => void;
   onStartScoring: (event: any) => void;
+  onBrowseDemoDay: (eventId: Id<"events">) => void;
   onAddTeam: (event: any) => void;
   isJoining: boolean;
   isActiveSection: boolean;
@@ -275,6 +294,7 @@ function EventCard({
   const userRole = event.userRole?.role;
   const isJudge = userRole === "judge";
   const isParticipant = userRole === "participant";
+  const isDemoDay = event.mode === "demo_day";
   const judgeProgress = event.judgeProgress as { completedTeams: number; totalTeams: number } | undefined;
   const hasCompletedScoring = Boolean(
     judgeProgress && judgeProgress.totalTeams > 0 && judgeProgress.completedTeams >= judgeProgress.totalTeams
@@ -296,6 +316,11 @@ function EventCard({
           <h3 className="text-lg font-heading font-semibold text-foreground group-hover:text-primary transition-colors">
             {event.name}
           </h3>
+          {isDemoDay && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-500 border border-pink-500/30">
+              Demo Day
+            </span>
+          )}
         </div>
         {userRole && (
           <span className={`text-xs px-2 py-1 rounded-full ${
@@ -313,12 +338,27 @@ function EventCard({
       
       <div className="flex justify-between text-sm text-muted-foreground mb-4">
         <span>{new Date(event.startDate).toLocaleDateString()}</span>
-        <span className="badge">{event.teamCount} teams</span>
+        <span className="badge">{event.teamCount} {isDemoDay ? "projects" : "teams"}</span>
       </div>
 
       <div className="space-y-2">
-        {/* Judge Buttons */}
-        {!isParticipant && !isPastSection && (
+        {/* Demo Day: Browse Projects Button (no sign-in required) */}
+        {isDemoDay && isActiveSection && (
+          <button
+            onClick={() => onBrowseDemoDay(event._id)}
+            className="btn-primary w-full"
+          >
+            <span className="flex items-center justify-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              Browse & Appreciate Projects
+            </span>
+          </button>
+        )}
+
+        {/* Hackathon Mode: Judge Buttons */}
+        {!isDemoDay && !isParticipant && !isPastSection && (
           <>
             {!isJudge ? (
               <button
@@ -376,8 +416,8 @@ function EventCard({
           </>
         )}
 
-        {/* Participant Buttons - Only for Active Events */}
-        {isActiveSection && !isJudge && (
+        {/* Participant Buttons - Only for Active Hackathon Events */}
+        {!isDemoDay && isActiveSection && !isJudge && (
           <button
             onClick={() => onAddTeam(event)}
             className={`w-full py-3 px-6 rounded-xl font-medium transition-all ${

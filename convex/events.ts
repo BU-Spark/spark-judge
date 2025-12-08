@@ -209,6 +209,8 @@ export const createEvent = mutation({
     tracks: v.optional(v.array(v.string())),
     judgeCode: v.optional(v.string()),
     enableCohorts: v.optional(v.boolean()),
+    mode: v.optional(v.union(v.literal("hackathon"), v.literal("demo_day"))),
+    courseCodes: v.optional(v.array(v.string())),
   },
   returns: v.id("events"),
   handler: async (ctx, args) => {
@@ -329,6 +331,8 @@ export const duplicateEvent = mutation({
       tracks: event.tracks,
       resultsReleased: false,
       judgeCode: undefined,
+      mode: event.mode,
+      courseCodes: event.courseCodes,
     });
 
     return newEventId;
@@ -362,6 +366,19 @@ export const updateEventCohorts = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     await ctx.db.patch(args.eventId, { enableCohorts: args.enableCohorts });
+    return null;
+  },
+});
+
+export const updateEventMode = mutation({
+  args: {
+    eventId: v.id("events"),
+    mode: v.union(v.literal("hackathon"), v.literal("demo_day")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(args.eventId, { mode: args.mode });
     return null;
   },
 });

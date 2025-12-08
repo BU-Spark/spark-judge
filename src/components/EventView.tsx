@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ScoringWizard } from "./ScoringWizard";
 import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
+import { DemoDayBrowse } from "./demo-day";
 
 export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: () => void }) {
   const event = useQuery(api.events.getEvent, { eventId });
@@ -102,7 +103,8 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     setJustSubmitted(true);
   };
 
-  if (event === undefined || judgeStatus === undefined || myScores === undefined || myAssignments === undefined) {
+  // Loading state - for Demo Day mode, we only need the event
+  if (event === undefined) {
     return <LoadingState label="Loading event details..." />;
   }
 
@@ -115,6 +117,16 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
         onAction={onBack}
       />
     );
+  }
+
+  // Demo Day Mode - render the browse experience (no judge auth required)
+  if (event.mode === "demo_day") {
+    return <DemoDayBrowse eventId={eventId} event={event} onBack={onBack} />;
+  }
+
+  // Hackathon Mode - requires judge authentication
+  if (judgeStatus === undefined || myScores === undefined || myAssignments === undefined) {
+    return <LoadingState label="Loading judge details..." />;
   }
 
   if (!judgeStatus) {

@@ -10,16 +10,34 @@ export const createTeam = mutation({
     description: v.string(),
     members: v.array(v.string()),
     projectUrl: v.optional(v.string()),
+    courseCode: v.optional(v.string()),
   },
   returns: v.id("teams"),
   handler: async (ctx, args) => {
     const userId = await requireAdmin(ctx);
 
+    // Get event to validate course code if provided
+    const event = await ctx.db.get(args.eventId);
+    if (!event) throw new Error("Event not found");
+
+    const isDemoDay = event.mode === "demo_day";
+
+    // Validate course code for Demo Day
+    if (isDemoDay && args.courseCode) {
+      if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
+        throw new Error("Invalid course code");
+      }
+    }
+
     // Admin team creation - need to provide required new fields with defaults
     return await ctx.db.insert("teams", {
-      ...args,
+      eventId: args.eventId,
+      name: args.name,
+      description: args.description,
+      members: args.members,
       githubUrl: args.projectUrl || "",
       track: "",
+      courseCode: args.courseCode,
       submittedBy: userId,
       submittedAt: Date.now(),
     });
@@ -32,8 +50,9 @@ export const submitTeam = mutation({
     name: v.string(),
     description: v.string(),
     members: v.array(v.string()),
-    githubUrl: v.string(),
-    track: v.string(),
+    githubUrl: v.optional(v.string()),
+    track: v.optional(v.string()),
+    courseCode: v.optional(v.string()),
     logoStorageId: v.optional(v.id("_storage")),
   },
   returns: v.id("teams"),
@@ -46,6 +65,8 @@ export const submitTeam = mutation({
     if (!event || event.status !== "active") {
       throw new Error("Can only submit teams to active events");
     }
+
+    const isDemoDay = event.mode === "demo_day";
 
     // Verify not a judge
     const judge = await ctx.db
@@ -82,19 +103,42 @@ export const submitTeam = mutation({
       throw new Error("A team with this name already exists for this event");
     }
 
-    // Validate track (use tracks if defined, otherwise fall back to categories)
-    const availableTracks =
-      event.tracks ||
-      event.categories.map((c: any) => (typeof c === "string" ? c : c.name));
-    if (!availableTracks.includes(args.track)) {
-      throw new Error("Invalid track");
+    // Validate based on event mode
+    if (isDemoDay) {
+      // Validate course code for Demo Day
+      if (!args.courseCode) {
+        throw new Error("Course code is required for Demo Day events");
+      }
+      if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
+        throw new Error("Invalid course code");
+      }
+    } else {
+      // Validate track for hackathon mode
+      if (!args.track) {
+        throw new Error("Track is required");
+      }
+      const availableTracks =
+        event.tracks ||
+        event.categories.map((c: any) => (typeof c === "string" ? c : c.name));
+      if (!availableTracks.includes(args.track)) {
+        throw new Error("Invalid track");
+      }
     }
 
-    // Validate GitHub URL is provided and correct format
-    if (!args.githubUrl || !args.githubUrl.trim()) {
-      throw new Error("GitHub URL is required");
-    }
-    if (!args.githubUrl.startsWith("https://github.com/")) {
+    // Validate GitHub URL - required for hackathon, optional for Demo Day
+    if (!isDemoDay) {
+      if (!args.githubUrl || !args.githubUrl.trim()) {
+        throw new Error("GitHub URL is required");
+      }
+      if (!args.githubUrl.startsWith("https://github.com/")) {
+        throw new Error("GitHub URL must start with https://github.com/");
+      }
+    } else if (
+      args.githubUrl &&
+      args.githubUrl.trim() &&
+      !args.githubUrl.startsWith("https://github.com/")
+    ) {
+      // For Demo Day, only validate format if URL is provided
       throw new Error("GitHub URL must start with https://github.com/");
     }
 
@@ -115,7 +159,14 @@ export const submitTeam = mutation({
     }
 
     return await ctx.db.insert("teams", {
-      ...args,
+      eventId: args.eventId,
+      name: args.name,
+      description: args.description,
+      members: args.members,
+      githubUrl: args.githubUrl || "",
+      track: args.track || "",
+      courseCode: args.courseCode,
+      logoStorageId: args.logoStorageId,
       submittedBy: userId,
       submittedAt: Date.now(),
     });
@@ -155,6 +206,7 @@ export const updateTeam = mutation({
     members: v.optional(v.array(v.string())),
     githubUrl: v.optional(v.string()),
     track: v.optional(v.string()),
+    courseCode: v.optional(v.string()),
     logoStorageId: v.optional(v.id("_storage")),
   },
   returns: v.null(),
@@ -169,16 +221,25 @@ export const updateTeam = mutation({
       throw new Error("Not authorized");
     }
 
-    // Validate track if provided
-    if (args.track) {
-      const event = await ctx.db.get(team.eventId);
-      if (!event) throw new Error("Event not found");
+    const event = await ctx.db.get(team.eventId);
+    if (!event) throw new Error("Event not found");
 
+    const isDemoDay = event.mode === "demo_day";
+
+    // Validate track if provided (hackathon mode)
+    if (args.track && !isDemoDay) {
       const availableTracks =
         event.tracks ||
         event.categories.map((c: any) => (typeof c === "string" ? c : c.name));
       if (!availableTracks.includes(args.track)) {
         throw new Error("Invalid track");
+      }
+    }
+
+    // Validate course code if provided (demo day mode)
+    if (args.courseCode && isDemoDay) {
+      if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
+        throw new Error("Invalid course code");
       }
     }
 
@@ -192,6 +253,7 @@ export const updateTeam = mutation({
     if (args.members !== undefined) updates.members = args.members;
     if (args.githubUrl !== undefined) updates.githubUrl = args.githubUrl;
     if (args.track !== undefined) updates.track = args.track;
+    if (args.courseCode !== undefined) updates.courseCode = args.courseCode;
     if (args.logoStorageId !== undefined)
       updates.logoStorageId = args.logoStorageId;
 

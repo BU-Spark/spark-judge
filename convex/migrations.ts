@@ -33,5 +33,33 @@ export const removeJudgeIsAdmin = internalMutation({
   },
 });
 
+/**
+ * Backfill existing events with mode = "hackathon" for Demo Day feature rollout.
+ * This ensures backwards compatibility - events without mode are treated as hackathons.
+ * Run this migration once after deploying the schema changes.
+ */
+export const backfillEventMode = internalMutation({
+  args: {},
+  returns: v.object({
+    message: v.string(),
+    eventsUpdated: v.number(),
+  }),
+  handler: async (ctx) => {
+    const events = await ctx.db.query("events").collect();
+    let count = 0;
 
+    for (const event of events) {
+      // Only update events that don't have a mode set
+      if (event.mode === undefined) {
+        await ctx.db.patch(event._id, { mode: "hackathon" });
+        count++;
+      }
+    }
+
+    return {
+      message: `Successfully set mode="hackathon" on ${count} events`,
+      eventsUpdated: count,
+    };
+  },
+});
 

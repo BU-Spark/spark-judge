@@ -104,9 +104,9 @@ export default function App() {
                 handleBackToLanding();
                 closeMobileMenu();
               }}
-              className="text-xl font-heading font-bold hover:text-primary transition-colors gradient-text"
+              className="text-xl font-sans font-bold hover:text-primary transition-colors"
             >
-              HackJudge
+              redeye
             </button>
             <div className="flex items-center gap-3">
               <div className="hidden md:flex gap-4 items-center">

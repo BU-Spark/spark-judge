@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as appreciations from "../appreciations.js";
 import type * as auth from "../auth.js";
 import type * as events from "../events.js";
 import type * as helpers from "../helpers.js";
@@ -20,6 +21,8 @@ import type * as http from "../http.js";
 import type * as judgeAssignments from "../judgeAssignments.js";
 import type * as migrations from "../migrations.js";
 import type * as participants from "../participants.js";
+import type * as qrCodes from "../qrCodes.js";
+import type * as qrCodesQueries from "../qrCodesQueries.js";
 import type * as router from "../router.js";
 import type * as scores from "../scores.js";
 import type * as seed from "../seed.js";
@@ -35,6 +38,7 @@ import type * as users from "../users.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  appreciations: typeof appreciations;
   auth: typeof auth;
   events: typeof events;
   helpers: typeof helpers;
@@ -42,6 +46,8 @@ declare const fullApi: ApiFromModules<{
   judgeAssignments: typeof judgeAssignments;
   migrations: typeof migrations;
   participants: typeof participants;
+  qrCodes: typeof qrCodes;
+  qrCodesQueries: typeof qrCodesQueries;
   router: typeof router;
   scores: typeof scores;
   seed: typeof seed;

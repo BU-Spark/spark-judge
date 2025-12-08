@@ -2,6 +2,14 @@ import { QueryCtx, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
 
+// Demo Day constants - exported for use in other modules
+export const DEMO_DAY_CONSTANTS = {
+  MAX_TAPS_PER_PROJECT_PER_ATTENDEE: 3,
+  MAX_TAPS_PER_ATTENDEE: 15,
+  IP_RATE_LIMIT_WINDOW_MS: 10 * 60 * 1000, // 10 minutes
+  IP_RATE_LIMIT_MAX: 100, // Max appreciations from same IP in window
+} as const;
+
 /**
  * Check if the current user is a global admin
  */

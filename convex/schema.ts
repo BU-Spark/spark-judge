@@ -41,6 +41,11 @@ const applicationTables = {
         })
       )
     ),
+    // Demo Day mode support
+    mode: v.optional(
+      v.union(v.literal("hackathon"), v.literal("demo_day"))
+    ), // undefined = "hackathon" for backwards compatibility
+    courseCodes: v.optional(v.array(v.string())), // Available course codes for Demo Day mode
   }).index("by_status", ["status"]),
 
   teams: defineTable({
@@ -55,6 +60,11 @@ const applicationTables = {
     submittedAt: v.optional(v.number()),
     projectUrl: v.optional(v.string()),
     hidden: v.optional(v.boolean()),
+    // Demo Day appreciation scores (optional, can be computed from appreciations table)
+    rawScore: v.optional(v.number()), // Total appreciations count
+    cleanScore: v.optional(v.number()), // Cleaned/validated appreciation count
+    flagged: v.optional(v.boolean()), // Flagged for suspicious activity
+    courseCode: v.optional(v.string()), // Course code for Demo Day filtering (e.g., "DS519")
   })
     .index("by_event", ["eventId"])
     .index("by_submitter", ["submittedBy"])
@@ -104,6 +114,22 @@ const applicationTables = {
     .index("by_judge_and_team", ["judgeId", "teamId"])
     .index("by_event", ["eventId"])
     .index("by_team", ["teamId"]),
+
+  // Demo Day appreciations table
+  appreciations: defineTable({
+    eventId: v.id("events"),
+    teamId: v.id("teams"), // teams function as projects
+    attendeeId: v.string(), // UUID stored client-side
+    fingerprintKey: v.string(), // SHA-256 hash (device fingerprint)
+    ipAddress: v.string(),
+    userAgent: v.string(),
+    timestamp: v.number(),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_team", ["teamId"])
+    .index("by_event_and_attendee", ["eventId", "attendeeId"])
+    .index("by_event_and_team_and_attendee", ["eventId", "teamId", "attendeeId"])
+    .index("by_ip_and_timestamp", ["ipAddress", "timestamp"]),
 };
 
 export default defineSchema({

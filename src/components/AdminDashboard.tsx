@@ -1,10 +1,11 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useState, Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 import { Id } from "../../convex/_generated/dataModel";
 import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
+import { DEFAULT_DEMO_DAY_COURSES } from "../lib/constants";
 
 type SortField = "name" | "status" | "teamCount" | "startDate";
 type SortDirection = "asc" | "desc";
@@ -332,6 +333,8 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
     { name: "Presentation", weight: 1 },
     { name: "Impact", weight: 1 },
   ]);
+  const [courseCodes, setCourseCodes] = useState<string[]>([...DEFAULT_DEMO_DAY_COURSES]);
+  const [newCourseCode, setNewCourseCode] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -341,7 +344,20 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
     tracks: "AI/ML,Web Development,Hardware,Mobile,Other",
     judgeCode: "",
     enableCohorts: false,
+    mode: "hackathon" as "hackathon" | "demo_day",
   });
+
+  const handleAddCourseCode = () => {
+    const code = newCourseCode.trim().toUpperCase();
+    if (code && !courseCodes.includes(code)) {
+      setCourseCodes([...courseCodes, code]);
+      setNewCourseCode("");
+    }
+  };
+
+  const handleRemoveCourseCode = (code: string) => {
+    setCourseCodes(courseCodes.filter((c) => c !== code));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -361,6 +377,8 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
         tracks,
         judgeCode: formData.judgeCode || undefined,
         enableCohorts: formData.enableCohorts || undefined,
+        mode: formData.mode,
+        courseCodes: formData.mode === "demo_day" ? courseCodes : undefined,
       });
       toast.success("Event created successfully!");
       onClose();
@@ -428,6 +446,39 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
             </select>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Event Mode</label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, mode: "hackathon" })}
+                className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all ${
+                  formData.mode === "hackathon"
+                    ? "bg-primary text-white"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                🏆 Hackathon
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, mode: "demo_day" })}
+                className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all ${
+                  formData.mode === "demo_day"
+                    ? "bg-pink-500 text-white"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                ❤️ Demo Day
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {formData.mode === "hackathon" 
+                ? "Traditional judging with scores and categories"
+                : "Public appreciation voting - attendees can give hearts to projects"}
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Start Date</label>
@@ -451,129 +502,194 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Judging Categories & Weights
-            </label>
-            <div className="space-y-2">
-              {categories.map((cat, index) => (
-                <div key={index} className="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    required
-                    value={cat.name}
-                    onChange={(e) => {
-                      const newCats = [...categories];
-                      newCats[index].name = e.target.value;
-                      setCategories(newCats);
-                    }}
-                    className="flex-1 px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
-                    placeholder="Category name"
-                  />
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    max="2"
-                    step="0.1"
-                    value={cat.weight}
-                    onChange={(e) => {
-                      const newCats = [...categories];
-                      newCats[index].weight = parseFloat(e.target.value) || 1;
-                      setCategories(newCats);
-                    }}
-                    className="w-24 px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
-                    placeholder="Weight"
-                  />
+          {/* Hackathon-specific fields */}
+          {formData.mode === "hackathon" && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Judging Categories & Weights
+                </label>
+                <div className="space-y-2">
+                  {categories.map((cat, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        required
+                        value={cat.name}
+                        onChange={(e) => {
+                          const newCats = [...categories];
+                          newCats[index].name = e.target.value;
+                          setCategories(newCats);
+                        }}
+                        className="flex-1 px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                        placeholder="Category name"
+                      />
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        max="2"
+                        step="0.1"
+                        value={cat.weight}
+                        onChange={(e) => {
+                          const newCats = [...categories];
+                          newCats[index].weight = parseFloat(e.target.value) || 1;
+                          setCategories(newCats);
+                        }}
+                        className="w-24 px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                        placeholder="Weight"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                        className="p-3 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
                   <button
                     type="button"
-                    onClick={() => setCategories(categories.filter((_, i) => i !== index))}
-                    className="p-3 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                    onClick={() => setCategories([...categories, { name: "", weight: 1 }])}
+                    className="btn-ghost text-sm"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    + Add Category
                   </button>
                 </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setCategories([...categories, { name: "", weight: 1 }])}
-                className="btn-ghost text-sm"
-              >
-                + Add Category
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Weight range: 0-2. Higher weights increase the category's impact on the total score.
-            </p>
-          </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Weight range: 0-2. Higher weights increase the category's impact on the total score.
+                </p>
+              </div>
 
-          <div>
-            <label className="flex items-center gap-2 mb-3">
-              <input
-                type="checkbox"
-                checked={useTracksAsAwards}
-                onChange={(e) => setUseTracksAsAwards(e.target.checked)}
-                className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
-              />
-              <span className="text-sm font-medium text-foreground">
-                Use awards as tracks (teams choose from same list)
-              </span>
-            </label>
-            
-            {!useTracksAsAwards && (
-              <>
+              <div>
+                <label className="flex items-center gap-2 mb-3">
+                  <input
+                    type="checkbox"
+                    checked={useTracksAsAwards}
+                    onChange={(e) => setUseTracksAsAwards(e.target.checked)}
+                    className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
+                  />
+                  <span className="text-sm font-medium text-foreground">
+                    Use awards as tracks (teams choose from same list)
+                  </span>
+                </label>
+                
+                {!useTracksAsAwards && (
+                  <>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Tracks (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.tracks}
+                      onChange={(e) => setFormData({ ...formData, tracks: e.target.value })}
+                      className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                      placeholder="AI/ML, Web Development, Hardware..."
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      These are the tracks teams can choose when registering
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 mb-3">
+                  <input
+                    type="checkbox"
+                    checked={formData.enableCohorts}
+                    onChange={(e) => setFormData({ ...formData, enableCohorts: e.target.checked })}
+                    className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
+                  />
+                  <span className="text-sm font-medium text-foreground">
+                    Enable Multiple Judging Cohorts
+                  </span>
+                </label>
+                <p className="text-xs text-muted-foreground ml-6 mb-4">
+                  Judges will select their own teams to judge (for large events with 40+ teams)
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Tracks (comma-separated)
+                  Judge Code (Optional)
                 </label>
                 <input
                   type="text"
-                  required
-                  value={formData.tracks}
-                  onChange={(e) => setFormData({ ...formData, tracks: e.target.value })}
+                  value={formData.judgeCode}
+                  onChange={(e) => setFormData({ ...formData, judgeCode: e.target.value })}
                   className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
-                  placeholder="AI/ML, Web Development, Hardware..."
+                  placeholder="secret-code-123"
                 />
                 <p className="text-xs text-muted-foreground mt-2">
-                  These are the tracks teams can choose when registering
+                  If set, judges must enter this code to start judging active events
                 </p>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
 
-          <div>
-            <label className="flex items-center gap-2 mb-3">
-              <input
-                type="checkbox"
-                checked={formData.enableCohorts}
-                onChange={(e) => setFormData({ ...formData, enableCohorts: e.target.checked })}
-                className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
-              />
-              <span className="text-sm font-medium text-foreground">
-                Enable Multiple Judging Cohorts
-              </span>
-            </label>
-            <p className="text-xs text-muted-foreground ml-6 mb-4">
-              Judges will select their own teams to judge (for large events with 40+ teams)
-            </p>
-          </div>
+          {/* Demo Day-specific fields */}
+          {formData.mode === "demo_day" && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Course Codes
+              </label>
+              <p className="text-xs text-muted-foreground mb-3">
+                Teams will select from these courses when submitting their projects.
+              </p>
+              
+              {/* Current course codes */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {courseCodes.map((code) => (
+                  <span
+                    key={code}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-pink-500/10 text-pink-600 dark:text-pink-400 rounded-lg text-sm font-medium"
+                  >
+                    {code}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCourseCode(code)}
+                      className="hover:text-pink-800 dark:hover:text-pink-200 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                ))}
+                {courseCodes.length === 0 && (
+                  <span className="text-sm text-muted-foreground italic">No courses added</span>
+                )}
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Judge Code (Optional)
-            </label>
-            <input
-              type="text"
-              value={formData.judgeCode}
-              onChange={(e) => setFormData({ ...formData, judgeCode: e.target.value })}
-              className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
-              placeholder="secret-code-123"
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              If set, judges must enter this code to start judging active events
-            </p>
-          </div>
+              {/* Add new course code */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCourseCode}
+                  onChange={(e) => setNewCourseCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddCourseCode();
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 bg-background border border-border rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all text-foreground"
+                  placeholder="Add course code (e.g., CS101)"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCourseCode}
+                  className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-xl font-medium transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="sticky bottom-0 bg-background border-t border-border -mx-6 -mb-6 p-6 flex gap-4">
             <button
@@ -883,7 +999,9 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const event = useQuery(api.events.getEvent, { eventId });
   const eventScores = useQuery(api.scores.getEventScores, { eventId });
   const detailedScores = useQuery(api.scores.getDetailedEventScores, { eventId });
+  const appreciationSummary = useQuery(api.appreciations.getEventAppreciationSummary, { eventId });
   const updateEventStatus = useMutation(api.events.updateEventStatus);
+  const updateEventMode = useMutation(api.events.updateEventMode);
   const duplicateEvent = useMutation(api.events.duplicateEvent);
   const removeEvent = useMutation(api.events.removeEvent);
   const createTeam = useMutation(api.teams.createTeam);
@@ -892,6 +1010,8 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const hideTeam = useMutation(api.teams.hideTeam);
   const removeTeam = useMutation(api.teams.removeTeam);
 
+  const generateQrZip = useAction(api.qrCodes.generateQrCodeZip);
+
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [showSelectWinners, setShowSelectWinners] = useState(false);
   const [teamMenuOpen, setTeamMenuOpen] = useState<Id<"teams"> | null>(null);
@@ -899,10 +1019,9 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
   const [isRemovingEvent, setIsRemovingEvent] = useState(false);
   const [isDuplicatingEvent, setIsDuplicatingEvent] = useState(false);
+  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
 
-  // Debug logging
-  console.log('EventManagementModal - detailedScores:', detailedScores);
-  console.log('EventManagementModal - event:', event?.name, 'teams:', event?.teams?.length);
+  const isDemoDayMode = event?.mode === "demo_day";
 
   if (!event) {
     return null;
@@ -914,6 +1033,89 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
       toast.success("Event status updated!");
     } catch (error) {
       toast.error("Failed to update status");
+    }
+  };
+
+  const handleModeChange = async (mode: "hackathon" | "demo_day") => {
+    try {
+      await updateEventMode({ eventId, mode });
+      toast.success(`Event mode changed to ${mode === "demo_day" ? "Demo Day" : "Hackathon"}!`);
+    } catch (error) {
+      toast.error("Failed to update mode");
+    }
+  };
+
+  const handleExportAppreciationsCsv = () => {
+    if (!appreciationSummary) return;
+    
+    const headers = ["Team Name", "Course Code", "Total Appreciations", "Unique Attendees"];
+    const rows = appreciationSummary.teams.map(team => [
+      team.teamName,
+      team.courseCode || "",
+      team.rawScore.toString(),
+      // We don't have unique attendees per team in summary, use rawScore as proxy
+      team.rawScore.toString(),
+    ]);
+    
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+    
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${event?.name || "event"}_appreciations.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("CSV exported!");
+  };
+
+  const handleDownloadQrCodes = async () => {
+    if (!event) return;
+    
+    setIsGeneratingQr(true);
+    try {
+      // Get the current origin for building URLs
+      const baseUrl = window.location.origin;
+      
+      const result = await generateQrZip({
+        eventId,
+        baseUrl,
+      });
+      
+      if (!result.success || !result.zipBase64) {
+        toast.error(result.error || "Failed to generate QR codes");
+        return;
+      }
+      
+      // Convert base64 to blob and download
+      const binaryString = atob(result.zipBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: "application/zip" });
+      
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", result.filename || "qr-codes.zip");
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success("QR codes downloaded!");
+    } catch (error) {
+      console.error("Error downloading QR codes:", error);
+      toast.error("Failed to download QR codes");
+    } finally {
+      setIsGeneratingQr(false);
     }
   };
 
@@ -977,8 +1179,15 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
             </button>
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between pr-12">
               <div>
-                <h2 className="text-3xl font-heading font-bold text-foreground">{event.name}</h2>
-                <p className="text-muted-foreground mt-1">Manage event settings and teams</p>
+                <div className="flex items-center gap-3 mb-1">
+                  <h2 className="text-3xl font-heading font-bold text-foreground">{event.name}</h2>
+                  {isDemoDayMode && (
+                    <span className="badge bg-pink-500/20 text-pink-500 border-pink-500/30">
+                      Demo Day
+                    </span>
+                  )}
+                </div>
+                <p className="text-muted-foreground">Manage event settings and teams</p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
@@ -1035,7 +1244,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Scores
+              {isDemoDayMode ? "Appreciations" : "Scores"}
             </button>
           </div>
         </div>
@@ -1045,28 +1254,65 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
             <>
               {/* Event Status */}
               <div className="card p-6">
-            <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Event Status
-            </h3>
-            <div className="flex gap-3 flex-wrap">
-              {(["upcoming", "active", "past"] as const).map((status) => (
-                <button
-                  key={status}
-                  onClick={() => handleStatusChange(status)}
-                  className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-200 ${
-                    event.status === status
-                      ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105"
-                  }`}
-                >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
+                <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Event Status
+                </h3>
+                <div className="flex gap-3 flex-wrap">
+                  {(["upcoming", "active", "past"] as const).map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => handleStatusChange(status)}
+                      className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                        event.status === status
+                          ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105"
+                      }`}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Event Mode */}
+              <div className="card p-6">
+                <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                  </svg>
+                  Event Mode
+                </h3>
+                <div className="flex gap-3 flex-wrap">
+                  <button
+                    onClick={() => handleModeChange("hackathon")}
+                    className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                      !isDemoDayMode
+                        ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105"
+                    }`}
+                  >
+                    🏆 Hackathon
+                  </button>
+                  <button
+                    onClick={() => handleModeChange("demo_day")}
+                    className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                      isDemoDayMode
+                        ? "bg-pink-500 text-white shadow-lg shadow-pink-500/30 scale-105"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105"
+                    }`}
+                  >
+                    ❤️ Demo Day
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  {isDemoDayMode 
+                    ? "Public appreciation voting - attendees can give hearts to projects without signing in"
+                    : "Traditional judging with scores and categories - requires judge registration"}
+                </p>
+              </div>
 
           {/* Teams */}
           <div className="card p-6">
@@ -1109,6 +1355,11 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                           {(team as any).hidden && (
                             <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-xs rounded-full">
                               Hidden
+                            </span>
+                          )}
+                          {isDemoDayMode && (team as any).courseCode && (
+                            <span className="px-2 py-0.5 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 text-xs rounded-full">
+                              {(team as any).courseCode}
                             </span>
                           )}
                         </div>
@@ -1174,8 +1425,8 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
             </div>
           </div>
 
-          {/* Scores */}
-          {eventScores && eventScores.length > 0 && (
+          {/* Scores - only show for hackathon mode */}
+          {!isDemoDayMode && eventScores && eventScores.length > 0 && (
             <div className="card p-6">
               <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1210,6 +1461,17 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
 
               {/* Actions */}
               <div className="flex gap-3 flex-wrap">
+                {event.status === "active" && (
+                  <button
+                    onClick={() => handleStatusChange("past")}
+                    className="flex-1 min-w-[200px] bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Finish Event
+                  </button>
+                )}
                 <button
                   onClick={() => setShowSelectWinners(true)}
                   className="flex-1 min-w-[200px] btn-secondary flex items-center justify-center gap-2"
@@ -1235,28 +1497,133 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
 
           {activeTab === 'scores' && (
             <>
-              {detailedScores ? (
-                <ScoringDashboard 
-                  scores={detailedScores}
-                  viewMode={viewMode}
-                  setViewMode={setViewMode}
-                />
-              ) : (
-                <div className="card p-12 text-center">
-                  <div className="text-6xl mb-4">📊</div>
-                  <h3 className="text-2xl font-heading font-bold text-foreground mb-2">No Scores Yet</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Judges haven't submitted any scores for this event yet.
-                  </p>
-                  <div className="max-w-md mx-auto text-left bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
-                    <p className="font-semibold mb-2">💡 To see demo scores:</p>
-                    <ol className="list-decimal list-inside space-y-1">
-                      <li>Open your Convex dashboard</li>
-                      <li>Go to Functions → seed:seedJudgeScores</li>
-                      <li>Click "Run" to generate demo data</li>
-                    </ol>
+              {isDemoDayMode ? (
+                // Demo Day Appreciations View
+                appreciationSummary ? (
+                  <div className="space-y-6">
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="card p-6 text-center">
+                        <div className="text-3xl font-bold text-pink-500">{appreciationSummary.totalAppreciations}</div>
+                        <div className="text-sm text-muted-foreground mt-1">Total Appreciations</div>
+                      </div>
+                      <div className="card p-6 text-center">
+                        <div className="text-3xl font-bold text-foreground">{appreciationSummary.uniqueAttendees}</div>
+                        <div className="text-sm text-muted-foreground mt-1">Unique Attendees</div>
+                      </div>
+                      <div className="card p-6 text-center">
+                        <div className="text-3xl font-bold text-foreground">{appreciationSummary.teams.length}</div>
+                        <div className="text-sm text-muted-foreground mt-1">Projects</div>
+                      </div>
+                    </div>
+
+                    {/* Export Buttons */}
+                    <div className="flex justify-end gap-3">
+                      <button
+                        onClick={handleExportAppreciationsCsv}
+                        className="btn-secondary flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Export CSV
+                      </button>
+                      <button
+                        onClick={() => void handleDownloadQrCodes()}
+                        disabled={isGeneratingQr}
+                        className="bg-pink-500 hover:bg-pink-600 text-white font-medium px-4 py-2 rounded-xl transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isGeneratingQr ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                            </svg>
+                            Download QR Codes
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Team Rankings */}
+                    <div className="card p-6">
+                      <h4 className="text-xl font-heading font-bold text-foreground mb-4">Project Rankings</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                          <thead className="bg-muted/50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Rank</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Project</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Course</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Appreciations</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {appreciationSummary.teams.map((team, index) => (
+                              <tr key={team.teamId} className={index % 2 === 0 ? 'bg-gray-50 dark:bg-white/[0.03]' : ''}>
+                                <td className="px-4 py-3 text-sm font-bold text-foreground">
+                                  <span className="flex items-center gap-2">
+                                    #{index + 1}
+                                    {index === 0 && <span className="text-lg">🥇</span>}
+                                    {index === 1 && <span className="text-lg">🥈</span>}
+                                    {index === 2 && <span className="text-lg">🥉</span>}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm font-semibold text-foreground">{team.teamName}</td>
+                                <td className="px-4 py-3 text-sm text-muted-foreground">
+                                  {team.courseCode || "-"}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-pink-500">❤️</span>
+                                    <span className="font-bold text-foreground">{team.rawScore}</span>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="card p-12 text-center">
+                    <div className="text-6xl mb-4">❤️</div>
+                    <h3 className="text-2xl font-heading font-bold text-foreground mb-2">No Appreciations Yet</h3>
+                    <p className="text-muted-foreground">
+                      Attendees haven't given any appreciations yet. Share the event link to get started!
+                    </p>
+                  </div>
+                )
+              ) : (
+                // Hackathon Scores View
+                detailedScores ? (
+                  <ScoringDashboard 
+                    scores={detailedScores}
+                    viewMode={viewMode}
+                    setViewMode={setViewMode}
+                  />
+                ) : (
+                  <div className="card p-12 text-center">
+                    <div className="text-6xl mb-4">📊</div>
+                    <h3 className="text-2xl font-heading font-bold text-foreground mb-2">No Scores Yet</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Judges haven't submitted any scores for this event yet.
+                    </p>
+                    <div className="max-w-md mx-auto text-left bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
+                      <p className="font-semibold mb-2">💡 To see demo scores:</p>
+                      <ol className="list-decimal list-inside space-y-1">
+                        <li>Open your Convex dashboard</li>
+                        <li>Go to Functions → seed:seedJudgeScores</li>
+                        <li>Click "Run" to generate demo data</li>
+                      </ol>
+                    </div>
+                  </div>
+                )
               )}
             </>
           )}
@@ -1268,6 +1635,8 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
           eventId={eventId}
           onClose={() => setShowAddTeam(false)}
           onSubmit={createTeam}
+          eventMode={event.mode}
+          courseCodes={event.courseCodes || []}
         />
       )}
 
@@ -1340,17 +1709,23 @@ function AddTeamModal({
   eventId,
   onClose,
   onSubmit,
+  eventMode,
+  courseCodes,
 }: {
   eventId: Id<"events">;
   onClose: () => void;
   onSubmit: any;
+  eventMode?: "hackathon" | "demo_day";
+  courseCodes?: string[];
 }) {
+  const isDemoDay = eventMode === "demo_day";
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     members: "",
     projectUrl: "",
+    courseCode: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1362,7 +1737,10 @@ function AddTeamModal({
         name: formData.name,
         description: formData.description,
         members: formData.members.split(",").map((m) => m.trim()),
-        projectUrl: formData.projectUrl || undefined,
+        ...(isDemoDay 
+          ? { courseCode: formData.courseCode || undefined }
+          : { projectUrl: formData.projectUrl || undefined }
+        ),
       });
       toast.success("Team added successfully!");
       onClose();
@@ -1427,16 +1805,38 @@ function AddTeamModal({
               placeholder="Alice Smith, Bob Johnson, Carol Lee"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Project URL (optional)</label>
-            <input
-              type="url"
-              value={formData.projectUrl}
-              onChange={(e) => setFormData({ ...formData, projectUrl: e.target.value })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
-              placeholder="https://github.com/team/project"
-            />
-          </div>
+          {/* Course Code (Demo Day) or Project URL (Hackathon) */}
+          {isDemoDay ? (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Course <span className="text-red-500">*</span>
+              </label>
+              <select
+                required
+                value={formData.courseCode}
+                onChange={(e) => setFormData({ ...formData, courseCode: e.target.value })}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all text-foreground"
+              >
+                <option value="">Select course...</option>
+                {(courseCodes || []).map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Project URL (optional)</label>
+              <input
+                type="url"
+                value={formData.projectUrl}
+                onChange={(e) => setFormData({ ...formData, projectUrl: e.target.value })}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                placeholder="https://github.com/team/project"
+              />
+            </div>
+          )}
           <div className="flex gap-3 pt-2">
             <button
               type="submit"

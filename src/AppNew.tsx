@@ -7,6 +7,7 @@ import { LandingPage } from "./components/LandingPageNew";
 import { EventView } from "./components/EventView";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { ProfilePage } from "./components/ProfilePage";
+import { TeamPage } from "./components/TeamPage";
 import { useState, useEffect } from "react";
 import { Id } from "../convex/_generated/dataModel";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -28,11 +29,11 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<LandingPageWrapper />} />
           <Route path="/event/:eventId" element={<EventViewWrapper />} />
+          {/* Dedicated team page - direct route */}
+          <Route path="/event/:eventId/team/:teamId" element={<TeamPageWrapper />} />
           <Route path="/admin" element={<AdminDashboardWrapper />} />
           <Route path="/profile" element={<ProfilePageWrapper />} />
-          {/* Deep link route for QR codes: /team/:teamId redirects to /event/:eventId */}
-          <Route path="/team/:teamId" element={<TeamRedirect />} />
-          {/* Legacy route format from QR codes */}
+          {/* Deep link redirect for QR codes with slug format */}
           <Route path="/event/:eventSlug/:teamSlug/:teamId" element={<TeamRedirect />} />
           {/* Catch-all redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -286,15 +287,33 @@ function ProfilePageWrapper() {
 }
 
 /**
+ * Wrapper for TeamPage - dedicated page for a single team/project
+ */
+function TeamPageWrapper() {
+  const { eventId, teamId } = useParams<{ eventId: string; teamId: string }>();
+
+  if (!eventId || !teamId) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <TeamPage
+      eventId={eventId as Id<"events">}
+      teamId={teamId as Id<"teams">}
+    />
+  );
+}
+
+/**
  * Handles deep linking from QR codes.
- * Looks up the team's event and redirects to it.
- * Supports both /team/:teamId and /event/:slug/:slug/:teamId formats.
+ * Looks up the team's event and redirects to the team page.
+ * Handles /event/:slug/:slug/:teamId format from QR codes.
  */
 function TeamRedirect() {
   const params = useParams<{ teamId: string; eventSlug?: string; teamSlug?: string }>();
   const navigate = useNavigate();
   
-  // Get teamId from either route format
+  // Get teamId from the route
   const teamId = params.teamId;
   
   // Look up the event for this team
@@ -304,15 +323,15 @@ function TeamRedirect() {
   );
 
   useEffect(() => {
-    if (eventId) {
-      // Redirect to the event page
-      void navigate(`/event/${eventId}`, { replace: true });
+    if (eventId && teamId) {
+      // Redirect to the dedicated team page
+      void navigate(`/event/${eventId}/team/${teamId}`, { replace: true });
     } else if (eventId === null) {
       // Team not found, redirect to home
       void navigate("/", { replace: true });
     }
     // If eventId is undefined, we're still loading
-  }, [eventId, navigate]);
+  }, [eventId, teamId, navigate]);
 
   return (
     <div className="flex justify-center items-center min-h-[60vh]">

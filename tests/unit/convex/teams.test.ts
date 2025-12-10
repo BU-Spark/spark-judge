@@ -124,5 +124,34 @@ describe('teams business logic', () => {
       expect(allTeams.length).toBe(2);
     });
   });
+
+  describe('getTeamEventId', () => {
+    it('should return the correct event ID for a valid team ID', () => {
+      // Simulating the getTeamEventId query logic
+      const mockTeam = {
+        _id: 'team123',
+        name: 'Test Team',
+        eventId: 'event456',
+        hidden: false,
+      };
+
+      // Simulate database lookup
+      const team = mockTeam; // In real handler: ctx.db.get(args.teamId)
+      const eventId = team ? team.eventId : null;
+
+      expect(eventId).toBe('event456');
+    });
+
+    it('should return null for a non-existent team ID', () => {
+      // Simulating the getTeamEventId query logic when team doesn't exist
+      const mockTeam = null; // Team not found in database
+
+      // Simulate database lookup
+      const team = mockTeam; // In real handler: ctx.db.get(args.teamId)
+      const eventId = team ? team.eventId : null;
+
+      expect(eventId).toBeNull();
+    });
+  });
 });
 

@@ -429,12 +429,8 @@ export const generateTeamQrCode = action({
       return { success: false, error: "Team not found" };
     }
 
-    // Create slugs for readable URLs
-    const eventSlug = createSlug(event.name);
-    const teamSlug = createSlug(team.name);
-
-    // Build the appreciation URL: /event/:eventSlug/:teamSlug/:teamId
-    const appreciationUrl: string = `${args.baseUrl}/event/${eventSlug}/${teamSlug}/${args.teamId}`;
+    // Build the appreciation URL: /event/:eventId/team/:teamId
+    const appreciationUrl: string = `${args.baseUrl}/event/${args.eventId}/team/${args.teamId}`;
 
     try {
       // Generate labeled SVG QR code
@@ -543,15 +539,15 @@ export const generateQrCodeZip = action({
       for (const team of teams) {
         if (team.hidden) continue;
 
-        // Create a slug from the team name
+        // Create a slug from the team name for filename
         const teamSlug = createSlug(team.name);
 
         // Build filename (now SVG)
         const coursePrefix: string = team.courseCode || "general";
         const qrFilename: string = `${coursePrefix}_${teamSlug}_${team._id.slice(-4)}.svg`;
 
-        // Build appreciation URL: /event/:eventSlug/:teamSlug/:teamId
-        const appreciationUrl: string = `${args.baseUrl}/event/${eventSlug}/${teamSlug}/${team._id}`;
+        // Build appreciation URL: /event/:eventId/team/:teamId
+        const appreciationUrl: string = `${args.baseUrl}/event/${args.eventId}/team/${team._id}`;
 
         // Generate labeled SVG QR code
         const svg = await generateLabeledQrSvg(

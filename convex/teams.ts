@@ -354,3 +354,62 @@ export const getTeamEventId = query({
     return team.eventId;
   },
 });
+
+/**
+ * Get a team by ID with event info.
+ * Used for the dedicated team page.
+ */
+export const getTeamById = query({
+  args: { teamId: v.id("teams") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("teams"),
+      eventId: v.id("events"),
+      name: v.string(),
+      description: v.string(),
+      members: v.array(v.string()),
+      githubUrl: v.optional(v.string()),
+      courseCode: v.optional(v.string()),
+      hidden: v.optional(v.boolean()),
+      logoUrl: v.union(v.null(), v.string()),
+      event: v.object({
+        _id: v.id("events"),
+        name: v.string(),
+        mode: v.optional(
+          v.union(v.literal("hackathon"), v.literal("demo_day"))
+        ),
+      }),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) return null;
+
+    const event = await ctx.db.get(team.eventId);
+    if (!event) return null;
+
+    // Get logo URL if exists
+    let logoUrl = null;
+    if (team.logoStorageId) {
+      logoUrl = await ctx.storage.getUrl(team.logoStorageId);
+    }
+
+    return {
+      _id: team._id,
+      eventId: team.eventId,
+      name: team.name,
+      description: team.description,
+      members: team.members,
+      githubUrl: team.githubUrl,
+      courseCode: team.courseCode,
+      hidden: team.hidden,
+      logoUrl,
+      event: {
+        _id: event._id,
+        name: event.name,
+        mode: event.mode,
+      },
+    };
+  },
+});

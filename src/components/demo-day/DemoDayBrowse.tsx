@@ -6,6 +6,7 @@ import { useAttendeeIdentity } from "../../lib/demoDayIdentity";
 import { useAppreciation } from "../../lib/demoDayApi";
 import { toast } from "sonner";
 import { LoadingState } from "../ui/LoadingState";
+import { Link } from "react-router-dom";
 
 interface DemoDayBrowseProps {
   eventId: Id<"events">;
@@ -401,9 +402,12 @@ function TeamCard({
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-heading font-semibold text-foreground text-base truncate">
+            <Link
+              to={`/event/${eventId}/team/${team._id}`}
+              className="font-heading font-semibold text-foreground text-base truncate block hover:text-primary transition-colors"
+            >
               {team.name}
-            </h3>
+            </Link>
             {team.courseCode && (
               <span className="inline-block px-2 py-0.5 bg-muted text-muted-foreground text-[10px] rounded mt-1">
                 {team.courseCode}
@@ -421,47 +425,43 @@ function TeamCard({
           {team.description}
         </p>
 
-        {/* Appreciation Button */}
-        <div className="flex items-center justify-between pt-3 border-t border-border">
-          <div className="text-xs text-muted-foreground font-medium">
-            {attendeeCount} / {maxPerTeam} given
-          </div>
-          <button
-            onClick={handleAppreciate}
-            disabled={!canAppreciate || isLoading}
-            className={`
-              flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all shadow-sm
-              ${
-                canAppreciate
-                  ? "bg-pink-500 hover:bg-pink-600 text-white hover:shadow-md active:scale-95"
-                  : "bg-muted text-muted-foreground cursor-not-allowed shadow-none"
-              }
-              ${isLoading ? "opacity-70" : ""}
-            `}
+        {/* Actions */}
+        <div className="flex items-center justify-between pt-3 border-t border-border gap-2">
+          <Link
+            to={`/event/${eventId}/team/${team._id}`}
+            className="text-xs text-primary hover:underline font-medium"
           >
-            {isLoading ? (
-              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <svg
-                className="w-3.5 h-3.5"
-                fill={canAppreciate ? "currentColor" : "none"}
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                />
-              </svg>
-            )}
-            {attendeeCount >= maxPerTeam
-              ? "Max Given"
-              : remainingBudget <= 0
-                ? "No Budget"
-                : "Appreciate"}
-          </button>
+            View Details →
+          </Link>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {attendeeCount}/{maxPerTeam}
+            </span>
+            <button
+              onClick={handleAppreciate}
+              disabled={!canAppreciate || isLoading}
+              className={`
+                flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all shadow-sm
+                ${
+                  canAppreciate
+                    ? "bg-pink-500 hover:bg-pink-600 text-white hover:shadow-md active:scale-95"
+                    : "bg-muted text-muted-foreground cursor-not-allowed shadow-none"
+                }
+                ${isLoading ? "opacity-70" : ""}
+              `}
+            >
+              {isLoading ? (
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span>❤️</span>
+              )}
+              {attendeeCount >= maxPerTeam
+                ? "Max"
+                : remainingBudget <= 0
+                  ? "None Left"
+                  : "+1"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -87,6 +87,69 @@ export const getTeamAppreciations = query({
 });
 
 /**
+ * Get appreciation data for a single team.
+ * Used for the dedicated team page.
+ */
+export const getSingleTeamAppreciation = query({
+  args: {
+    eventId: v.id("events"),
+    teamId: v.id("teams"),
+    attendeeId: v.optional(v.string()),
+  },
+  returns: v.object({
+    totalCount: v.number(),
+    attendeeCount: v.number(),
+    attendeeTotalCount: v.number(),
+    attendeeRemainingBudget: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!event) {
+      throw new Error("Event not found");
+    }
+
+    // Get all appreciations for this team
+    const teamAppreciations = await ctx.db
+      .query("appreciations")
+      .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
+      .collect();
+
+    const totalCount = teamAppreciations.length;
+
+    // Get attendee's appreciations if attendeeId provided
+    let attendeeCount = 0;
+    let attendeeTotalCount = 0;
+    if (args.attendeeId) {
+      // Count for this specific team
+      attendeeCount = teamAppreciations.filter(
+        (a) => a.attendeeId === args.attendeeId
+      ).length;
+
+      // Count total across all teams for budget calculation
+      const allAttendeeAppreciations = await ctx.db
+        .query("appreciations")
+        .withIndex("by_event_and_attendee", (q) =>
+          q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId!)
+        )
+        .collect();
+      attendeeTotalCount = allAttendeeAppreciations.length;
+    }
+
+    const attendeeRemainingBudget = Math.max(
+      0,
+      MAX_TAPS_PER_ATTENDEE - attendeeTotalCount
+    );
+
+    return {
+      totalCount,
+      attendeeCount,
+      attendeeTotalCount,
+      attendeeRemainingBudget,
+    };
+  },
+});
+
+/**
  * Get appreciation summary for admin dashboard.
  * Returns aggregated data for all teams with course codes.
  */
@@ -232,7 +295,9 @@ export const createAppreciationInternal = internalMutation({
               await ctx.db
                 .query("appreciations")
                 .withIndex("by_event_and_attendee", (q) =>
-                  q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId)
+                  q
+                    .eq("eventId", args.eventId)
+                    .eq("attendeeId", args.attendeeId)
                 )
                 .collect()
             ).length
@@ -273,8 +338,7 @@ export const createAppreciationInternal = internalMutation({
         error: "Too many requests from this network. Please try again later.",
         remainingForTeam:
           MAX_TAPS_PER_PROJECT_PER_ATTENDEE - attendeeTeamAppreciations.length,
-        remainingTotal:
-          MAX_TAPS_PER_ATTENDEE - attendeeAllAppreciations.length,
+        remainingTotal: MAX_TAPS_PER_ATTENDEE - attendeeAllAppreciations.length,
       };
     }
 
@@ -290,13 +354,12 @@ export const createAppreciationInternal = internalMutation({
     });
 
     // 7. Optionally update team's rawScore (denormalized count)
-    const newTeamCount =
-      (
-        await ctx.db
-          .query("appreciations")
-          .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
-          .collect()
-      ).length;
+    const newTeamCount = (
+      await ctx.db
+        .query("appreciations")
+        .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
+        .collect()
+    ).length;
     await ctx.db.patch(args.teamId, { rawScore: newTeamCount });
 
     return {
@@ -306,7 +369,8 @@ export const createAppreciationInternal = internalMutation({
         MAX_TAPS_PER_PROJECT_PER_ATTENDEE -
         attendeeTeamAppreciations.length -
         1,
-      remainingTotal: MAX_TAPS_PER_ATTENDEE - attendeeAllAppreciations.length - 1,
+      remainingTotal:
+        MAX_TAPS_PER_ATTENDEE - attendeeAllAppreciations.length - 1,
     };
   },
 });
@@ -384,7 +448,9 @@ export const createAppreciation = mutation({
               await ctx.db
                 .query("appreciations")
                 .withIndex("by_event_and_attendee", (q) =>
-                  q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId)
+                  q
+                    .eq("eventId", args.eventId)
+                    .eq("attendeeId", args.attendeeId)
                 )
                 .collect()
             ).length
@@ -422,13 +488,12 @@ export const createAppreciation = mutation({
     });
 
     // 6. Update team's rawScore
-    const newTeamCount =
-      (
-        await ctx.db
-          .query("appreciations")
-          .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
-          .collect()
-      ).length;
+    const newTeamCount = (
+      await ctx.db
+        .query("appreciations")
+        .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
+        .collect()
+    ).length;
     await ctx.db.patch(args.teamId, { rawScore: newTeamCount });
 
     return {
@@ -437,7 +502,8 @@ export const createAppreciation = mutation({
         MAX_TAPS_PER_PROJECT_PER_ATTENDEE -
         attendeeTeamAppreciations.length -
         1,
-      remainingTotal: MAX_TAPS_PER_ATTENDEE - attendeeAllAppreciations.length - 1,
+      remainingTotal:
+        MAX_TAPS_PER_ATTENDEE - attendeeAllAppreciations.length - 1,
     };
   },
 });
@@ -482,8 +548,9 @@ export const getAppreciationsCsvData = query({
       const teamAppreciations = allAppreciations.filter(
         (a) => a.teamId === team._id
       );
-      const uniqueAttendees = new Set(teamAppreciations.map((a) => a.attendeeId))
-        .size;
+      const uniqueAttendees = new Set(
+        teamAppreciations.map((a) => a.attendeeId)
+      ).size;
 
       return {
         teamId: team._id,
@@ -500,4 +567,3 @@ export const getAppreciationsCsvData = query({
     return csvData;
   },
 });
-

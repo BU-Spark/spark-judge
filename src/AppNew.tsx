@@ -69,11 +69,6 @@ function Layout() {
 
     return (
       <>
-        {variant === "mobile" && (
-          <div className="flex justify-end mb-2">
-            <ThemeToggle />
-          </div>
-        )}
         <Authenticated>
           <button
             onClick={() => {
@@ -129,8 +124,8 @@ function Layout() {
               HackJudge
             </Link>
             <div className="flex items-center gap-3">
+              <ThemeToggle />
               <div className="hidden md:flex gap-4 items-center">
-                <ThemeToggle />
                 {renderNavActions("desktop")}
               </div>
               <button

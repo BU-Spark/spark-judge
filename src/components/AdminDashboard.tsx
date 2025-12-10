@@ -182,9 +182,9 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
   const allEvents = [...events.active, ...events.upcoming, ...events.past];
 
   const statusStyles: Record<"upcoming" | "active" | "past", string> = {
-    active: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800",
-    upcoming: "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800",
-    past: "bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700",
+    active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+    upcoming: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
+    past: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
   };
 
   const handleRemoveEvent = async (eventId: Id<"events">, name: string) => {
@@ -236,7 +236,7 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
   }
 
   return (
-    <div className="card-static overflow-hidden fade-in p-0 bg-white dark:bg-zinc-900 shadow-sm border border-border rounded-lg">
+    <div className="card-static overflow-hidden fade-in p-0 bg-card shadow-sm border border-border rounded-lg">
       <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead className="bg-muted border-b border-border">
@@ -1032,7 +1032,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
           {activeTab === 'overview' && (
             <>
               {/* Event Status */}
-              <div className="card-static p-6 bg-white dark:bg-zinc-900">
+              <div className="card-static p-6 bg-card">
                 <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1057,7 +1057,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
               </div>
 
               {/* Event Mode */}
-              <div className="card-static p-6 bg-white dark:bg-zinc-900">
+              <div className="card-static p-6 bg-card">
                 <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
@@ -1094,7 +1094,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
               </div>
 
           {/* Teams */}
-          <div className="card-static p-6 bg-white dark:bg-zinc-900">
+          <div className="card-static p-6 bg-card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1206,7 +1206,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
 
           {/* Scores - only show for hackathon mode */}
           {!isDemoDayMode && eventScores && eventScores.length > 0 && (
-            <div className="card-static p-6 bg-white dark:bg-zinc-900">
+            <div className="card-static p-6 bg-card">
               <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -1282,15 +1282,15 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                   <div className="space-y-6">
                     {/* Summary Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="card-static p-6 bg-white dark:bg-zinc-900 text-center">
+                      <div className="card-static p-6 bg-card text-center">
                         <div className="text-3xl font-bold text-pink-500">{appreciationSummary.totalAppreciations}</div>
                         <div className="text-sm text-muted-foreground mt-1">Total Appreciations</div>
                       </div>
-                      <div className="card-static p-6 bg-white dark:bg-zinc-900 text-center">
+                      <div className="card-static p-6 bg-card text-center">
                         <div className="text-3xl font-bold text-foreground">{appreciationSummary.uniqueAttendees}</div>
                         <div className="text-sm text-muted-foreground mt-1">Unique Attendees</div>
                       </div>
-                      <div className="card-static p-6 bg-white dark:bg-zinc-900 text-center">
+                      <div className="card-static p-6 bg-card text-center">
                         <div className="text-3xl font-bold text-foreground">{appreciationSummary.teams.length}</div>
                         <div className="text-sm text-muted-foreground mt-1">Projects</div>
                       </div>
@@ -1329,7 +1329,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                     </div>
 
                     {/* Team Rankings */}
-                    <div className="card-static p-6 bg-white dark:bg-zinc-900">
+                    <div className="card-static p-6 bg-card">
                       <h4 className="text-xl font-heading font-bold text-foreground mb-4">Project Rankings</h4>
                       <div className="overflow-x-auto">
                         <table className="min-w-full">
@@ -1370,7 +1370,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                     </div>
                   </div>
                 ) : (
-                  <div className="card-static p-12 bg-white dark:bg-zinc-900 text-center">
+                  <div className="card-static p-12 bg-card text-center">
                     <div className="text-6xl mb-4">❤️</div>
                     <h3 className="text-2xl font-heading font-bold text-foreground mb-2">No Appreciations Yet</h3>
                     <p className="text-muted-foreground">
@@ -1387,7 +1387,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                     setViewMode={setViewMode}
                   />
                 ) : (
-                  <div className="card-static p-12 bg-white dark:bg-zinc-900 text-center">
+                  <div className="card-static p-12 bg-card text-center">
                     <div className="text-6xl mb-4">📊</div>
                     <h3 className="text-2xl font-heading font-bold text-foreground mb-2">No Scores Yet</h3>
                     <p className="text-muted-foreground mb-6">
@@ -1541,7 +1541,7 @@ function ScoringDashboard({
       {viewMode === 'table' ? (
         <>
           {/* Overall Rankings Table */}
-          <div className="card-static p-6 bg-white dark:bg-zinc-900">
+          <div className="card-static p-6 bg-card">
             <h4 className="text-xl font-heading font-bold text-foreground mb-4">Overall Rankings</h4>
             <div className="overflow-x-auto">
               <table className="min-w-full">
@@ -1608,7 +1608,7 @@ function ScoringDashboard({
           {/* Category Rankings */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {scores.categories.map((category) => (
-              <div key={category} className="card-static p-6 bg-white dark:bg-zinc-900">
+              <div key={category} className="card-static p-6 bg-card">
                 <h4 className="text-lg font-heading font-bold text-foreground mb-4">{category}</h4>
                 <div className="space-y-2">
                   {scores.categoryRankings[category]?.slice(0, 5).map((team, idx) => (
@@ -1633,7 +1633,7 @@ function ScoringDashboard({
       ) : (
         <>
           {/* Overall Rankings Chart */}
-          <div className="card-static p-6 bg-white dark:bg-zinc-900">
+          <div className="card-static p-6 bg-card">
             <h4 className="text-xl font-heading font-bold text-foreground mb-6">Overall Rankings</h4>
             <div className="space-y-4">
               {scores.teamRankings.map((ranking, index) => {
@@ -1664,7 +1664,7 @@ function ScoringDashboard({
           </div>
 
           {/* Category Comparison Chart */}
-          <div className="card-static p-6 bg-white dark:bg-zinc-900">
+          <div className="card-static p-6 bg-card">
             <h4 className="text-xl font-heading font-bold text-foreground mb-6">Top 5 Teams by Category</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {scores.categories.map((category) => (
@@ -1936,7 +1936,7 @@ function SelectWinnersModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="card p-6 bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border-yellow-500/20">
+          <div className="card p-6 bg-amber-500/10 border-amber-500/20">
             <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-3">
               <span className="text-2xl">🏆</span>
               Overall Winner

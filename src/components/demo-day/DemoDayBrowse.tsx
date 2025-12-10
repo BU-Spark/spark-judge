@@ -151,14 +151,14 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
       </button>
 
       {/* Header */}
-      <div className="card-static mb-8 p-6 bg-white dark:bg-zinc-900 border border-border rounded-lg shadow-sm">
+      <div className="card-static mb-8 p-6 bg-card border border-border rounded-lg shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-heading font-bold text-foreground">
                 {event.name}
               </h1>
-              <span className="badge bg-pink-50 text-pink-600 border border-pink-100 dark:bg-pink-900/20 dark:text-pink-300 dark:border-pink-800">
+              <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20">
                 Demo Day
               </span>
             </div>
@@ -172,7 +172,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
       </div>
 
       {/* Search and Filters */}
-      <div className="card-static mb-6 p-4 bg-white dark:bg-zinc-900">
+      <div className="card-static mb-6 p-4 bg-card">
         <div className="space-y-4">
           {/* Search Input */}
           <div className="relative">
@@ -242,7 +242,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
 
       {/* Team Grid - Grouped by course when viewing all, flat when filtered */}
       {filteredTeams.length === 0 ? (
-        <div className="card-static text-center py-12 bg-white dark:bg-zinc-900">
+        <div className="card-static text-center py-12 bg-card">
           <div className="text-4xl mb-4">🔍</div>
           <h3 className="text-lg font-heading font-semibold text-foreground mb-2">
             No Projects Found
@@ -395,7 +395,7 @@ function TeamCard({
 
   return (
     <div
-      className="card fade-in p-5 bg-white dark:bg-zinc-900 hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+      className="card fade-in p-5 bg-card hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
       style={{ animationDelay: `${index * 0.05}s` }}
     >
       <div className="flex flex-col h-full">
@@ -414,7 +414,7 @@ function TeamCard({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 text-pink-500 ml-2 bg-pink-50 dark:bg-pink-900/10 px-2 py-1 rounded-md">
+          <div className="flex items-center gap-1 text-pink-500 ml-2 bg-pink-500/10 px-2 py-1 rounded-md">
             <span className="text-sm">❤️</span>
             <span className="font-bold text-sm">{totalCount + (optimisticCount !== null ? 1 : 0)}</span>
           </div>

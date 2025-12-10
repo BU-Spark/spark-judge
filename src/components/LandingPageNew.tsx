@@ -8,7 +8,7 @@ import { JudgeCodeModal } from "./JudgeCodeModalNew";
 import { TeamSubmissionModal } from "./TeamSubmissionModalNew";
 import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
-import { formatDateTime } from "../lib/utils";
+import { formatDateTime, formatDateRange } from "../lib/utils";
 
 export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) => void }) {
   const events = useQuery(api.events.listEvents);
@@ -326,7 +326,7 @@ function EventCard({
   );
   
   return (
-    <div className="group card flex flex-col h-full overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+    <div className="card-static flex flex-col h-full overflow-hidden">
       <div className="p-6 flex flex-col h-full">
         <div className="flex justify-between items-start gap-3 mb-4">
           <div className="flex flex-col gap-1.5">
@@ -337,20 +337,20 @@ function EventCard({
               </span>
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Active</span>
             </div>
-            <h3 className="text-xl font-heading font-bold text-foreground group-hover:text-primary transition-colors">
+            <h3 className="text-xl font-heading font-bold text-foreground">
               {event.name}
             </h3>
           </div>
           <div className="flex flex-col items-end gap-2">
             {isDemoDay && (
-              <span className="badge bg-pink-50 text-pink-600 border border-pink-100 dark:bg-pink-900/20 dark:text-pink-300 dark:border-pink-800 font-medium">
+              <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">
                 Demo Day
               </span>
             )}
             {userRole && (
-              <span className={`badge font-medium ${
-                isJudge ? "bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800" : 
-                "bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800"
+              <span className={`badge flex-shrink-0 ${
+                isJudge ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : 
+                "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
               }`}>
                 {isJudge ? "Judge" : "Participant"}
               </span>
@@ -364,10 +364,10 @@ function EventCard({
         
         <div className="flex justify-between text-xs text-muted-foreground mb-6 items-center border-t border-border pt-4">
           <span className="flex items-center gap-1.5 font-medium">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            {formatDateTime(event.startDate)}
+            <span>{formatDateRange(event.startDate, event.endDate)}</span>
           </span>
           <span className="bg-muted/50 px-2.5 py-1 rounded-md text-xs font-semibold text-muted-foreground">
             {event.teamCount} {isDemoDay ? "projects" : "teams"}
@@ -378,7 +378,7 @@ function EventCard({
           {isDemoDay && (
             <button
               onClick={() => onBrowseDemoDay(event._id)}
-              className="btn-primary w-full shadow-md hover:shadow-lg transition-all"
+              className="w-full py-2.5 px-4 rounded-md font-medium shadow-md transition-all bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 hover:shadow-lg"
             >
               <span className="flex items-center justify-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -397,7 +397,7 @@ function EventCard({
                     void onJoinAsJudge(event._id);
                   }}
                   disabled={isJoining}
-                  className="btn-secondary w-full"
+                  className="w-full py-2.5 px-4 rounded-md font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isJoining ? (
                     <span className="flex items-center justify-center gap-2">
@@ -440,10 +440,10 @@ function EventCard({
           {!isDemoDay && !isJudge && (
             <button
               onClick={() => onAddTeam(event)}
-              className={`w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+              className={`w-full py-2.5 px-4 rounded-md text-sm font-medium transition-all ${
                 isParticipant
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
-                  : "bg-muted text-foreground hover:bg-muted/80 border border-transparent"
+                  ? "bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 shadow-sm hover:shadow-md"
+                  : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
               }`}
             >
               {isParticipant ? "View/Edit Team" : "Add Your Team"}
@@ -476,91 +476,180 @@ function EventRow({
   const isJudge = userRole === "judge";
   const isParticipant = userRole === "participant";
   const isDemoDay = event.mode === "demo_day";
+  const [isExpanded, setIsExpanded] = useState(false);
   
   return (
-    <div className="card p-4 flex items-center gap-6 transition-all hover:border-primary/30 hover:shadow-md bg-white dark:bg-zinc-900">
-      {/* Date & Status */}
-      <div className="flex-shrink-0 w-24 md:w-32 text-sm">
-        <div className="font-bold text-foreground">{formatDateTime(event.startDate).split(',')[0]}</div>
-        <div className="text-muted-foreground text-xs font-medium">{formatDateTime(event.startDate).split(',')[1]}</div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-grow min-w-0">
-        <div className="flex items-center gap-3 mb-1.5">
-          <h3 className="text-base font-bold text-foreground truncate">
-            {event.name}
-          </h3>
-          {isDemoDay && (
-            <span className="badge bg-pink-50 text-pink-600 border border-pink-100 dark:bg-pink-900/20 dark:text-pink-300 dark:border-pink-800">
-              Demo Day
-            </span>
-          )}
-          {userRole && (
-            <span className={`badge ${
-              isJudge ? "bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800" : 
-              "bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800"
-            }`}>
-              {isJudge ? "Judge" : "Participant"}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
-          <span>{event.teamCount} {isDemoDay ? "projects" : "teams"}</span>
-          {isPastSection && event.overallWinner && (
-            <span className="text-amber-600 dark:text-amber-500 flex items-center gap-1 font-bold">
-              🏆 Winner announced
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Action Button */}
-      <div className="flex-shrink-0 flex items-center gap-3">
-        {isPastSection ? (
-          <button
-            onClick={() => onStartScoring(event)}
-            className="text-sm font-semibold text-primary hover:text-primary/80 px-4 py-2"
-          >
-            View Results
+    <div className="card-static bg-card transition-colors hover:bg-muted/50">
+      {/* Mobile Layout */}
+      <div className="md:hidden p-4">
+        <div 
+          className="flex justify-between items-start cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <div className="flex-1 min-w-0 pr-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-bold text-muted-foreground">
+                {formatDateTime(event.startDate).split(',')[0]}
+              </span>
+              {isDemoDay && (
+                <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20 text-[10px] px-1.5 py-0.5 h-5">
+                  Demo Day
+                </span>
+              )}
+            </div>
+            <h3 className="font-bold text-foreground truncate">
+              {event.name}
+            </h3>
+            <div className="text-xs text-muted-foreground mt-1">
+              {event.teamCount} {isDemoDay ? "projects" : "teams"}
+            </div>
+          </div>
+          <button className="text-muted-foreground p-1">
+            <svg 
+              className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
-        ) : isDemoDay ? (
-          <button
-            onClick={() => onBrowseDemoDay(event._id)}
-            className="btn-secondary py-2 px-4 text-sm h-9 shadow-sm"
-          >
-            Browse
-          </button>
-        ) : (
-          <>
-            {!isJudge && !isPastSection && (
-              <button
-                onClick={() => onAddTeam(event)}
-                className={`text-sm font-semibold px-4 py-2 transition-colors rounded-lg ${
-                  isParticipant 
-                    ? "text-primary hover:text-primary/80 bg-primary/5 hover:bg-primary/10" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
-              >
-                {isParticipant ? "View Team" : "Add Team"}
-              </button>
-            )}
-            
-            {!userRole ? (
-              <button
-                onClick={() => void onJoinAsJudge(event._id)}
-                disabled={isJoining}
-                className="btn-secondary py-2 px-4 text-sm h-9 shadow-sm"
-              >
-                {isJoining ? "Joining..." : "Join as Judge"}
-              </button>
-            ) : (
-              <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 px-4 bg-emerald-50 dark:bg-emerald-900/10 py-1.5 rounded-full">
-                Registered
-              </div>
-            )}
-          </>
+        </div>
+
+        {isExpanded && (
+          <div className="mt-4 pt-4 border-t border-border space-y-3">
+            <div className="flex flex-col gap-2">
+              {isPastSection ? (
+                <button
+                  onClick={() => onStartScoring(event)}
+                  className="w-full text-sm font-semibold text-primary px-4 py-2 rounded-md transition-all hover:bg-primary hover:text-primary-foreground border border-primary/20"
+                >
+                  View Results
+                </button>
+              ) : isDemoDay ? (
+                <button
+                  onClick={() => onBrowseDemoDay(event._id)}
+                  className="w-full py-2 px-4 text-sm rounded-md font-medium bg-primary text-primary-foreground shadow-sm transition-all hover:bg-teal-700 dark:hover:bg-teal-500 hover:shadow-md"
+                >
+                  Browse
+                </button>
+              ) : (
+                <>
+                  {!isJudge && !isPastSection && (
+                    <button
+                      onClick={() => onAddTeam(event)}
+                      className={`w-full text-sm font-semibold px-4 py-2 rounded-md transition-all ${
+                        isParticipant 
+                          ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm border border-border"
+                      }`}
+                    >
+                      {isParticipant ? "View Team" : "Add Team"}
+                    </button>
+                  )}
+                  
+                  {!userRole ? (
+                    <button
+                      onClick={() => void onJoinAsJudge(event._id)}
+                      disabled={isJoining}
+                      className="w-full py-2 px-4 text-sm rounded-md font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isJoining ? "Joining..." : "Join as Judge"}
+                    </button>
+                  ) : (
+                    <div className="w-full text-center text-sm font-bold text-emerald-600 dark:text-emerald-400 px-4 bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 py-2 rounded-md">
+                      Registered as {userRole === 'judge' ? 'Judge' : 'Participant'}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         )}
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden md:flex p-4 items-center gap-6">
+        <div className="flex-shrink-0 w-32 text-sm">
+          <div className="font-bold text-foreground">{formatDateTime(event.startDate).split(',')[0]}</div>
+          <div className="text-muted-foreground text-xs font-medium">{formatDateTime(event.startDate).split(',')[1]}</div>
+        </div>
+
+        <div className="flex-grow min-w-0">
+          <div className="flex items-center gap-3 mb-1.5">
+            <h3 className="text-base font-bold text-foreground truncate min-w-0 flex-1">
+              {event.name}
+            </h3>
+            {isDemoDay && (
+              <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20 flex-shrink-0">
+                Demo Day
+              </span>
+            )}
+            {userRole && (
+              <span className={`badge flex-shrink-0 ${
+                isJudge ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : 
+                "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+              }`}>
+                {isJudge ? "Judge" : "Participant"}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
+            <span>{event.teamCount} {isDemoDay ? "projects" : "teams"}</span>
+            {isPastSection && event.overallWinner && (
+              <span className="text-amber-600 dark:text-amber-500 flex items-center gap-1 font-bold">
+                🏆 Winner announced
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-shrink-0 flex items-center gap-3">
+          {isPastSection ? (
+            <button
+              onClick={() => onStartScoring(event)}
+              className="text-sm font-semibold text-primary px-4 py-2 rounded-md transition-all hover:bg-primary hover:text-primary-foreground"
+            >
+              View Results
+            </button>
+          ) : isDemoDay ? (
+            <button
+              onClick={() => onBrowseDemoDay(event._id)}
+              className="py-2 px-4 text-sm h-9 rounded-md font-medium bg-primary text-primary-foreground shadow-sm transition-all hover:bg-teal-700 dark:hover:bg-teal-500 hover:shadow-md"
+            >
+              Browse
+            </button>
+          ) : (
+            <>
+              {!isJudge && !isPastSection && (
+                <button
+                  onClick={() => onAddTeam(event)}
+                  className={`text-sm font-semibold px-4 py-2 rounded-md transition-all ${
+                    isParticipant 
+                      ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm"
+                  }`}
+                >
+                  {isParticipant ? "View Team" : "Add Team"}
+                </button>
+              )}
+              
+              {!userRole ? (
+                <button
+                  onClick={() => void onJoinAsJudge(event._id)}
+                  disabled={isJoining}
+                  className="py-2 px-4 text-sm h-9 rounded-md font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isJoining ? "Joining..." : "Join as Judge"}
+                </button>
+              ) : (
+                <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 px-4 bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 py-1.5 rounded-full">
+                  Registered
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

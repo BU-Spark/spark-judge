@@ -165,7 +165,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
             </svg>
             {formatDateTime(event.startDate)} - {formatDateTime(event.endDate)}
           </span>
-          <span className={`badge ${event.status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800' : ''}`}>
+          <span className={`badge ${event.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : ''}`}>
             {event.status}
           </span>
         </div>
@@ -297,11 +297,11 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
 
   return (
     <div className="space-y-8">
-      <div className="card bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800 text-center fade-in">
+      <div className="card bg-amber-500/10 border-amber-500/20 text-center fade-in">
         <div className="text-6xl mb-4">🏆</div>
-        <h2 className="text-3xl font-heading font-bold text-gray-900 dark:text-gray-100 mb-2">Overall Winner</h2>
+        <h2 className="text-3xl font-heading font-bold text-foreground mb-2">Overall Winner</h2>
         {overallWinnerTeam && (
-          <p className="text-2xl font-bold text-amber-700 dark:text-amber-500">{overallWinnerTeam.name}</p>
+          <p className="text-2xl font-bold text-amber-500">{overallWinnerTeam.name}</p>
         )}
       </div>
 

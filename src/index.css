@@ -11,32 +11,31 @@
   --card: #ffffff;
   --card-foreground: #18181b;
   --border: #e4e4e7; /* Zinc 200 */
-  --primary: #4f46e5; /* Indigo 600 */
+  --primary: #0d9488; /* Teal 600 */
   --primary-foreground: #ffffff;
   --secondary: #71717a; /* Zinc 500 */
   --secondary-foreground: #ffffff;
-  --accent: #8b5cf6;
+  --accent: #14b8a6; /* Teal 500 */
   --accent-foreground: #ffffff;
   --muted: #f4f4f5; /* Zinc 100 */
   --muted-foreground: #71717a; /* Zinc 500 */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #09090b; /* Zinc 950 */
-    --foreground: #fafafa; /* Zinc 50 */
-    --card: #18181b; /* Zinc 900 */
-    --card-foreground: #fafafa;
-    --border: #27272a; /* Zinc 800 */
-    --primary: #6366f1; /* Indigo 500 */
-    --primary-foreground: #ffffff;
-    --secondary: #a1a1aa; /* Zinc 400 */
-    --secondary-foreground: #18181b;
-    --accent: #8b5cf6;
-    --accent-foreground: #ffffff;
-    --muted: #27272a; /* Zinc 800 */
-    --muted-foreground: #a1a1aa; /* Zinc 400 */
-  }
+.dark {
+  /* Deep Muted Teal Theme (Professional) */
+  --background: #0b1215; /* Charcoal Teal (More neutral) */
+  --foreground: #f1f5f9; /* Slate 100 */
+  --card: #141c21; /* Slightly lighter charcoal teal */
+  --card-foreground: #f1f5f9;
+  --border: #233038; /* Muted border */
+  --primary: #0d9488; /* Teal 600 - Professional, saturated but not neon */
+  --primary-foreground: #ffffff; /* White text is crisp on Teal 600 */
+  --secondary: #1e2930; /* Dark slate-teal for secondary buttons */
+  --secondary-foreground: #e2e8f0; /* Slate 200 */
+  --accent: #115e59; /* Teal 800 */
+  --accent-foreground: #ffffff;
+  --muted: #1a242a; /* Card hover / Muted bg */
+  --muted-foreground: #94a3b8; /* Slate 400 - Classic muted text */
 }
 
 html {
@@ -121,7 +120,7 @@ code, pre, kbd, samp {
 
 /* Badges */
 .badge {
-  @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80;
+  @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:brightness-90 whitespace-nowrap;
 }
 
 /* Animations - Minimal/None */
@@ -145,7 +144,7 @@ code, pre, kbd, samp {
 }
 
 .header-depth {
-  @apply border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80;
+  @apply border-b border-border bg-background backdrop-blur;
 }
 
 .gradient-text {

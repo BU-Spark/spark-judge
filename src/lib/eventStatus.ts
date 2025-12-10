@@ -23,3 +23,4 @@ export function computeEventDisplayStatus({
   if (now > endDate) return "past";
   return "active";
 }
+

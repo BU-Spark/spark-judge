@@ -6,55 +6,37 @@
 @tailwind utilities;
 
 :root {
-  /* Light Mode (Material-Inspired) - HSL Values */
-  --background: 210 20% 98%;   /* Cool gray background */
-  --foreground: 222 47% 11%;   /* Deep slate for text */
-  
-  --card: 0 0% 100%;           /* Pure white cards */
-  --card-foreground: 222 47% 11%;
-  
-  --border: 214 32% 91%;       /* Subtle border */
-  
-  --primary: 221 83% 53%;      /* Strong Blue (Primary Action) */
-  --primary-foreground: 210 40% 98%;
-  
-  --secondary: 210 40% 96.1%;  /* Light gray-blue secondary */
-  --secondary-foreground: 222 47% 11.2%;
-  
-  --accent: 210 40% 96.1%;     /* Light gray-blue accent */
-  --accent-foreground: 222 47% 11.2%;
-  
-  --muted: 210 40% 96.1%;      /* Muted backgrounds */
-  --muted-foreground: 215 16% 47%;
-  
-  --ring: 221 83% 53%;
-  
-  --radius: 0.5rem;
+  --background: #fafafa; /* Zinc 50 */
+  --foreground: #18181b; /* Zinc 900 */
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --border: #e4e4e7; /* Zinc 200 */
+  --primary: #4f46e5; /* Indigo 600 */
+  --primary-foreground: #ffffff;
+  --secondary: #71717a; /* Zinc 500 */
+  --secondary-foreground: #ffffff;
+  --accent: #8b5cf6;
+  --accent-foreground: #ffffff;
+  --muted: #f4f4f5; /* Zinc 100 */
+  --muted-foreground: #71717a; /* Zinc 500 */
 }
 
-.dark {
-  /* Dark Mode (Material-Inspired) - HSL Values */
-  --background: 222 47% 11%;   /* Deep slate background */
-  --foreground: 210 40% 98%;   /* Bright text */
-  
-  --card: 217 33% 17%;         /* Elevated dark card */
-  --card-foreground: 210 40% 98%;
-  
-  --border: 217 33% 22%;       /* Card border */
-  
-  --primary: 217 91% 60%;      /* Bright Blue */
-  --primary-foreground: 222 47% 11.2%;
-  
-  --secondary: 217 33% 22%;    /* Darker secondary */
-  --secondary-foreground: 210 40% 98%;
-  
-  --accent: 217 33% 22%;
-  --accent-foreground: 210 40% 98%;
-  
-  --muted: 217 33% 22%;
-  --muted-foreground: 215 20% 65%;
-  
-  --ring: 224 76% 48%;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #09090b; /* Zinc 950 */
+    --foreground: #fafafa; /* Zinc 50 */
+    --card: #18181b; /* Zinc 900 */
+    --card-foreground: #fafafa;
+    --border: #27272a; /* Zinc 800 */
+    --primary: #6366f1; /* Indigo 500 */
+    --primary-foreground: #ffffff;
+    --secondary: #a1a1aa; /* Zinc 400 */
+    --secondary-foreground: #18181b;
+    --accent: #8b5cf6;
+    --accent-foreground: #ffffff;
+    --muted: #27272a; /* Zinc 800 */
+    --muted-foreground: #a1a1aa; /* Zinc 400 */
+  }
 }
 
 html {
@@ -64,14 +46,15 @@ html {
 }
 
 body {
-  @apply bg-background text-foreground;
+  color: var(--foreground);
+  background: var(--background);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* Typography Overrides */
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.025em; /* tracking-tight */
   font-weight: 600;
 }
 
@@ -91,62 +74,54 @@ code, pre, kbd, samp {
 
 /* Utility Classes */
 .card {
-  @apply bg-card text-card-foreground rounded-lg border border-border shadow-sm transition-all duration-200;
+  @apply bg-card border border-border rounded-lg shadow-sm transition-shadow duration-200;
 }
 
 .card:hover {
-  @apply shadow-md -translate-y-[1px]; /* Slight lift effect */
+  @apply shadow-md;
 }
 
 .card-static {
-  @apply bg-card text-card-foreground rounded-lg border border-border shadow-sm;
+  @apply bg-card border border-border rounded-lg shadow-sm;
 }
 
 /* Replaces old glass cards with clean solid cards */
 .card-glass {
-  @apply bg-card text-card-foreground rounded-lg border border-border shadow-sm transition-all duration-200;
+  @apply bg-card border border-border rounded-lg shadow-sm transition-shadow duration-200;
 }
 
 .card-glass:hover {
-  @apply shadow-md -translate-y-[1px];
-}
-
-.card-glass.no-card-hover {
-  @apply transition-none transform-none shadow-sm;
+  @apply shadow-md;
 }
 
 .card-glass.no-card-hover:hover {
-  @apply shadow-sm cursor-default translate-y-0;
+  @apply shadow-sm cursor-default;
 }
 
 /* Buttons */
 .btn-primary {
-  @apply inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none;
+  @apply inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium shadow-sm transition-colors duration-200 hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed;
   height: 2.5rem; /* h-10 */
 }
 
 .btn-secondary {
-  @apply inline-flex items-center justify-center px-4 py-2 bg-card border border-border text-foreground rounded-md font-medium shadow-sm transition-all duration-200 hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply inline-flex items-center justify-center px-4 py-2 bg-white dark:bg-zinc-800 border border-border text-foreground rounded-md font-medium shadow-sm transition-colors duration-200 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed;
   height: 2.5rem; /* h-10 */
 }
 
 .btn-ghost {
-  @apply inline-flex items-center justify-center px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md font-medium transition-colors duration-200;
+  @apply inline-flex items-center justify-center px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md font-medium transition-colors duration-200;
   height: 2.5rem;
 }
 
 /* Inputs */
 .input {
-  @apply flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow duration-200;
-}
-
-.input:focus {
-  @apply shadow-sm;
+  @apply flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 /* Badges */
 .badge {
-  @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent;
+  @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80;
 }
 
 /* Animations - Minimal/None */
@@ -170,26 +145,17 @@ code, pre, kbd, samp {
 }
 
 .header-depth {
-  @apply border-b border-border bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/60 shadow-sm sticky top-0 z-50;
+  @apply border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80;
 }
 
 .gradient-text {
-  @apply text-foreground font-bold tracking-tight;
-}
-
-/* Shadow Utilities for "Elevated" look */
-.shadow-pop {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-}
-
-.shadow-pop:hover {
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  @apply text-foreground; /* Remove gradient text */
 }
 
 /* Scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--border)) transparent;
+  scrollbar-color: var(--border) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -201,10 +167,10 @@ code, pre, kbd, samp {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border));
+  background: var(--border);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--secondary));
+  background: var(--secondary);
 }

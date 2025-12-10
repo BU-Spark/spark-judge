@@ -153,13 +153,13 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
         Back to Events
       </button>
 
-      <div className="card-static mb-8 fade-in p-6 bg-white dark:bg-zinc-900 border border-border shadow-sm">
+      <div className="card-static mb-8 fade-in">
         <div className="mb-4">
           <h1 className="text-3xl font-heading font-bold text-foreground mb-2">{event.name}</h1>
           <p className="text-muted-foreground text-lg">{event.description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-2 font-medium">
+          <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
@@ -192,7 +192,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       )}
 
       {event.status === "active" && (
-        <div className="card mb-8 fade-in p-6 bg-white dark:bg-zinc-900 shadow-md">
+        <div className="card mb-8 fade-in">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
@@ -200,7 +200,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
                   {scoringComplete ? "Scoring Complete!" : completedCount > 0 ? "Keep Scoring" : "Ready to Score?"}
           </h2>
                 {scoringComplete ? (
-                  <p className="text-emerald-600 dark:text-emerald-400 font-medium">
+                  <p className="text-emerald-600 dark:text-emerald-400">
                     Thank you for judging. All teams have been scored.
                   </p>
                 ) : (
@@ -212,7 +212,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
                         } categories.`}
                   </p>
                 )}
-                <p className={`text-sm mt-2 font-medium ${scoringComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                <p className={`text-sm mt-2 ${scoringComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
                   Progress: {completedCount} / {totalTeams} teams scored
                 </p>
                 {justSubmitted && (
@@ -222,7 +222,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
               {!scoringComplete && (
                 <button
                   onClick={() => setShowWizard(true)}
-                  className="btn-primary shadow-md hover:shadow-lg transition-all"
+                  className="btn-primary"
                   disabled={(enableCohorts && myAssignments.length === 0) || totalTeams === 0}
                 >
                   {hasDraft
@@ -236,13 +236,13 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
               )}
                 </div>
             <div>
-              <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden shadow-inner">
+              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                 <div
                   className={`h-full transition-all duration-500 ${scoringComplete ? 'bg-emerald-500' : 'bg-primary'}`}
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground mt-2 font-medium">
+              <div className="flex justify-between text-xs text-muted-foreground mt-2">
                 <span>Completed: {completedCount}</span>
                 <span>Remaining: {Math.max(totalTeams - completedCount, 0)}</span>
               </div>
@@ -253,7 +253,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
       {/* Score Summary Section - Show when scoring is complete */}
       {scoringComplete && myScores && myScores.length > 0 && (
-        <div className="card mb-8 fade-in p-6 bg-white dark:bg-zinc-900 shadow-md">
+        <div className="card mb-8 fade-in">
           <h2 className="text-lg font-heading font-semibold mb-4">Your Score Summary</h2>
           <ScoreSummary 
             scores={myScores.map(score => {
@@ -297,8 +297,8 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
 
   return (
     <div className="space-y-8">
-      <div className="card bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800 text-center fade-in p-8 shadow-md">
-        <div className="text-6xl mb-4 animate-bounce">🏆</div>
+      <div className="card bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800 text-center fade-in">
+        <div className="text-6xl mb-4">🏆</div>
         <h2 className="text-3xl font-heading font-bold text-gray-900 dark:text-gray-100 mb-2">Overall Winner</h2>
         {overallWinnerTeam && (
           <p className="text-2xl font-bold text-amber-700 dark:text-amber-500">{overallWinnerTeam.name}</p>
@@ -314,7 +314,7 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
               return (
                 <div 
                   key={winner.category} 
-                  className="card border-primary/20 bg-primary/5 transition-all duration-300 p-6 hover:shadow-lg hover:-translate-y-1"
+                  className="card border-primary/20 bg-primary/5 transition-all duration-300"
                   style={{ animationDelay: `${0.2 + index * 0.1}s` }}
                 >
                   <div className="flex items-start justify-between mb-2">
@@ -331,7 +331,7 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
 
       <div className="fade-in" style={{ animationDelay: '0.3s' }}>
         <h2 className="text-xl font-heading font-bold mb-6 text-foreground">All Scores</h2>
-        <div className="card overflow-hidden p-0 shadow-md">
+        <div className="card overflow-hidden p-0">
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead className="bg-muted">
@@ -549,7 +549,7 @@ function TeamSelectionSection({
     return myScores.find((score: any) => score.teamId === teamId);
   };
   return (
-    <div className="card mb-8 fade-in p-6 bg-white dark:bg-zinc-900 shadow-md">
+    <div className="card mb-8 fade-in">
       <div className="space-y-4">
         <div>
           <h2 className="text-xl font-heading font-bold text-foreground mb-2">
@@ -570,7 +570,7 @@ function TeamSelectionSection({
             placeholder="Search teams..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground text-sm shadow-sm"
+            className="w-full pl-11 pr-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground text-sm"
           />
         </div>
 
@@ -580,7 +580,7 @@ function TeamSelectionSection({
             <h3 className="text-lg font-heading font-semibold text-foreground mb-3">
               My Queue ({assignedTeams.length} teams)
             </h3>
-            <div className="divide-y divide-border bg-muted/30 rounded-lg overflow-hidden border border-border shadow-inner">
+            <div className="divide-y divide-border bg-muted/30 rounded-lg overflow-hidden border border-border">
               {assignedTeams.map((team: any) => {
                 const score = getTeamScoreStatus(team._id);
                 return (
@@ -626,7 +626,7 @@ function TeamSelectionSection({
             </h3>
             <button
               onClick={onStartScoring}
-              className="btn-primary shadow-sm hover:shadow-md transition-all"
+              className="btn-primary"
               disabled={!canStart || locked}
             >
               {locked ? "Scoring Complete" : "Start Scoring Selected Teams"}
@@ -643,16 +643,12 @@ function TeamSelectionSection({
                 return (
                   <div
                     key={team._id}
-                    className="border border-border rounded-lg p-4 transition-all hover:shadow-md bg-background cursor-pointer"
-                    onClick={() => !locked && onToggleTeam(team._id, false)}
+                    className="border border-border rounded-lg p-4 transition-all hover:shadow-sm bg-background"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-semibold text-foreground">{team.name}</h3>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleTeam(team._id, false);
-                        }}
+                        onClick={() => onToggleTeam(team._id, false)}
                         className="p-2 bg-muted text-muted-foreground hover:bg-muted/80 rounded-lg transition-colors"
                         disabled={locked}
                       >

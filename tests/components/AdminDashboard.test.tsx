@@ -248,3 +248,4 @@ describe("EventManagementModal - loading state", () => {
     });
   });
 });
+

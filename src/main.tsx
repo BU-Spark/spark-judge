@@ -12,7 +12,7 @@ createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
     <ConvexAuthProvider client={convex}>
       <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-        <App />
+      <App />
       </ThemeProvider>
     </ConvexAuthProvider>
   </ErrorBoundary>

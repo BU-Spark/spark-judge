@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as appreciations from "../appreciations.js";
 import type * as auth from "../auth.js";
+import type * as demoDayImport from "../demoDayImport.js";
 import type * as events from "../events.js";
 import type * as helpers from "../helpers.js";
 import type * as http from "../http.js";
@@ -40,6 +41,7 @@ import type * as users from "../users.js";
 declare const fullApi: ApiFromModules<{
   appreciations: typeof appreciations;
   auth: typeof auth;
+  demoDayImport: typeof demoDayImport;
   events: typeof events;
   helpers: typeof helpers;
   http: typeof http;

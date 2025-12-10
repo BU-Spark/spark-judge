@@ -349,8 +349,8 @@ function EventCard({
             )}
             {userRole && (
               <span className={`badge flex-shrink-0 ${
-                isJudge ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : 
-                "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                isJudge ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20" : 
+                "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
               }`}>
                 {isJudge ? "Judge" : "Participant"}
               </span>
@@ -557,7 +557,11 @@ function EventRow({
                       {isJoining ? "Joining..." : "Join as Judge"}
                     </button>
                   ) : (
-                    <div className="w-full text-center text-sm font-bold text-emerald-600 dark:text-emerald-400 px-4 bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 py-2 rounded-md">
+                    <div className={`w-full text-center text-sm font-bold px-4 py-2 rounded-md border ${
+                      isJudge 
+                        ? "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/20" 
+                        : "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20"
+                    }`}>
                       Registered as {userRole === 'judge' ? 'Judge' : 'Participant'}
                     </div>
                   )}
@@ -587,8 +591,8 @@ function EventRow({
             )}
             {userRole && (
               <span className={`badge flex-shrink-0 ${
-                isJudge ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : 
-                "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                isJudge ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20" : 
+                "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
               }`}>
                 {isJudge ? "Judge" : "Participant"}
               </span>
@@ -643,7 +647,11 @@ function EventRow({
                   {isJoining ? "Joining..." : "Join as Judge"}
                 </button>
               ) : (
-                <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 px-4 bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 py-1.5 rounded-full">
+                <div className={`text-sm font-bold px-4 py-1.5 rounded-full border ${
+                  isJudge
+                    ? "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/20"
+                    : "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20"
+                }`}>
                   Registered
                 </div>
               )}

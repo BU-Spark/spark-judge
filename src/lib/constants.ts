@@ -3,7 +3,7 @@
  * These are pre-populated when creating a Demo Day event.
  * Admins can add additional courses in the event creation modal.
  */
-export const DEFAULT_DEMO_DAY_COURSES = [
+export const DEFAULT_DEMO_DAY_COURSES: string[] = [
   "DS519",
   "DS539",
   "DS594",
@@ -11,7 +11,4 @@ export const DEFAULT_DEMO_DAY_COURSES = [
   "DS488/688",
   "DS701",
   "XC473",
-] as const;
-
-export type DemoDayCourse = (typeof DEFAULT_DEMO_DAY_COURSES)[number];
-
+];

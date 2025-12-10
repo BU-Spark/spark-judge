@@ -45,3 +45,24 @@ export async function requireAdmin(
   }
   return userId;
 }
+
+/**
+ * Compute event status based on current time and start/end dates
+ * - If now < startDate → "upcoming"
+ * - If startDate <= now <= endDate → "active"
+ * - If now > endDate → "past"
+ */
+export function computeEventStatus(event: {
+  startDate: number;
+  endDate: number;
+}): "upcoming" | "active" | "past" {
+  const now = Date.now();
+
+  if (now < event.startDate) {
+    return "upcoming";
+  } else if (now > event.endDate) {
+    return "past";
+  } else {
+    return "active";
+  }
+}

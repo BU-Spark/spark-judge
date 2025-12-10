@@ -19,6 +19,7 @@ interface DemoDayBrowseProps {
       _id: Id<"teams">;
       name: string;
       description: string;
+      members?: string[];
       courseCode?: string;
       hidden?: boolean;
     }>;
@@ -60,7 +61,8 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
           const query = searchQuery.toLowerCase();
           if (
             !team.name.toLowerCase().includes(query) &&
-            !team.description.toLowerCase().includes(query)
+            !team.description.toLowerCase().includes(query) &&
+            !(team.members || []).some((m) => m.toLowerCase().includes(query))
           ) {
             return false;
           }
@@ -72,6 +74,38 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
         return true;
       });
   }, [event.teams, searchQuery, selectedCourse]);
+
+  // Group teams by course when viewing all courses
+  const teamsByCourse = useMemo(() => {
+    if (selectedCourse !== null) {
+      // When a specific course is selected, return null to use flat display
+      return null;
+    }
+
+    const grouped = new Map<string, typeof filteredTeams>();
+    
+    // Add teams with course codes
+    filteredTeams.forEach((team) => {
+      const course = team.courseCode || "Other";
+      if (!grouped.has(course)) {
+        grouped.set(course, []);
+      }
+      grouped.get(course)!.push(team);
+    });
+
+    // Sort courses and teams within each course
+    const sorted = Array.from(grouped.entries()).sort(([a], [b]) => {
+      if (a === "Other") return 1;
+      if (b === "Other") return -1;
+      return a.localeCompare(b);
+    });
+
+    sorted.forEach(([_, teams]) => {
+      teams.sort((a, b) => a.name.localeCompare(b.name));
+    });
+
+    return sorted;
+  }, [filteredTeams, selectedCourse]);
 
   // Build appreciation lookup map
   const appreciationMap = useMemo(() => {
@@ -97,7 +131,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="flex items-center gap-2 btn-ghost mb-6 fade-in"
+        className="flex items-center gap-2 btn-ghost mb-6"
       >
         <svg
           className="w-5 h-5"
@@ -116,14 +150,14 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
       </button>
 
       {/* Header */}
-      <div className="card-glass mb-8 fade-in">
+      <div className="card-static mb-8 p-6 bg-white dark:bg-zinc-900 border border-border rounded-lg shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
+              <h1 className="text-3xl font-heading font-bold text-foreground">
                 {event.name}
               </h1>
-              <span className="badge bg-pink-500/20 text-pink-500 border-pink-500/30">
+              <span className="badge bg-pink-50 text-pink-600 border border-pink-100 dark:bg-pink-900/20 dark:text-pink-300 dark:border-pink-800">
                 Demo Day
               </span>
             </div>
@@ -137,7 +171,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
       </div>
 
       {/* Search and Filters */}
-      <div className="card mb-6 fade-in">
+      <div className="card-static mb-6 p-4 bg-white dark:bg-zinc-900">
         <div className="space-y-4">
           {/* Search Input */}
           <div className="relative">
@@ -159,7 +193,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
               placeholder="Search projects by name or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+              className="w-full pl-11 pr-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground text-sm"
             />
           </div>
 
@@ -168,10 +202,10 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setSelectedCourse(null)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
                   selectedCourse === null
-                    ? "bg-primary text-white"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    ? "bg-primary text-white border-primary shadow-sm"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted"
                 }`}
               >
                 All Courses
@@ -182,10 +216,10 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
                   onClick={() =>
                     setSelectedCourse(selectedCourse === code ? null : code)
                   }
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
                     selectedCourse === code
-                      ? "bg-primary text-white"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      ? "bg-primary text-white border-primary shadow-sm"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted"
                   }`}
                 >
                   {code}
@@ -197,19 +231,19 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
       </div>
 
       {/* Results Count */}
-      <div className="flex items-center justify-between mb-4 fade-in">
-        <p className="text-muted-foreground">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-muted-foreground">
           Showing {filteredTeams.length} project
           {filteredTeams.length !== 1 ? "s" : ""}
           {selectedCourse && ` in ${selectedCourse}`}
         </p>
       </div>
 
-      {/* Team Grid */}
+      {/* Team Grid - Grouped by course when viewing all, flat when filtered */}
       {filteredTeams.length === 0 ? (
-        <div className="card text-center py-12 fade-in">
-          <div className="text-6xl mb-4">🔍</div>
-          <h3 className="text-xl font-heading font-semibold text-foreground mb-2">
+        <div className="card-static text-center py-12 bg-white dark:bg-zinc-900">
+          <div className="text-4xl mb-4">🔍</div>
+          <h3 className="text-lg font-heading font-semibold text-foreground mb-2">
             No Projects Found
           </h3>
           <p className="text-muted-foreground">
@@ -218,7 +252,37 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
               : "No projects match the selected filters"}
           </p>
         </div>
+      ) : teamsByCourse ? (
+        // Grouped by course view (All Courses selected)
+        <div className="space-y-8">
+          {teamsByCourse.map(([courseCode, teams]) => (
+            <div key={courseCode} className="space-y-4">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-heading font-bold text-foreground">
+                  {courseCode}
+                </h2>
+                <span className="text-sm text-muted-foreground">
+                  ({teams.length} project{teams.length !== 1 ? "s" : ""})
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {teams.map((team, index) => (
+                  <TeamCard
+                    key={team._id}
+                    team={team}
+                    eventId={eventId}
+                    attendeeId={attendeeId}
+                    appreciationData={appreciationMap.get(team._id)}
+                    remainingBudget={appreciationData?.attendeeRemainingBudget ?? 15}
+                    index={index}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
+        // Flat grid view (specific course selected)
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredTeams.map((team, index) => (
             <TeamCard
@@ -250,13 +314,13 @@ function BudgetIndicator({
   return (
     <div className="flex flex-col items-end">
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-2xl">❤️</span>
+        <span className="text-xl">❤️</span>
         <span
-          className={`text-2xl font-bold ${isLow ? "text-red-500" : "text-foreground"}`}
+          className={`text-xl font-bold ${isLow ? "text-red-500" : "text-foreground"}`}
         >
           {remaining}
         </span>
-        <span className="text-muted-foreground">/ {total} left</span>
+        <span className="text-muted-foreground text-sm">/ {total} left</span>
       </div>
       <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
         <div
@@ -275,6 +339,7 @@ interface TeamCardProps {
     _id: Id<"teams">;
     name: string;
     description: string;
+    members?: string[];
     courseCode?: string;
   };
   eventId: Id<"events">;
@@ -329,56 +394,56 @@ function TeamCard({
 
   return (
     <div
-      className="card group slide-up"
+      className="card fade-in p-5 bg-white dark:bg-zinc-900 hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
       style={{ animationDelay: `${index * 0.05}s` }}
     >
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-heading font-semibold text-foreground text-lg truncate">
+            <h3 className="font-heading font-semibold text-foreground text-base truncate">
               {team.name}
             </h3>
             {team.courseCode && (
-              <span className="inline-block px-2 py-0.5 bg-muted text-muted-foreground text-xs rounded mt-1">
+              <span className="inline-block px-2 py-0.5 bg-muted text-muted-foreground text-[10px] rounded mt-1">
                 {team.courseCode}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 text-pink-500 ml-2">
-            <span className="text-lg">❤️</span>
-            <span className="font-bold">{totalCount + (optimisticCount !== null ? 1 : 0)}</span>
+          <div className="flex items-center gap-1 text-pink-500 ml-2 bg-pink-50 dark:bg-pink-900/10 px-2 py-1 rounded-md">
+            <span className="text-sm">❤️</span>
+            <span className="font-bold text-sm">{totalCount + (optimisticCount !== null ? 1 : 0)}</span>
           </div>
         </div>
 
         {/* Description */}
-        <p className="text-sm text-muted-foreground flex-1 line-clamp-3 mb-4">
+        <p className="text-sm text-muted-foreground flex-1 line-clamp-3 mb-4 leading-relaxed">
           {team.description}
         </p>
 
         {/* Appreciation Button */}
         <div className="flex items-center justify-between pt-3 border-t border-border">
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground font-medium">
             {attendeeCount} / {maxPerTeam} given
           </div>
           <button
             onClick={handleAppreciate}
             disabled={!canAppreciate || isLoading}
             className={`
-              flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
+              flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all shadow-sm
               ${
                 canAppreciate
-                  ? "bg-pink-500 hover:bg-pink-600 text-white hover:scale-105 active:scale-100"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
+                  ? "bg-pink-500 hover:bg-pink-600 text-white hover:shadow-md active:scale-95"
+                  : "bg-muted text-muted-foreground cursor-not-allowed shadow-none"
               }
               ${isLoading ? "opacity-70" : ""}
             `}
           >
             {isLoading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <svg
-                className="w-4 h-4"
+                className="w-3.5 h-3.5"
                 fill={canAppreciate ? "currentColor" : "none"}
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -402,4 +467,3 @@ function TeamCard({
     </div>
   );
 }
-

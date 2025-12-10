@@ -1,155 +1,199 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fira+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --card: #ffffff;
-  --card-foreground: #171717;
-  --border: rgba(0, 0, 0, 0.1);
-  --primary: #f97316;
-  --primary-foreground: #ffffff;
-  --secondary: #6b7280;
-  --secondary-foreground: #ffffff;
-  --accent: #8b5cf6;
-  --accent-foreground: #ffffff;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
+  /* Light Mode (Material-Inspired) - HSL Values */
+  --background: 210 20% 98%;   /* Cool gray background */
+  --foreground: 222 47% 11%;   /* Deep slate for text */
+  
+  --card: 0 0% 100%;           /* Pure white cards */
+  --card-foreground: 222 47% 11%;
+  
+  --border: 214 32% 91%;       /* Subtle border */
+  
+  --primary: 221 83% 53%;      /* Strong Blue (Primary Action) */
+  --primary-foreground: 210 40% 98%;
+  
+  --secondary: 210 40% 96.1%;  /* Light gray-blue secondary */
+  --secondary-foreground: 222 47% 11.2%;
+  
+  --accent: 210 40% 96.1%;     /* Light gray-blue accent */
+  --accent-foreground: 222 47% 11.2%;
+  
+  --muted: 210 40% 96.1%;      /* Muted backgrounds */
+  --muted-foreground: 215 16% 47%;
+  
+  --ring: 221 83% 53%;
+  
+  --radius: 0.5rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --card: rgba(255, 255, 255, 0.03);
-    --card-foreground: #ededed;
-    --border: rgba(255, 255, 255, 0.1);
-    --primary: #f97316;
-    --primary-foreground: #ffffff;
-    --secondary: #4b5563;
-    --secondary-foreground: #ffffff;
-    --accent: #8b5cf6;
-    --accent-foreground: #ffffff;
-    --muted: rgba(255, 255, 255, 0.05);
-    --muted-foreground: rgba(255, 255, 255, 0.6);
-  }
+.dark {
+  /* Dark Mode (Material-Inspired) - HSL Values */
+  --background: 222 47% 11%;   /* Deep slate background */
+  --foreground: 210 40% 98%;   /* Bright text */
+  
+  --card: 217 33% 17%;         /* Elevated dark card */
+  --card-foreground: 210 40% 98%;
+  
+  --border: 217 33% 22%;       /* Card border */
+  
+  --primary: 217 91% 60%;      /* Bright Blue */
+  --primary-foreground: 222 47% 11.2%;
+  
+  --secondary: 217 33% 22%;    /* Darker secondary */
+  --secondary-foreground: 210 40% 98%;
+  
+  --accent: 217 33% 22%;
+  --accent-foreground: 210 40% 98%;
+  
+  --muted: 217 33% 22%;
+  --muted-foreground: 215 20% 65%;
+  
+  --ring: 224 76% 48%;
 }
 
 html {
   scroll-behavior: smooth;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: 'Fira Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+body {
+  @apply bg-background text-foreground;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
-}
-
-/* Typography */
+/* Typography Overrides */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.025em;
+  font-weight: 600;
 }
 
 .font-heading {
-  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.025em;
+  font-weight: 600;
 }
 
 .font-body {
-  font-family: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* Monospace for code elements */
 code, pre, kbd, samp {
-  font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  font-feature-settings: "calt" 1, "liga" 1;
-  font-variant-ligatures: contextual;
+  font-family: 'Fira Code', monospace;
 }
 
-/* Custom animations */
-.text-reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  animation: revealText 0.8s ease-out forwards;
+/* Utility Classes */
+.card {
+  @apply bg-card text-card-foreground rounded-lg border border-border shadow-sm transition-all duration-200;
 }
 
-.text-reveal-delay {
-  animation-delay: 0.2s;
+.card:hover {
+  @apply shadow-md -translate-y-[1px]; /* Slight lift effect */
 }
 
+.card-static {
+  @apply bg-card text-card-foreground rounded-lg border border-border shadow-sm;
+}
+
+/* Replaces old glass cards with clean solid cards */
+.card-glass {
+  @apply bg-card text-card-foreground rounded-lg border border-border shadow-sm transition-all duration-200;
+}
+
+.card-glass:hover {
+  @apply shadow-md -translate-y-[1px];
+}
+
+.card-glass.no-card-hover {
+  @apply transition-none transform-none shadow-sm;
+}
+
+.card-glass.no-card-hover:hover {
+  @apply shadow-sm cursor-default translate-y-0;
+}
+
+/* Buttons */
+.btn-primary {
+  @apply inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none;
+  height: 2.5rem; /* h-10 */
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center px-4 py-2 bg-card border border-border text-foreground rounded-md font-medium shadow-sm transition-all duration-200 hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed;
+  height: 2.5rem; /* h-10 */
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md font-medium transition-colors duration-200;
+  height: 2.5rem;
+}
+
+/* Inputs */
+.input {
+  @apply flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow duration-200;
+}
+
+.input:focus {
+  @apply shadow-sm;
+}
+
+/* Badges */
+.badge {
+  @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent;
+}
+
+/* Animations - Minimal/None */
 .fade-in {
-  opacity: 0;
-  animation: fadeIn 0.5s ease-out forwards;
-}
-
-.slide-up {
-  transform: translate3d(0, 12px, 0);
-  opacity: 0;
-  animation: slideUp 0.45s cubic-bezier(0.33, 1, 0.68, 1) forwards;
-  will-change: transform, opacity;
-}
-
-@keyframes revealText {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 @keyframes fadeIn {
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes slideUp {
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
+/* Deprecated/Legacy support mapped to nothing or simple styles */
+.text-reveal {
+  /* No animation */
 }
 
-/* Custom scrollbar */
+.slide-up {
+  /* No animation or very subtle */
+  animation: fadeIn 0.3s ease-out;
+}
+
+.header-depth {
+  @apply border-b border-border bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/60 shadow-sm sticky top-0 z-50;
+}
+
+.gradient-text {
+  @apply text-foreground font-bold tracking-tight;
+}
+
+/* Shadow Utilities for "Elevated" look */
+.shadow-pop {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.shadow-pop:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* Scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(249, 115, 22, 0.5) transparent;
+  scrollbar-color: hsl(var(--border)) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
-  height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -157,103 +201,10 @@ code, pre, kbd, samp {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(249, 115, 22, 0.5);
+  background-color: hsl(var(--border));
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(249, 115, 22, 0.8);
-}
-
-/* Glass morphism effects */
-.glass {
-  backdrop-filter: blur(8px);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.glass-hover {
-  transition: all 300ms;
-}
-
-.glass-hover:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-/* Button styles */
-.btn-primary {
-  @apply px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-100;
-}
-
-.btn-secondary {
-  @apply px-6 py-3 border border-border rounded-xl font-semibold transition-all duration-200 hover:bg-muted;
-}
-
-.btn-secondary:hover {
-  border-color: rgba(var(--foreground), 0.2);
-}
-
-.btn-ghost {
-  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:bg-muted;
-}
-
-/* Card styles */
-.card {
-  @apply bg-card border border-border rounded-xl p-6 transition-all duration-300 hover:shadow-xl;
-}
-
-.card-static {
-  @apply bg-card border border-border rounded-xl p-6;
-}
-
-.card-glass {
-  @apply rounded-xl p-6;
-  backdrop-filter: blur(8px);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 300ms;
-}
-
-.card-glass:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.card-glass.no-card-hover:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: none;
-}
-
-/* Input styles */
-.input {
-  @apply w-full px-4 py-3 bg-muted border border-border rounded-xl outline-none transition-all duration-200 focus:border-primary focus:ring-2;
-}
-
-.input:focus {
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
-}
-
-/* Badge styles */
-.badge {
-  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
-  background: rgba(249, 115, 22, 0.1);
-  color: var(--primary);
-}
-
-/* Gradient text */
-.gradient-text {
-  @apply bg-gradient-to-r from-orange-500 to-purple-600 bg-clip-text text-transparent;
-}
-
-/* Elevated header depth */
-.header-depth {
-  /* subtle drop shadow for depth */
-  box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.35);
-  /* hairline bottom edge for separation */
-  box-shadow: inset 0 -1px 0 0 var(--border), 0 10px 30px -15px rgba(0, 0, 0, 0.35);
-  /* glass effect for modern depth */
-  -webkit-backdrop-filter: saturate(160%) blur(10px);
-  backdrop-filter: saturate(160%) blur(10px);
+  background-color: hsl(var(--secondary));
 }

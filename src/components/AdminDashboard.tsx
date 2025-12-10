@@ -6,6 +6,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
 import { DEFAULT_DEMO_DAY_COURSES } from "../lib/constants";
+import { formatDateTime } from "../lib/utils";
 
 type SortField = "name" | "status" | "teamCount" | "startDate";
 type SortDirection = "asc" | "desc";
@@ -50,6 +51,48 @@ function compareEvents(
   return sortConfig.direction === "asc" ? comparison : -comparison;
 }
 
+function SortButton({
+  field,
+  label,
+  sortConfig,
+  onSort,
+}: {
+  field: SortField;
+  label: string;
+  sortConfig: SortConfig;
+  onSort: (config: SortConfig) => void;
+}) {
+  const isActive = sortConfig.field === field;
+  
+  return (
+    <button
+      onClick={() => onSort({
+        field,
+        direction: isActive && sortConfig.direction === "asc" ? "desc" : "asc"
+      })}
+      className="flex items-center gap-1 hover:text-foreground transition-colors group"
+    >
+      {label}
+      <span className="flex flex-col ml-1">
+        <svg 
+          className={`w-2 h-2 -mb-0.5 ${isActive && sortConfig.direction === "asc" ? "text-primary" : "text-muted-foreground/30 group-hover:text-muted-foreground"}`} 
+          fill="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path d="M12 4l-8 8h16l-8-8z" />
+        </svg>
+        <svg 
+          className={`w-2 h-2 ${isActive && sortConfig.direction === "desc" ? "text-primary" : "text-muted-foreground/30 group-hover:text-muted-foreground"}`} 
+          fill="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path d="M12 20l8-8H4l8 8z" />
+        </svg>
+      </span>
+    </button>
+  );
+}
+
 export function AdminDashboard({ onBackToLanding }: { onBackToLanding: () => void }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<Id<"events"> | null>(null);
@@ -86,7 +129,7 @@ export function AdminDashboard({ onBackToLanding }: { onBackToLanding: () => voi
 
       <div className="flex justify-between items-center mb-8 fade-in">
         <div>
-          <h1 className="text-4xl font-heading font-bold text-foreground mb-2">Admin Dashboard</h1>
+          <h1 className="text-3xl font-heading font-bold text-foreground mb-2">Admin Dashboard</h1>
           <p className="text-muted-foreground">Manage your hackathon events and teams</p>
         </div>
         <button
@@ -139,9 +182,9 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
   const allEvents = [...events.active, ...events.upcoming, ...events.past];
 
   const statusStyles: Record<"upcoming" | "active" | "past", string> = {
-    active: "bg-emerald-500/10 text-emerald-500 border border-emerald-500",
-    upcoming: "bg-sky-500/10 text-sky-500 border border-sky-500",
-    past: "bg-primary/10 text-primary border border-primary",
+    active: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800",
+    upcoming: "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800",
+    past: "bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700",
   };
 
   const handleRemoveEvent = async (eventId: Id<"events">, name: string) => {
@@ -184,7 +227,7 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
 
   if (sortedEvents.length === 0) {
     return (
-      <div className="card-glass text-center py-12 fade-in">
+      <div className="card-static text-center py-12 fade-in">
         <div className="text-6xl mb-4">📅</div>
         <h3 className="text-xl font-heading font-semibold text-foreground mb-2">No Events Yet</h3>
         <p className="text-muted-foreground">Create your first event to get started!</p>
@@ -193,12 +236,12 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
   }
 
   return (
-    <div className="card-glass no-card-hover overflow-hidden fade-in">
+    <div className="card-static overflow-hidden fade-in p-0 bg-white dark:bg-zinc-900 shadow-sm border border-border rounded-lg">
       <div className="overflow-x-auto">
         <table className="min-w-full">
-          <thead className="bg-muted/50">
+          <thead className="bg-muted border-b border-border">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 <SortButton
                   field="name"
                   label="Event Name"
@@ -206,7 +249,7 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
                   onSort={setSortConfig}
                 />
               </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 <SortButton
                   field="status"
                   label="Status"
@@ -214,7 +257,7 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
                   onSort={setSortConfig}
                 />
               </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 <SortButton
                   field="teamCount"
                   label="Teams"
@@ -222,7 +265,7 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
                   onSort={setSortConfig}
                 />
               </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 <SortButton
                   field="startDate"
                   label="Date"
@@ -230,7 +273,7 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
                   onSort={setSortConfig}
                 />
               </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -239,11 +282,12 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
             {sortedEvents.map((event, index) => (
               <tr 
                 key={event._id}
-                className={`transition-colors hover:bg-muted/20 ${index % 2 === 1 ? "bg-muted/10" : ""}`}
+                onClick={() => onSelectEvent(event._id)}
+                className="transition-colors hover:bg-muted/50 cursor-pointer"
               >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-foreground">{event.name}</span>
+                    <span className="text-sm font-medium text-foreground">{event.name}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -266,28 +310,34 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    {new Date(event.startDate).toLocaleDateString()}
+                    {formatDateTime(event.startDate)}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => onSelectEvent(event._id)}
-                      className="inline-flex items-center justify-center p-2 rounded-lg transition-colors text-primary hover:text-primary hover:bg-orange-500/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectEvent(event._id);
+                      }}
+                      className="inline-flex items-center justify-center p-2 rounded-md transition-colors text-primary hover:bg-primary/10"
                       title="Manage event"
                     >
                       <span className="sr-only">Manage event</span>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.094c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.095c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.02-.398-1.11-.94l-.149-.894c-.071-.424-.383-.764-.781-.93-.397-.164-.853-.142-1.203.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.095c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDuplicateEvent(event._id, event.name)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDuplicateEvent(event._id, event.name);
+                      }}
                       disabled={duplicatingEventId === event._id}
-                      className={`inline-flex items-center justify-center p-2 rounded-lg transition-colors text-blue-500 hover:bg-blue-500/10 ${
+                      className={`inline-flex items-center justify-center p-2 rounded-md transition-colors text-blue-500 hover:bg-blue-500/10 ${
                         duplicatingEventId === event._id ? "opacity-60 cursor-not-allowed" : ""
                       }`}
                       title="Duplicate event"
@@ -299,9 +349,12 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleRemoveEvent(event._id, event.name)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveEvent(event._id, event.name);
+                      }}
                       disabled={removingEventId === event._id}
-                      className={`inline-flex items-center justify-center p-2 rounded-lg transition-colors text-red-500 hover:bg-red-500/10 ${
+                      className={`inline-flex items-center justify-center p-2 rounded-md transition-colors text-red-500 hover:bg-red-500/10 ${
                         removingEventId === event._id ? "opacity-60 cursor-not-allowed" : ""
                       }`}
                       title="Remove event"
@@ -416,7 +469,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+              className="input"
               placeholder="HackBU Fall 2024"
             />
           </div>
@@ -428,7 +481,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground resize-none"
+              className="input h-auto resize-none"
               placeholder="Boston University's premier 24-hour hackathon..."
             />
           </div>
@@ -438,7 +491,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-              className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+              className="input"
             >
               <option value="upcoming">Upcoming</option>
               <option value="active">Active</option>
@@ -452,7 +505,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, mode: "hackathon" })}
-                className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all ${
+                className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
                   formData.mode === "hackathon"
                     ? "bg-primary text-white"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -463,7 +516,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, mode: "demo_day" })}
-                className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all ${
+                className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
                   formData.mode === "demo_day"
                     ? "bg-pink-500 text-white"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -487,7 +540,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                 required
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                className="input"
               />
             </div>
             <div>
@@ -497,7 +550,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                 required
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                className="input"
               />
             </div>
           </div>
@@ -521,7 +574,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                           newCats[index].name = e.target.value;
                           setCategories(newCats);
                         }}
-                        className="flex-1 px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                        className="input flex-1"
                         placeholder="Category name"
                       />
                       <input
@@ -536,7 +589,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                           newCats[index].weight = parseFloat(e.target.value) || 1;
                           setCategories(newCats);
                         }}
-                        className="w-24 px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                        className="input w-24"
                         placeholder="Weight"
                       />
                       <button
@@ -586,7 +639,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                       required
                       value={formData.tracks}
                       onChange={(e) => setFormData({ ...formData, tracks: e.target.value })}
-                      className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                      className="input"
                       placeholder="AI/ML, Web Development, Hardware..."
                     />
                     <p className="text-xs text-muted-foreground mt-2">
@@ -621,7 +674,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                   type="text"
                   value={formData.judgeCode}
                   onChange={(e) => setFormData({ ...formData, judgeCode: e.target.value })}
-                  className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+                  className="input"
                   placeholder="secret-code-123"
                 />
                 <p className="text-xs text-muted-foreground mt-2">
@@ -677,13 +730,13 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                       handleAddCourseCode();
                     }
                   }}
-                  className="flex-1 px-4 py-2 bg-background border border-border rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all text-foreground"
+                  className="flex-1 input"
                   placeholder="Add course code (e.g., CS101)"
                 />
                 <button
                   type="button"
                   onClick={handleAddCourseCode}
-                  className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-xl font-medium transition-colors"
+                  className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-medium transition-colors"
                 >
                   Add
                 </button>
@@ -717,280 +770,6 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
           </div>
         </form>
       </div>
-    </div>
-  );
-}
-
-function ScoringDashboard({
-  scores,
-  viewMode,
-  setViewMode,
-}: {
-  scores: {
-    teamRankings: any[];
-    categoryRankings: Record<string, any[]>;
-    judgeBreakdown: any[];
-    categories: string[];
-  };
-  viewMode: 'table' | 'chart';
-  setViewMode: (mode: 'table' | 'chart') => void;
-}) {
-  const [sortColumn, setSortColumn] = useState<string>('averageScore');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
-  const handleSort = (column: string) => {
-    if (column === sortColumn) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(column);
-      setSortDirection('desc');
-    }
-  };
-
-  const sortedRankings = [...scores.teamRankings].sort((a, b) => {
-    let comparison = 0;
-    
-    switch (sortColumn) {
-      case 'name':
-        comparison = a.team.name.localeCompare(b.team.name);
-        break;
-      case 'averageScore':
-        comparison = a.averageScore - b.averageScore;
-        break;
-      case 'judges':
-        comparison = a.judgeCount - b.judgeCount;
-        break;
-      default:
-        // Category columns
-        if (scores.categories.includes(sortColumn)) {
-          const aScore = a.categoryAverages[sortColumn] || 0;
-          const bScore = b.categoryAverages[sortColumn] || 0;
-          comparison = aScore - bScore;
-        }
-        break;
-    }
-    
-    return sortDirection === 'asc' ? comparison : -comparison;
-  });
-
-  const SortIcon = ({ column }: { column: string }) => {
-    if (sortColumn !== column) {
-      return (
-        <svg className="w-4 h-4 inline-block ml-1 text-muted-foreground opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
-    }
-    return sortDirection === 'asc' ? (
-      <svg className="w-4 h-4 inline-block ml-1 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
-    ) : (
-      <svg className="w-4 h-4 inline-block ml-1 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    );
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* View Toggle */}
-      <div className="flex justify-between items-center">
-        <h3 className="text-2xl font-heading font-bold text-foreground">Scoring Dashboard</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setViewMode('table')}
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              viewMode === 'table'
-                ? 'bg-primary text-white shadow-lg'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-          >
-            <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            Table
-          </button>
-          <button
-            onClick={() => setViewMode('chart')}
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              viewMode === 'chart'
-                ? 'bg-primary text-white shadow-lg'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-          >
-            <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Charts
-          </button>
-        </div>
-      </div>
-
-      {viewMode === 'table' ? (
-        <>
-          {/* Overall Rankings Table */}
-          <div className="card p-6">
-            <h4 className="text-xl font-heading font-bold text-foreground mb-4">Overall Rankings</h4>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-foreground">
-                      Rank
-                    </th>
-                    <th 
-                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
-                      onClick={() => handleSort('name')}
-                    >
-                      Team Name
-                      <SortIcon column="name" />
-                    </th>
-                    <th 
-                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
-                      onClick={() => handleSort('averageScore')}
-                    >
-                      Avg Score
-                      <SortIcon column="averageScore" />
-                    </th>
-                    <th 
-                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
-                      onClick={() => handleSort('judges')}
-                    >
-                      Judges
-                      <SortIcon column="judges" />
-                    </th>
-                    {scores.categories.map((cat) => (
-                      <th 
-                        key={cat} 
-                        className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
-                        onClick={() => handleSort(cat)}
-                      >
-                        {cat}
-                        <SortIcon column={cat} />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedRankings.map((ranking, index) => (
-                    <tr 
-                      key={ranking.team._id}
-                      className={index % 2 === 0 ? 'bg-gray-50 dark:bg-white/[0.03]' : 'bg-gray-100 dark:bg-white/[0.08]'}
-                    >
-                      <td className="px-6 py-4 text-lg font-bold text-foreground">#{index + 1}</td>
-                      <td className="px-6 py-4 text-lg font-semibold text-foreground">{ranking.team.name}</td>
-                      <td className="px-6 py-4 text-lg font-mono text-foreground">{ranking.averageScore.toFixed(2)}</td>
-                      <td className="px-6 py-4 text-lg text-muted-foreground">{ranking.judgeCount}</td>
-                      {scores.categories.map((cat) => (
-                        <td key={cat} className="px-6 py-4 text-base font-mono text-muted-foreground">
-                          {ranking.categoryAverages[cat]?.toFixed(2) || '-'}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Category Rankings */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {scores.categories.map((category) => (
-              <div key={category} className="card p-6">
-                <h4 className="text-lg font-heading font-bold text-foreground mb-4">{category}</h4>
-                <div className="space-y-2">
-                  {scores.categoryRankings[category]?.slice(0, 5).map((team, idx) => (
-                    <div 
-                      key={team.team._id}
-                      className={`flex justify-between items-center p-3 rounded-lg ${
-                        idx % 2 === 0 ? 'bg-gray-50 dark:bg-white/[0.03]' : 'bg-gray-100 dark:bg-white/[0.08]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg font-bold text-muted-foreground">#{idx + 1}</span>
-                        <span className="text-base font-semibold text-foreground">{team.team.name}</span>
-                      </div>
-                      <span className="text-base font-mono text-foreground">{team.categoryAverage.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : (
-        <>
-          {/* Overall Rankings Chart */}
-          <div className="card p-6">
-            <h4 className="text-xl font-heading font-bold text-foreground mb-6">Overall Rankings</h4>
-            <div className="space-y-4">
-              {scores.teamRankings.map((ranking, index) => {
-                const maxScore = Math.max(...scores.teamRankings.map(r => r.averageScore));
-                const percentage = (ranking.averageScore / maxScore) * 100;
-                
-                return (
-                  <div key={ranking.team._id} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg font-bold text-muted-foreground w-8">#{index + 1}</span>
-                        <span className="text-lg font-semibold text-foreground">{ranking.team.name}</span>
-                      </div>
-                      <span className="text-lg font-mono font-bold text-foreground">{ranking.averageScore.toFixed(2)}</span>
-                    </div>
-                    <div className="w-full bg-muted/30 rounded-full h-8 overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-primary to-accent rounded-full flex items-center justify-end pr-3 transition-all duration-500"
-                        style={{ width: `${percentage}%` }}
-                      >
-                        <span className="text-xs font-medium text-white">{percentage.toFixed(0)}%</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Category Comparison Chart */}
-          <div className="card p-6">
-            <h4 className="text-xl font-heading font-bold text-foreground mb-6">Top 5 Teams by Category</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {scores.categories.map((category) => (
-                <div key={category}>
-                  <h5 className="text-lg font-semibold text-foreground mb-4">{category}</h5>
-                  <div className="space-y-3">
-                    {scores.categoryRankings[category]?.slice(0, 5).map((team, idx) => {
-                      const maxCategoryScore = Math.max(...(scores.categoryRankings[category]?.map(t => t.categoryAverage) || [1]));
-                      const percentage = (team.categoryAverage / maxCategoryScore) * 100;
-                      
-                      return (
-                        <div key={team.team._id} className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="font-medium text-foreground">{team.team.name}</span>
-                            <span className="font-mono text-muted-foreground">{team.categoryAverage.toFixed(2)}</span>
-                          </div>
-                          <div className="w-full bg-muted/30 rounded-full h-6 overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full transition-all duration-500 ${
-                                idx === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
-                                idx === 1 ? 'bg-gradient-to-r from-gray-300 to-gray-500' :
-                                idx === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
-                                'bg-gradient-to-r from-primary to-accent'
-                              }`}
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }
@@ -1253,7 +1032,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
           {activeTab === 'overview' && (
             <>
               {/* Event Status */}
-              <div className="card p-6">
+              <div className="card-static p-6 bg-white dark:bg-zinc-900">
                 <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1265,10 +1044,10 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                     <button
                       key={status}
                       onClick={() => handleStatusChange(status)}
-                      className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                      className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                         event.status === status
-                          ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105"
-                          : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105"
+                          ? "bg-primary text-white shadow-md"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
                       }`}
                     >
                       {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -1278,7 +1057,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
               </div>
 
               {/* Event Mode */}
-              <div className="card p-6">
+              <div className="card-static p-6 bg-white dark:bg-zinc-900">
                 <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
@@ -1288,20 +1067,20 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                 <div className="flex gap-3 flex-wrap">
                   <button
                     onClick={() => handleModeChange("hackathon")}
-                    className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                    className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                       !isDemoDayMode
-                        ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105"
+                        ? "bg-primary text-white shadow-md"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
                     }`}
                   >
                     🏆 Hackathon
                   </button>
                   <button
                     onClick={() => handleModeChange("demo_day")}
-                    className={`px-6 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                    className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                       isDemoDayMode
-                        ? "bg-pink-500 text-white shadow-lg shadow-pink-500/30 scale-105"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105"
+                        ? "bg-pink-500 text-white shadow-md"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
                     }`}
                   >
                     ❤️ Demo Day
@@ -1315,7 +1094,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
               </div>
 
           {/* Teams */}
-          <div className="card p-6">
+          <div className="card-static p-6 bg-white dark:bg-zinc-900">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1340,12 +1119,12 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                 event.teams.map((team, index) => (
                   <div 
                     key={team._id} 
-                    className={`rounded-xl p-4 transition-colors ${
+                    className={`rounded-lg p-4 transition-colors border border-border ${
                       index % 2 === 0 
-                        ? 'bg-gray-50 dark:bg-white/[0.03] hover:bg-gray-100 dark:hover:bg-white/[0.06]' 
-                        : 'bg-gray-100 dark:bg-white/[0.08] hover:bg-gray-200 dark:hover:bg-white/[0.12]'
+                        ? 'bg-muted/30' 
+                        : 'bg-background'
                     } ${
-                      (team as any).hidden ? 'opacity-50 border-2 border-dashed border-yellow-500/50' : ''
+                      (team as any).hidden ? 'opacity-50 border-dashed border-yellow-500/50' : ''
                     }`}
                   >
                     <div className="flex justify-between items-start">
@@ -1427,16 +1206,16 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
 
           {/* Scores - only show for hackathon mode */}
           {!isDemoDayMode && eventScores && eventScores.length > 0 && (
-            <div className="card p-6">
+            <div className="card-static p-6 bg-white dark:bg-zinc-900">
               <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Scores
               </h3>
-              <div className="bg-muted/30 rounded-xl overflow-hidden">
+              <div className="bg-muted/30 rounded-lg overflow-hidden border border-border">
                 <table className="min-w-full">
-                  <thead className="bg-muted/50">
+                  <thead className="bg-muted/50 border-b border-border">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Rank</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Team</th>
@@ -1464,7 +1243,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                 {event.status === "active" && (
                   <button
                     onClick={() => handleStatusChange("past")}
-                    className="flex-1 min-w-[200px] bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2"
+                    className="flex-1 min-w-[200px] bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1484,7 +1263,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                 <button
                   onClick={handleReleaseResults}
                   disabled={event.resultsReleased}
-                  className="flex-1 min-w-[200px] bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 min-w-[200px] bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1503,15 +1282,15 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                   <div className="space-y-6">
                     {/* Summary Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="card p-6 text-center">
+                      <div className="card-static p-6 bg-white dark:bg-zinc-900 text-center">
                         <div className="text-3xl font-bold text-pink-500">{appreciationSummary.totalAppreciations}</div>
                         <div className="text-sm text-muted-foreground mt-1">Total Appreciations</div>
                       </div>
-                      <div className="card p-6 text-center">
+                      <div className="card-static p-6 bg-white dark:bg-zinc-900 text-center">
                         <div className="text-3xl font-bold text-foreground">{appreciationSummary.uniqueAttendees}</div>
                         <div className="text-sm text-muted-foreground mt-1">Unique Attendees</div>
                       </div>
-                      <div className="card p-6 text-center">
+                      <div className="card-static p-6 bg-white dark:bg-zinc-900 text-center">
                         <div className="text-3xl font-bold text-foreground">{appreciationSummary.teams.length}</div>
                         <div className="text-sm text-muted-foreground mt-1">Projects</div>
                       </div>
@@ -1531,7 +1310,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                       <button
                         onClick={() => void handleDownloadQrCodes()}
                         disabled={isGeneratingQr}
-                        className="bg-pink-500 hover:bg-pink-600 text-white font-medium px-4 py-2 rounded-xl transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-pink-500 hover:bg-pink-600 text-white font-medium px-4 py-2 rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isGeneratingQr ? (
                           <>
@@ -1550,11 +1329,11 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                     </div>
 
                     {/* Team Rankings */}
-                    <div className="card p-6">
+                    <div className="card-static p-6 bg-white dark:bg-zinc-900">
                       <h4 className="text-xl font-heading font-bold text-foreground mb-4">Project Rankings</h4>
                       <div className="overflow-x-auto">
                         <table className="min-w-full">
-                          <thead className="bg-muted/50">
+                          <thead className="bg-muted/50 border-b border-border">
                             <tr>
                               <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Rank</th>
                               <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Project</th>
@@ -1564,7 +1343,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                           </thead>
                           <tbody className="divide-y divide-border">
                             {appreciationSummary.teams.map((team, index) => (
-                              <tr key={team.teamId} className={index % 2 === 0 ? 'bg-gray-50 dark:bg-white/[0.03]' : ''}>
+                              <tr key={team.teamId} className={index % 2 === 0 ? 'bg-muted/20' : ''}>
                                 <td className="px-4 py-3 text-sm font-bold text-foreground">
                                   <span className="flex items-center gap-2">
                                     #{index + 1}
@@ -1591,7 +1370,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                     </div>
                   </div>
                 ) : (
-                  <div className="card p-12 text-center">
+                  <div className="card-static p-12 bg-white dark:bg-zinc-900 text-center">
                     <div className="text-6xl mb-4">❤️</div>
                     <h3 className="text-2xl font-heading font-bold text-foreground mb-2">No Appreciations Yet</h3>
                     <p className="text-muted-foreground">
@@ -1608,7 +1387,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                     setViewMode={setViewMode}
                   />
                 ) : (
-                  <div className="card p-12 text-center">
+                  <div className="card-static p-12 bg-white dark:bg-zinc-900 text-center">
                     <div className="text-6xl mb-4">📊</div>
                     <h3 className="text-2xl font-heading font-bold text-foreground mb-2">No Scores Yet</h3>
                     <p className="text-muted-foreground mb-6">
@@ -1653,55 +1432,277 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   );
 }
 
-function SortButton({
-  field,
-  label,
-  sortConfig,
-  onSort,
+function ScoringDashboard({
+  scores,
+  viewMode,
+  setViewMode,
 }: {
-  field: SortField;
-  label: string;
-  sortConfig: SortConfig;
-  onSort: Dispatch<SetStateAction<SortConfig>>;
+  scores: {
+    teamRankings: any[];
+    categoryRankings: Record<string, any[]>;
+    judgeBreakdown: any[];
+    categories: string[];
+  };
+  viewMode: 'table' | 'chart';
+  setViewMode: (mode: 'table' | 'chart') => void;
 }) {
-  const isActive = sortConfig.field === field;
-  const direction = isActive ? sortConfig.direction : undefined;
+  const [sortColumn, setSortColumn] = useState<string>('averageScore');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  const handleClick = () => {
-    onSort((prev) =>
-      prev.field === field
-        ? { field, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { field, direction: "asc" }
+  const handleSort = (column: string) => {
+    if (column === sortColumn) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const sortedRankings = [...scores.teamRankings].sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortColumn) {
+      case 'name':
+        comparison = a.team.name.localeCompare(b.team.name);
+        break;
+      case 'averageScore':
+        comparison = a.averageScore - b.averageScore;
+        break;
+      case 'judges':
+        comparison = a.judgeCount - b.judgeCount;
+        break;
+      default:
+        // Category columns
+        if (scores.categories.includes(sortColumn)) {
+          const aScore = a.categoryAverages[sortColumn] || 0;
+          const bScore = b.categoryAverages[sortColumn] || 0;
+          comparison = aScore - bScore;
+        }
+        break;
+    }
+    
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) {
+      return (
+        <svg className="w-4 h-4 inline-block ml-1 text-muted-foreground opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      );
+    }
+    return sortDirection === 'asc' ? (
+      <svg className="w-4 h-4 inline-block ml-1 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    ) : (
+      <svg className="w-4 h-4 inline-block ml-1 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
     );
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className="flex items-center gap-2 uppercase tracking-wider text-xs font-bold transition-colors hover:text-foreground focus:outline-none"
-    >
-      <span>{label}</span>
-      <SortIndicator active={isActive} direction={direction} />
-      <span className="sr-only">
-        {isActive ? `sorted ${direction === "asc" ? "ascending" : "descending"}` : "click to sort"}
-      </span>
-    </button>
-  );
-}
+    <div className="space-y-6">
+      {/* View Toggle */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-2xl font-heading font-bold text-foreground">Scoring Dashboard</h3>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              viewMode === 'table'
+                ? 'bg-primary text-white shadow-md'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Table
+          </button>
+          <button
+            onClick={() => setViewMode('chart')}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              viewMode === 'chart'
+                ? 'bg-primary text-white shadow-md'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Charts
+          </button>
+        </div>
+      </div>
 
-function SortIndicator({
-  active,
-  direction,
-}: {
-  active: boolean;
-  direction?: SortDirection;
-}) {
-  const symbol = !active ? "⇅" : direction === "asc" ? "↑" : "↓";
-  return (
-    <span aria-hidden="true" className={`text-[0.7rem] leading-none ${active ? "text-primary" : "text-muted-foreground"}`}>
-      {symbol}
-    </span>
+      {viewMode === 'table' ? (
+        <>
+          {/* Overall Rankings Table */}
+          <div className="card-static p-6 bg-white dark:bg-zinc-900">
+            <h4 className="text-xl font-heading font-bold text-foreground mb-4">Overall Rankings</h4>
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-muted/50 border-b border-border">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-foreground">
+                      Rank
+                    </th>
+                    <th 
+                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
+                      onClick={() => handleSort('name')}
+                    >
+                      Team Name
+                      <SortIcon column="name" />
+                    </th>
+                    <th 
+                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
+                      onClick={() => handleSort('averageScore')}
+                    >
+                      Avg Score
+                      <SortIcon column="averageScore" />
+                    </th>
+                    <th 
+                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
+                      onClick={() => handleSort('judges')}
+                    >
+                      Judges
+                      <SortIcon column="judges" />
+                    </th>
+                    {scores.categories.map((cat) => (
+                      <th 
+                        key={cat} 
+                        className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
+                        onClick={() => handleSort(cat)}
+                      >
+                        {cat}
+                        <SortIcon column={cat} />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {sortedRankings.map((ranking, index) => (
+                    <tr 
+                      key={ranking.team._id}
+                      className={index % 2 === 0 ? 'bg-muted/20' : ''}
+                    >
+                      <td className="px-6 py-4 text-lg font-bold text-foreground">#{index + 1}</td>
+                      <td className="px-6 py-4 text-lg font-semibold text-foreground">{ranking.team.name}</td>
+                      <td className="px-6 py-4 text-lg font-mono text-foreground">{ranking.averageScore.toFixed(2)}</td>
+                      <td className="px-6 py-4 text-lg text-muted-foreground">{ranking.judgeCount}</td>
+                      {scores.categories.map((cat) => (
+                        <td key={cat} className="px-6 py-4 text-base font-mono text-muted-foreground">
+                          {ranking.categoryAverages[cat]?.toFixed(2) || '-'}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Category Rankings */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {scores.categories.map((category) => (
+              <div key={category} className="card-static p-6 bg-white dark:bg-zinc-900">
+                <h4 className="text-lg font-heading font-bold text-foreground mb-4">{category}</h4>
+                <div className="space-y-2">
+                  {scores.categoryRankings[category]?.slice(0, 5).map((team, idx) => (
+                    <div 
+                      key={team.team._id}
+                      className={`flex justify-between items-center p-3 rounded-lg ${
+                        idx % 2 === 0 ? 'bg-muted/30' : 'bg-background border border-border'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold text-muted-foreground">#{idx + 1}</span>
+                        <span className="text-base font-semibold text-foreground">{team.team.name}</span>
+                      </div>
+                      <span className="text-base font-mono text-foreground">{team.categoryAverage.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Overall Rankings Chart */}
+          <div className="card-static p-6 bg-white dark:bg-zinc-900">
+            <h4 className="text-xl font-heading font-bold text-foreground mb-6">Overall Rankings</h4>
+            <div className="space-y-4">
+              {scores.teamRankings.map((ranking, index) => {
+                const maxScore = Math.max(...scores.teamRankings.map(r => r.averageScore));
+                const percentage = (ranking.averageScore / maxScore) * 100;
+                
+                return (
+                  <div key={ranking.team._id} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold text-muted-foreground w-8">#{index + 1}</span>
+                        <span className="text-lg font-semibold text-foreground">{ranking.team.name}</span>
+                      </div>
+                      <span className="text-lg font-mono font-bold text-foreground">{ranking.averageScore.toFixed(2)}</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-8 overflow-hidden">
+                      <div 
+                        className="h-full bg-primary rounded-full flex items-center justify-end pr-3 transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      >
+                        <span className="text-xs font-medium text-white">{percentage.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Category Comparison Chart */}
+          <div className="card-static p-6 bg-white dark:bg-zinc-900">
+            <h4 className="text-xl font-heading font-bold text-foreground mb-6">Top 5 Teams by Category</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {scores.categories.map((category) => (
+                <div key={category}>
+                  <h5 className="text-lg font-semibold text-foreground mb-4">{category}</h5>
+                  <div className="space-y-3">
+                    {scores.categoryRankings[category]?.slice(0, 5).map((team, idx) => {
+                      const maxCategoryScore = Math.max(...(scores.categoryRankings[category]?.map(t => t.categoryAverage) || [1]));
+                      const percentage = (team.categoryAverage / maxCategoryScore) * 100;
+                      
+                      return (
+                        <div key={team.team._id} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium text-foreground">{team.team.name}</span>
+                            <span className="font-mono text-muted-foreground">{team.categoryAverage.toFixed(2)}</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-6 overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                idx === 0 ? 'bg-amber-400' :
+                                idx === 1 ? 'bg-zinc-400' :
+                                idx === 2 ? 'bg-orange-400' :
+                                'bg-primary'
+                              }`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { requireAdmin } from "./helpers";
+import { requireAdmin, computeEventStatus } from "./helpers";
 
 export const createTeam = mutation({
   args: {
@@ -11,6 +11,7 @@ export const createTeam = mutation({
     members: v.array(v.string()),
     projectUrl: v.optional(v.string()),
     courseCode: v.optional(v.string()),
+    logoStorageId: v.optional(v.id("_storage")),
   },
   returns: v.id("teams"),
   handler: async (ctx, args) => {
@@ -38,6 +39,7 @@ export const createTeam = mutation({
       githubUrl: args.projectUrl || "",
       track: "",
       courseCode: args.courseCode,
+      logoStorageId: args.logoStorageId,
       submittedBy: userId,
       submittedAt: Date.now(),
     });
@@ -60,9 +62,12 @@ export const submitTeam = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    // Verify event is active
+    // Verify event is active (computed from dates)
     const event = await ctx.db.get(args.eventId);
-    if (!event || event.status !== "active") {
+    if (!event) throw new Error("Event not found");
+
+    const status = computeEventStatus(event);
+    if (status !== "active") {
       throw new Error("Can only submit teams to active events");
     }
 

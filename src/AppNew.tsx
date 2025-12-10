@@ -9,6 +9,7 @@ import { AdminDashboard } from "./components/AdminDashboard";
 import { ProfilePage } from "./components/ProfilePage";
 import { useState } from "react";
 import { Id } from "../convex/_generated/dataModel";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<"landing" | "event" | "admin" | "profile">("landing");
@@ -52,6 +53,11 @@ export default function App() {
 
     return (
       <>
+        {variant === "mobile" && (
+          <div className="flex justify-end mb-2">
+            <ThemeToggle />
+          </div>
+        )}
         <Authenticated>
           <button
             onClick={() => {
@@ -96,7 +102,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/60 header-depth relative">
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <button
@@ -104,12 +110,13 @@ export default function App() {
                 handleBackToLanding();
                 closeMobileMenu();
               }}
-              className="text-xl font-sans font-bold hover:text-primary transition-colors"
+              className="text-xl font-heading font-bold hover:text-primary transition-colors text-foreground"
             >
-              redeye
+              HackJudge
             </button>
             <div className="flex items-center gap-3">
               <div className="hidden md:flex gap-4 items-center">
+                <ThemeToggle />
                 {renderNavActions("desktop")}
               </div>
               <button
@@ -133,15 +140,10 @@ export default function App() {
           </div>
         </div>
         {isMobileMenuOpen && (
-          <div className="md:hidden">
-            <div
-              className="fixed inset-0 z-30 bg-transparent"
-              onClick={closeMobileMenu}
-            />
-            <div className="fixed inset-x-0 top-[72px] z-40 px-4 sm:px-6">
-              <div className="max-w-7xl mx-auto border border-border rounded-xl bg-black text-white shadow-lg p-4 space-y-2">
-                {renderNavActions("mobile")}
-              </div>
+          <div className="md:hidden border-t border-border bg-background">
+            <div className="fixed inset-0 z-30 bg-transparent" onClick={closeMobileMenu} />
+            <div className="relative z-40 px-4 py-6 space-y-2">
+              {renderNavActions("mobile")}
             </div>
           </div>
         )}
@@ -173,10 +175,10 @@ export default function App() {
       {showSignIn && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setShowSignIn(false)}
           />
-          <div className="relative bg-background rounded-2xl p-8 max-w-md w-full shadow-2xl slide-up border border-border">
+          <div className="relative bg-background rounded-xl p-8 max-w-md w-full shadow-2xl border border-border slide-up">
             <button
               onClick={() => setShowSignIn(false)}
               className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
@@ -185,7 +187,7 @@ export default function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <h2 className="text-2xl font-heading font-bold mb-6">Sign In</h2>
+            <h2 className="text-2xl font-heading font-bold mb-6 text-foreground">Sign In</h2>
             <SignInForm />
           </div>
         </div>
@@ -210,7 +212,7 @@ function Content({
   if (loggedInUser === undefined) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -223,8 +225,8 @@ function Content({
     if (!loggedInUser) {
       return (
         <div className="max-w-md mx-auto mt-16 px-4">
-          <div className="card text-center">
-            <h2 className="text-2xl font-heading font-bold mb-4">Sign In Required</h2>
+          <div className="card-static p-8 text-center bg-white dark:bg-zinc-900">
+            <h2 className="text-xl font-heading font-bold mb-2">Sign In Required</h2>
             <p className="text-muted-foreground mb-6">
               Please sign in to access the admin dashboard.
             </p>

@@ -29,3 +29,6 @@ package-lock.json
 # Test coverage
 coverage/
 .nyc_output/
+
+# Documentation
+docs/

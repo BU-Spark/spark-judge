@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { computeEventStatus } from "./helpers";
 
 export const getUserProfile = query({
   args: {},
@@ -96,19 +97,19 @@ export const getUserProfile = query({
       })
     );
 
-    // Filter out null values and separate by event status
+    // Filter out null values and separate by event status (computed from dates)
     const validEventsData = eventsData.filter((e) => e !== null);
 
     const pastEvents = validEventsData
-      .filter((e) => e!.event.status === "past")
+      .filter((e) => computeEventStatus(e!.event) === "past")
       .map(({ scores, ...rest }) => rest);
 
     const activeEvents = validEventsData
-      .filter((e) => e!.event.status === "active")
+      .filter((e) => computeEventStatus(e!.event) === "active")
       .map(({ scores, ...rest }) => rest);
 
     const upcomingEvents = validEventsData
-      .filter((e) => e!.event.status === "upcoming")
+      .filter((e) => computeEventStatus(e!.event) === "upcoming")
       .map(({ scores, ...rest }) => rest);
 
     // Calculate statistics

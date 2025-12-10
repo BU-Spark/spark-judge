@@ -6,6 +6,7 @@ import { ScoringWizard } from "./ScoringWizard";
 import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
 import { DemoDayBrowse } from "./demo-day";
+import { formatDateTime } from "../lib/utils";
 
 export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: () => void }) {
   const event = useQuery(api.events.getEvent, { eventId });
@@ -152,19 +153,19 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
         Back to Events
       </button>
 
-      <div className="card-glass mb-8 fade-in">
+      <div className="card-static mb-8 fade-in p-6 bg-white dark:bg-zinc-900 border border-border shadow-sm">
         <div className="mb-4">
-          <h1 className="text-4xl font-heading font-bold text-foreground mb-2">{event.name}</h1>
+          <h1 className="text-3xl font-heading font-bold text-foreground mb-2">{event.name}</h1>
           <p className="text-muted-foreground text-lg">{event.description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-2 font-medium">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
+            {formatDateTime(event.startDate)} - {formatDateTime(event.endDate)}
           </span>
-          <span className={`badge ${event.status === 'active' ? 'bg-green-500/20 text-green-600 border-green-500/30' : ''}`}>
+          <span className={`badge ${event.status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800' : ''}`}>
             {event.status}
           </span>
         </div>
@@ -191,15 +192,15 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       )}
 
       {event.status === "active" && (
-        <div className="card mb-8 fade-in">
+        <div className="card mb-8 fade-in p-6 bg-white dark:bg-zinc-900 shadow-md">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
+                <h2 className="text-xl font-heading font-bold text-foreground mb-2">
                   {scoringComplete ? "Scoring Complete!" : completedCount > 0 ? "Keep Scoring" : "Ready to Score?"}
           </h2>
                 {scoringComplete ? (
-                  <p className="text-emerald-600 dark:text-emerald-400">
+                  <p className="text-emerald-600 dark:text-emerald-400 font-medium">
                     Thank you for judging. All teams have been scored.
                   </p>
                 ) : (
@@ -211,37 +212,37 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
                         } categories.`}
                   </p>
                 )}
-                <p className={`text-sm mt-2 ${scoringComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                <p className={`text-sm mt-2 font-medium ${scoringComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
                   Progress: {completedCount} / {totalTeams} teams scored
                 </p>
                 {justSubmitted && (
                   <p className="text-xs text-muted-foreground mt-1">Your scores were submitted successfully.</p>
                 )}
               </div>
-                  <button
-                onClick={() => setShowWizard(true)}
-                className={scoringComplete ? "btn-secondary" : "btn-primary"}
-                disabled={(enableCohorts && myAssignments.length === 0) || totalTeams === 0 || scoringComplete}
-              >
-                {scoringComplete
-                  ? "Scoring Complete"
-                  : hasDraft
-                  ? "Continue Scoring"
-                  : completedCount > 0
-                  ? "Resume Scoring"
-                  : enableCohorts && myAssignments.length === 0
-                  ? "Select Teams First"
-                  : "Start Scoring"}
-                  </button>
+              {!scoringComplete && (
+                <button
+                  onClick={() => setShowWizard(true)}
+                  className="btn-primary shadow-md hover:shadow-lg transition-all"
+                  disabled={(enableCohorts && myAssignments.length === 0) || totalTeams === 0}
+                >
+                  {hasDraft
+                    ? "Continue Scoring"
+                    : completedCount > 0
+                    ? "Resume Scoring"
+                    : enableCohorts && myAssignments.length === 0
+                    ? "Select Teams First"
+                    : "Start Scoring"}
+                </button>
+              )}
                 </div>
             <div>
-              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+              <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden shadow-inner">
                 <div
                   className={`h-full transition-all duration-500 ${scoringComplete ? 'bg-emerald-500' : 'bg-primary'}`}
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground mt-2">
+              <div className="flex justify-between text-xs text-muted-foreground mt-2 font-medium">
                 <span>Completed: {completedCount}</span>
                 <span>Remaining: {Math.max(totalTeams - completedCount, 0)}</span>
               </div>
@@ -252,8 +253,8 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
       {/* Score Summary Section - Show when scoring is complete */}
       {scoringComplete && myScores && myScores.length > 0 && (
-        <div className="card mb-8 fade-in">
-          <h2 className="text-xl font-heading font-semibold mb-4">Your Score Summary</h2>
+        <div className="card mb-8 fade-in p-6 bg-white dark:bg-zinc-900 shadow-md">
+          <h2 className="text-lg font-heading font-semibold mb-4">Your Score Summary</h2>
           <ScoreSummary 
             scores={myScores.map(score => {
               const team = visibleTeams.find(t => t._id === score.teamId);
@@ -296,24 +297,24 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
 
   return (
     <div className="space-y-8">
-      <div className="card-glass bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 border-yellow-500/30 text-center slide-up">
-        <div className="text-6xl mb-4">🏆</div>
-        <h2 className="text-3xl font-heading font-bold text-gray-900 mb-2">Overall Winner</h2>
+      <div className="card bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800 text-center fade-in p-8 shadow-md">
+        <div className="text-6xl mb-4 animate-bounce">🏆</div>
+        <h2 className="text-3xl font-heading font-bold text-gray-900 dark:text-gray-100 mb-2">Overall Winner</h2>
         {overallWinnerTeam && (
-          <p className="text-2xl font-bold text-gray-900">{overallWinnerTeam.name}</p>
+          <p className="text-2xl font-bold text-amber-700 dark:text-amber-500">{overallWinnerTeam.name}</p>
         )}
       </div>
 
       {event.categoryWinners && event.categoryWinners.length > 0 && (
-        <div className="slide-up" style={{ animationDelay: '0.1s' }}>
-          <h2 className="text-2xl font-heading font-bold mb-6 text-foreground">Category Winners</h2>
+        <div className="fade-in" style={{ animationDelay: '0.1s' }}>
+          <h2 className="text-xl font-heading font-bold mb-6 text-foreground">Category Winners</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {event.categoryWinners.map((winner, index) => {
               const team = event.teams.find((t) => t._id === winner.teamId);
               return (
                 <div 
                   key={winner.category} 
-                  className="card-glass border-2 border-primary/50 bg-primary/5 hover:border-primary transition-all duration-300"
+                  className="card border-primary/20 bg-primary/5 transition-all duration-300 p-6 hover:shadow-lg hover:-translate-y-1"
                   style={{ animationDelay: `${0.2 + index * 0.1}s` }}
                 >
                   <div className="flex items-start justify-between mb-2">
@@ -328,23 +329,23 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
         </div>
       )}
 
-      <div className="slide-up" style={{ animationDelay: '0.3s' }}>
-        <h2 className="text-2xl font-heading font-bold mb-6 text-foreground">All Scores</h2>
-        <div className="card-glass overflow-hidden">
+      <div className="fade-in" style={{ animationDelay: '0.3s' }}>
+        <h2 className="text-xl font-heading font-bold mb-6 text-foreground">All Scores</h2>
+        <div className="card overflow-hidden p-0 shadow-md">
           <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead className="bg-muted/50">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
                     Rank
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
                     Team
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
                     Average Score
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
                     Judges
                   </th>
                 </tr>
@@ -356,7 +357,7 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
                     <tr 
                       key={teamScore.team._id} 
                       className={`
-                        transition-colors hover:bg-muted/30
+                        transition-colors hover:bg-muted/50
                         ${index < 3 ? 'bg-primary/5' : ''}
                       `}
                     >
@@ -441,18 +442,19 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
             {Math.round((averageScore / maxPossibleWeightedScore) * 100)}%
           </div>
           <div className="text-sm text-muted-foreground">Score Ratio</div>
+          <div className="text-xs text-muted-foreground mt-1">% of max possible</div>
         </div>
       </div>
 
       {/* Category Averages */}
       <div>
-        <h3 className="text-lg font-semibold mb-3">Category Averages</h3>
+        <h3 className="text-base font-semibold mb-3">Category Averages</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {categoryAverages.map(({ category, average }) => (
             <div key={category} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
-              <span className="font-medium">{category}</span>
+              <span className="font-medium text-sm">{category}</span>
               <div className="flex items-center gap-2">
-                <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-primary transition-all duration-300"
                     style={{ width: `${(average / 5) * 100}%` }}
@@ -469,7 +471,7 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
 
       {/* Score Distribution */}
       <div>
-        <h3 className="text-lg font-semibold mb-3">Score Distribution</h3>
+        <h3 className="text-base font-semibold mb-3">Score Distribution</h3>
         <div className="space-y-2">
           {scoreDistribution.map(({ score, count, percentage }) => (
             <div key={score} className="flex items-center gap-3">
@@ -490,12 +492,15 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
 
       {/* Individual Scores */}
       <div>
-        <h3 className="text-lg font-semibold mb-3">Your Scores</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-semibold">Your Scores</h3>
+          <span className="text-xs text-muted-foreground">*Totals include category weights</span>
+        </div>
         <div className="space-y-2">
           {scores.map((score) => (
             <div key={score.teamId} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
               <div className="flex items-center gap-3">
-                <span className="font-medium">{score.teamName || 'Unknown Team'}</span>
+                <span className="font-medium text-sm">{score.teamName || 'Unknown Team'}</span>
                 <div className="flex gap-1">
                   {score.categoryScores.map((cs: any, index: number) => (
                     <span 
@@ -507,8 +512,8 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
                   ))}
                 </div>
               </div>
-              <span className="font-bold text-primary">
-                {score.totalScore}/{categories.length * 5}
+              <span className="font-bold text-primary text-sm">
+                {score.totalScore.toFixed(1)}/{maxPossibleWeightedScore.toFixed(1)}
               </span>
             </div>
           ))}
@@ -544,10 +549,10 @@ function TeamSelectionSection({
     return myScores.find((score: any) => score.teamId === teamId);
   };
   return (
-    <div className="card mb-8 fade-in">
+    <div className="card mb-8 fade-in p-6 bg-white dark:bg-zinc-900 shadow-md">
       <div className="space-y-4">
         <div>
-          <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
+          <h2 className="text-xl font-heading font-bold text-foreground mb-2">
             Select Your Teams to Judge
           </h2>
           <p className="text-muted-foreground">
@@ -565,7 +570,7 @@ function TeamSelectionSection({
             placeholder="Search teams..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+            className="w-full pl-11 pr-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground text-sm shadow-sm"
           />
         </div>
 
@@ -575,7 +580,7 @@ function TeamSelectionSection({
             <h3 className="text-lg font-heading font-semibold text-foreground mb-3">
               My Queue ({assignedTeams.length} teams)
             </h3>
-            <div className="divide-y divide-border bg-muted/30 rounded-lg overflow-hidden">
+            <div className="divide-y divide-border bg-muted/30 rounded-lg overflow-hidden border border-border shadow-inner">
               {assignedTeams.map((team: any) => {
                 const score = getTeamScoreStatus(team._id);
                 return (
@@ -621,7 +626,7 @@ function TeamSelectionSection({
             </h3>
             <button
               onClick={onStartScoring}
-              className="btn-primary"
+              className="btn-primary shadow-sm hover:shadow-md transition-all"
               disabled={!canStart || locked}
             >
               {locked ? "Scoring Complete" : "Start Scoring Selected Teams"}
@@ -638,16 +643,20 @@ function TeamSelectionSection({
                 return (
                   <div
                     key={team._id}
-                    className="border border-border rounded-xl p-4 transition-all hover:shadow-md bg-background"
+                    className="border border-border rounded-lg p-4 transition-all hover:shadow-md bg-background cursor-pointer"
+                    onClick={() => !locked && onToggleTeam(team._id, false)}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-semibold text-foreground">{team.name}</h3>
                       <button
-                        onClick={() => onToggleTeam(team._id, false)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleTeam(team._id, false);
+                        }}
                         className="p-2 bg-muted text-muted-foreground hover:bg-muted/80 rounded-lg transition-colors"
                         disabled={locked}
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
                       </button>

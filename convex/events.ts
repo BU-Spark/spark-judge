@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { isAdmin, requireAdmin } from "./helpers";
+import { isAdmin, requireAdmin, computeEventStatus } from "./helpers";
 
 export const listEvents = query({
   args: {},
@@ -21,6 +21,9 @@ export const listEvents = query({
           .query("teams")
           .withIndex("by_event", (q) => q.eq("eventId", event._id))
           .collect();
+
+        // Compute status based on dates
+        const status = computeEventStatus(event);
 
         // Check user's role for this event
         let userRole = null;
@@ -63,10 +66,11 @@ export const listEvents = query({
 
         return {
           ...event,
+          status, // Use computed status
           teamCount: teams.length,
           userRole,
           judgeProgress,
-          requiresJudgeCode: event.status === "active" && !!event.judgeCode,
+          requiresJudgeCode: status === "active" && !!event.judgeCode,
         };
       })
     );
@@ -91,7 +95,10 @@ export const getEvent = query({
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
 
-    return { ...event, teams };
+    // Compute status based on dates
+    const status = computeEventStatus(event);
+
+    return { ...event, status, teams };
   },
 });
 
@@ -145,8 +152,9 @@ export const verifyJudgeCodeAndStartJudging = mutation({
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
 
-    // Verify event is active
-    if (event.status !== "active") {
+    // Verify event is active (computed from dates)
+    const status = computeEventStatus(event);
+    if (status !== "active") {
       throw new Error("Event is not currently active");
     }
 
@@ -244,7 +252,42 @@ export const updateEventStatus = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    await ctx.db.patch(args.eventId, { status: args.status });
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event) throw new Error("Event not found");
+
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const duration = event.endDate - event.startDate;
+
+    // Update dates to achieve the desired status
+    let updates: { startDate: number; endDate: number };
+
+    switch (args.status) {
+      case "upcoming":
+        // Set event to start tomorrow, preserve duration
+        updates = {
+          startDate: now + day,
+          endDate: now + day + duration,
+        };
+        break;
+      case "active":
+        // Set event to have started yesterday, end tomorrow (or preserve duration)
+        updates = {
+          startDate: now - day,
+          endDate: Math.max(now + day, now - day + duration),
+        };
+        break;
+      case "past":
+        // Set event to have ended yesterday, preserve duration
+        updates = {
+          startDate: now - day - duration,
+          endDate: now - day,
+        };
+        break;
+    }
+
+    await ctx.db.patch(args.eventId, updates);
     return null;
   },
 });
@@ -379,6 +422,36 @@ export const updateEventMode = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     await ctx.db.patch(args.eventId, { mode: args.mode });
+    return null;
+  },
+});
+
+export const updateEventDetails = mutation({
+  args: {
+    eventId: v.id("events"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    startDate: v.optional(v.number()),
+    endDate: v.optional(v.number()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const updates: {
+      name?: string;
+      description?: string;
+      startDate?: number;
+      endDate?: number;
+    } = {};
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.description !== undefined) updates.description = args.description;
+    if (args.startDate !== undefined) updates.startDate = args.startDate;
+    if (args.endDate !== undefined) updates.endDate = args.endDate;
+
+    if (Object.keys(updates).length > 0) {
+      await ctx.db.patch(args.eventId, updates);
+    }
     return null;
   },
 });

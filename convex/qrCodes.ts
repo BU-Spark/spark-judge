@@ -6,7 +6,6 @@ import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import QRCode from "qrcode";
 import JSZip from "jszip";
-import Jimp from "jimp";
 
 // Type definitions for query results
 type EventResult = {
@@ -42,25 +41,17 @@ function createSlug(str: string): string {
 }
 
 /**
- * Generate a labeled QR code image with text using Jimp
- * Returns a PNG buffer
+ * Generate an SVG QR code with embedded labels (large format for printing)
  */
-async function generateLabeledQrCode(
+async function generateLabeledQrSvg(
   url: string,
   teamName: string,
   courseCode: string | undefined,
   eventName: string
-): Promise<Buffer> {
-  // Canvas dimensions
-  const width = 500;
-  const height = 650;
-  const qrSize = 380;
-  const padding = 20;
-
-  // Generate QR code as PNG buffer
-  const qrBuffer = await QRCode.toBuffer(url, {
-    type: "png",
-    width: qrSize,
+): Promise<string> {
+  // Generate QR code as SVG string
+  const qrSvg = await QRCode.toString(url, {
+    type: "svg",
     margin: 1,
     color: {
       dark: "#000000",
@@ -69,84 +60,319 @@ async function generateLabeledQrCode(
     errorCorrectionLevel: "M",
   });
 
-  // Load QR code image
-  const qrImage = await Jimp.read(qrBuffer);
+  // Extract the viewBox to get the QR code's native size
+  const viewBoxMatch = qrSvg.match(/viewBox="0 0 (\d+) (\d+)"/);
+  const qrNativeSize = viewBoxMatch ? parseInt(viewBoxMatch[1]) : 33;
 
-  // Create the main canvas with white background
-  const canvas = new Jimp(width, height, 0xffffffff);
+  // Extract the path elements from the QR code
+  const pathMatch = qrSvg.match(/<path[^>]*\/>/g);
+  const paths = pathMatch ? pathMatch.join("\n") : "";
 
-  // Load font for text
-  const fontLarge = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
-  const fontMedium = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK);
+  // Calculate scale factor to make QR code fill desired size (500x500 for large print)
+  const qrTargetSize = 500;
+  const scaleFactor = qrTargetSize / qrNativeSize;
 
-  // Calculate QR position (centered horizontally)
-  const qrX = Math.floor((width - qrSize) / 2);
-  const qrY = 100;
+  // Truncate text if too long
+  const maxLength = 50;
+  const displayTeamName =
+    teamName.length > maxLength
+      ? teamName.slice(0, maxLength - 3) + "..."
+      : teamName;
+  const displayEventName =
+    eventName.length > maxLength
+      ? eventName.slice(0, maxLength - 3) + "..."
+      : eventName;
 
-  // Composite QR code onto canvas
-  canvas.composite(qrImage, qrX, qrY);
+  // Calculate positions - much larger SVG for print
+  const svgWidth = 600;
+  const svgHeight = 700;
+  const qrX = (svgWidth - qrTargetSize) / 2; // Center horizontally
+  const qrY = courseCode ? 80 : 40; // Leave room for course code if present
 
-  // Add course code at top (centered)
-  if (courseCode) {
-    const courseWidth = Jimp.measureText(fontLarge, courseCode);
-    const courseX = Math.floor((width - courseWidth) / 2);
-    canvas.print(fontLarge, courseX, 30, courseCode);
+  // Create a complete SVG with text labels - large format for printing (2 per page)
+  const fullSvg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}" preserveAspectRatio="xMidYMid meet">
+  <rect width="${svgWidth}" height="${svgHeight}" fill="white"/>
+  
+  <!-- Course Code -->
+  ${courseCode ? `<text x="${svgWidth / 2}" y="50" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="bold" fill="#333333">${escapeXml(courseCode)}</text>` : ""}
+  
+  <!-- QR Code - centered and scaled -->
+  <g transform="translate(${qrX}, ${qrY}) scale(${scaleFactor})">
+    ${paths}
+  </g>
+  
+  <!-- Team Name -->
+  <text x="${svgWidth / 2}" y="${svgHeight - 70}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="bold" fill="#000000">${escapeXml(displayTeamName)}</text>
+  
+  <!-- Event Name -->
+  <text x="${svgWidth / 2}" y="${svgHeight - 25}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#666666">${escapeXml(displayEventName)}</text>
+</svg>`;
+
+  return fullSvg;
+}
+
+/**
+ * Escape XML special characters
+ */
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+/**
+ * Generate a printable HTML page with all QR codes, grouped by course
+ */
+function generatePrintableHtml(
+  eventName: string,
+  qrCodes: Array<{
+    teamName: string;
+    courseCode?: string;
+    svg: string;
+    url: string;
+  }>
+): string {
+  // Group QR codes by course
+  const courseGroups = new Map<string, typeof qrCodes>();
+  for (const qr of qrCodes) {
+    const course = qr.courseCode || "General";
+    if (!courseGroups.has(course)) {
+      courseGroups.set(course, []);
+    }
+    courseGroups.get(course)!.push(qr);
   }
 
-  // Add team name below QR code (centered, with truncation if needed)
-  let displayName = teamName;
-  const maxTextWidth = width - padding * 2;
+  // Sort courses alphabetically
+  const sortedCourses = Array.from(courseGroups.keys()).sort();
 
-  // Truncate team name if too long
-  while (
-    Jimp.measureText(fontLarge, displayName) > maxTextWidth &&
-    displayName.length > 3
-  ) {
-    displayName = displayName.slice(0, -4) + "...";
-  }
+  // Generate HTML for each course section
+  const courseSectionsHtml = sortedCourses
+    .map((course, courseIndex) => {
+      const codes = courseGroups.get(course)!;
+      const cardsHtml = codes
+        .map(
+          (qr) => `
+        <div class="qr-card">
+          ${qr.svg}
+        </div>`
+        )
+        .join("\n");
 
-  const teamNameWidth = Jimp.measureText(fontLarge, displayName);
-  const teamNameX = Math.floor((width - teamNameWidth) / 2);
-  const teamNameY = qrY + qrSize + 30;
-  canvas.print(fontLarge, teamNameX, teamNameY, displayName);
+      return `
+      <section class="course-section ${courseIndex > 0 ? "page-break-before" : ""}">
+        <h2 class="course-header">${escapeXml(course)}</h2>
+        <div class="qr-grid">
+          ${cardsHtml}
+        </div>
+      </section>`;
+    })
+    .join("\n");
 
-  // Add event name at bottom (centered, gray-ish by using smaller font)
-  let displayEventName = eventName;
-  while (
-    Jimp.measureText(fontMedium, displayEventName) > maxTextWidth &&
-    displayEventName.length > 3
-  ) {
-    displayEventName = displayEventName.slice(0, -4) + "...";
-  }
+  // Generate table of contents
+  const tocHtml = sortedCourses
+    .map((course) => {
+      const count = courseGroups.get(course)!.length;
+      return `<li><a href="#course-${createSlug(course)}">${escapeXml(course)}</a> (${count} project${count !== 1 ? "s" : ""})</li>`;
+    })
+    .join("\n");
 
-  const eventNameWidth = Jimp.measureText(fontMedium, displayEventName);
-  const eventNameX = Math.floor((width - eventNameWidth) / 2);
-  const eventNameY = teamNameY + 50;
-  canvas.print(fontMedium, eventNameX, eventNameY, displayEventName);
-
-  // Add a subtle border (draw rectangles on edges)
-  const borderColor = 0xccccccff;
-  for (let i = 0; i < 2; i++) {
-    // Top border
-    for (let x = 0; x < width; x++) {
-      canvas.setPixelColor(borderColor, x, i);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Codes - ${escapeXml(eventName)}</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-    // Bottom border
-    for (let x = 0; x < width; x++) {
-      canvas.setPixelColor(borderColor, x, height - 1 - i);
+    
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
     }
-    // Left border
-    for (let y = 0; y < height; y++) {
-      canvas.setPixelColor(borderColor, i, y);
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #333;
+      font-size: 28px;
     }
-    // Right border
-    for (let y = 0; y < height; y++) {
-      canvas.setPixelColor(borderColor, width - 1 - i, y);
+    
+    .instructions {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #666;
+      font-size: 14px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
     }
-  }
-
-  // Return as PNG buffer
-  return await canvas.getBufferAsync(Jimp.MIME_PNG);
+    
+    .toc {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 400px;
+      margin: 0 auto 30px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .toc h3 {
+      margin-bottom: 10px;
+      color: #333;
+    }
+    
+    .toc ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .toc li {
+      padding: 5px 0;
+    }
+    
+    .toc a {
+      color: #0066cc;
+      text-decoration: none;
+    }
+    
+    .toc a:hover {
+      text-decoration: underline;
+    }
+    
+    .course-section {
+      margin-bottom: 40px;
+    }
+    
+    .course-header {
+      text-align: center;
+      font-size: 24px;
+      color: #333;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .qr-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .qr-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      padding: 15px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 320px;
+      height: 380px;
+    }
+    
+    .qr-card svg {
+      width: 100%;
+      height: 100%;
+      max-width: 290px;
+      max-height: 350px;
+    }
+    
+    /* Print styles - 2 per page, LARGE and centered vertically */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        margin: 0;
+      }
+      
+      h1, .instructions, .toc, .course-header {
+        display: none !important;
+      }
+      
+      .course-section {
+        margin: 0;
+        padding: 0;
+      }
+      
+      .page-break-before {
+        page-break-before: auto;
+      }
+      
+      .qr-grid {
+        display: block;
+        max-width: 100%;
+        padding: 0;
+        margin: 0;
+      }
+      
+      .qr-card {
+        box-shadow: none;
+        border: 3px solid #000;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 0 auto 20px auto;
+        width: 100%;
+        max-width: 7in;
+        height: 4.6in;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      
+      .qr-card svg {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100%;
+        max-height: 100%;
+      }
+      
+      /* Force page break after every 2nd card */
+      .qr-card:nth-child(2n) {
+        page-break-after: always;
+        break-after: page;
+        margin-bottom: 0;
+      }
+    }
+    
+    @page {
+      size: letter;
+      margin: 0.4in;
+    }
+  </style>
+</head>
+<body>
+  <h1>QR Codes - ${escapeXml(eventName)}</h1>
+  <p class="instructions">
+    Press <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac) to print.<br>
+    QR codes are organized by course, 2 per page for easy scanning.
+  </p>
+  
+  <div class="toc">
+    <h3>Courses</h3>
+    <ul>
+      ${tocHtml}
+    </ul>
+  </div>
+  
+  ${courseSectionsHtml}
+</body>
+</html>`;
 }
 
 /**
@@ -211,15 +437,16 @@ export const generateTeamQrCode = action({
     const appreciationUrl: string = `${args.baseUrl}/event/${eventSlug}/${teamSlug}/${args.teamId}`;
 
     try {
-      // Generate labeled QR code
-      const qrBuffer = await generateLabeledQrCode(
+      // Generate labeled SVG QR code
+      const svg = await generateLabeledQrSvg(
         appreciationUrl,
         team.name,
         team.courseCode,
         event.name
       );
 
-      const qrCodeBase64 = `data:image/png;base64,${qrBuffer.toString("base64")}`;
+      // Convert SVG to base64 data URL
+      const qrCodeBase64 = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 
       return {
         success: true,
@@ -239,7 +466,7 @@ export const generateTeamQrCode = action({
 
 /**
  * Generate a ZIP file containing all labeled QR codes for an event.
- * Returns a base64-encoded ZIP file.
+ * Returns a base64-encoded ZIP file with SVG files and a printable HTML.
  */
 export const generateQrCodeZip = action({
   args: {
@@ -306,21 +533,28 @@ export const generateQrCodeZip = action({
         ],
       ];
 
+      const qrCodesForHtml: Array<{
+        teamName: string;
+        courseCode?: string;
+        svg: string;
+        url: string;
+      }> = [];
+
       for (const team of teams) {
         if (team.hidden) continue;
 
         // Create a slug from the team name
         const teamSlug = createSlug(team.name);
 
-        // Build filename
+        // Build filename (now SVG)
         const coursePrefix: string = team.courseCode || "general";
-        const qrFilename: string = `${coursePrefix}_${teamSlug}_${team._id.slice(-4)}.png`;
+        const qrFilename: string = `${coursePrefix}_${teamSlug}_${team._id.slice(-4)}.svg`;
 
         // Build appreciation URL: /event/:eventSlug/:teamSlug/:teamId
         const appreciationUrl: string = `${args.baseUrl}/event/${eventSlug}/${teamSlug}/${team._id}`;
 
-        // Generate labeled QR code
-        const qrBuffer = await generateLabeledQrCode(
+        // Generate labeled SVG QR code
+        const svg = await generateLabeledQrSvg(
           appreciationUrl,
           team.name,
           team.courseCode,
@@ -328,7 +562,15 @@ export const generateQrCodeZip = action({
         );
 
         // Add to ZIP
-        qrFolder?.file(qrFilename, qrBuffer);
+        qrFolder?.file(qrFilename, svg);
+
+        // Collect for HTML
+        qrCodesForHtml.push({
+          teamName: team.name,
+          courseCode: team.courseCode,
+          svg,
+          url: appreciationUrl,
+        });
 
         // Add to CSV data
         csvRows.push([
@@ -348,6 +590,10 @@ export const generateQrCodeZip = action({
         )
         .join("\n");
       zip.file("projects.csv", csvContent);
+
+      // Create printable HTML file
+      const printableHtml = generatePrintableHtml(event.name, qrCodesForHtml);
+      zip.file("print-all-qr-codes.html", printableHtml);
 
       // Generate ZIP as base64
       const zipBuffer: Buffer = await zip.generateAsync({ type: "nodebuffer" });

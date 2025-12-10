@@ -2,6 +2,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
+import { formatDateTime } from "../lib/utils";
 
 interface ProfilePageProps {
   onSelectEvent: (eventId: Id<"events">) => void;
@@ -35,14 +36,6 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
   }
 
   const { user, pastEvents, activeEvents, upcomingEvents, stats } = profile;
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -110,7 +103,7 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
                 <div>
                   <h3 className="font-medium text-foreground">{event.name}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                    {formatDateTime(event.startDate)} - {formatDateTime(event.endDate)}
                   </p>
                 </div>
                 <button

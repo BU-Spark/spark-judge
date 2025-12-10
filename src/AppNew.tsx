@@ -7,35 +7,50 @@ import { LandingPage } from "./components/LandingPageNew";
 import { EventView } from "./components/EventView";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { ProfilePage } from "./components/ProfilePage";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Id } from "../convex/_generated/dataModel";
 import { ThemeToggle } from "./components/ThemeToggle";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+  useParams,
+  Outlet,
+  Navigate,
+} from "react-router-dom";
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<"landing" | "event" | "admin" | "profile">("landing");
-  const [selectedEventId, setSelectedEventId] = useState<Id<"events"> | null>(null);
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<LandingPageWrapper />} />
+          <Route path="/event/:eventId" element={<EventViewWrapper />} />
+          <Route path="/admin" element={<AdminDashboardWrapper />} />
+          <Route path="/profile" element={<ProfilePageWrapper />} />
+          {/* Deep link route for QR codes: /team/:teamId redirects to /event/:eventId */}
+          <Route path="/team/:teamId" element={<TeamRedirect />} />
+          {/* Legacy route format from QR codes */}
+          <Route path="/event/:eventSlug/:teamSlug/:teamId" element={<TeamRedirect />} />
+          {/* Catch-all redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+/**
+ * Layout component with header - wraps all routes
+ */
+function Layout() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isAdmin = useQuery(api.events.isUserAdmin);
+  const navigate = useNavigate();
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
-
-  const handleSelectEvent = (eventId: Id<"events">) => {
-    setSelectedEventId(eventId);
-    setCurrentView("event");
-  };
-
-  const handleBackToLanding = () => {
-    setCurrentView("landing");
-    setSelectedEventId(null);
-  };
-
-  const handleGoToAdmin = () => {
-    setCurrentView("admin");
-  };
-
-  const handleGoToProfile = () => {
-    setCurrentView("profile");
-  };
 
   const renderNavActions = (variant: "desktop" | "mobile") => {
     const baseGhostClass =
@@ -61,7 +76,7 @@ export default function App() {
         <Authenticated>
           <button
             onClick={() => {
-              handleGoToProfile();
+              void navigate("/profile");
               closeMobileMenu();
             }}
             className={baseGhostClass}
@@ -71,7 +86,7 @@ export default function App() {
           {isAdmin && (
             <button
               onClick={() => {
-                handleGoToAdmin();
+                void navigate("/admin");
                 closeMobileMenu();
               }}
               className={baseGhostClass}
@@ -105,15 +120,13 @@ export default function App() {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <button
-              onClick={() => {
-                handleBackToLanding();
-                closeMobileMenu();
-              }}
+            <Link
+              to="/"
+              onClick={closeMobileMenu}
               className="text-xl font-heading font-bold hover:text-primary transition-colors text-foreground"
             >
               HackJudge
-            </button>
+            </Link>
             <div className="flex items-center gap-3">
               <div className="hidden md:flex gap-4 items-center">
                 <ThemeToggle />
@@ -151,12 +164,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1">
-        <Content 
-          currentView={currentView}
-          selectedEventId={selectedEventId}
-          onSelectEvent={handleSelectEvent}
-          onBackToLanding={handleBackToLanding}
-        />
+        <Outlet />
       </main>
 
       {/* Toast Notifications */}
@@ -196,17 +204,43 @@ export default function App() {
   );
 }
 
-function Content({ 
-  currentView, 
-  selectedEventId, 
-  onSelectEvent,
-  onBackToLanding 
-}: { 
-  currentView: "landing" | "event" | "admin" | "profile";
-  selectedEventId: Id<"events"> | null;
-  onSelectEvent: (eventId: Id<"events">) => void;
-  onBackToLanding: () => void;
-}) {
+/**
+ * Wrapper for LandingPage that handles navigation
+ */
+function LandingPageWrapper() {
+  const navigate = useNavigate();
+  
+  const handleSelectEvent = (eventId: Id<"events">) => {
+    void navigate(`/event/${eventId}`);
+  };
+
+  return <LandingPage onSelectEvent={handleSelectEvent} />;
+}
+
+/**
+ * Wrapper for EventView that gets eventId from URL params
+ */
+function EventViewWrapper() {
+  const { eventId } = useParams<{ eventId: string }>();
+  const navigate = useNavigate();
+
+  if (!eventId) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <EventView 
+      eventId={eventId as Id<"events">} 
+      onBack={() => void navigate("/")} 
+    />
+  );
+}
+
+/**
+ * Wrapper for AdminDashboard
+ */
+function AdminDashboardWrapper() {
+  const navigate = useNavigate();
   const loggedInUser = useQuery(api.auth.loggedInUser);
 
   if (loggedInUser === undefined) {
@@ -217,29 +251,75 @@ function Content({
     );
   }
 
-  if (currentView === "profile") {
-    return <ProfilePage onSelectEvent={onSelectEvent} onBackToLanding={onBackToLanding} />;
-  }
-
-  if (currentView === "admin") {
-    if (!loggedInUser) {
-      return (
-        <div className="max-w-md mx-auto mt-16 px-4">
-          <div className="card-static p-8 text-center bg-white dark:bg-zinc-900">
-            <h2 className="text-xl font-heading font-bold mb-2">Sign In Required</h2>
-            <p className="text-muted-foreground mb-6">
-              Please sign in to access the admin dashboard.
-            </p>
-          </div>
+  if (!loggedInUser) {
+    return (
+      <div className="max-w-md mx-auto mt-16 px-4">
+        <div className="card-static p-8 text-center bg-white dark:bg-zinc-900">
+          <h2 className="text-xl font-heading font-bold mb-2">Sign In Required</h2>
+          <p className="text-muted-foreground mb-6">
+            Please sign in to access the admin dashboard.
+          </p>
         </div>
-      );
+      </div>
+    );
+  }
+
+  return <AdminDashboard onBackToLanding={() => void navigate("/")} />;
+}
+
+/**
+ * Wrapper for ProfilePage
+ */
+function ProfilePageWrapper() {
+  const navigate = useNavigate();
+
+  const handleSelectEvent = (eventId: Id<"events">) => {
+    void navigate(`/event/${eventId}`);
+  };
+
+  return (
+    <ProfilePage 
+      onSelectEvent={handleSelectEvent} 
+      onBackToLanding={() => void navigate("/")} 
+    />
+  );
+}
+
+/**
+ * Handles deep linking from QR codes.
+ * Looks up the team's event and redirects to it.
+ * Supports both /team/:teamId and /event/:slug/:slug/:teamId formats.
+ */
+function TeamRedirect() {
+  const params = useParams<{ teamId: string; eventSlug?: string; teamSlug?: string }>();
+  const navigate = useNavigate();
+  
+  // Get teamId from either route format
+  const teamId = params.teamId;
+  
+  // Look up the event for this team
+  const eventId = useQuery(
+    api.teams.getTeamEventId,
+    teamId ? { teamId: teamId as Id<"teams"> } : "skip"
+  );
+
+  useEffect(() => {
+    if (eventId) {
+      // Redirect to the event page
+      void navigate(`/event/${eventId}`, { replace: true });
+    } else if (eventId === null) {
+      // Team not found, redirect to home
+      void navigate("/", { replace: true });
     }
-    return <AdminDashboard onBackToLanding={onBackToLanding} />;
-  }
+    // If eventId is undefined, we're still loading
+  }, [eventId, navigate]);
 
-  if (currentView === "event" && selectedEventId) {
-    return <EventView eventId={selectedEventId} onBack={onBackToLanding} />;
-  }
-
-  return <LandingPage onSelectEvent={onSelectEvent} />;
+  return (
+    <div className="flex justify-center items-center min-h-[60vh]">
+      <div className="text-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-muted-foreground">Loading project...</p>
+      </div>
+    </div>
+  );
 }

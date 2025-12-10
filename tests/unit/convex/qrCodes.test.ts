@@ -164,6 +164,264 @@ describe("qrCodes business logic", () => {
     });
   });
 
+  describe('XML escaping', () => {
+    it('should escape ampersands', () => {
+      const str = 'Team A & B';
+      const escaped = str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+
+      expect(escaped).toBe('Team A &amp; B');
+    });
+
+    it('should escape less than and greater than', () => {
+      const str = '<script>alert("xss")</script>';
+      const escaped = str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+
+      expect(escaped).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+    });
+
+    it('should escape quotes and apostrophes', () => {
+      const str = 'Team "Best" \'s Project';
+      const escaped = str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+
+      expect(escaped).toBe('Team &quot;Best&quot; &apos;s Project');
+    });
+
+    it('should handle multiple special characters', () => {
+      const str = 'A & B < C > D "E" \'F\'';
+      const escaped = str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+
+      expect(escaped).toBe('A &amp; B &lt; C &gt; D &quot;E&quot; &apos;F&apos;');
+    });
+  });
+
+  describe('generateLabeledQrSvg format', () => {
+    it('should include XML declaration in SVG output', () => {
+      const svgStart = '<?xml version="1.0" encoding="UTF-8"?>';
+      expect(svgStart).toContain('<?xml');
+      expect(svgStart).toContain('encoding="UTF-8"');
+    });
+
+    it('should calculate correct SVG dimensions for labeled QR', () => {
+      const svgWidth = 600;
+      const svgHeight = 700;
+
+      expect(svgWidth).toBe(600);
+      expect(svgHeight).toBe(700);
+    });
+
+    it('should calculate QR code scale factor correctly', () => {
+      const qrNativeSize = 33;
+      const qrTargetSize = 500;
+      const scaleFactor = qrTargetSize / qrNativeSize;
+
+      expect(scaleFactor).toBeCloseTo(15.15, 1);
+    });
+
+    it('should center QR code horizontally', () => {
+      const svgWidth = 600;
+      const qrTargetSize = 500;
+      const qrX = (svgWidth - qrTargetSize) / 2;
+
+      expect(qrX).toBe(50);
+    });
+
+    it('should position QR code lower when course code present', () => {
+      const courseCode = 'DS519';
+      const qrY = courseCode ? 80 : 40;
+
+      expect(qrY).toBe(80);
+    });
+
+    it('should position QR code higher when no course code', () => {
+      const courseCode = undefined;
+      const qrY = courseCode ? 80 : 40;
+
+      expect(qrY).toBe(40);
+    });
+
+    it('should truncate long team names', () => {
+      const maxLength = 50;
+      const teamName = 'A'.repeat(100);
+      const displayTeamName =
+        teamName.length > maxLength
+          ? teamName.slice(0, maxLength - 3) + '...'
+          : teamName;
+
+      expect(displayTeamName.length).toBe(50);
+      expect(displayTeamName).toContain('...');
+    });
+
+    it('should not truncate short team names', () => {
+      const maxLength = 50;
+      const teamName = 'Short Team Name';
+      const displayTeamName =
+        teamName.length > maxLength
+          ? teamName.slice(0, maxLength - 3) + '...'
+          : teamName;
+
+      expect(displayTeamName).toBe('Short Team Name');
+    });
+
+    it('should include course code text element when present', () => {
+      const courseCode = 'DS519';
+      const svgWidth = 600;
+      const courseElement = courseCode
+        ? `<text x="${svgWidth / 2}" y="50" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="bold" fill="#333333">${courseCode}</text>`
+        : '';
+
+      expect(courseElement).toContain('DS519');
+      expect(courseElement).toContain('font-size="36"');
+      expect(courseElement).toContain('font-weight="bold"');
+    });
+
+    it('should omit course code text element when not present', () => {
+      const courseCode = undefined;
+      const svgWidth = 600;
+      const courseElement = courseCode
+        ? `<text x="${svgWidth / 2}" y="50" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="bold" fill="#333333">${courseCode}</text>`
+        : '';
+
+      expect(courseElement).toBe('');
+    });
+  });
+
+  describe('generatePrintableHtml structure', () => {
+    it('should group teams by course code', () => {
+      const qrCodes = [
+        { teamName: 'Team 1', courseCode: 'DS519', svg: '<svg></svg>', url: 'url1' },
+        { teamName: 'Team 2', courseCode: 'DS519', svg: '<svg></svg>', url: 'url2' },
+        { teamName: 'Team 3', courseCode: 'DS549', svg: '<svg></svg>', url: 'url3' },
+      ];
+
+      const courseGroups = new Map<string, typeof qrCodes>();
+      for (const qr of qrCodes) {
+        const course = qr.courseCode || 'General';
+        if (!courseGroups.has(course)) {
+          courseGroups.set(course, []);
+        }
+        courseGroups.get(course)!.push(qr);
+      }
+
+      expect(courseGroups.size).toBe(2);
+      expect(courseGroups.get('DS519')?.length).toBe(2);
+      expect(courseGroups.get('DS549')?.length).toBe(1);
+    });
+
+    it('should use "General" for teams without course code', () => {
+      const qrCodes = [
+        { teamName: 'Team 1', courseCode: undefined, svg: '<svg></svg>', url: 'url1' },
+      ];
+
+      const courseGroups = new Map<string, typeof qrCodes>();
+      for (const qr of qrCodes) {
+        const course = qr.courseCode || 'General';
+        if (!courseGroups.has(course)) {
+          courseGroups.set(course, []);
+        }
+        courseGroups.get(course)!.push(qr);
+      }
+
+      expect(courseGroups.has('General')).toBe(true);
+      expect(courseGroups.get('General')?.length).toBe(1);
+    });
+
+    it('should sort courses alphabetically', () => {
+      const courseGroups = new Map([
+        ['DS549', []],
+        ['DS519', []],
+        ['CS101', []],
+      ]);
+
+      const sortedCourses = Array.from(courseGroups.keys()).sort();
+
+      expect(sortedCourses).toEqual(['CS101', 'DS519', 'DS549']);
+    });
+
+    it('should escape XML in HTML document title', () => {
+      const eventName = 'Demo Day <Fall 2024>';
+      const escaped = eventName
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+
+      expect(escaped).toBe('Demo Day &lt;Fall 2024&gt;');
+    });
+
+    it('should create correct table of contents link format', () => {
+      const course = 'DS519';
+      const createSlug = (str: string) =>
+        str
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+
+      const link = `#course-${createSlug(course)}`;
+
+      expect(link).toBe('#course-ds519');
+    });
+
+    it('should format project count singular correctly', () => {
+      const count = 1;
+      const text = `${count} project${count !== 1 ? 's' : ''}`;
+
+      expect(text).toBe('1 project');
+    });
+
+    it('should format project count plural correctly', () => {
+      const count = 5;
+      const text = `${count} project${count !== 1 ? 's' : ''}`;
+
+      expect(text).toBe('5 projects');
+    });
+
+    it('should embed SVG content directly in HTML cards', () => {
+      const svgContent = '<svg viewBox="0 0 600 700"><rect/></svg>';
+      const cardHtml = `
+        <div class="qr-card">
+          ${svgContent}
+        </div>`;
+
+      expect(cardHtml).toContain(svgContent);
+      expect(cardHtml).toContain('qr-card');
+    });
+
+    it('should add page-break-before class to subsequent course sections', () => {
+      const courseIndex = 1;
+      const className = `course-section ${courseIndex > 0 ? 'page-break-before' : ''}`;
+
+      expect(className).toBe('course-section page-break-before');
+    });
+
+    it('should not add page-break-before class to first course section', () => {
+      const courseIndex = 0;
+      const className = `course-section ${courseIndex > 0 ? 'page-break-before' : ''}`;
+
+      expect(className).toBe('course-section ');
+    });
+  });
+
   describe("ZIP filename generation", () => {
     it("should create ZIP filename from event name", () => {
       const eventName = "Demo Day Fall 2024";

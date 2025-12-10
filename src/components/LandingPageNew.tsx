@@ -118,15 +118,6 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-12 space-y-3">
-          <h1 className="text-3xl font-heading font-bold text-foreground tracking-tight">
-            Hackathon Judging Platform
-          </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            Streamlined judging for hackathon events
-          </p>
-        </div>
-
         <ActiveEventSection
           title="Active Events"
           events={events.active}

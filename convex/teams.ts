@@ -340,3 +340,17 @@ export const removeTeam = mutation({
     return null;
   },
 });
+
+/**
+ * Get a team's event ID by team ID.
+ * Used for deep linking from QR codes.
+ */
+export const getTeamEventId = query({
+  args: { teamId: v.id("teams") },
+  returns: v.union(v.null(), v.id("events")),
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) return null;
+    return team.eventId;
+  },
+});

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { Id } from "../../../convex/_generated/dataModel";
 
 // Hoisted mock implementation references
@@ -96,11 +97,13 @@ describe("DemoDayBrowse", () => {
 
   it("should render event name and description", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     expect(screen.getByText("Demo Day Fall 2024")).toBeInTheDocument();
@@ -109,11 +112,13 @@ describe("DemoDayBrowse", () => {
 
   it("should render Demo Day badge", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     expect(screen.getByText("Demo Day")).toBeInTheDocument();
@@ -121,11 +126,13 @@ describe("DemoDayBrowse", () => {
 
   it("should render back button and call onBack when clicked", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     const backButton = screen.getByText("Back to Events");
@@ -136,11 +143,13 @@ describe("DemoDayBrowse", () => {
 
   it("should render visible teams but not hidden teams", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     expect(screen.getByText("Team Alpha")).toBeInTheDocument();
@@ -150,11 +159,13 @@ describe("DemoDayBrowse", () => {
 
   it("should render team descriptions", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     expect(
@@ -165,11 +176,13 @@ describe("DemoDayBrowse", () => {
 
   it("should render course code badges", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     // Course codes appear in both filter chips and team cards
@@ -181,11 +194,13 @@ describe("DemoDayBrowse", () => {
 
   it("should render budget indicator", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     // Should show remaining budget
@@ -195,11 +210,13 @@ describe("DemoDayBrowse", () => {
 
   it("should render search input", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     const searchInput = screen.getByPlaceholderText(
@@ -210,11 +227,13 @@ describe("DemoDayBrowse", () => {
 
   it("should filter teams by search query", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     const searchInput = screen.getByPlaceholderText(
@@ -228,11 +247,13 @@ describe("DemoDayBrowse", () => {
 
   it("should filter teams by description search", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     const searchInput = screen.getByPlaceholderText(
@@ -246,11 +267,13 @@ describe("DemoDayBrowse", () => {
 
   it("should render course filter chips", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     expect(screen.getByText("All Courses")).toBeInTheDocument();
@@ -269,11 +292,13 @@ describe("DemoDayBrowse", () => {
     });
 
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     expect(screen.getByText("Initializing...")).toBeInTheDocument();
@@ -281,38 +306,44 @@ describe("DemoDayBrowse", () => {
 
   it("should render appreciation buttons", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
-    const appreciateButtons = screen.getAllByText("Appreciate");
+    const appreciateButtons = screen.getAllByText("+1");
     expect(appreciateButtons.length).toBeGreaterThan(0);
   });
 
   it("should show per-team appreciation count", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
-    // Should show "X / 3 given" for each team
-    expect(screen.getByText("1 / 3 given")).toBeInTheDocument();
-    expect(screen.getByText("0 / 3 given")).toBeInTheDocument();
+    // Should show "X/3" for each team
+    expect(screen.getByText("1/3")).toBeInTheDocument();
+    expect(screen.getByText("0/3")).toBeInTheDocument();
   });
 
   it("should show empty state when no teams match filter", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     const searchInput = screen.getByPlaceholderText(
@@ -328,11 +359,13 @@ describe("DemoDayBrowse", () => {
 
   it("should show project count", () => {
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={mockOnBack}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={mockOnBack}
+        />
+      </MemoryRouter>
     );
 
     // Should show "Showing X projects"
@@ -386,14 +419,16 @@ describe("DemoDayBrowse - Team Card interactions", () => {
     });
 
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={vi.fn()}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={vi.fn()}
+        />
+      </MemoryRouter>
     );
 
-    const appreciateButton = screen.getByText("Appreciate");
+    const appreciateButton = screen.getByText("+1");
     fireEvent.click(appreciateButton);
 
     await waitFor(() => {
@@ -416,14 +451,16 @@ describe("DemoDayBrowse - Team Card interactions", () => {
     });
 
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={vi.fn()}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={vi.fn()}
+        />
+      </MemoryRouter>
     );
 
-    const maxGivenButton = screen.getByText("Max Given");
+    const maxGivenButton = screen.getByText("Max");
     expect(maxGivenButton).toBeInTheDocument();
     expect(maxGivenButton.closest("button")).toBeDisabled();
   });
@@ -443,14 +480,16 @@ describe("DemoDayBrowse - Team Card interactions", () => {
     });
 
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={vi.fn()}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={vi.fn()}
+        />
+      </MemoryRouter>
     );
 
-    const noBudgetButton = screen.getByText("No Budget");
+    const noBudgetButton = screen.getByText("None Left");
     expect(noBudgetButton).toBeInTheDocument();
     expect(noBudgetButton.closest("button")).toBeDisabled();
   });
@@ -464,11 +503,13 @@ describe("DemoDayBrowse - Team Card interactions", () => {
     });
 
     render(
-      <DemoDayBrowse
-        eventId={mockEventId}
-        event={mockEvent}
-        onBack={vi.fn()}
-      />
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={vi.fn()}
+        />
+      </MemoryRouter>
     );
 
     // Should show spinner

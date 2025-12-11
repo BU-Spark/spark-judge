@@ -431,16 +431,16 @@ function BudgetIndicator({
 
   return (
     <div className="flex flex-col items-end">
-      <div className="flex items-baseline gap-2 mb-1 text-right">
+      <div className="flex items-center gap-1.5 mb-3 text-right whitespace-nowrap">
         <span className="text-xl leading-none">❤️</span>
         <span
-          className={`text-xl font-bold leading-none ${
+          className={`text-2xl font-bold leading-none ${
             isLow ? "text-red-500" : "text-foreground"
           }`}
         >
           {remaining}
         </span>
-        <span className="text-muted-foreground text-sm leading-none">
+        <span className="text-muted-foreground text-sm leading-tight">
           / {total} left
         </span>
       </div>

@@ -5,7 +5,7 @@ import { Id } from "./_generated/dataModel";
 // Demo Day constants - exported for use in other modules
 export const DEMO_DAY_CONSTANTS = {
   MAX_TAPS_PER_PROJECT_PER_ATTENDEE: 3,
-  MAX_TAPS_PER_ATTENDEE: 15,
+  MAX_TAPS_PER_ATTENDEE: 100,
   IP_RATE_LIMIT_WINDOW_MS: 10 * 60 * 1000, // 10 minutes
   IP_RATE_LIMIT_MAX: 100, // Max appreciations from same IP in window
 } as const;

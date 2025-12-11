@@ -930,6 +930,8 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const [enableCohorts, setEnableCohorts] = useState(false);
   const [judgeCodeEdit, setJudgeCodeEdit] = useState("");
   const [savingJudgeSettings, setSavingJudgeSettings] = useState(false);
+  const [appreciationBudget, setAppreciationBudget] = useState<number>(100);
+  const [savingAppreciationSettings, setSavingAppreciationSettings] = useState(false);
 
   // Sync editable fields when event changes
   useEffect(() => {
@@ -947,6 +949,11 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
       );
       setEnableCohorts(!!event.enableCohorts);
       setJudgeCodeEdit(event.judgeCode || "");
+      setAppreciationBudget(
+        typeof event.appreciationBudgetPerAttendee === "number"
+          ? event.appreciationBudgetPerAttendee
+          : 100
+      );
     }
   }, [event]);
 
@@ -1143,6 +1150,23 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
       toast.error("Failed to save judging settings");
     } finally {
       setSavingJudgeSettings(false);
+    }
+  };
+
+  const handleSaveAppreciationSettings = async () => {
+    const parsed = Number(appreciationBudget);
+    const budgetValue = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+    setSavingAppreciationSettings(true);
+    try {
+      await updateEventDetails({
+        eventId,
+        appreciationBudgetPerAttendee: budgetValue,
+      });
+      toast.success("Appreciation settings saved");
+    } catch (error) {
+      toast.error("Failed to save appreciation settings");
+    } finally {
+      setSavingAppreciationSettings(false);
     }
   };
 
@@ -1568,6 +1592,73 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                   </button>
                 </div>
               </div>
+
+              {isDemoDayMode && (
+                <div className="card-static p-6 bg-card space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c1.657 0 3-1.343 3-3S13.657 2 12 2 9 3.343 9 5s1.343 3 3 3zm0 2c-2.667 0-8 1.334-8 4v2a2 2 0 002 2h12a2 2 0 002-2v-2c0-2.666-5.333-4-8-4z" />
+                      </svg>
+                      Appreciation Settings (Demo Day)
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Total appreciations per attendee
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        className="input"
+                        value={appreciationBudget}
+                        onChange={(e) =>
+                          setAppreciationBudget(
+                            Number.isFinite(Number(e.target.value))
+                              ? Number(e.target.value)
+                              : 0
+                          )
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Limit of hearts each attendee can give across all teams. Defaults to 100.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Max per team
+                      </label>
+                      <input
+                        type="number"
+                        value={3}
+                        readOnly
+                        className="input bg-muted cursor-not-allowed"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Per-team cap remains 3 to encourage distribution.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleSaveAppreciationSettings}
+                      disabled={savingAppreciationSettings}
+                      className="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {savingAppreciationSettings ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Appreciation Settings"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
 
           {/* Teams */}
           <div className="card-static p-6 bg-card">

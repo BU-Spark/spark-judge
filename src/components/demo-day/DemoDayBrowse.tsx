@@ -49,6 +49,10 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
     api.appreciations.getTeamAppreciations,
     attendeeId ? { eventId, attendeeId } : "skip"
   );
+  const maxPerAttendee = appreciationData?.maxPerAttendee ?? 100;
+  const maxPerTeam = appreciationData?.maxPerTeam ?? 3;
+  const remainingBudget =
+    appreciationData?.attendeeRemainingBudget ?? maxPerAttendee;
 
   // Get unique course codes for filter chips
   const courseCodes = useMemo(() => {
@@ -132,7 +136,6 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
     return map;
   }, [appreciationData]);
 
-  const remainingBudget = appreciationData?.attendeeRemainingBudget ?? 15;
   const isEventLive = event.status === "active";
 
   if (identityLoading) {
@@ -216,7 +219,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
               <p className="text-muted-foreground">{event.description}</p>
             </div>
             <div>
-              <BudgetIndicator remaining={remainingBudget} total={15} />
+              <BudgetIndicator remaining={remainingBudget} total={maxPerAttendee} />
             </div>
           </div>
         </div>
@@ -351,7 +354,8 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
                     eventId={eventId}
                     attendeeId={attendeeId}
                     appreciationData={appreciationMap.get(team._id)}
-                    remainingBudget={appreciationData?.attendeeRemainingBudget ?? 15}
+                    remainingBudget={remainingBudget}
+                    maxPerTeam={maxPerTeam}
                     index={index}
                     isEventLive={isEventLive}
                     onQuickView={(enrichedTeam) =>
@@ -377,7 +381,8 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
               eventId={eventId}
               attendeeId={attendeeId}
               appreciationData={appreciationMap.get(team._id)}
-              remainingBudget={appreciationData?.attendeeRemainingBudget ?? 15}
+              remainingBudget={remainingBudget}
+              maxPerTeam={maxPerTeam}
               index={index}
               isEventLive={isEventLive}
               onQuickView={(enrichedTeam) =>
@@ -400,6 +405,8 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
             eventId={eventId}
             attendeeId={attendeeId}
             remainingBudget={remainingBudget}
+            maxPerTeam={maxPerTeam}
+            maxPerAttendee={maxPerAttendee}
             onHeightChange={(h) => setSheetHeight(h)}
             isEventLive={isEventLive}
           />
@@ -407,6 +414,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
       </AnimatePresence>
       <MobileBudgetFooter
         remaining={remainingBudget}
+        total={maxPerAttendee}
         lifted={!!quickTeam}
         liftAmount={sheetHeight + 24}
       />
@@ -459,6 +467,7 @@ interface TeamCardProps {
   attendeeId: string | null;
   appreciationData?: { totalCount: number; attendeeCount: number };
   remainingBudget: number;
+  maxPerTeam: number;
   index: number;
   onQuickView?: (team: TeamCardProps["team"]) => void;
   layout?: "grid" | "carousel";
@@ -471,6 +480,7 @@ function TeamCard({
   attendeeId,
   appreciationData,
   remainingBudget,
+  maxPerTeam,
   index,
   onQuickView,
   layout = "grid",
@@ -480,7 +490,6 @@ function TeamCard({
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
 
   const attendeeCount = optimisticCount ?? appreciationData?.attendeeCount ?? 0;
-  const maxPerTeam = 3;
   const canAppreciate =
     isEventLive && attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
 
@@ -614,6 +623,8 @@ interface QuickViewSheetProps {
   eventId: Id<"events">;
   attendeeId: string | null;
   remainingBudget: number;
+  maxPerTeam: number;
+  maxPerAttendee: number;
   onHeightChange: (height: number) => void;
   isEventLive: boolean;
 }
@@ -624,6 +635,8 @@ function QuickViewSheet({
   eventId,
   attendeeId,
   remainingBudget,
+  maxPerTeam,
+  maxPerAttendee,
   onHeightChange,
   isEventLive,
 }: QuickViewSheetProps) {
@@ -651,7 +664,6 @@ function QuickViewSheet({
 
   const attendeeCount =
     optimisticCount ?? team.appreciationData?.attendeeCount ?? 0;
-  const maxPerTeam = 3;
   const canAppreciate =
     isEventLive && attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
 
@@ -744,7 +756,7 @@ function QuickViewSheet({
         )}
         <div className="flex items-center justify-between border-t border-border pt-3 gap-3">
           <span className="text-xs text-muted-foreground">
-            {attendeeCount}/{maxPerTeam} you’ve given
+            {attendeeCount}/{maxPerTeam} you’ve given • {remainingBudget}/{maxPerAttendee} left
           </span>
           <button
             onClick={() => {
@@ -782,10 +794,12 @@ function QuickViewSheet({
 
 function MobileBudgetFooter({
   remaining,
+  total,
   lifted,
   liftAmount,
 }: {
   remaining: number;
+  total: number;
   lifted: boolean;
   liftAmount: number;
 }) {
@@ -801,7 +815,7 @@ function MobileBudgetFooter({
       <div className="bg-primary text-primary-foreground border border-primary rounded-full shadow-[0_12px_28px_rgba(0,0,0,0.22)] dark:shadow-[0_12px_28px_rgba(0,0,0,0.32)] px-3 py-2 flex items-center gap-2 w-fit mx-auto text-sm">
         <span className="text-base leading-none">❤️</span>
         <span className="font-semibold text-sm leading-none">
-          {remaining}/15 appreciations left
+          {remaining}/{total} appreciations left
         </span>
       </div>
     </motion.div>

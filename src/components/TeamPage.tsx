@@ -196,6 +196,8 @@ interface AppreciationSectionProps {
     attendeeCount: number;
     attendeeTotalCount: number;
     attendeeRemainingBudget: number;
+    maxPerAttendee: number;
+    maxPerTeam: number;
   };
   isEventLive: boolean;
 }
@@ -212,8 +214,11 @@ function AppreciationSection({
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
 
   const attendeeCount = optimisticCount ?? appreciationData.attendeeCount;
-  const remainingBudget = appreciationData.attendeeRemainingBudget - (optimisticCount !== null ? 1 : 0);
-  const maxPerTeam = 3;
+  const maxPerTeam = appreciationData.maxPerTeam ?? 3;
+  const maxPerAttendee = appreciationData.maxPerAttendee ?? 100;
+  const remainingBudget =
+    appreciationData.attendeeRemainingBudget -
+    (optimisticCount !== null ? 1 : 0);
   const canAppreciate =
     isEventLive && attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
 
@@ -249,7 +254,7 @@ function AppreciationSection({
       </h2>
       <p className="text-sm text-muted-foreground mb-4">
         You can give up to {maxPerTeam} appreciations to this project.
-        You have <span className="font-semibold text-foreground">{remainingBudget}</span> remaining overall.
+        You have <span className="font-semibold text-foreground">{remainingBudget}</span> of {maxPerAttendee} remaining overall.
       </p>
       {!isEventLive && (
         <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mb-3">

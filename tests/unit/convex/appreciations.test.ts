@@ -15,7 +15,7 @@ describe("appreciations business logic", () => {
 
     it("should have correct max taps per attendee", async () => {
       const { DEMO_DAY_CONSTANTS } = await import("../../../convex/helpers");
-      expect(DEMO_DAY_CONSTANTS.MAX_TAPS_PER_ATTENDEE).toBe(15);
+      expect(DEMO_DAY_CONSTANTS.MAX_TAPS_PER_ATTENDEE).toBe(100);
     });
 
     it("should have correct IP rate limit window", async () => {
@@ -49,8 +49,8 @@ describe("appreciations business logic", () => {
     });
 
     it("should validate total budget limit", () => {
-      const MAX_TAPS_TOTAL = 15;
-      const attendeeAllAppreciations = Array.from({ length: 15 }, (_, i) => ({
+      const MAX_TAPS_TOTAL = 100;
+      const attendeeAllAppreciations = Array.from({ length: 100 }, (_, i) => ({
         _id: `app${i}`,
       }));
       expect(attendeeAllAppreciations.length).toBe(MAX_TAPS_TOTAL);
@@ -58,10 +58,10 @@ describe("appreciations business logic", () => {
     });
 
     it("should calculate remaining budget correctly", () => {
-      const MAX_TAPS_TOTAL = 15;
+      const MAX_TAPS_TOTAL = 100;
       const used = 5;
       const remaining = Math.max(0, MAX_TAPS_TOTAL - used);
-      expect(remaining).toBe(10);
+      expect(remaining).toBe(95);
     });
 
     it("should calculate remaining per-team correctly", () => {

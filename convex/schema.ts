@@ -29,6 +29,9 @@ const applicationTables = {
         optOutAllowed: v.optional(v.boolean()), // Judges can mark "not comfortable"
       })
     ), // Awards/categories for judging
+    // Demo Day appreciation limits (optional; defaults applied in logic)
+    appreciationBudgetPerAttendee: v.optional(v.number()), // Total hearts an attendee can give
+    appreciationMaxPerTeam: v.optional(v.number()), // Hearts an attendee can give a single team
     tracks: v.optional(v.array(v.string())), // Tracks for team registration (optional, defaults to categories)
     enableCohorts: v.optional(v.boolean()), // Enable multiple judging cohorts (judges select their teams)
     resultsReleased: v.boolean(),

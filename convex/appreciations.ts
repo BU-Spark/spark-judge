@@ -5,9 +5,18 @@ import { computeEventStatus } from "./helpers";
 
 // Constants for rate limiting
 const MAX_TAPS_PER_PROJECT_PER_ATTENDEE = 3;
-const MAX_TAPS_PER_ATTENDEE = 15;
+const MAX_TAPS_PER_ATTENDEE = 100;
 const IP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const IP_RATE_LIMIT_MAX = 100; // Max appreciations from same IP in window
+
+function getEventLimits(event: any) {
+  return {
+    maxPerTeam:
+      event?.appreciationMaxPerTeam ?? MAX_TAPS_PER_PROJECT_PER_ATTENDEE,
+    maxPerAttendee:
+      event?.appreciationBudgetPerAttendee ?? MAX_TAPS_PER_ATTENDEE,
+  };
+}
 
 /**
  * Get appreciation counts for all teams in a Demo Day event.
@@ -28,12 +37,15 @@ export const getTeamAppreciations = query({
     ),
     attendeeTotalCount: v.number(),
     attendeeRemainingBudget: v.number(),
+    maxPerAttendee: v.number(),
+    maxPerTeam: v.number(),
   }),
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event) {
       throw new Error("Event not found");
     }
+    const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
 
     // Get all teams for this event
     const teams = await ctx.db
@@ -76,13 +88,15 @@ export const getTeamAppreciations = query({
     const attendeeTotalCount = attendeeAppreciations.length;
     const attendeeRemainingBudget = Math.max(
       0,
-      MAX_TAPS_PER_ATTENDEE - attendeeTotalCount
+      maxPerAttendee - attendeeTotalCount
     );
 
     return {
       teams: teamCounts,
       attendeeTotalCount,
       attendeeRemainingBudget,
+      maxPerAttendee,
+      maxPerTeam,
     };
   },
 });
@@ -102,12 +116,15 @@ export const getSingleTeamAppreciation = query({
     attendeeCount: v.number(),
     attendeeTotalCount: v.number(),
     attendeeRemainingBudget: v.number(),
+    maxPerAttendee: v.number(),
+    maxPerTeam: v.number(),
   }),
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event) {
       throw new Error("Event not found");
     }
+    const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
 
     // Get all appreciations for this team
     const teamAppreciations = await ctx.db
@@ -138,7 +155,7 @@ export const getSingleTeamAppreciation = query({
 
     const attendeeRemainingBudget = Math.max(
       0,
-      MAX_TAPS_PER_ATTENDEE - attendeeTotalCount
+      maxPerAttendee - attendeeTotalCount
     );
 
     return {
@@ -146,6 +163,8 @@ export const getSingleTeamAppreciation = query({
       attendeeCount,
       attendeeTotalCount,
       attendeeRemainingBudget,
+      maxPerAttendee,
+      maxPerTeam,
     };
   },
 });
@@ -261,6 +280,8 @@ export const createAppreciationInternal = internalMutation({
         remainingTotal: 0,
       };
     }
+    const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
+    const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
 
     // 2b. Enforce live status
     const status = computeEventStatus(event);
@@ -284,7 +305,7 @@ export const createAppreciationInternal = internalMutation({
       };
     }
 
-    // 3. Check per-team limit (max 3 per team per attendee)
+    // 3. Check per-team limit
     const attendeeTeamAppreciations = await ctx.db
       .query("appreciations")
       .withIndex("by_event_and_team_and_attendee", (q) =>
@@ -295,14 +316,14 @@ export const createAppreciationInternal = internalMutation({
       )
       .collect();
 
-    if (attendeeTeamAppreciations.length >= MAX_TAPS_PER_PROJECT_PER_ATTENDEE) {
+    if (attendeeTeamAppreciations.length >= maxPerTeam) {
       return {
         success: false,
-        error: `You've already given ${MAX_TAPS_PER_PROJECT_PER_ATTENDEE} appreciations to this team`,
+        error: `You've already given ${maxPerTeam} appreciations to this team`,
         remainingForTeam: 0,
         remainingTotal: Math.max(
           0,
-          MAX_TAPS_PER_ATTENDEE -
+          maxPerAttendee -
             (
               await ctx.db
                 .query("appreciations")
@@ -317,7 +338,7 @@ export const createAppreciationInternal = internalMutation({
       };
     }
 
-    // 4. Check total event budget (max 15 per attendee)
+    // 4. Check total event budget
     const attendeeAllAppreciations = await ctx.db
       .query("appreciations")
       .withIndex("by_event_and_attendee", (q) =>
@@ -325,12 +346,11 @@ export const createAppreciationInternal = internalMutation({
       )
       .collect();
 
-    if (attendeeAllAppreciations.length >= MAX_TAPS_PER_ATTENDEE) {
+    if (attendeeAllAppreciations.length >= maxPerAttendee) {
       return {
         success: false,
-        error: `You've used all ${MAX_TAPS_PER_ATTENDEE} appreciations for this event`,
-        remainingForTeam:
-          MAX_TAPS_PER_PROJECT_PER_ATTENDEE - attendeeTeamAppreciations.length,
+        error: `You've used all ${maxPerAttendee} appreciations for this event`,
+        remainingForTeam: maxPerTeam - attendeeTeamAppreciations.length,
         remainingTotal: 0,
       };
     }
@@ -348,9 +368,8 @@ export const createAppreciationInternal = internalMutation({
       return {
         success: false,
         error: "Too many requests from this network. Please try again later.",
-        remainingForTeam:
-          MAX_TAPS_PER_PROJECT_PER_ATTENDEE - attendeeTeamAppreciations.length,
-        remainingTotal: MAX_TAPS_PER_ATTENDEE - attendeeAllAppreciations.length,
+        remainingForTeam: maxPerTeam - attendeeTeamAppreciations.length,
+        remainingTotal: maxPerAttendee - attendeeAllAppreciations.length,
       };
     }
 
@@ -377,12 +396,8 @@ export const createAppreciationInternal = internalMutation({
     return {
       success: true,
       appreciationId,
-      remainingForTeam:
-        MAX_TAPS_PER_PROJECT_PER_ATTENDEE -
-        attendeeTeamAppreciations.length -
-        1,
-      remainingTotal:
-        MAX_TAPS_PER_ATTENDEE - attendeeAllAppreciations.length - 1,
+      remainingForTeam: maxPerTeam - attendeeTeamAppreciations.length - 1,
+      remainingTotal: maxPerAttendee - attendeeAllAppreciations.length - 1,
     };
   },
 });
@@ -459,14 +474,14 @@ export const createAppreciation = mutation({
       )
       .collect();
 
-    if (attendeeTeamAppreciations.length >= MAX_TAPS_PER_PROJECT_PER_ATTENDEE) {
+    if (attendeeTeamAppreciations.length >= maxPerTeam) {
       return {
         success: false,
-        error: `You've already given ${MAX_TAPS_PER_PROJECT_PER_ATTENDEE} appreciations to this team`,
+        error: `You've already given ${maxPerTeam} appreciations to this team`,
         remainingForTeam: 0,
         remainingTotal: Math.max(
           0,
-          MAX_TAPS_PER_ATTENDEE -
+          maxPerAttendee -
             (
               await ctx.db
                 .query("appreciations")
@@ -481,7 +496,7 @@ export const createAppreciation = mutation({
       };
     }
 
-    // 4. Check total event budget (max 15 per attendee)
+    // 4. Check total event budget
     const attendeeAllAppreciations = await ctx.db
       .query("appreciations")
       .withIndex("by_event_and_attendee", (q) =>
@@ -489,12 +504,11 @@ export const createAppreciation = mutation({
       )
       .collect();
 
-    if (attendeeAllAppreciations.length >= MAX_TAPS_PER_ATTENDEE) {
+    if (attendeeAllAppreciations.length >= maxPerAttendee) {
       return {
         success: false,
-        error: `You've used all ${MAX_TAPS_PER_ATTENDEE} appreciations for this event`,
-        remainingForTeam:
-          MAX_TAPS_PER_PROJECT_PER_ATTENDEE - attendeeTeamAppreciations.length,
+        error: `You've used all ${maxPerAttendee} appreciations for this event`,
+        remainingForTeam: maxPerTeam - attendeeTeamAppreciations.length,
         remainingTotal: 0,
       };
     }
@@ -521,12 +535,8 @@ export const createAppreciation = mutation({
 
     return {
       success: true,
-      remainingForTeam:
-        MAX_TAPS_PER_PROJECT_PER_ATTENDEE -
-        attendeeTeamAppreciations.length -
-        1,
-      remainingTotal:
-        MAX_TAPS_PER_ATTENDEE - attendeeAllAppreciations.length - 1,
+      remainingForTeam: maxPerTeam - attendeeTeamAppreciations.length - 1,
+      remainingTotal: maxPerAttendee - attendeeAllAppreciations.length - 1,
     };
   },
 });

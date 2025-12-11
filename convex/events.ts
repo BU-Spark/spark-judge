@@ -446,6 +446,7 @@ export const updateEventDetails = mutation({
     startDate: v.optional(v.number()),
     endDate: v.optional(v.number()),
     judgeCode: v.optional(v.union(v.string(), v.null())),
+    appreciationBudgetPerAttendee: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -457,6 +458,7 @@ export const updateEventDetails = mutation({
       startDate?: number;
       endDate?: number;
       judgeCode?: string;
+      appreciationBudgetPerAttendee?: number;
     } = {};
     if (args.name !== undefined) updates.name = args.name;
     if (args.description !== undefined) updates.description = args.description;
@@ -465,6 +467,12 @@ export const updateEventDetails = mutation({
     if (args.judgeCode !== undefined) {
       // Treat null as a request to clear the judge code.
       updates.judgeCode = args.judgeCode ?? "";
+    }
+    if (args.appreciationBudgetPerAttendee !== undefined) {
+      updates.appreciationBudgetPerAttendee = Math.max(
+        0,
+        args.appreciationBudgetPerAttendee
+      );
     }
 
     if (Object.keys(updates).length > 0) {

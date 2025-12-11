@@ -281,7 +281,6 @@ export const createAppreciationInternal = internalMutation({
       };
     }
     const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
-    const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
 
     // 2b. Enforce live status
     const status = computeEventStatus(event);
@@ -440,6 +439,7 @@ export const createAppreciation = mutation({
         remainingTotal: 0,
       };
     }
+    const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
 
     // 2b. Enforce live status
     const status = computeEventStatus(event);

@@ -327,7 +327,7 @@ function EventCard({
   const showSideBySide = !isDemoDay && !userRole;
   
   return (
-    <div className="card-static flex flex-col overflow-hidden min-w-[320px] sm:min-w-[360px] snap-start h-[360px]">
+    <div className="card-static flex flex-col overflow-hidden w-[320px] sm:w-[360px] flex-shrink-0 snap-start h-[360px]">
       <div className="p-5 pb-4 flex flex-col h-full">
         <div className="flex justify-between items-start gap-3 mb-4">
           <div className="flex flex-col gap-1.5">
@@ -338,7 +338,7 @@ function EventCard({
               </span>
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Live</span>
             </div>
-            <h3 className="text-xl font-heading font-bold text-foreground">
+            <h3 className="text-xl font-heading font-bold text-foreground leading-snug line-clamp-2 break-words">
               {event.name}
             </h3>
           </div>

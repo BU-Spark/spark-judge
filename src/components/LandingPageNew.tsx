@@ -232,7 +232,7 @@ function ActiveEventSection({
           {emptyMessage}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="flex gap-4 overflow-x-auto pb-4 px-5 snap-x snap-mandatory md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6">
           {events.map((event) => (
             <EventCard
               key={event._id}
@@ -324,10 +324,11 @@ function EventCard({
   const hasCompletedScoring = Boolean(
     judgeProgress && judgeProgress.totalTeams > 0 && judgeProgress.completedTeams >= judgeProgress.totalTeams
   );
+  const showSideBySide = !isDemoDay && !userRole;
   
   return (
-    <div className="card-static flex flex-col h-full overflow-hidden">
-      <div className="p-6 flex flex-col h-full">
+    <div className="card-static flex flex-col overflow-hidden min-w-[320px] sm:min-w-[360px] snap-start h-[360px]">
+      <div className="p-5 pb-4 flex flex-col h-full">
         <div className="flex justify-between items-start gap-3 mb-4">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
@@ -374,11 +375,11 @@ function EventCard({
           </span>
         </div>
 
-        <div className="space-y-3 mt-auto">
+        <div className="mt-auto flex flex-col gap-2 justify-end pb-0">
           {isDemoDay && (
             <button
               onClick={() => onBrowseDemoDay(event._id)}
-              className="w-full py-2.5 px-4 rounded-md font-medium shadow-md transition-all bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 hover:shadow-lg"
+              className="w-full h-12 px-4 rounded-md text-sm font-medium flex items-center justify-center shadow-md transition-all bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 hover:shadow-lg"
             >
               <span className="flex items-center justify-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -389,65 +390,94 @@ function EventCard({
             </button>
           )}
 
-          {!isDemoDay && !isParticipant && (
-            <>
-              {!isJudge ? (
-                <button
-                  onClick={() => {
-                    void onJoinAsJudge(event._id);
-                  }}
-                  disabled={isJoining}
-                  className="w-full py-2.5 px-4 rounded-md font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isJoining ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      Joining...
-                    </span>
-                  ) : (
-                    "Join as Judge"
-                  )}
-                </button>
-              ) : (
-                <button
-                  onClick={() => onStartScoring(event)}
-                  className={`w-full btn-primary shadow-md hover:shadow-lg transition-all ${hasCompletedScoring ? 'opacity-90' : ''}`}
-                >
+          {showSideBySide ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  void onJoinAsJudge(event._id);
+                }}
+                disabled={isJoining}
+                className="flex-1 h-12 px-3 rounded-md text-sm font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {isJoining ? (
                   <span className="flex items-center justify-center gap-2">
-                    {hasCompletedScoring ? (
-                      <>
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                        Scoring Complete
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                        {judgeProgress && judgeProgress.completedTeams > 0
-                          ? `Resume (${judgeProgress.completedTeams}/${judgeProgress.totalTeams})`
-                          : "Start Scoring"}
-                      </>
-                    )}
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    Joining...
                   </span>
+                ) : (
+                  "Join as Judge"
+                )}
+              </button>
+              <button
+                onClick={() => onAddTeam(event)}
+                className="flex-1 h-12 px-3 rounded-md text-sm font-medium transition-all bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm flex items-center justify-center"
+              >
+                Add Your Team
+              </button>
+            </div>
+          ) : (
+            <>
+              {!isDemoDay && !isParticipant && (
+                <>
+                  {!isJudge ? (
+                    <button
+                      onClick={() => {
+                        void onJoinAsJudge(event._id);
+                      }}
+                      disabled={isJoining}
+                    className="w-full h-12 px-4 rounded-md text-sm font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {isJoining ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          Joining...
+                        </span>
+                      ) : (
+                        "Join as Judge"
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onStartScoring(event)}
+                      className={`w-full h-12 px-4 rounded-md text-sm font-medium btn-primary shadow-md hover:shadow-lg transition-all ${hasCompletedScoring ? 'opacity-90' : ''} flex items-center justify-center`}
+                    >
+                      <span className="flex items-center justify-center gap-2">
+                        {hasCompletedScoring ? (
+                          <>
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Scoring Complete
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                            {judgeProgress && judgeProgress.completedTeams > 0
+                              ? `Resume (${judgeProgress.completedTeams}/${judgeProgress.totalTeams})`
+                              : "Start Scoring"}
+                          </>
+                        )}
+                      </span>
+                    </button>
+                  )}
+                </>
+              )}
+
+              {!isDemoDay && !isJudge && (
+                <button
+                  onClick={() => onAddTeam(event)}
+                  className={`w-full h-12 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
+                    isParticipant
+                      ? "bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 shadow-sm hover:shadow-md"
+                      : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
+                  }`}
+                >
+                  {isParticipant ? "View/Edit Team" : "Add Your Team"}
                 </button>
               )}
             </>
-          )}
-
-          {!isDemoDay && !isJudge && (
-            <button
-              onClick={() => onAddTeam(event)}
-              className={`w-full py-2.5 px-4 rounded-md text-sm font-medium transition-all ${
-                isParticipant
-                  ? "bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 shadow-sm hover:shadow-md"
-                  : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
-              }`}
-            >
-              {isParticipant ? "View/Edit Team" : "Add Your Team"}
-            </button>
           )}
         </div>
       </div>

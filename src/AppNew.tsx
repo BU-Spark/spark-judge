@@ -49,9 +49,17 @@ export default function App() {
 function Layout() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const isAdmin = useQuery(api.events.isUserAdmin);
   const navigate = useNavigate();
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  useEffect(() => {
+    const updateIsMobile = () => setIsMobile(window.matchMedia("(max-width: 768px)").matches);
+    updateIsMobile();
+    window.addEventListener("resize", updateIsMobile);
+    return () => window.removeEventListener("resize", updateIsMobile);
+  }, []);
 
   const renderNavActions = (variant: "desktop" | "mobile") => {
     const baseGhostClass =
@@ -114,12 +122,12 @@ function Layout() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex justify-between items-center">
             <Link
               to="/"
               onClick={closeMobileMenu}
-              className="text-xl font-heading font-bold hover:text-primary transition-colors text-foreground"
+              className="text-xl font-logo logo-title hover:opacity-90 transition-colors"
             >
               HackJudge
             </Link>
@@ -163,17 +171,19 @@ function Layout() {
         <Outlet />
       </main>
 
-      {/* Toast Notifications */}
-      <Toaster 
-        position="bottom-right"
-        toastOptions={{
-          style: {
-            background: 'var(--card)',
-            color: 'var(--card-foreground)',
-            border: '1px solid var(--border)',
-          },
-        }}
-      />
+      {/* Toast Notifications - hidden on mobile */}
+      {!isMobile && (
+        <Toaster 
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: 'var(--card)',
+              color: 'var(--card-foreground)',
+              border: '1px solid var(--border)',
+            },
+          }}
+        />
+      )}
 
       {/* Sign In Modal */}
       {showSignIn && (

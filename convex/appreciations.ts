@@ -567,3 +567,82 @@ export const getAppreciationsCsvData = query({
     return csvData;
   },
 });
+
+/**
+ * Clear all appreciations for a specific team.
+ * Resets the team's denormalized scores to zero.
+ */
+export const clearTeamAppreciations = mutation({
+  args: {
+    teamId: v.id("teams"),
+  },
+  returns: v.object({
+    deletedCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      throw new Error("Team not found");
+    }
+
+    const appreciations = await ctx.db
+      .query("appreciations")
+      .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
+      .collect();
+
+    let deletedCount = 0;
+    for (const appreciation of appreciations) {
+      await ctx.db.delete(appreciation._id);
+      deletedCount += 1;
+    }
+
+    await ctx.db.patch(args.teamId, { rawScore: 0, cleanScore: 0 });
+
+    return { deletedCount };
+  },
+});
+
+/**
+ * Clear all appreciations for an entire event.
+ * Resets denormalized scores for all teams in the event.
+ */
+export const clearEventAppreciations = mutation({
+  args: {
+    eventId: v.id("events"),
+  },
+  returns: v.object({
+    deletedCount: v.number(),
+    teamUpdates: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!event) {
+      throw new Error("Event not found");
+    }
+
+    const appreciations = await ctx.db
+      .query("appreciations")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .collect();
+
+    let deletedCount = 0;
+    for (const appreciation of appreciations) {
+      await ctx.db.delete(appreciation._id);
+      deletedCount += 1;
+    }
+
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .collect();
+
+    for (const team of teams) {
+      await ctx.db.patch(team._id, { rawScore: 0, cleanScore: 0 });
+    }
+
+    return {
+      deletedCount,
+      teamUpdates: teams.length,
+    };
+  },
+});

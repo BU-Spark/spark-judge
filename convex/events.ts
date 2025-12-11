@@ -231,8 +231,18 @@ export const createEvent = mutation({
       await ctx.db.patch(userId, { isAdmin: true });
     }
 
+    if (args.startDate >= args.endDate) {
+      throw new Error("End date must be after start date");
+    }
+
+    const computedStatus = computeEventStatus({
+      startDate: args.startDate,
+      endDate: args.endDate,
+    });
+
     const eventId = await ctx.db.insert("events", {
       ...args,
+      status: computedStatus,
       resultsReleased: false,
     });
 

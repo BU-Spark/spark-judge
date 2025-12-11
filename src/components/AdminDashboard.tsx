@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useState, useEffect, Dispatch, SetStateAction } from "react";
+import { useState, useEffect, useMemo, Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 import { Id } from "../../convex/_generated/dataModel";
 import { LoadingState } from "./ui/LoadingState";
@@ -399,7 +399,6 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    status: "upcoming" as "upcoming" | "active" | "past",
     startDate: "",
     endDate: "",
     tracks: "AI/ML,Web Development,Hardware,Mobile,Other",
@@ -407,6 +406,58 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
     enableCohorts: false,
     mode: "hackathon" as "hackathon" | "demo_day",
   });
+
+  const getTimestamp = (value: string) => {
+    const ts = new Date(value).getTime();
+    return Number.isFinite(ts) ? ts : null;
+  };
+
+  const startTimestamp = useMemo(
+    () => getTimestamp(formData.startDate),
+    [formData.startDate]
+  );
+
+  const endTimestamp = useMemo(
+    () => getTimestamp(formData.endDate),
+    [formData.endDate]
+  );
+
+  const derivedStatus = useMemo(() => {
+    if (startTimestamp === null || endTimestamp === null) return null;
+    if (startTimestamp >= endTimestamp) return null;
+    const now = Date.now();
+    if (now < startTimestamp) return "upcoming";
+    if (now > endTimestamp) return "past";
+    return "active";
+  }, [startTimestamp, endTimestamp]);
+
+  const hasInvalidRange = useMemo(
+    () =>
+      startTimestamp !== null &&
+      endTimestamp !== null &&
+      startTimestamp >= endTimestamp,
+    [startTimestamp, endTimestamp]
+  );
+
+  const statusBadgeClass = useMemo(() => {
+    switch (derivedStatus) {
+      case "active":
+        return "bg-emerald-500/15 text-emerald-500 border-emerald-500/30";
+      case "past":
+        return "bg-orange-500/15 text-orange-500 border-orange-500/30";
+      case "upcoming":
+        return "bg-blue-500/15 text-blue-500 border-blue-500/30";
+      default:
+        return "bg-muted text-muted-foreground border-border";
+    }
+  }, [derivedStatus]);
+
+  const statusBadgeLabel = useMemo(() => {
+    if (!derivedStatus) return "Select dates to preview status";
+    if (derivedStatus === "active") return "Active (happening now)";
+    if (derivedStatus === "past") return "Past (already ended)";
+    return "Upcoming (scheduled)";
+  }, [derivedStatus]);
 
   const handleAddCourseCode = () => {
     const code = newCourseCode.trim().toUpperCase();
@@ -423,6 +474,37 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+
+    const startMs = startTimestamp ?? getTimestamp(formData.startDate);
+    const endMs = endTimestamp ?? getTimestamp(formData.endDate);
+
+    if (startMs === null || endMs === null) {
+      toast.error("Please provide both start and end date/time.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (startMs >= endMs) {
+      toast.error("End time must be after the start time.");
+      setSubmitting(false);
+      return;
+    }
+
+    const cleanedCategories = categories
+      .map((cat) => ({
+        name: cat.name.trim(),
+        weight: Math.min(2, Math.max(0, Number(cat.weight) || 0)),
+      }))
+      .filter((cat) => cat.name.length > 0);
+
+    if (cleanedCategories.length === 0) {
+      toast.error("Add at least one judging category with a name.");
+      setSubmitting(false);
+      return;
+    }
+
+    const computedStatus = derivedStatus ?? "upcoming";
+
     try {
       const tracks = useTracksAsAwards 
         ? undefined 
@@ -431,10 +513,10 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
       await createEvent({
         name: formData.name,
         description: formData.description,
-        status: formData.status,
-        startDate: new Date(formData.startDate).getTime(),
-        endDate: new Date(formData.endDate).getTime(),
-        categories,
+        status: computedStatus,
+        startDate: startMs,
+        endDate: endMs,
+        categories: cleanedCategories,
         tracks,
         judgeCode: formData.judgeCode || undefined,
         enableCohorts: formData.enableCohorts || undefined,
@@ -495,16 +577,44 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Status</label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-              className="input"
-            >
-              <option value="upcoming">Upcoming</option>
-              <option value="active">Active</option>
-              <option value="past">Past</option>
-            </select>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <label className="block text-sm font-medium text-foreground">Schedule</label>
+                <p className="text-xs text-muted-foreground">
+                  Status now updates automatically from the start and end date/time.
+                </p>
+              </div>
+              <span className={`badge ${statusBadgeClass}`}>{statusBadgeLabel}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Start Date &amp; Time</label>
+                <input
+                  type="datetime-local"
+                  required
+                  step="900"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">End Date &amp; Time</label>
+                <input
+                  type="datetime-local"
+                  required
+                  step="900"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  className="input"
+                />
+              </div>
+            </div>
+
+            {hasInvalidRange && (
+              <p className="text-xs text-red-500 mt-2">End time must be after the start time.</p>
+            )}
           </div>
 
           <div>
@@ -540,29 +650,6 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Start Date</label>
-              <input
-                type="date"
-                required
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">End Date</label>
-              <input
-                type="date"
-                required
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="input"
-              />
-            </div>
-          </div>
-
           {/* Hackathon-specific fields */}
           {formData.mode === "hackathon" && (
             <>
@@ -570,47 +657,60 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Judging Categories & Weights
                 </label>
-                <div className="space-y-2">
-                  {categories.map((cat, index) => (
-                    <div key={index} className="flex gap-2 items-center">
-                      <input
-                        type="text"
-                        required
-                        value={cat.name}
-                        onChange={(e) => {
-                          const newCats = [...categories];
-                          newCats[index].name = e.target.value;
-                          setCategories(newCats);
-                        }}
-                        className="input flex-1"
-                        placeholder="Category name"
-                      />
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        max="2"
-                        step="0.1"
-                        value={cat.weight}
-                        onChange={(e) => {
-                          const newCats = [...categories];
-                          newCats[index].weight = parseFloat(e.target.value) || 1;
-                          setCategories(newCats);
-                        }}
-                        className="input w-24"
-                        placeholder="Weight"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setCategories(categories.filter((_, i) => i !== index))}
-                        className="p-3 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
+                <div className="rounded-lg border border-border">
+                  <div className="grid grid-cols-[1fr,110px,40px] gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide">
+                    <span>Category</span>
+                    <span>Weight</span>
+                    <span className="text-right">Remove</span>
+                  </div>
+                  <div className="space-y-2 p-3">
+                    {categories.map((cat, index) => (
+                      <div key={index} className="grid grid-cols-[1fr,110px,40px] gap-2 items-center">
+                        <input
+                          type="text"
+                          required
+                          value={cat.name}
+                          onChange={(e) => {
+                            const newCats = [...categories];
+                            newCats[index].name = e.target.value;
+                            setCategories(newCats);
+                          }}
+                          className="input w-full"
+                          placeholder="e.g., Innovation"
+                        />
+                        <input
+                          type="number"
+                          required
+                          min="0"
+                          max="2"
+                          step="0.1"
+                          inputMode="decimal"
+                          value={cat.weight}
+                          onChange={(e) => {
+                            const numericValue = parseFloat(e.target.value);
+                            const clamped = Math.max(0, Math.min(2, Number.isFinite(numericValue) ? numericValue : 0));
+                            const newCats = [...categories];
+                            newCats[index].weight = clamped;
+                            setCategories(newCats);
+                          }}
+                          className="input w-full"
+                          placeholder="1.0"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                          className="p-2.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                          aria-label={`Remove ${cat.name || "category"}`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-3">
                   <button
                     type="button"
                     onClick={() => setCategories([...categories, { name: "", weight: 1 }])}
@@ -618,10 +718,10 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                   >
                     + Add Category
                   </button>
+                  <p className="text-xs text-muted-foreground">
+                    Weight range: 0-2. Higher weights increase the category's impact on the total score.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Weight range: 0-2. Higher weights increase the category's impact on the total score.
-                </p>
               </div>
 
               <div>

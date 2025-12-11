@@ -1,11 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anta&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  --logo-color: #0a4942; /* darker teal for light mode */
+  --logo-color-dark: #d6fffb; /* near-white teal for dark mode */
   --background: #fafafa; /* Zinc 50 */
   --foreground: #18181b; /* Zinc 900 */
   --card: #ffffff;
@@ -61,6 +64,12 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   letter-spacing: -0.025em;
   font-weight: 600;
+}
+
+.font-logo {
+  font-family: 'Anta', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .font-body {
@@ -151,6 +160,14 @@ code, pre, kbd, samp {
   @apply text-foreground; /* Remove gradient text */
 }
 
+.logo-title {
+  color: var(--logo-color);
+}
+
+.dark .logo-title {
+  color: var(--logo-color-dark);
+}
+
 /* Scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;
@@ -172,4 +189,36 @@ code, pre, kbd, samp {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--secondary);
+}
+
+/* Scrollbar that stays hidden until interaction */
+.scrollbar-auto-hide {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scrollbar-auto-hide:hover,
+.scrollbar-auto-hide:focus,
+.scrollbar-auto-hide:active {
+  scrollbar-color: var(--border) transparent;
+}
+
+.scrollbar-auto-hide::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.scrollbar-auto-hide::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-auto-hide::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.scrollbar-auto-hide:hover::-webkit-scrollbar-thumb,
+.scrollbar-auto-hide:focus::-webkit-scrollbar-thumb,
+.scrollbar-auto-hide:active::-webkit-scrollbar-thumb {
+  background: var(--border);
 }

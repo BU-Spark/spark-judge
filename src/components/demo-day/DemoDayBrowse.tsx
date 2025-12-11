@@ -1,7 +1,8 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAttendeeIdentity } from "../../lib/demoDayIdentity";
 import { useAppreciation } from "../../lib/demoDayApi";
 import { toast } from "sonner";
@@ -31,6 +32,14 @@ interface DemoDayBrowseProps {
 export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [quickTeam, setQuickTeam] = useState<
+    | (DemoDayBrowseProps["event"]["teams"][number] & {
+        appreciationData?: { totalCount: number; attendeeCount: number };
+      })
+    | null
+  >(null);
+  const [sheetHeight, setSheetHeight] = useState(260);
+  const courseRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Get attendee identity
   const { attendeeId, isLoading: identityLoading } = useAttendeeIdentity();
@@ -123,57 +132,93 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
     return map;
   }, [appreciationData]);
 
+  const remainingBudget = appreciationData?.attendeeRemainingBudget ?? 15;
+
   if (identityLoading) {
     return <LoadingState label="Initializing..." />;
   }
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Back Button */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 btn-ghost mb-6"
-      >
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M10 19l-7-7m0 0l7-7m-7 7h18"
-          />
-        </svg>
-        Back to Events
-      </button>
+  const scrollToCourse = (code: string | null) => {
+    if (code === null) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    const target = courseRefs.current[code];
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
-      {/* Header */}
-      <div className="card-static mb-8 p-6 bg-card border border-border rounded-lg shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-heading font-bold text-foreground">
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-20 sm:pb-8">
+      {/* Mobile header (compact) */}
+      <div className="sm:hidden mb-4">
+        <div className="flex items-center gap-4 py-2">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-0 text-xs p-0 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary rounded"
+            aria-label="Back to events"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+          </button>
+          <h1 className="text-2xl font-heading font-bold text-foreground truncate max-w-[80vw]">
+            {event.name}
+          </h1>
+        </div>
+      </div>
+
+      {/* Desktop header (original layout) */}
+      <div className="hidden sm:block">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm btn-ghost mb-6"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
+          </svg>
+          Back to Events
+        </button>
+
+        <div className="card-static p-6 mb-8 bg-card border border-border rounded-lg shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-heading font-bold text-foreground mb-2">
                 {event.name}
               </h1>
-              <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20">
-                Demo Day
-              </span>
+              <p className="text-muted-foreground">{event.description}</p>
             </div>
-            <p className="text-muted-foreground">{event.description}</p>
+            <div>
+              <BudgetIndicator remaining={remainingBudget} total={15} />
+            </div>
           </div>
-          <BudgetIndicator
-            remaining={appreciationData?.attendeeRemainingBudget ?? 15}
-            total={15}
-          />
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="card-static mb-6 p-4 bg-card">
-        <div className="space-y-4">
+      <div className="card-static relative mb-5 sm:mb-6 p-3 sm:p-4 bg-card overflow-hidden">
+        <div className="space-y-3 sm:space-y-4">
           {/* Search Input */}
           <div className="relative">
             <svg
@@ -200,32 +245,42 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
 
           {/* Course Filter Chips */}
           {courseCodes.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedCourse(null)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
-                  selectedCourse === null
-                    ? "bg-primary text-white border-primary shadow-sm"
-                    : "bg-background text-muted-foreground border-border hover:bg-muted"
-                }`}
-              >
-                All Courses
-              </button>
-              {courseCodes.map((code) => (
+            <div className="sticky top-0 z-20 w-full bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-sm overflow-hidden relative">
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-auto-hide px-3 w-full">
                 <button
-                  key={code}
-                  onClick={() =>
-                    setSelectedCourse(selectedCourse === code ? null : code)
-                  }
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
-                    selectedCourse === code
+                  onClick={() => {
+                    setSelectedCourse(null);
+                    scrollToCourse(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border whitespace-nowrap ${
+                    selectedCourse === null
                       ? "bg-primary text-white border-primary shadow-sm"
                       : "bg-background text-muted-foreground border-border hover:bg-muted"
                   }`}
                 >
-                  {code}
+                  All Courses
                 </button>
-              ))}
+                {courseCodes.map((code) => (
+                  <button
+                    key={code}
+                    onClick={() => {
+                      const next =
+                        selectedCourse === code ? null : code;
+                      setSelectedCourse(next);
+                      scrollToCourse(code);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border whitespace-nowrap ${
+                      selectedCourse === code
+                        ? "bg-primary text-white border-primary shadow-sm"
+                        : "bg-background text-muted-foreground border-border hover:bg-muted"
+                    }`}
+                  >
+                    {code}
+                  </button>
+                ))}
+              </div>
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-card via-card/70 to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-card via-card/70 to-transparent" />
             </div>
           )}
         </div>
@@ -257,7 +312,14 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
         // Grouped by course view (All Courses selected)
         <div className="space-y-8">
           {teamsByCourse.map(([courseCode, teams]) => (
-            <div key={courseCode} className="space-y-4">
+            <div
+              key={courseCode}
+              className="space-y-4 scroll-mt-24"
+              id={`course-${courseCode}`}
+              ref={(el) => {
+                courseRefs.current[courseCode] = el;
+              }}
+            >
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-heading font-bold text-foreground">
                   {courseCode}
@@ -266,7 +328,10 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
                   ({teams.length} project{teams.length !== 1 ? "s" : ""})
                 </span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div
+                className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:overflow-visible md:snap-none scrollbar-auto-hide"
+                aria-label={`${courseCode} projects`}
+              >
                 {teams.map((team, index) => (
                   <TeamCard
                     key={team._id}
@@ -276,6 +341,13 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
                     appreciationData={appreciationMap.get(team._id)}
                     remainingBudget={appreciationData?.attendeeRemainingBudget ?? 15}
                     index={index}
+                    onQuickView={(enrichedTeam) =>
+                      setQuickTeam({
+                        ...enrichedTeam,
+                        appreciationData: appreciationMap.get(team._id),
+                      })
+                    }
+                    layout="carousel"
                   />
                 ))}
               </div>
@@ -294,10 +366,35 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
               appreciationData={appreciationMap.get(team._id)}
               remainingBudget={appreciationData?.attendeeRemainingBudget ?? 15}
               index={index}
+              onQuickView={(enrichedTeam) =>
+                setQuickTeam({
+                  ...enrichedTeam,
+                  appreciationData: appreciationMap.get(team._id),
+                })
+              }
             />
           ))}
         </div>
       )}
+
+      <AnimatePresence initial={false}>
+        {quickTeam && (
+          <QuickViewSheet
+            key={quickTeam._id}
+            team={quickTeam}
+            onClose={() => setQuickTeam(null)}
+            eventId={eventId}
+            attendeeId={attendeeId}
+            remainingBudget={remainingBudget}
+            onHeightChange={(h) => setSheetHeight(h)}
+          />
+        )}
+      </AnimatePresence>
+      <MobileBudgetFooter
+        remaining={remainingBudget}
+        lifted={!!quickTeam}
+        liftAmount={sheetHeight + 24}
+      />
     </div>
   );
 }
@@ -348,6 +445,8 @@ interface TeamCardProps {
   appreciationData?: { totalCount: number; attendeeCount: number };
   remainingBudget: number;
   index: number;
+  onQuickView?: (team: TeamCardProps["team"]) => void;
+  layout?: "grid" | "carousel";
 }
 
 function TeamCard({
@@ -357,11 +456,12 @@ function TeamCard({
   appreciationData,
   remainingBudget,
   index,
+  onQuickView,
+  layout = "grid",
 }: TeamCardProps) {
   const { appreciate, isLoading } = useAppreciation();
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
 
-  const totalCount = appreciationData?.totalCount ?? 0;
   const attendeeCount = optimisticCount ?? appreciationData?.attendeeCount ?? 0;
   const maxPerTeam = 3;
   const canAppreciate =
@@ -395,7 +495,11 @@ function TeamCard({
 
   return (
     <div
-      className="card fade-in p-5 bg-card hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+      className={`card fade-in p-5 bg-card hover:shadow-lg transition-all duration-200 ${
+        layout === "carousel"
+          ? "min-w-[80%] sm:min-w-[60%] md:min-w-0"
+          : ""
+      }`}
       style={{ animationDelay: `${index * 0.05}s` }}
     >
       <div className="flex flex-col h-full">
@@ -414,10 +518,6 @@ function TeamCard({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 text-pink-500 ml-2 bg-pink-500/10 px-2 py-1 rounded-md">
-            <span className="text-sm">❤️</span>
-            <span className="font-bold text-sm">{totalCount + (optimisticCount !== null ? 1 : 0)}</span>
-          </div>
         </div>
 
         {/* Description */}
@@ -434,6 +534,14 @@ function TeamCard({
             View Details →
           </Link>
           <div className="flex items-center gap-2">
+            {onQuickView && (
+              <button
+                onClick={() => onQuickView(team)}
+                className="text-xs text-foreground hover:text-primary px-2 py-1 rounded-md bg-muted"
+              >
+                Quick view
+              </button>
+            )}
             <span className="text-xs text-muted-foreground">
               {attendeeCount}/{maxPerTeam}
             </span>
@@ -465,5 +573,203 @@ function TeamCard({
         </div>
       </div>
     </div>
+  );
+}
+
+interface QuickViewSheetProps {
+  team: (TeamCardProps["team"] & {
+    appreciationData?: { totalCount: number; attendeeCount: number };
+  }) | null;
+  onClose: () => void;
+  eventId: Id<"events">;
+  attendeeId: string | null;
+  remainingBudget: number;
+  onHeightChange: (height: number) => void;
+}
+
+function QuickViewSheet({
+  team,
+  onClose,
+  eventId,
+  attendeeId,
+  remainingBudget,
+  onHeightChange,
+}: QuickViewSheetProps) {
+  const { appreciate, isLoading } = useAppreciation();
+  const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+
+  // Measure sheet height to lift footer appropriately
+  useEffect(() => {
+    const el = sheetRef.current;
+    if (!el) return;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.height) {
+        onHeightChange(rect.height);
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [onHeightChange, team]);
+
+  if (!team) return null;
+
+  const attendeeCount =
+    optimisticCount ?? team.appreciationData?.attendeeCount ?? 0;
+  const maxPerTeam = 3;
+  const canAppreciate =
+    attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
+
+  const handleAppreciate = async () => {
+    if (!attendeeId || !canAppreciate) return;
+    setOptimisticCount((prev) => (prev ?? attendeeCount) + 1);
+
+    const result = await appreciate(
+      eventId,
+      team._id,
+      () => {
+        toast.success(`Appreciated ${team.name}!`);
+      },
+      (error) => {
+        setOptimisticCount(null);
+        toast.error(error);
+      }
+    );
+
+    if (result.success) {
+      setTimeout(() => setOptimisticCount(null), 500);
+    }
+  };
+
+  return (
+    <>
+      <motion.div
+        key="overlay"
+        className="fixed inset-0 bg-black/40 z-40"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1, transition: { duration: 0.25 } }}
+        exit={{ opacity: 0, transition: { duration: 0.25 } }}
+        role="button"
+        aria-label="Close quick view"
+        onClick={onClose}
+      />
+      <motion.div
+        key="sheet"
+        className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-2xl shadow-2xl border border-border p-4 max-h-[80vh] overflow-y-auto will-change-transform"
+        ref={sheetRef}
+        initial={{ y: "100%" }}
+        animate={{
+          y: 0,
+          transition: { duration: 0.25, ease: [0.25, 0.8, 0.3, 1] },
+        }}
+        exit={{
+          y: "100%",
+          transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
+        }}
+      >
+        <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full mx-auto mb-3" />
+        <div className="flex items-start justify-between mb-3 gap-2">
+          <div>
+            <h3 className="text-lg font-heading font-semibold text-foreground">
+              {team.name}
+            </h3>
+            {team.courseCode && (
+              <span className="inline-block px-2 py-0.5 bg-muted text-muted-foreground text-[10px] rounded mt-1">
+                {team.courseCode}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Close quick view"
+          >
+            ✕
+          </button>
+        </div>
+        <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+          {team.description}
+        </p>
+        {team.members && team.members.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+              Members
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {team.members.map((member) => (
+                <span
+                  key={member}
+                  className="px-2 py-1 bg-muted text-xs rounded-md text-foreground"
+                >
+                  {member}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="flex items-center justify-between border-t border-border pt-3 gap-3">
+          <span className="text-xs text-muted-foreground">
+            {attendeeCount}/{maxPerTeam} you’ve given
+          </span>
+          <button
+            onClick={handleAppreciate}
+            disabled={!canAppreciate || isLoading}
+            className={`
+              flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all shadow-sm
+              ${
+                canAppreciate
+                  ? "bg-pink-500 hover:bg-pink-600 text-white hover:shadow-md active:scale-95"
+                  : "bg-muted text-muted-foreground cursor-not-allowed shadow-none"
+              }
+              ${isLoading ? "opacity-70" : ""}
+            `}
+          >
+            {isLoading ? (
+              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <span>❤️</span>
+            )}
+            {attendeeCount >= maxPerTeam
+              ? "Max"
+              : remainingBudget <= 0
+                ? "None Left"
+                : "Appreciate"}
+          </button>
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
+function MobileBudgetFooter({
+  remaining,
+  lifted,
+  liftAmount,
+}: {
+  remaining: number;
+  lifted: boolean;
+  liftAmount: number;
+}) {
+  return (
+    <motion.div
+      className="fixed bottom-0 inset-x-0 z-[60] sm:hidden px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] pt-2"
+      initial={false}
+      animate={{
+        y: lifted ? -Math.max(liftAmount, 120) : 0,
+        transition: { duration: 0.25, ease: [0.25, 0.8, 0.3, 1] },
+      }}
+    >
+      <div className="bg-primary text-primary-foreground border border-primary rounded-full shadow-[0_12px_28px_rgba(0,0,0,0.22)] dark:shadow-[0_12px_28px_rgba(0,0,0,0.32)] px-4 py-2 flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">❤️</span>
+          <span className="font-semibold text-sm">{remaining}</span>
+          <span className="text-primary-foreground/80 text-xs">/ 15 left</span>
+        </div>
+        <span className="text-xs text-primary-foreground/80">Tap a project to +1</span>
+      </div>
+    </motion.div>
   );
 }

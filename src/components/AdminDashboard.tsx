@@ -964,7 +964,13 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   })();
 
   const scoresLoaded = eventScores !== undefined;
-  const hasScores = (eventScores?.length || 0) > 0;
+  // Treat judging as started only if any team has at least one score submitted.
+  const hasScores =
+    eventScores?.some(
+      (teamScore) =>
+        (teamScore as any)?.judgeCount > 0 ||
+        ((teamScore as any)?.scores?.length || 0) > 0
+    ) ?? false;
 
   const handleModeChange = async (mode: "hackathon" | "demo_day") => {
     try {
@@ -1092,7 +1098,12 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
 
   const handleSaveJudgeSettings = async () => {
     const scoresLoaded = eventScores !== undefined;
-    const hasScores = (eventScores?.length || 0) > 0;
+    const hasScores =
+      eventScores?.some(
+        (teamScore) =>
+          (teamScore as any)?.judgeCount > 0 ||
+          ((teamScore as any)?.scores?.length || 0) > 0
+      ) ?? false;
 
     if (!scoresLoaded) {
       toast.error("Scores are still loading. Please try again.");

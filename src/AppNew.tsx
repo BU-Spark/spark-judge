@@ -127,7 +127,7 @@ function Layout() {
             <Link
               to="/"
               onClick={closeMobileMenu}
-              className="text-xl font-logo logo-title hover:opacity-90 transition-colors"
+              className="text-xl font-logo text-foreground hover:text-primary transition-colors"
             >
               HackJudge
             </Link>

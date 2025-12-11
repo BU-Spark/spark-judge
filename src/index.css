@@ -1,14 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Anta&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --logo-color: #0a4942; /* darker teal for light mode */
-  --logo-color-dark: #d6fffb; /* near-white teal for dark mode */
   --background: #fafafa; /* Zinc 50 */
   --foreground: #18181b; /* Zinc 900 */
   --card: #ffffff;
@@ -67,9 +65,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .font-logo {
-  font-family: 'Anta', system-ui, sans-serif;
+  font-family: 'Noto Sans Mono', system-ui, monospace;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: -0.01em;
 }
 
 .font-body {
@@ -158,14 +156,6 @@ code, pre, kbd, samp {
 
 .gradient-text {
   @apply text-foreground; /* Remove gradient text */
-}
-
-.logo-title {
-  color: var(--logo-color);
-}
-
-.dark .logo-title {
-  color: var(--logo-color-dark);
 }
 
 /* Scrollbar */

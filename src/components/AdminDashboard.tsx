@@ -453,7 +453,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
   }, [derivedStatus]);
 
   const statusBadgeLabel = useMemo(() => {
-    if (!derivedStatus) return "Select dates to preview status";
+    if (!derivedStatus) return null;
     if (derivedStatus === "active") return "Active (happening now)";
     if (derivedStatus === "past") return "Past (already ended)";
     return "Upcoming (scheduled)";
@@ -577,14 +577,11 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div>
-                <label className="block text-sm font-medium text-foreground">Schedule</label>
-                <p className="text-xs text-muted-foreground">
-                  Status now updates automatically from the start and end date/time.
-                </p>
-              </div>
-              <span className={`badge ${statusBadgeClass}`}>{statusBadgeLabel}</span>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div aria-hidden />
+              {statusBadgeLabel && (
+                <span className={`badge ${statusBadgeClass}`}>{statusBadgeLabel}</span>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -655,13 +652,13 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
             <>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Judging Categories & Weights
+                  Judging Categories &amp; Weights (0-2)
                 </label>
                 <div className="rounded-lg border border-border">
                   <div className="grid grid-cols-[1fr,110px,40px] gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide">
                     <span>Category</span>
                     <span>Weight</span>
-                    <span className="text-right">Remove</span>
+                    <span className="text-right" aria-hidden />
                   </div>
                   <div className="space-y-2 p-3">
                     {categories.map((cat, index) => (
@@ -718,9 +715,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                   >
                     + Add Category
                   </button>
-                  <p className="text-xs text-muted-foreground">
-                    Weight range: 0-2. Higher weights increase the category's impact on the total score.
-                  </p>
+                  <div aria-hidden />
                 </div>
               </div>
 

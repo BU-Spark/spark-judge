@@ -529,7 +529,7 @@ function TeamCard({
         <div className="flex items-center justify-between pt-3 border-t border-border gap-2">
           <Link
             to={`/event/${eventId}/team/${team._id}`}
-            className="text-xs text-primary hover:underline font-medium"
+            className="hidden sm:inline text-xs text-primary hover:underline font-medium"
           >
             View Details →
           </Link>
@@ -762,13 +762,11 @@ function MobileBudgetFooter({
         transition: { duration: 0.25, ease: [0.25, 0.8, 0.3, 1] },
       }}
     >
-      <div className="bg-primary text-primary-foreground border border-primary rounded-full shadow-[0_12px_28px_rgba(0,0,0,0.22)] dark:shadow-[0_12px_28px_rgba(0,0,0,0.32)] px-4 py-2 flex items-center justify-between text-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">❤️</span>
-          <span className="font-semibold text-sm">{remaining}</span>
-          <span className="text-primary-foreground/80 text-xs">/ 15 left</span>
-        </div>
-        <span className="text-xs text-primary-foreground/80">Tap a project to +1</span>
+      <div className="bg-primary text-primary-foreground border border-primary rounded-full shadow-[0_12px_28px_rgba(0,0,0,0.22)] dark:shadow-[0_12px_28px_rgba(0,0,0,0.32)] px-3 py-2 flex items-center gap-2 w-fit mx-auto text-sm">
+        <span className="text-base leading-none">❤️</span>
+        <span className="font-semibold text-sm leading-none">
+          {remaining}/15 appreciations left
+        </span>
       </div>
     </motion.div>
   );

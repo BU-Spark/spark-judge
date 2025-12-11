@@ -46,6 +46,53 @@ export const createTeam = mutation({
   },
 });
 
+export const updateTeamAdmin = mutation({
+  args: {
+    teamId: v.id("teams"),
+    name: v.string(),
+    description: v.string(),
+    members: v.array(v.string()),
+    projectUrl: v.optional(v.string()),
+    courseCode: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const team = await ctx.db.get(args.teamId);
+    if (!team) throw new Error("Team not found");
+
+    const event = await ctx.db.get(team.eventId);
+    if (!event) throw new Error("Event not found");
+
+    const isDemoDay = event.mode === "demo_day";
+
+    // Validate course code for Demo Day
+    if (isDemoDay && args.courseCode) {
+      if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
+        throw new Error("Invalid course code");
+      }
+    }
+
+    // Basic GitHub URL validation for hackathon projects
+    if (!isDemoDay && args.projectUrl) {
+      if (!args.projectUrl.startsWith("https://github.com/")) {
+        throw new Error("Project URL must start with https://github.com/");
+      }
+    }
+
+    await ctx.db.patch(args.teamId, {
+      name: args.name,
+      description: args.description,
+      members: args.members,
+      githubUrl: args.projectUrl || "",
+      ...(isDemoDay ? { courseCode: args.courseCode } : {}),
+    });
+
+    return null;
+  },
+});
+
 export const submitTeam = mutation({
   args: {
     eventId: v.id("events"),

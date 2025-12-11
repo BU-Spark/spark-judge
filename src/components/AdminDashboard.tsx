@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useState, Dispatch, SetStateAction } from "react";
+import { useState, useEffect, Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 import { Id } from "../../convex/_generated/dataModel";
 import { LoadingState } from "./ui/LoadingState";
@@ -17,6 +17,14 @@ const STATUS_SORT_ORDER: Record<"active" | "upcoming" | "past", number> = {
   upcoming: 1,
   past: 2,
 };
+
+function formatDateTimeInput(timestamp: number) {
+  const date = new Date(timestamp);
+  // Convert to local time for datetime-local input
+  const offset = date.getTimezoneOffset();
+  const local = new Date(timestamp - offset * 60 * 1000);
+  return local.toISOString().slice(0, 16);
+}
 
 function compareEvents(
   a: any,
@@ -321,7 +329,7 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
                         e.stopPropagation();
                         onSelectEvent(event._id);
                       }}
-                      className="inline-flex items-center justify-center p-2 rounded-md transition-colors text-primary hover:bg-primary/10"
+                      className="inline-flex items-center justify-center p-2 rounded-md transition-colors text-primary hover:bg-teal-500/10"
                       title="Manage event"
                     >
                       <span className="sr-only">Manage event</span>
@@ -779,11 +787,12 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const eventScores = useQuery(api.scores.getEventScores, { eventId });
   const detailedScores = useQuery(api.scores.getDetailedEventScores, { eventId });
   const appreciationSummary = useQuery(api.appreciations.getEventAppreciationSummary, { eventId });
-  const updateEventStatus = useMutation(api.events.updateEventStatus);
+  const updateEventDetails = useMutation(api.events.updateEventDetails);
   const updateEventMode = useMutation(api.events.updateEventMode);
   const duplicateEvent = useMutation(api.events.duplicateEvent);
   const removeEvent = useMutation(api.events.removeEvent);
   const createTeam = useMutation(api.teams.createTeam);
+  const updateTeamAdmin = useMutation(api.teams.updateTeamAdmin);
   const setWinners = useMutation(api.scores.setWinners);
   const releaseResults = useMutation(api.scores.releaseResults);
   const hideTeam = useMutation(api.teams.hideTeam);
@@ -792,6 +801,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const generateQrZip = useAction(api.qrCodes.generateQrCodeZip);
 
   const [showAddTeam, setShowAddTeam] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<any | null>(null);
   const [showSelectWinners, setShowSelectWinners] = useState(false);
   const [teamMenuOpen, setTeamMenuOpen] = useState<Id<"teams"> | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'scores'>('overview');
@@ -799,21 +809,34 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const [isRemovingEvent, setIsRemovingEvent] = useState(false);
   const [isDuplicatingEvent, setIsDuplicatingEvent] = useState(false);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [eventName, setEventName] = useState("");
+  const [eventDescription, setEventDescription] = useState("");
+  const [eventStart, setEventStart] = useState("");
+  const [eventEnd, setEventEnd] = useState("");
 
-  const isDemoDayMode = event?.mode === "demo_day";
+  // Sync editable fields when event changes
+  useEffect(() => {
+    if (event) {
+      setEventName(event.name || "");
+      setEventDescription(event.description || "");
+      setEventStart(formatDateTimeInput(event.startDate));
+      setEventEnd(formatDateTimeInput(event.endDate));
+    }
+  }, [event]);
 
   if (!event) {
     return null;
   }
 
-  const handleStatusChange = async (status: "upcoming" | "active" | "past") => {
-    try {
-      await updateEventStatus({ eventId, status });
-      toast.success("Event status updated!");
-    } catch (error) {
-      toast.error("Failed to update status");
-    }
-  };
+  const isDemoDayMode = event.mode === "demo_day";
+
+  const derivedStatus = (() => {
+    const now = Date.now();
+    if (now < event.startDate) return "upcoming";
+    if (now > event.endDate) return "past";
+    return "active";
+  })();
 
   const handleModeChange = async (mode: "hackathon" | "demo_day") => {
     try {
@@ -895,6 +918,47 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
       toast.error("Failed to download QR codes");
     } finally {
       setIsGeneratingQr(false);
+    }
+  };
+
+  const handleSaveDetails = async () => {
+    if (!eventName.trim()) {
+      toast.error("Event name is required");
+      return;
+    }
+
+    if (!eventStart || !eventEnd) {
+      toast.error("Start and end date/time are required");
+      return;
+    }
+
+    const startMs = Date.parse(eventStart);
+    const endMs = Date.parse(eventEnd);
+
+    if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+      toast.error("Please provide valid dates");
+      return;
+    }
+
+    if (endMs < startMs) {
+      toast.error("End date/time must be after start date/time");
+      return;
+    }
+
+    setSavingDetails(true);
+    try {
+      await updateEventDetails({
+        eventId,
+        name: eventName.trim(),
+        description: eventDescription.trim(),
+        startDate: startMs,
+        endDate: endMs,
+      });
+      toast.success("Event details saved");
+    } catch (error) {
+      toast.error("Failed to save details");
+    } finally {
+      setSavingDetails(false);
     }
   };
 
@@ -1031,28 +1095,95 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
         <div className="p-6 space-y-6">
           {activeTab === 'overview' && (
             <>
-              {/* Event Status */}
-              <div className="card-static p-6 bg-card">
-                <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Event Status
-                </h3>
-                <div className="flex gap-3 flex-wrap">
-                  {(["upcoming", "active", "past"] as const).map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => handleStatusChange(status)}
-                      className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-                        event.status === status
-                          ? "bg-primary text-white shadow-md"
-                          : "bg-muted text-muted-foreground hover:bg-muted/80"
-                      }`}
-                    >
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </button>
-                  ))}
+              {/* Event Details */}
+              <div className="card-static p-6 bg-card space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <h3 className="text-lg font-heading font-semibold text-foreground">Event Details</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Status updates automatically from the schedule
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`badge ${
+                    derivedStatus === "active"
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                      : derivedStatus === "upcoming"
+                      ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20"
+                      : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20"
+                  }`}>
+                    {derivedStatus.charAt(0).toUpperCase() + derivedStatus.slice(1)}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">
+                      Event Title <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={eventName}
+                      onChange={(e) => setEventName(e.target.value)}
+                      className="input"
+                      placeholder="Demo Day Fall 2025"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">
+                      Description <span className="text-muted-foreground text-xs">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={eventDescription}
+                      onChange={(e) => setEventDescription(e.target.value)}
+                      className="input"
+                      placeholder="Manage event settings and teams"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">
+                      Start Date & Time <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={eventStart}
+                      onChange={(e) => setEventStart(e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">
+                      End Date & Time <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={eventEnd}
+                      onChange={(e) => setEventEnd(e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSaveDetails}
+                    disabled={savingDetails}
+                    className="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {savingDetails ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Details"
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -1103,7 +1234,10 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                 Teams ({event.teams.length})
               </h3>
               <button
-                onClick={() => setShowAddTeam(true)}
+                onClick={() => {
+                  setEditingTeam(null);
+                  setShowAddTeam(true);
+                }}
                 className="btn-primary text-sm flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1163,6 +1297,16 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                               onClick={() => setTeamMenuOpen(null)}
                             />
                             <div className="absolute right-0 top-8 z-20 bg-background border border-border rounded-lg shadow-xl py-1 min-w-[150px]">
+                              <button
+                                onClick={() => {
+                                  setEditingTeam(team);
+                                  setShowAddTeam(true);
+                                  setTeamMenuOpen(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors"
+                              >
+                                Edit Team
+                              </button>
                               <button
                                 onClick={async () => {
                                   try {
@@ -1412,8 +1556,13 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
       {showAddTeam && (
         <AddTeamModal
           eventId={eventId}
-          onClose={() => setShowAddTeam(false)}
+          onClose={() => {
+            setShowAddTeam(false);
+            setEditingTeam(null);
+          }}
           onSubmit={createTeam}
+          onSubmitEdit={updateTeamAdmin}
+          editingTeam={editingTeam}
           eventMode={event.mode}
           courseCodes={event.courseCodes || []}
         />
@@ -1710,14 +1859,18 @@ function AddTeamModal({
   eventId,
   onClose,
   onSubmit,
+  onSubmitEdit,
   eventMode,
   courseCodes,
+  editingTeam,
 }: {
   eventId: Id<"events">;
   onClose: () => void;
   onSubmit: any;
+  onSubmitEdit?: any;
   eventMode?: "hackathon" | "demo_day";
   courseCodes?: string[];
+  editingTeam?: any;
 }) {
   const isDemoDay = eventMode === "demo_day";
   const [submitting, setSubmitting] = useState(false);
@@ -1729,24 +1882,80 @@ function AddTeamModal({
     courseCode: "",
   });
 
+  useEffect(() => {
+    if (editingTeam) {
+      setFormData({
+        name: editingTeam.name || "",
+        description: editingTeam.description || "",
+        members: editingTeam.members?.join(", ") || "",
+        projectUrl: editingTeam.githubUrl || "",
+        courseCode: editingTeam.courseCode || "",
+      });
+    } else {
+      setFormData({
+        name: "",
+        description: "",
+        members: "",
+        projectUrl: "",
+        courseCode: "",
+      });
+    }
+  }, [editingTeam]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await onSubmit({
-        eventId,
-        name: formData.name,
-        description: formData.description,
-        members: formData.members.split(",").map((m) => m.trim()),
-        ...(isDemoDay 
-          ? { courseCode: formData.courseCode || undefined }
-          : { projectUrl: formData.projectUrl || undefined }
-        ),
-      });
-      toast.success("Team added successfully!");
+      const name = formData.name.trim();
+      const members = formData.members
+        .split(",")
+        .map((m) => m.trim())
+        .filter(Boolean);
+
+      if (!name || members.length === 0) {
+        toast.error("Name and at least one member are required.");
+        setSubmitting(false);
+        return;
+      }
+
+      if (isDemoDay && !formData.courseCode) {
+        toast.error("Please select a course.");
+        setSubmitting(false);
+        return;
+      }
+
+      if (!isDemoDay && formData.projectUrl && !formData.projectUrl.startsWith("https://github.com/")) {
+        toast.error("Project URL must start with https://github.com/");
+        setSubmitting(false);
+        return;
+      }
+
+      if (editingTeam && onSubmitEdit) {
+        await onSubmitEdit({
+          teamId: editingTeam._id,
+          name,
+          description: formData.description.trim(),
+          members,
+          ...(isDemoDay
+            ? { courseCode: formData.courseCode || undefined }
+            : { projectUrl: formData.projectUrl || undefined }),
+        });
+        toast.success("Team updated successfully!");
+      } else {
+        await onSubmit({
+          eventId,
+          name,
+          description: formData.description.trim(),
+          members,
+          ...(isDemoDay
+            ? { courseCode: formData.courseCode || undefined }
+            : { projectUrl: formData.projectUrl || undefined }),
+        });
+        toast.success("Team added successfully!");
+      }
       onClose();
     } catch (error) {
-      toast.error("Failed to add team");
+      toast.error("Failed to save team");
     } finally {
       setSubmitting(false);
     }
@@ -1768,11 +1977,15 @@ function AddTeamModal({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-          <h3 className="text-2xl font-heading font-bold text-foreground">Add Team</h3>
+          <h3 className="text-2xl font-heading font-bold text-foreground">
+            {editingTeam ? "Edit Team" : "Add Team"}
+          </h3>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Team Name</label>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Team Name <span className="text-red-500">*</span>
+            </label>
             <input
               type="text"
               required
@@ -1783,9 +1996,10 @@ function AddTeamModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Description</label>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Description <span className="text-muted-foreground text-xs">(optional)</span>
+            </label>
             <textarea
-              required
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
@@ -1795,7 +2009,7 @@ function AddTeamModal({
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Members (comma-separated)
+              Members (comma-separated) <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -1828,7 +2042,9 @@ function AddTeamModal({
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Project URL (optional)</label>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Project URL <span className="text-muted-foreground text-xs">(optional)</span>
+              </label>
               <input
                 type="url"
                 value={formData.projectUrl}
@@ -1847,10 +2063,10 @@ function AddTeamModal({
               {submitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Adding...
+                  Saving...
                 </span>
               ) : (
-                "Add Team"
+                editingTeam ? "Save Changes" : "Add Team"
               )}
             </button>
             <button

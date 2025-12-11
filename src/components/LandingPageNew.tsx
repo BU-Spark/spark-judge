@@ -522,7 +522,7 @@ function EventRow({
               {isPastSection ? (
                 <button
                   onClick={() => onStartScoring(event)}
-                  className="w-full text-sm font-semibold text-primary px-4 py-2 rounded-md transition-all hover:bg-primary hover:text-primary-foreground border border-primary/20"
+                  className="w-full text-sm font-semibold text-primary px-4 py-2 rounded-md transition-all hover:bg-primary hover:text-primary-foreground border border-teal-500/20"
                 >
                   View Results
                 </button>
@@ -581,22 +581,9 @@ function EventRow({
 
         <div className="flex-grow min-w-0">
           <div className="flex items-center gap-3 mb-1.5">
-            <h3 className="text-base font-bold text-foreground truncate min-w-0 flex-1">
+            <h3 className="text-base font-bold text-foreground truncate">
               {event.name}
             </h3>
-            {isDemoDay && (
-              <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20 flex-shrink-0">
-                Demo Day
-              </span>
-            )}
-            {userRole && (
-              <span className={`badge flex-shrink-0 ${
-                isJudge ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20" : 
-                "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-              }`}>
-                {isJudge ? "Judge" : "Participant"}
-              </span>
-            )}
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
             <span>{event.teamCount} {isDemoDay ? "projects" : "teams"}</span>
@@ -606,6 +593,22 @@ function EventRow({
               </span>
             )}
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isDemoDay && (
+            <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20 flex-shrink-0">
+              Demo Day
+            </span>
+          )}
+          {userRole && (
+            <span className={`badge flex-shrink-0 ${
+              isJudge ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20" : 
+              "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+            }`}>
+              {isJudge ? "Judge" : "Participant"}
+            </span>
+          )}
         </div>
 
         <div className="flex-shrink-0 flex items-center gap-3">

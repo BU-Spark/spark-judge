@@ -28,6 +28,8 @@ type TeamsResult = Array<{
   name: string;
   courseCode?: string;
   hidden?: boolean;
+  demoDayRound?: number;
+  demoDayBoardNumber?: string;
 }>;
 
 /**
@@ -122,6 +124,38 @@ function escapeXml(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+}
+
+/**
+ * Generate a bare QR code SVG (no labels) for layouts where text sits outside.
+ */
+async function generatePlainQrSvg(url: string): Promise<string> {
+  const qrSvg = await QRCode.toString(url, {
+    type: "svg",
+    margin: 1,
+    color: {
+      dark: "#000000",
+      light: "#ffffff",
+    },
+    errorCorrectionLevel: "M",
+  });
+
+  const viewBoxMatch = qrSvg.match(/viewBox="0 0 (\d+) (\d+)"/);
+  const qrNativeSize = viewBoxMatch ? parseInt(viewBoxMatch[1]) : 33;
+  const paths = qrSvg.match(/<path[^>]*\/>/g)?.join("\n") ?? "";
+
+  const targetSize = 220;
+  const svgWidth = targetSize;
+  const svgHeight = targetSize;
+  const scaleFactor = targetSize / qrNativeSize;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}" preserveAspectRatio="xMidYMid meet">
+  <rect width="${svgWidth}" height="${svgHeight}" fill="white"/>
+  <g transform="translate(0, 0) scale(${scaleFactor})">
+    ${paths}
+  </g>
+</svg>`;
 }
 
 /**
@@ -376,6 +410,330 @@ function generatePrintableHtml(
 }
 
 /**
+ * Generate a printable HTML page with QR codes grouped by board number.
+ * Each page has 3 horizontal sections (one per round), sorted by round.
+ */
+function generateBoardGroupedHtml(
+  eventName: string,
+  qrCodes: Array<{
+    teamName: string;
+    courseCode?: string;
+    svg: string;
+    plainSvg?: string;
+    url: string;
+    demoDayRound?: number;
+    demoDayBoardNumber?: string;
+  }>
+): string {
+  // Group QR codes by board number
+  const boardGroups = new Map<string, Array<(typeof qrCodes)[0]>>();
+
+  for (const qr of qrCodes) {
+    const board = qr.demoDayBoardNumber || "Unassigned";
+    if (!boardGroups.has(board)) {
+      boardGroups.set(board, []);
+    }
+    boardGroups.get(board)!.push(qr);
+  }
+
+  // Sort boards alphabetically
+  const sortedBoards = Array.from(boardGroups.keys()).sort();
+
+  // Generate HTML for each board page
+  const boardPagesHtml = sortedBoards
+    .map((board, boardIndex) => {
+      const boardTeams = boardGroups.get(board)!;
+      // Sort by round (earliest first)
+      boardTeams.sort((a, b) => (a.demoDayRound || 0) - (b.demoDayRound || 0));
+
+      // Generate the 3 horizontal sections
+      const sectionsHtml = boardTeams
+        .map((qr) => {
+          const roundLabel = qr.demoDayRound ? `Round ${qr.demoDayRound}` : "";
+          const courseLabel = qr.courseCode || "";
+          return `
+          <div class="team-section">
+            <div class="qr-container">
+              ${qr.plainSvg || qr.svg}
+            </div>
+            <div class="team-info">
+              <div class="round-badge">${escapeXml(roundLabel)}</div>
+              <div class="team-name">${escapeXml(qr.teamName)}</div>
+              <div class="course-code">${escapeXml(courseLabel)}</div>
+            </div>
+          </div>`;
+        })
+        .join("\n");
+
+      return `
+      <div class="board-page ${boardIndex > 0 ? "page-break-before" : ""}">
+        <div class="board-header">Board ${escapeXml(board)}</div>
+        <div class="teams-container">
+          ${sectionsHtml}
+        </div>
+      </div>`;
+    })
+    .join("\n");
+
+  // Generate table of contents
+  const tocHtml = sortedBoards
+    .map((board) => {
+      const count = boardGroups.get(board)!.length;
+      const teams = boardGroups
+        .get(board)!
+        .sort((a, b) => (a.demoDayRound || 0) - (b.demoDayRound || 0))
+        .map(
+          (t) =>
+            `R${t.demoDayRound || "?"}: ${t.teamName.slice(0, 30)}${t.teamName.length > 30 ? "..." : ""}`
+        )
+        .join(", ");
+      return `<li><strong>Board ${escapeXml(board)}</strong> (${count} teams)<br><small>${escapeXml(teams)}</small></li>`;
+    })
+    .join("\n");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Codes by Board - ${escapeXml(eventName)}</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #333;
+      font-size: 28px;
+    }
+    
+    .instructions {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #666;
+      font-size: 14px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .toc {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto 30px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .toc h3 {
+      margin-bottom: 15px;
+      color: #333;
+    }
+    
+    .toc ul {
+      list-style: none;
+      padding: 0;
+      columns: 2;
+      column-gap: 30px;
+    }
+    
+    .toc li {
+      padding: 8px 0;
+      break-inside: avoid;
+    }
+    
+    .toc small {
+      color: #666;
+      font-size: 11px;
+    }
+    
+    .board-page {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .board-header {
+      text-align: center;
+      font-size: 32px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 8px;
+    }
+    
+    .teams-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .team-section {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 15px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    
+    .qr-container {
+      flex-shrink: 0;
+      width: 200px;
+      height: 200px;
+    }
+    
+    .qr-container svg {
+      width: 100%;
+      height: 100%;
+    }
+    
+    .team-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .round-badge {
+      display: inline-block;
+      background: #2563eb;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      width: fit-content;
+    }
+    
+    .team-name {
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .course-code {
+      font-size: 16px;
+      color: #666;
+    }
+    
+    /* Print styles - 1 board per page with 3 horizontal sections */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        margin: 0;
+      }
+      
+      h1, .instructions, .toc {
+        display: none !important;
+      }
+      
+      .board-page {
+        box-shadow: none;
+        border: none;
+        padding: 0.3in;
+        margin: 0;
+        page-break-after: always;
+        break-after: page;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .board-page:last-child {
+        page-break-after: avoid;
+      }
+      
+      .page-break-before {
+        page-break-before: always;
+      }
+      
+      .board-header {
+        font-size: 36px;
+        margin-bottom: 15px;
+        padding: 8px;
+        background: #000;
+        color: white;
+        border-radius: 0;
+      }
+      
+      .teams-container {
+        flex: 1;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      
+      .team-section {
+        flex: 1;
+        border: 3px solid #000;
+        border-radius: 0;
+        padding: 10px 15px;
+        gap: 15px;
+      }
+      
+      .qr-container {
+        width: 2.2in;
+        height: 2.2in;
+      }
+      
+      .round-badge {
+        font-size: 18px;
+        padding: 6px 16px;
+        background: #000;
+      }
+      
+      .team-name {
+        font-size: 18px;
+      }
+      
+      .course-code {
+        font-size: 14px;
+      }
+    }
+    
+    @page {
+      size: letter;
+      margin: 0.3in;
+    }
+  </style>
+</head>
+<body>
+  <h1>QR Codes by Board - ${escapeXml(eventName)}</h1>
+  <p class="instructions">
+    Press <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac) to print.<br>
+    Each page corresponds to one board with 3 teams (one per round), sorted by round.
+  </p>
+  
+  <div class="toc">
+    <h3>Boards (${sortedBoards.length} total)</h3>
+    <ul>
+      ${tocHtml}
+    </ul>
+  </div>
+  
+  ${boardPagesHtml}
+</body>
+</html>`;
+}
+
+/**
  * Generate a QR code PNG for a specific team's appreciation URL.
  * Returns a base64-encoded PNG image with labels.
  */
@@ -533,7 +891,10 @@ export const generateQrCodeZip = action({
         teamName: string;
         courseCode?: string;
         svg: string;
+        plainSvg?: string;
         url: string;
+        demoDayRound?: number;
+        demoDayBoardNumber?: string;
       }> = [];
 
       for (const team of teams) {
@@ -556,6 +917,7 @@ export const generateQrCodeZip = action({
           team.courseCode,
           event.name
         );
+        const plainSvg = await generatePlainQrSvg(appreciationUrl);
 
         // Add to ZIP
         qrFolder?.file(qrFilename, svg);
@@ -565,7 +927,10 @@ export const generateQrCodeZip = action({
           teamName: team.name,
           courseCode: team.courseCode,
           svg,
+          plainSvg,
           url: appreciationUrl,
+          demoDayRound: team.demoDayRound,
+          demoDayBoardNumber: team.demoDayBoardNumber,
         });
 
         // Add to CSV data
@@ -587,9 +952,16 @@ export const generateQrCodeZip = action({
         .join("\n");
       zip.file("projects.csv", csvContent);
 
-      // Create printable HTML file
+      // Create printable HTML file (grouped by course)
       const printableHtml = generatePrintableHtml(event.name, qrCodesForHtml);
-      zip.file("print-all-qr-codes.html", printableHtml);
+      zip.file("print-by-course.html", printableHtml);
+
+      // Create board-grouped HTML file (3 teams per page, sorted by round)
+      const boardGroupedHtml = generateBoardGroupedHtml(
+        event.name,
+        qrCodesForHtml
+      );
+      zip.file("print-by-board.html", boardGroupedHtml);
 
       // Generate ZIP as base64
       const zipBuffer: Buffer = await zip.generateAsync({ type: "nodebuffer" });

@@ -74,9 +74,6 @@ export function TeamSubmissionModal({
     if (!isEditMode && !name.trim()) {
       newErrors.name = "Team name is required";
     }
-    if (!description.trim()) {
-      newErrors.description = "Description is required";
-    }
     if (members.filter(m => m.trim()).length === 0) {
       newErrors.members = "At least one team member is required";
     }
@@ -229,20 +226,18 @@ export function TeamSubmissionModal({
 
           <div>
             <label htmlFor="description" className="block text-sm font-medium mb-2">
-              Description <span className="text-red-500">*</span>
+              Description <span className="text-muted-foreground text-xs">(optional)</span>
             </label>
             <textarea
               id="description"
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
-                setErrors({ ...errors, description: "" });
               }}
               placeholder="Describe your project..."
               rows={4}
               className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
             />
-            {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
           </div>
 
           <div>
@@ -360,7 +355,7 @@ export function TeamSubmissionModal({
                 type="file"
                 accept="image/*"
                 onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-500/10 file:text-primary hover:file:bg-teal-500/20"
               />
             </div>
           )}

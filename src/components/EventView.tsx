@@ -24,6 +24,12 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     ? `scoring_draft_${eventId}_${judgeStatus.userId}`
     : null;
 
+  const statusStyles: Record<string, string> = {
+    active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+    upcoming: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
+    past: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
+  };
+
   useEffect(() => {
     if (!storageKey) {
       setHasDraft(false);
@@ -165,7 +171,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
             </svg>
             {formatDateTime(event.startDate)} - {formatDateTime(event.endDate)}
           </span>
-          <span className={`badge ${event.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : ''}`}>
+          <span className={`badge ${statusStyles[event.status] || statusStyles.upcoming}`}>
             {event.status}
           </span>
         </div>
@@ -314,7 +320,7 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
               return (
                 <div 
                   key={winner.category} 
-                  className="card border-primary/20 bg-primary/5 transition-all duration-300"
+                  className="card border-teal-500/20 bg-teal-500/5 transition-all duration-300"
                   style={{ animationDelay: `${0.2 + index * 0.1}s` }}
                 >
                   <div className="flex items-start justify-between mb-2">
@@ -358,7 +364,7 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
                       key={teamScore.team._id} 
                       className={`
                         transition-colors hover:bg-muted/50
-                        ${index < 3 ? 'bg-primary/5' : ''}
+                        ${index < 3 ? 'bg-teal-500/5' : ''}
                       `}
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-foreground">
@@ -505,7 +511,7 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
                   {score.categoryScores.map((cs: any, index: number) => (
                     <span 
                       key={index}
-                      className="px-2 py-1 text-xs bg-primary/20 text-primary rounded"
+                      className="px-2 py-1 text-xs bg-teal-500/20 text-primary rounded"
                     >
                       {cs.category}: {cs.score}
                     </span>

@@ -42,9 +42,7 @@ const applicationTables = {
       )
     ),
     // Demo Day mode support
-    mode: v.optional(
-      v.union(v.literal("hackathon"), v.literal("demo_day"))
-    ), // undefined = "hackathon" for backwards compatibility
+    mode: v.optional(v.union(v.literal("hackathon"), v.literal("demo_day"))), // undefined = "hackathon" for backwards compatibility
     courseCodes: v.optional(v.array(v.string())), // Available course codes for Demo Day mode
   }).index("by_status", ["status"]),
 
@@ -65,6 +63,9 @@ const applicationTables = {
     cleanScore: v.optional(v.number()), // Cleaned/validated appreciation count
     flagged: v.optional(v.boolean()), // Flagged for suspicious activity
     courseCode: v.optional(v.string()), // Course code for Demo Day filtering (e.g., "DS519")
+    // Demo Day board assignments
+    demoDayRound: v.optional(v.number()), // Round number (e.g., 4, 5, 6)
+    demoDayBoardNumber: v.optional(v.string()), // Board letter (e.g., "A", "B", "C")
   })
     .index("by_event", ["eventId"])
     .index("by_submitter", ["submittedBy"])
@@ -128,7 +129,11 @@ const applicationTables = {
     .index("by_event", ["eventId"])
     .index("by_team", ["teamId"])
     .index("by_event_and_attendee", ["eventId", "attendeeId"])
-    .index("by_event_and_team_and_attendee", ["eventId", "teamId", "attendeeId"])
+    .index("by_event_and_team_and_attendee", [
+      "eventId",
+      "teamId",
+      "attendeeId",
+    ])
     .index("by_ip_and_timestamp", ["ipAddress", "timestamp"]),
 };
 

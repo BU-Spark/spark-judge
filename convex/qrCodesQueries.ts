@@ -58,6 +58,8 @@ export const getTeamsInternal = internalQuery({
       name: v.string(),
       courseCode: v.optional(v.string()),
       hidden: v.optional(v.boolean()),
+      demoDayRound: v.optional(v.number()),
+      demoDayBoardNumber: v.optional(v.string()),
     })
   ),
   handler: async (ctx, args) => {
@@ -71,7 +73,8 @@ export const getTeamsInternal = internalQuery({
       name: team.name,
       courseCode: team.courseCode,
       hidden: team.hidden,
+      demoDayRound: team.demoDayRound,
+      demoDayBoardNumber: team.demoDayBoardNumber,
     }));
   },
 });
-

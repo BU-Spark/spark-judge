@@ -388,11 +388,11 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [useTracksAsAwards, setUseTracksAsAwards] = useState(true);
   const [categories, setCategories] = useState([
-    { name: "Innovation", weight: 1 },
-    { name: "Technical Complexity", weight: 1 },
-    { name: "Design", weight: 1 },
-    { name: "Presentation", weight: 1 },
-    { name: "Impact", weight: 1 },
+    { name: "Innovation", weight: 1, optOutAllowed: false },
+    { name: "Technical Complexity", weight: 1, optOutAllowed: false },
+    { name: "Design", weight: 1, optOutAllowed: false },
+    { name: "Presentation", weight: 1, optOutAllowed: false },
+    { name: "Impact", weight: 1, optOutAllowed: false },
   ]);
   const [courseCodes, setCourseCodes] = useState<string[]>([...DEFAULT_DEMO_DAY_COURSES]);
   const [newCourseCode, setNewCourseCode] = useState("");
@@ -494,6 +494,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
       .map((cat) => ({
         name: cat.name.trim(),
         weight: Math.min(2, Math.max(0, Number(cat.weight) || 0)),
+        optOutAllowed: cat.optOutAllowed ?? false,
       }))
       .filter((cat) => cat.name.length > 0);
 
@@ -655,14 +656,15 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                   Judging Categories &amp; Weights (0-2)
                 </label>
                 <div className="rounded-lg border border-border">
-                  <div className="grid grid-cols-[1fr,110px,40px] gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide">
+                <div className="grid grid-cols-[1fr,110px,150px,40px] gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide">
                     <span>Category</span>
                     <span>Weight</span>
+                  <span>Opt-out allowed</span>
                     <span className="text-right" aria-hidden />
                   </div>
                   <div className="space-y-2 p-3">
                     {categories.map((cat, index) => (
-                      <div key={index} className="grid grid-cols-[1fr,110px,40px] gap-2 items-center">
+                    <div key={index} className="grid grid-cols-[1fr,110px,150px,40px] gap-2 items-center">
                         <input
                           type="text"
                           required
@@ -693,6 +695,19 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                           className="input w-full"
                           placeholder="1.0"
                         />
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={cat.optOutAllowed ?? false}
+                          onChange={(e) => {
+                            const newCats = [...categories];
+                            newCats[index].optOutAllowed = e.target.checked;
+                            setCategories(newCats);
+                          }}
+                          className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
+                        />
+                        <span>Allow judges to opt out</span>
+                      </label>
                         <button
                           type="button"
                           onClick={() => setCategories(categories.filter((_, i) => i !== index))}
@@ -710,7 +725,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                 <div className="flex items-center justify-between mt-3">
                   <button
                     type="button"
-                    onClick={() => setCategories([...categories, { name: "", weight: 1 }])}
+                  onClick={() => setCategories([...categories, { name: "", weight: 1, optOutAllowed: false }])}
                     className="btn-ghost text-sm"
                   >
                     + Add Category
@@ -883,6 +898,8 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const detailedScores = useQuery(api.scores.getDetailedEventScores, { eventId });
   const appreciationSummary = useQuery(api.appreciations.getEventAppreciationSummary, { eventId });
   const updateEventDetails = useMutation(api.events.updateEventDetails);
+  const updateEventCategories = useMutation(api.events.updateEventCategories);
+  const updateEventCohorts = useMutation(api.events.updateEventCohorts);
   const updateEventMode = useMutation(api.events.updateEventMode);
   const duplicateEvent = useMutation(api.events.duplicateEvent);
   const removeEvent = useMutation(api.events.removeEvent);
@@ -909,6 +926,10 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const [eventDescription, setEventDescription] = useState("");
   const [eventStart, setEventStart] = useState("");
   const [eventEnd, setEventEnd] = useState("");
+  const [categoriesEdit, setCategoriesEdit] = useState<Array<{ name: string; weight: number; optOutAllowed?: boolean }>>([]);
+  const [enableCohorts, setEnableCohorts] = useState(false);
+  const [judgeCodeEdit, setJudgeCodeEdit] = useState("");
+  const [savingJudgeSettings, setSavingJudgeSettings] = useState(false);
 
   // Sync editable fields when event changes
   useEffect(() => {
@@ -917,6 +938,15 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
       setEventDescription(event.description || "");
       setEventStart(formatDateTimeInput(event.startDate));
       setEventEnd(formatDateTimeInput(event.endDate));
+      setCategoriesEdit(
+        (event.categories || []).map((cat: any) => ({
+          name: typeof cat === "string" ? cat : cat.name,
+          weight: typeof cat === "string" ? 1 : cat.weight ?? 1,
+          optOutAllowed: typeof cat === "string" ? false : cat.optOutAllowed ?? false,
+        }))
+      );
+      setEnableCohorts(!!event.enableCohorts);
+      setJudgeCodeEdit(event.judgeCode || "");
     }
   }, [event]);
 
@@ -932,6 +962,9 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     if (now > event.endDate) return "past";
     return "active";
   })();
+
+  const scoresLoaded = eventScores !== undefined;
+  const hasScores = (eventScores?.length || 0) > 0;
 
   const handleModeChange = async (mode: "hackathon" | "demo_day") => {
     try {
@@ -1057,6 +1090,51 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     }
   };
 
+  const handleSaveJudgeSettings = async () => {
+    const scoresLoaded = eventScores !== undefined;
+    const hasScores = (eventScores?.length || 0) > 0;
+
+    if (!scoresLoaded) {
+      toast.error("Scores are still loading. Please try again.");
+      return;
+    }
+
+    if (hasScores) {
+      toast.error("Judging has started; these settings are locked.");
+      return;
+    }
+
+    const cleanedCategories = categoriesEdit
+      .map((cat) => ({
+        name: cat.name.trim(),
+        weight: Math.min(2, Math.max(0, Number(cat.weight) || 0)),
+        optOutAllowed: cat.optOutAllowed ?? false,
+      }))
+      .filter((cat) => cat.name.length > 0);
+
+    if (cleanedCategories.length === 0) {
+      toast.error("Add at least one category with a name.");
+      return;
+    }
+
+    setSavingJudgeSettings(true);
+    try {
+      await Promise.all([
+        updateEventCategories({ eventId, categories: cleanedCategories }),
+        updateEventCohorts({ eventId, enableCohorts }),
+        updateEventDetails({
+          eventId,
+          judgeCode: judgeCodeEdit.trim() || null,
+        }),
+      ]);
+      toast.success("Judging settings updated");
+    } catch (error) {
+      toast.error("Failed to save judging settings");
+    } finally {
+      setSavingJudgeSettings(false);
+    }
+  };
+
   const handleRemoveEvent = async () => {
     const confirmed = window.confirm(
       `Remove "${event.name}"? This will delete teams, scores, and access for this event.`
@@ -1127,7 +1205,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                 </div>
                 <p className="text-muted-foreground">Manage event settings and teams</p>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-nowrap">
                 <button
                   type="button"
                   onClick={handleDuplicateEvent}
@@ -1317,6 +1395,167 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                     ? "Public appreciation voting - attendees can give hearts to projects without signing in"
                     : "Traditional judging with scores and categories - requires judge registration"}
                 </p>
+              </div>
+
+              {/* Judging Settings - editable only before scoring starts */}
+              <div className="card-static p-6 bg-card space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Judging Settings
+                  </h3>
+                  {hasScores && (
+                    <span className="badge bg-amber-500/15 text-amber-600 border-amber-500/30">
+                      Locked (judging started)
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">
+                      Judge Code <span className="text-muted-foreground text-xs">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={judgeCodeEdit}
+                      onChange={(e) => setJudgeCodeEdit(e.target.value)}
+                      className="input"
+                      disabled={hasScores}
+                      placeholder="Enter code required for judges"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Leave empty to allow judges without a code.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
+                        checked={enableCohorts}
+                        onChange={(e) => setEnableCohorts(e.target.checked)}
+                        disabled={hasScores}
+                      />
+                      Enable Multiple Judging Cohorts
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Judges pick their own teams (useful for large events).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-foreground">
+                      Judging Categories &amp; Weights (0-2)
+                    </label>
+                    {!scoresLoaded && (
+                      <span className="text-xs text-muted-foreground">Loading scores...</span>
+                    )}
+                  </div>
+                  <div className="rounded-lg border border-border">
+                    <div className="grid grid-cols-[1fr,110px,150px,40px] gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide">
+                      <span>Category</span>
+                      <span>Weight</span>
+                      <span>Opt-out allowed</span>
+                      <span className="text-right" aria-hidden />
+                    </div>
+                    <div className="space-y-2 p-3">
+                      {categoriesEdit.map((cat, index) => (
+                        <div key={index} className="grid grid-cols-[1fr,110px,150px,40px] gap-2 items-center">
+                          <input
+                            type="text"
+                            required
+                            value={cat.name}
+                            onChange={(e) => {
+                              const newCats = [...categoriesEdit];
+                              newCats[index].name = e.target.value;
+                              setCategoriesEdit(newCats);
+                            }}
+                            className="input w-full"
+                            placeholder="e.g., Innovation"
+                            disabled={hasScores}
+                          />
+                          <input
+                            type="number"
+                            required
+                            min="0"
+                            max="2"
+                            step="0.1"
+                            inputMode="decimal"
+                            value={cat.weight}
+                            onChange={(e) => {
+                              const numericValue = parseFloat(e.target.value);
+                              const clamped = Math.max(0, Math.min(2, Number.isFinite(numericValue) ? numericValue : 0));
+                              const newCats = [...categoriesEdit];
+                              newCats[index].weight = clamped;
+                              setCategoriesEdit(newCats);
+                            }}
+                            className="input w-full"
+                            placeholder="1.0"
+                            disabled={hasScores}
+                          />
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={cat.optOutAllowed ?? false}
+                              onChange={(e) => {
+                                const newCats = [...categoriesEdit];
+                                newCats[index].optOutAllowed = e.target.checked;
+                                setCategoriesEdit(newCats);
+                              }}
+                              className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
+                              disabled={hasScores}
+                            />
+                            <span>Allow judges to opt out</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setCategoriesEdit(categoriesEdit.filter((_, i) => i !== index))}
+                            className="p-2.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label={`Remove ${cat.name || "category"}`}
+                            disabled={hasScores}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setCategoriesEdit([...categoriesEdit, { name: "", weight: 1, optOutAllowed: false }])}
+                      className="btn-ghost text-sm"
+                      disabled={hasScores}
+                    >
+                      + Add Category
+                    </button>
+                    <div aria-hidden />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSaveJudgeSettings}
+                    disabled={savingJudgeSettings || hasScores || !scoresLoaded}
+                    className="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {savingJudgeSettings ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Judging Settings"
+                    )}
+                  </button>
+                </div>
               </div>
 
           {/* Teams */}

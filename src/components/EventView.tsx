@@ -280,7 +280,10 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
         <ScoringWizard
           eventId={eventId}
           teams={teamsToJudge}
-          categories={event.categories.map(c => c.name)}
+          categories={event.categories.map((c: any) => ({
+            name: c.name,
+            optOutAllowed: c.optOutAllowed,
+          }))}
           existingScores={myScores ?? []}
           storageKey={storageKey}
           onClose={() => setShowWizard(false)}
@@ -403,6 +406,7 @@ type ScoreSummaryProps = {
 function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps) {
   // Calculate max possible weighted score
   const maxPossibleWeightedScore = categoryWeights?.reduce((sum, cat) => sum + (5 * cat.weight), 0) || categories.length * 5;
+  const safeMaxPossible = maxPossibleWeightedScore || 1;
   
   // Calculate statistics
   const totalScores = scores.length;
@@ -413,20 +417,20 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
   // Calculate category averages
   const categoryAverages = categories.map(category => {
     const categoryScores = scores.flatMap(s => 
-      s.categoryScores.filter((cs: any) => cs.category === category)
+      s.categoryScores.filter((cs: any) => cs.category === category && !cs.optedOut && cs.score !== null && typeof cs.score === "number")
     );
     const avg = categoryScores.length > 0
-      ? categoryScores.reduce((sum: number, cs: any) => sum + cs.score, 0) / categoryScores.length
+      ? categoryScores.reduce((sum: number, cs: any) => sum + (cs.score as number), 0) / categoryScores.length
       : 0;
     return { category, average: avg };
   });
 
   // Score distribution (use weighted max score for buckets)
   const scoreDistribution = [1, 2, 3, 4, 5].map(score => {
-    const threshold = score * (maxPossibleWeightedScore / 5);
+    const threshold = score * (safeMaxPossible / 5);
     const count = scores.filter(s => {
       // Bucket by approximate position in the range
-      return s.totalScore >= (threshold - maxPossibleWeightedScore / 10) && s.totalScore < (threshold + maxPossibleWeightedScore / 10);
+      return s.totalScore >= (threshold - safeMaxPossible / 10) && s.totalScore < (threshold + safeMaxPossible / 10);
     }).length;
     return { score, count, percentage: totalScores > 0 ? (count / totalScores) * 100 : 0 };
   });
@@ -445,7 +449,7 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
         </div>
         <div className="text-center p-4 bg-muted/30 rounded-lg">
           <div className="text-2xl font-bold text-primary">
-            {Math.round((averageScore / maxPossibleWeightedScore) * 100)}%
+            {Math.round((averageScore / safeMaxPossible) * 100)}%
           </div>
           <div className="text-sm text-muted-foreground">Score Ratio</div>
           <div className="text-xs text-muted-foreground mt-1">% of max possible</div>
@@ -513,13 +517,13 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
                       key={index}
                       className="px-2 py-1 text-xs bg-teal-500/20 text-primary rounded"
                     >
-                      {cs.category}: {cs.score}
+                      {cs.category}: {cs.optedOut || cs.score === null ? "N/A" : cs.score}
                     </span>
                   ))}
                 </div>
               </div>
               <span className="font-bold text-primary text-sm">
-                {score.totalScore.toFixed(1)}/{maxPossibleWeightedScore.toFixed(1)}
+                {score.totalScore.toFixed(1)}/{safeMaxPossible.toFixed(1)}
               </span>
             </div>
           ))}

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { computeEventStatus } from "./helpers";
 
 // Constants for rate limiting
 const MAX_TAPS_PER_PROJECT_PER_ATTENDEE = 3;
@@ -261,6 +262,17 @@ export const createAppreciationInternal = internalMutation({
       };
     }
 
+    // 2b. Enforce live status
+    const status = computeEventStatus(event);
+    if (status !== "active") {
+      return {
+        success: false,
+        error: "Appreciations open once the event is live",
+        remainingForTeam: 0,
+        remainingTotal: 0,
+      };
+    }
+
     // 2. Verify team exists and belongs to this event
     const team = await ctx.db.get(args.teamId);
     if (!team || team.eventId !== args.eventId) {
@@ -409,6 +421,17 @@ export const createAppreciation = mutation({
       return {
         success: false,
         error: "Event is not in Demo Day mode",
+        remainingForTeam: 0,
+        remainingTotal: 0,
+      };
+    }
+
+    // 2b. Enforce live status
+    const status = computeEventStatus(event);
+    if (status !== "active") {
+      return {
+        success: false,
+        error: "Appreciations open once the event is live",
         remainingForTeam: 0,
         remainingTotal: 0,
       };

@@ -3,6 +3,45 @@ import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { isAdmin, requireAdmin } from "./helpers";
 
+function computeTotalScore(
+  categoryScores: Array<{
+    category: string;
+    score: number | null;
+    optedOut?: boolean;
+  }>,
+  eventCategories: Array<{ name: string; weight?: number }>
+) {
+  const totalConfiguredWeight =
+    eventCategories.reduce(
+      (sum, category) => sum + (category.weight ?? 1),
+      0
+    ) ||
+    eventCategories.length ||
+    1;
+
+  const categoryWeights = new Map(
+    eventCategories.map((c) => [c.name, c.weight ?? 1])
+  );
+
+  let weightedSum = 0;
+  let usedWeight = 0;
+
+  for (const cs of categoryScores) {
+    const weight = categoryWeights.get(cs.category);
+    if (weight === undefined) continue;
+    if (cs.optedOut) continue;
+    if (cs.score === null || typeof cs.score !== "number") continue;
+
+    weightedSum += cs.score * weight;
+    usedWeight += weight;
+  }
+
+  if (usedWeight === 0) return 0;
+
+  const normalizedAverage = weightedSum / usedWeight;
+  return normalizedAverage * totalConfiguredWeight;
+}
+
 export const submitScore = mutation({
   args: {
     teamId: v.id("teams"),
@@ -10,7 +49,8 @@ export const submitScore = mutation({
     categoryScores: v.array(
       v.object({
         category: v.string(),
-        score: v.number(),
+        score: v.union(v.number(), v.null()),
+        optedOut: v.optional(v.boolean()),
       })
     ),
   },
@@ -31,11 +71,19 @@ export const submitScore = mutation({
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
 
-    const totalScore = args.categoryScores.reduce((sum, cs) => {
+    const sanitizedCategoryScores = args.categoryScores.map((cs) => {
       const category = event.categories.find((c) => c.name === cs.category);
-      const weight = category?.weight ?? 1;
-      return sum + cs.score * weight;
-    }, 0);
+      const optOutAllowed = category?.optOutAllowed === true;
+      return {
+        ...cs,
+        optedOut: optOutAllowed ? (cs.optedOut ?? false) : false,
+      };
+    });
+
+    const totalScore = computeTotalScore(
+      sanitizedCategoryScores,
+      event.categories
+    );
 
     const existing = await ctx.db
       .query("scores")
@@ -46,7 +94,7 @@ export const submitScore = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        categoryScores: args.categoryScores,
+        categoryScores: sanitizedCategoryScores,
         totalScore,
         submittedAt: Date.now(),
       });
@@ -57,7 +105,7 @@ export const submitScore = mutation({
       judgeId: judge._id,
       teamId: args.teamId,
       eventId: args.eventId,
-      categoryScores: args.categoryScores,
+      categoryScores: sanitizedCategoryScores,
       totalScore,
       submittedAt: Date.now(),
     });
@@ -73,7 +121,8 @@ export const submitBatchScores = mutation({
         categoryScores: v.array(
           v.object({
             category: v.string(),
-            score: v.number(),
+            score: v.union(v.number(), v.null()),
+            optedOut: v.optional(v.boolean()),
           })
         ),
       })
@@ -110,11 +159,19 @@ export const submitBatchScores = mutation({
 
     await Promise.all(
       args.scores.map(async (entry) => {
-        const totalScore = entry.categoryScores.reduce((sum, cs) => {
+        const sanitizedCategoryScores = entry.categoryScores.map((cs) => {
           const category = event.categories.find((c) => c.name === cs.category);
-          const weight = category?.weight ?? 1;
-          return sum + cs.score * weight;
-        }, 0);
+          const optOutAllowed = category?.optOutAllowed === true;
+          return {
+            ...cs,
+            optedOut: optOutAllowed ? (cs.optedOut ?? false) : false,
+          };
+        });
+
+        const totalScore = computeTotalScore(
+          sanitizedCategoryScores,
+          event.categories
+        );
 
         const existing = await ctx.db
           .query("scores")
@@ -125,7 +182,7 @@ export const submitBatchScores = mutation({
 
         if (existing) {
           await ctx.db.patch(existing._id, {
-            categoryScores: entry.categoryScores,
+            categoryScores: sanitizedCategoryScores,
             totalScore,
             submittedAt: Date.now(),
           });
@@ -134,7 +191,7 @@ export const submitBatchScores = mutation({
             judgeId: judge._id,
             teamId: entry.teamId,
             eventId: args.eventId,
-            categoryScores: entry.categoryScores,
+            categoryScores: sanitizedCategoryScores,
             totalScore,
             submittedAt: Date.now(),
           });
@@ -320,8 +377,14 @@ export const getDetailedEventScores = query({
           .map((s) =>
             s.categoryScores.find((cs) => cs.category === catObj.name)
           )
-          .filter((cs) => cs !== undefined)
-          .map((cs) => cs!.score);
+          .filter(
+            (cs) =>
+              cs &&
+              !cs.optedOut &&
+              cs.score !== null &&
+              typeof cs.score === "number"
+          )
+          .map((cs) => cs!.score as number);
 
         categoryAverages[catObj.name] =
           categoryScores.length > 0

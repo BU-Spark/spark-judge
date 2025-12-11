@@ -72,8 +72,8 @@ function Layout() {
         : "btn-ghost w-full justify-start hover:text-red-500";
     const signInClass =
       variant === "desktop"
-        ? "btn-secondary"
-        : "btn-secondary w-full justify-center";
+        ? "btn-primary"
+        : "btn-primary w-full justify-center";
 
     return (
       <>
@@ -127,7 +127,7 @@ function Layout() {
             <Link
               to="/"
               onClick={closeMobileMenu}
-              className="text-xl font-logo text-foreground hover:text-primary transition-colors"
+              className="text-xl font-logo logo-color hover:text-primary dark:hover:text-primary/80 transition-colors"
             >
               HackJudge
             </Link>

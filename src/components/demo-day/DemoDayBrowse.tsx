@@ -133,6 +133,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
   }, [appreciationData]);
 
   const remainingBudget = appreciationData?.attendeeRemainingBudget ?? 15;
+  const isEventLive = event.status === "active";
 
   if (identityLoading) {
     return <LoadingState label="Initializing..." />;
@@ -153,7 +154,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-20 sm:pb-8">
       {/* Mobile header (compact) */}
       <div className="sm:hidden mb-4">
-        <div className="flex items-center gap-4 py-2">
+        <div className="flex items-center gap-4">
           <button
             onClick={onBack}
             className="flex items-center gap-0 text-xs p-0 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary rounded"
@@ -179,7 +180,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
         </div>
       </div>
 
-      {/* Desktop header (original layout) */}
+      {/* Desktop header (card layout) */}
       <div className="hidden sm:block">
         <button
           onClick={onBack}
@@ -202,11 +203,16 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
         </button>
 
         <div className="card-static p-6 mb-8 bg-card border border-border rounded-lg shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-heading font-bold text-foreground mb-2">
-                {event.name}
-              </h1>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-pink-500/10 text-pink-600 dark:text-pink-300 border border-pink-500/30">
+                  Demo Day
+                </span>
+                <h1 className="text-3xl font-heading font-bold text-foreground">
+                  {event.name}
+                </h1>
+              </div>
               <p className="text-muted-foreground">{event.description}</p>
             </div>
             <div>
@@ -215,6 +221,12 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
           </div>
         </div>
       </div>
+
+      {!isEventLive && (
+        <div className="card-static p-3 sm:p-4 mb-5 sm:mb-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900 text-amber-900 dark:text-amber-100 rounded-lg text-sm">
+          Appreciations open once the event is live.
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="card-static relative mb-5 sm:mb-6 p-3 sm:p-4 bg-card overflow-hidden">
@@ -341,6 +353,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
                     appreciationData={appreciationMap.get(team._id)}
                     remainingBudget={appreciationData?.attendeeRemainingBudget ?? 15}
                     index={index}
+                    isEventLive={isEventLive}
                     onQuickView={(enrichedTeam) =>
                       setQuickTeam({
                         ...enrichedTeam,
@@ -366,6 +379,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
               appreciationData={appreciationMap.get(team._id)}
               remainingBudget={appreciationData?.attendeeRemainingBudget ?? 15}
               index={index}
+              isEventLive={isEventLive}
               onQuickView={(enrichedTeam) =>
                 setQuickTeam({
                   ...enrichedTeam,
@@ -387,6 +401,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
             attendeeId={attendeeId}
             remainingBudget={remainingBudget}
             onHeightChange={(h) => setSheetHeight(h)}
+            isEventLive={isEventLive}
           />
         )}
       </AnimatePresence>
@@ -447,6 +462,7 @@ interface TeamCardProps {
   index: number;
   onQuickView?: (team: TeamCardProps["team"]) => void;
   layout?: "grid" | "carousel";
+  isEventLive: boolean;
 }
 
 function TeamCard({
@@ -458,6 +474,7 @@ function TeamCard({
   index,
   onQuickView,
   layout = "grid",
+  isEventLive,
 }: TeamCardProps) {
   const { appreciate, isLoading } = useAppreciation();
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
@@ -465,7 +482,7 @@ function TeamCard({
   const attendeeCount = optimisticCount ?? appreciationData?.attendeeCount ?? 0;
   const maxPerTeam = 3;
   const canAppreciate =
-    attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
+    isEventLive && attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
 
   const handleAppreciate = async () => {
     if (!attendeeId || !canAppreciate) return;
@@ -527,26 +544,37 @@ function TeamCard({
 
         {/* Actions */}
         <div className="flex items-center justify-between pt-3 border-t border-border gap-2">
-          <Link
-            to={`/event/${eventId}/team/${team._id}`}
-            className="hidden sm:inline text-xs text-primary hover:underline font-medium"
-          >
-            View Details →
-          </Link>
-          <div className="flex items-center gap-2">
-            {onQuickView && (
+          {onQuickView ? (
+            <>
               <button
                 onClick={() => onQuickView(team)}
-                className="text-xs text-foreground hover:text-primary px-2 py-1 rounded-md bg-muted"
+                className="text-xs text-primary hover:underline font-medium sm:hidden"
               >
-                Quick view
+                View Details →
               </button>
-            )}
+              <Link
+                to={`/event/${eventId}/team/${team._id}`}
+                className="text-xs text-primary hover:underline font-medium hidden sm:inline"
+              >
+                View Details →
+              </Link>
+            </>
+          ) : (
+            <Link
+              to={`/event/${eventId}/team/${team._id}`}
+              className="text-xs text-primary hover:underline font-medium"
+            >
+              View Details →
+            </Link>
+          )}
+          <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
               {attendeeCount}/{maxPerTeam}
             </span>
             <button
-              onClick={handleAppreciate}
+              onClick={() => {
+                void handleAppreciate();
+              }}
               disabled={!canAppreciate || isLoading}
               className={`
                 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all shadow-sm
@@ -563,11 +591,13 @@ function TeamCard({
               ) : (
                 <span>❤️</span>
               )}
-              {attendeeCount >= maxPerTeam
-                ? "Max"
-                : remainingBudget <= 0
-                  ? "None Left"
-                  : "+1"}
+              {!isEventLive
+                ? "Opens when live"
+                : attendeeCount >= maxPerTeam
+                  ? "Max"
+                  : remainingBudget <= 0
+                    ? "None Left"
+                    : "+1"}
             </button>
           </div>
         </div>
@@ -585,6 +615,7 @@ interface QuickViewSheetProps {
   attendeeId: string | null;
   remainingBudget: number;
   onHeightChange: (height: number) => void;
+  isEventLive: boolean;
 }
 
 function QuickViewSheet({
@@ -594,6 +625,7 @@ function QuickViewSheet({
   attendeeId,
   remainingBudget,
   onHeightChange,
+  isEventLive,
 }: QuickViewSheetProps) {
   const { appreciate, isLoading } = useAppreciation();
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
@@ -621,7 +653,7 @@ function QuickViewSheet({
     optimisticCount ?? team.appreciationData?.attendeeCount ?? 0;
   const maxPerTeam = 3;
   const canAppreciate =
-    attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
+    isEventLive && attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
 
   const handleAppreciate = async () => {
     if (!attendeeId || !canAppreciate) return;
@@ -684,7 +716,7 @@ function QuickViewSheet({
           </div>
           <button
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground text-2xl -mt-2 mr-2"
             aria-label="Close quick view"
           >
             ✕
@@ -715,7 +747,9 @@ function QuickViewSheet({
             {attendeeCount}/{maxPerTeam} you’ve given
           </span>
           <button
-            onClick={handleAppreciate}
+            onClick={() => {
+              void handleAppreciate();
+            }}
             disabled={!canAppreciate || isLoading}
             className={`
               flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all shadow-sm
@@ -732,11 +766,13 @@ function QuickViewSheet({
             ) : (
               <span>❤️</span>
             )}
-            {attendeeCount >= maxPerTeam
-              ? "Max"
-              : remainingBudget <= 0
-                ? "None Left"
-                : "Appreciate"}
+            {!isEventLive
+              ? "Opens when live"
+              : attendeeCount >= maxPerTeam
+                ? "Max"
+                : remainingBudget <= 0
+                  ? "None Left"
+                  : "Appreciate"}
           </button>
         </div>
       </motion.div>

@@ -18,6 +18,9 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
   // Get attendee identity
   const { attendeeId, isLoading: identityLoading } = useAttendeeIdentity();
 
+  // Fetch event status to gate appreciations
+  const event = useQuery(api.events.getEvent, { eventId });
+
   // Fetch team data
   const team = useQuery(api.teams.getTeamById, { teamId });
 
@@ -27,7 +30,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
     attendeeId ? { eventId, teamId, attendeeId } : { eventId, teamId }
   );
 
-  if (identityLoading || team === undefined || appreciationData === undefined) {
+  if (identityLoading || team === undefined || appreciationData === undefined || event === undefined) {
     return <LoadingState label="Loading project..." />;
   }
 
@@ -52,6 +55,19 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
       />
     );
   }
+
+  if (event === null) {
+    return (
+      <ErrorState
+        title="Event Not Found"
+        message="The event for this project is unavailable."
+        actionLabel="Browse All Projects"
+        actionHref={`/event/${eventId}`}
+      />
+    );
+  }
+
+  const isEventLive = event.status === "active";
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -162,6 +178,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
             teamName={team.name}
             attendeeId={attendeeId}
             appreciationData={appreciationData}
+            isEventLive={isEventLive}
           />
         </div>
       </div>
@@ -180,6 +197,7 @@ interface AppreciationSectionProps {
     attendeeTotalCount: number;
     attendeeRemainingBudget: number;
   };
+  isEventLive: boolean;
 }
 
 function AppreciationSection({
@@ -188,6 +206,7 @@ function AppreciationSection({
   teamName,
   attendeeId,
   appreciationData,
+  isEventLive,
 }: AppreciationSectionProps) {
   const { appreciate, isLoading } = useAppreciation();
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
@@ -196,7 +215,7 @@ function AppreciationSection({
   const remainingBudget = appreciationData.attendeeRemainingBudget - (optimisticCount !== null ? 1 : 0);
   const maxPerTeam = 3;
   const canAppreciate =
-    attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
+    isEventLive && attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
 
   const handleAppreciate = async () => {
     if (!attendeeId || !canAppreciate) return;
@@ -232,6 +251,11 @@ function AppreciationSection({
         You can give up to {maxPerTeam} appreciations to this project.
         You have <span className="font-semibold text-foreground">{remainingBudget}</span> remaining overall.
       </p>
+      {!isEventLive && (
+        <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mb-3">
+          Appreciations open once the event is live.
+        </p>
+      )}
 
       {/* Progress indicator */}
       <div className="flex justify-center items-center gap-2 mb-4">
@@ -279,11 +303,13 @@ function AppreciationSection({
             />
           </svg>
         )}
-        {attendeeCount >= maxPerTeam
-          ? "Max Appreciations Given"
-          : remainingBudget <= 0
-            ? "No Appreciations Left"
-            : "Give Appreciation"}
+        {!isEventLive
+          ? "Opens when live"
+          : attendeeCount >= maxPerTeam
+            ? "Max Appreciations Given"
+            : remainingBudget <= 0
+              ? "No Appreciations Left"
+              : "Give Appreciation"}
       </button>
 
       {attendeeCount > 0 && (

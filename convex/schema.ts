@@ -26,6 +26,7 @@ const applicationTables = {
       v.object({
         name: v.string(),
         weight: v.number(), // 0-2 multiplier
+        optOutAllowed: v.optional(v.boolean()), // Judges can mark "not comfortable"
       })
     ), // Awards/categories for judging
     tracks: v.optional(v.array(v.string())), // Tracks for team registration (optional, defaults to categories)
@@ -106,7 +107,8 @@ const applicationTables = {
     categoryScores: v.array(
       v.object({
         category: v.string(),
-        score: v.number(),
+        score: v.union(v.number(), v.null()),
+        optedOut: v.optional(v.boolean()),
       })
     ),
     totalScore: v.number(),

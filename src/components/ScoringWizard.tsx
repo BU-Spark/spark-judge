@@ -16,14 +16,25 @@ type ExistingScore = {
   teamId: Id<"teams">;
   categoryScores: {
     category: string;
-    score: number;
+    score: number | null;
+    optedOut?: boolean;
   }[];
+};
+
+type Category = {
+  name: string;
+  optOutAllowed?: boolean;
+};
+
+type CategoryScoreValue = {
+  score: number | null;
+  optedOut?: boolean;
 };
 
 type ScoringWizardProps = {
   eventId: Id<"events">;
   teams: Team[];
-  categories: string[];
+  categories: Category[];
   existingScores?: ExistingScore[];
   storageKey: string | null;
   onClose: () => void;
@@ -31,7 +42,7 @@ type ScoringWizardProps = {
 };
 
 type DraftStoragePayload = {
-  scores: Record<string, Record<string, number>>;
+  scores: Record<string, Record<string, CategoryScoreValue>>;
   completed: string[];
   skipped: string[];
   currentIndex: number;
@@ -65,7 +76,7 @@ export function ScoringWizard({
   );
 
   const [draftScores, setDraftScores] = useState<
-    Record<string, Record<string, number>>
+    Record<string, Record<string, CategoryScoreValue>>
   >({});
   const [completedTeams, setCompletedTeams] = useState<Set<string>>(
     () => new Set()
@@ -98,9 +109,17 @@ export function ScoringWizard({
   const filledScoresForTeam = useCallback(
     (teamId: string) => {
       const existing = draftScores[teamId] || {};
-      const filled: Record<string, number> = {};
-      categories.forEach((category) => {
-        filled[category] = existing[category] ?? DEFAULT_SCORE;
+      const filled: Record<string, CategoryScoreValue> = {};
+      categories.forEach(({ name }) => {
+        const current = existing[name];
+        if (current) {
+          filled[name] = {
+            score: current.optedOut ? null : current.score ?? DEFAULT_SCORE,
+            optedOut: current.optedOut ?? current.score === null,
+          };
+          return;
+        }
+        filled[name] = { score: DEFAULT_SCORE, optedOut: false };
       });
       return filled;
     },
@@ -112,12 +131,15 @@ export function ScoringWizard({
 
     setDraftScores((prev) => {
       if (Object.keys(prev).length > 0) return prev;
-      const next: Record<string, Record<string, number>> = {};
+      const next: Record<string, Record<string, CategoryScoreValue>> = {};
       existingScores.forEach((score) => {
         const key = score.teamId as string;
-        next[key] = score.categoryScores.reduce<Record<string, number>>(
+        next[key] = score.categoryScores.reduce<Record<string, CategoryScoreValue>>(
           (acc, cs) => {
-            acc[cs.category] = cs.score;
+            acc[cs.category] = {
+              score: cs.optedOut ? null : cs.score ?? DEFAULT_SCORE,
+              optedOut: cs.optedOut ?? cs.score === null,
+            };
             return acc;
           },
           {}
@@ -140,7 +162,23 @@ export function ScoringWizard({
       const raw = window.localStorage.getItem(storageKey);
       if (raw) {
         const parsed = JSON.parse(raw) as DraftStoragePayload;
-        setDraftScores(parsed.scores ?? {});
+        const normalizedScores: Record<string, Record<string, CategoryScoreValue>> = {};
+        Object.entries(parsed.scores ?? {}).forEach(([teamId, categories]) => {
+          const normalizedCategories: Record<string, CategoryScoreValue> = {};
+          Object.entries(categories as Record<string, any>).forEach(([categoryName, value]) => {
+            if (value && typeof value === "object" && "score" in (value as any)) {
+              const obj = value as any;
+              normalizedCategories[categoryName] = {
+                score: obj.optedOut ? null : obj.score ?? DEFAULT_SCORE,
+                optedOut: obj.optedOut ?? obj.score === null,
+              };
+            } else if (typeof value === "number") {
+              normalizedCategories[categoryName] = { score: value, optedOut: false };
+            }
+          });
+          normalizedScores[teamId] = normalizedCategories;
+        });
+        setDraftScores(normalizedScores);
         setCompletedTeams(new Set(parsed.completed ?? []));
         setSkippedTeams(new Set(parsed.skipped ?? []));
         if (parsed.currentIndex >= 0 && parsed.currentIndex < sortedTeams.length) {
@@ -186,7 +224,25 @@ export function ScoringWizard({
       setDraftScores((prev) => {
         const next = { ...prev };
         const existing = { ...(next[currentTeamId] ?? {}) };
-        existing[category] = value;
+        existing[category] = { score: value, optedOut: false };
+        next[currentTeamId] = existing;
+        return next;
+      });
+    },
+    [currentTeamId]
+  );
+
+  const handleOptOut = useCallback(
+    (category: string) => {
+      if (!currentTeamId) return;
+      setDraftScores((prev) => {
+        const next = { ...prev };
+        const existing = { ...(next[currentTeamId] ?? {}) };
+        const current = existing[category];
+        const isCurrentlyOptedOut = current?.optedOut;
+        existing[category] = isCurrentlyOptedOut
+          ? { score: current?.score ?? DEFAULT_SCORE, optedOut: false }
+          : { score: null, optedOut: true };
         next[currentTeamId] = existing;
         return next;
       });
@@ -343,10 +399,19 @@ export function ScoringWizard({
           const scores = filledScoresForTeam(teamId);
           return {
             teamId: team._id,
-            categoryScores: categories.map((category) => ({
-              category,
-              score: scores[category] ?? DEFAULT_SCORE,
-            })),
+            categoryScores: categories.map(({ name }) => {
+              const entry = scores[name];
+              const optedOut = entry?.optedOut ?? false;
+              const scoreValue =
+                optedOut || entry?.score === null
+                  ? null
+                  : entry?.score ?? DEFAULT_SCORE;
+              return {
+                category: name,
+                score: scoreValue,
+                optedOut,
+              };
+            }),
           };
         });
 
@@ -497,36 +562,59 @@ export function ScoringWizard({
               </div>
 
               <div className="space-y-5 flex flex-col items-center">
-                {categories.map((category) => {
+                {categories.map(({ name, optOutAllowed }) => {
                   const teamId = currentTeam._id as string;
+                  const selection = draftScores[teamId]?.[name];
+                  const isOptedOut = selection?.optedOut;
                   const selected =
-                    draftScores[teamId]?.[category] ?? DEFAULT_SCORE;
+                    isOptedOut || selection?.score === null
+                      ? null
+                      : selection?.score ?? DEFAULT_SCORE;
                   return (
                     <div
-                      key={category}
+                      key={name}
                       className="space-y-2 w-full max-w-xl"
                     >
                       <div className="text-center">
                         <label className="text-lg font-semibold text-foreground">
-                          {category}
+                          {name}
                         </label>
                       </div>
                       <div className="flex gap-2 flex-wrap justify-center">
                         {[1, 2, 3, 4, 5].map((value) => (
                           <button
                             key={value}
-                            onClick={() => handleScoreSelect(category, value)}
+                            onClick={() => handleScoreSelect(name, value)}
                             className={clsx(
                               "w-12 h-12 rounded-xl font-semibold text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary",
-                              selected === value
+                              selected === value && !isOptedOut
                                 ? "bg-primary text-white scale-110 shadow-lg shadow-primary/30"
-                                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105",
+                              isOptedOut && "opacity-50"
                             )}
                           >
                             {value}
                           </button>
                         ))}
                       </div>
+                      {optOutAllowed && (
+                        <div className="flex flex-col items-center gap-1">
+                          <button
+                            onClick={() => handleOptOut(name)}
+                            className={clsx(
+                              "px-4 py-2 rounded-lg text-sm font-medium border transition-colors",
+                              isOptedOut
+                                ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                                : "text-muted-foreground border-border hover:border-amber-500/50 hover:text-amber-600"
+                            )}
+                          >
+                            {isOptedOut ? "Marked as N/A" : "I'm not comfortable judging this category"}
+                          </button>
+                          <p className="text-xs text-muted-foreground">
+                            Marks this category as neutral and skips scoring it.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -563,7 +651,7 @@ type ReviewEntry = {
   team: Team;
   index: number;
   status: ReviewStatus;
-  scores: Record<string, number>;
+  scores: Record<string, CategoryScoreValue>;
 };
 
 function ReviewPanel({
@@ -682,13 +770,27 @@ function ReviewPanel({
                         <div className="flex-1 min-w-0">
                           {status !== "pending" ? (
                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                              {Object.entries(scores).map(([category, score]) => (
-                                <span key={category} className="text-muted-foreground whitespace-nowrap">
-                                  <span className="hidden sm:inline">{category}: </span>
-                                  <span className="sm:hidden">{category.slice(0, 3)}: </span>
-                                  <span className="font-semibold text-foreground">{score}</span>
-                                </span>
-                              ))}
+                              {Object.entries(scores).map(([category, scoreValue]) => {
+                                const isOptedOut = scoreValue.optedOut;
+                                const displayScore =
+                                  isOptedOut || scoreValue.score === null
+                                    ? "N/A"
+                                    : scoreValue.score;
+                                return (
+                                  <span key={category} className="text-muted-foreground whitespace-nowrap">
+                                    <span className="hidden sm:inline">{category}: </span>
+                                    <span className="sm:hidden">{category.slice(0, 3)}: </span>
+                                    <span
+                                      className={clsx(
+                                        "font-semibold",
+                                        isOptedOut ? "text-amber-600 dark:text-amber-400" : "text-foreground"
+                                      )}
+                                    >
+                                      {displayScore}
+                                    </span>
+                                  </span>
+                                );
+                              })}
                             </div>
                           ) : (
                             <span className="text-sm text-muted-foreground italic">

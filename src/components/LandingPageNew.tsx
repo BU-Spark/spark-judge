@@ -336,7 +336,7 @@ function EventCard({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Active</span>
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Live</span>
             </div>
             <h3 className="text-xl font-heading font-bold text-foreground">
               {event.name}
@@ -507,6 +507,7 @@ function EventRow({
   const isParticipant = userRole === "participant";
   const isDemoDay = event.mode === "demo_day";
   const [isExpanded, setIsExpanded] = useState(false);
+  const addTeamDisabled = !isPastSection;
   
   return (
     <div className="card-static bg-card transition-colors hover:bg-muted/50">
@@ -568,10 +569,14 @@ function EventRow({
                   {!isJudge && !isPastSection && (
                     <button
                       onClick={() => onAddTeam(event)}
+                      disabled={addTeamDisabled}
+                      title={addTeamDisabled ? "Team submissions open when the event is live" : undefined}
                       className={`w-full text-sm font-semibold px-4 py-2 rounded-md transition-all ${
-                        isParticipant 
-                          ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm border border-border"
+                        addTeamDisabled
+                          ? "opacity-60 cursor-not-allowed bg-muted text-muted-foreground"
+                          : isParticipant 
+                            ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm border border-border"
                       }`}
                     >
                       {isParticipant ? "View Team" : "Add Team"}
@@ -661,10 +666,14 @@ function EventRow({
               {!isJudge && !isPastSection && (
                 <button
                   onClick={() => onAddTeam(event)}
+                  disabled={addTeamDisabled}
+                  title={addTeamDisabled ? "Team submissions open when the event is live" : undefined}
                   className={`text-sm font-semibold px-4 py-2 rounded-md transition-all ${
-                    isParticipant 
-                      ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm"
+                    addTeamDisabled
+                      ? "opacity-60 cursor-not-allowed bg-muted text-muted-foreground"
+                      : isParticipant 
+                        ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm"
                   }`}
                 >
                   {isParticipant ? "View Team" : "Add Team"}

@@ -212,6 +212,7 @@ export const createEvent = mutation({
       v.object({
         name: v.string(),
         weight: v.number(),
+        optOutAllowed: v.optional(v.boolean()),
       })
     ),
     tracks: v.optional(v.array(v.string())),
@@ -399,6 +400,7 @@ export const updateEventCategories = mutation({
       v.object({
         name: v.string(),
         weight: v.number(),
+        optOutAllowed: v.optional(v.boolean()),
       })
     ),
   },
@@ -443,6 +445,7 @@ export const updateEventDetails = mutation({
     description: v.optional(v.string()),
     startDate: v.optional(v.number()),
     endDate: v.optional(v.number()),
+    judgeCode: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -453,11 +456,13 @@ export const updateEventDetails = mutation({
       description?: string;
       startDate?: number;
       endDate?: number;
+      judgeCode?: string | null;
     } = {};
     if (args.name !== undefined) updates.name = args.name;
     if (args.description !== undefined) updates.description = args.description;
     if (args.startDate !== undefined) updates.startDate = args.startDate;
     if (args.endDate !== undefined) updates.endDate = args.endDate;
+    if (args.judgeCode !== undefined) updates.judgeCode = args.judgeCode;
 
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch(args.eventId, updates);

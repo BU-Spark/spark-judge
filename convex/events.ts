@@ -456,13 +456,16 @@ export const updateEventDetails = mutation({
       description?: string;
       startDate?: number;
       endDate?: number;
-      judgeCode?: string | null;
+      judgeCode?: string;
     } = {};
     if (args.name !== undefined) updates.name = args.name;
     if (args.description !== undefined) updates.description = args.description;
     if (args.startDate !== undefined) updates.startDate = args.startDate;
     if (args.endDate !== undefined) updates.endDate = args.endDate;
-    if (args.judgeCode !== undefined) updates.judgeCode = args.judgeCode;
+    if (args.judgeCode !== undefined) {
+      // Treat null as a request to clear the judge code.
+      updates.judgeCode = args.judgeCode ?? "";
+    }
 
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch(args.eventId, updates);

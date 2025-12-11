@@ -10,6 +10,18 @@ import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
 import { formatDateTime, formatDateRange } from "../lib/utils";
 
+const withEllipsis = (text: string | undefined, maxLength = 100) => {
+  if (!text) return "";
+  if (text.length <= maxLength) return text;
+
+  const truncated = text.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(" ");
+  const safeCut =
+    lastSpace > maxLength - 40 ? truncated.slice(0, lastSpace) : truncated;
+
+  return `${safeCut.trimEnd()}...`;
+};
+
 export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) => void }) {
   const events = useQuery(api.events.listEvents);
   const loggedInUser = useQuery(api.auth.loggedInUser);
@@ -327,6 +339,8 @@ function EventCard({
   const showSideBySide = !isDemoDay && !userRole;
   const addTeamTemporarilyDisabled = !isDemoDay; // Hackathon add-team temporarily disabled
   
+  const truncatedDescription = withEllipsis(event.description, 100);
+
   return (
     <div className="card-static flex flex-col overflow-hidden w-[320px] sm:w-[360px] flex-shrink-0 snap-start h-[360px]">
       <div className="p-5 pb-4 flex flex-col h-full">
@@ -360,8 +374,11 @@ function EventCard({
           </div>
         </div>
 
-        <p className="text-base text-muted-foreground line-clamp-3 mb-6 flex-grow leading-relaxed">
-          {event.description}
+        <p
+          className="text-base text-muted-foreground line-clamp-3 mb-6 flex-grow leading-relaxed"
+          title={event.description}
+        >
+          {truncatedDescription}
         </p>
         
         <div className="flex justify-between text-xs text-muted-foreground mb-6 items-center border-t border-border pt-4">

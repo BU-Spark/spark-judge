@@ -325,6 +325,7 @@ function EventCard({
     judgeProgress && judgeProgress.totalTeams > 0 && judgeProgress.completedTeams >= judgeProgress.totalTeams
   );
   const showSideBySide = !isDemoDay && !userRole;
+  const addTeamTemporarilyDisabled = !isDemoDay; // Hackathon add-team temporarily disabled
   
   return (
     <div className="card-static flex flex-col overflow-hidden w-[320px] sm:w-[360px] flex-shrink-0 snap-start h-[360px]">
@@ -410,7 +411,13 @@ function EventCard({
               </button>
               <button
                 onClick={() => onAddTeam(event)}
-                className="flex-1 h-12 px-3 rounded-md text-sm font-medium transition-all bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm flex items-center justify-center"
+                disabled={addTeamTemporarilyDisabled}
+                title={addTeamTemporarilyDisabled ? "Team submissions are temporarily disabled" : undefined}
+                className={`flex-1 h-12 px-3 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
+                  addTeamTemporarilyDisabled
+                    ? "bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60"
+                    : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
+                }`}
               >
                 Add Your Team
               </button>
@@ -468,10 +475,14 @@ function EventCard({
               {!isDemoDay && !isJudge && (
                 <button
                   onClick={() => onAddTeam(event)}
+                  disabled={addTeamTemporarilyDisabled}
+                  title={addTeamTemporarilyDisabled ? "Team submissions are temporarily disabled" : undefined}
                   className={`w-full h-12 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
-                    isParticipant
-                      ? "bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 shadow-sm hover:shadow-md"
-                      : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
+                    addTeamTemporarilyDisabled
+                      ? "bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60"
+                      : isParticipant
+                        ? "bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 shadow-sm hover:shadow-md"
+                        : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
                   }`}
                 >
                   {isParticipant ? "View/Edit Team" : "Add Your Team"}
@@ -507,7 +518,7 @@ function EventRow({
   const isParticipant = userRole === "participant";
   const isDemoDay = event.mode === "demo_day";
   const [isExpanded, setIsExpanded] = useState(false);
-  const addTeamDisabled = !isPastSection;
+  const addTeamDisabled = true; // Temporarily disable add-team on hackathon cards
   
   return (
     <div className="card-static bg-card transition-colors hover:bg-muted/50">
@@ -570,7 +581,7 @@ function EventRow({
                     <button
                       onClick={() => onAddTeam(event)}
                       disabled={addTeamDisabled}
-                      title={addTeamDisabled ? "Team submissions open when the event is live" : undefined}
+                  title={addTeamDisabled ? "Team submissions are temporarily disabled" : undefined}
                       className={`w-full text-sm font-semibold px-4 py-2 rounded-md transition-all ${
                         addTeamDisabled
                           ? "opacity-60 cursor-not-allowed bg-muted text-muted-foreground"
@@ -667,7 +678,7 @@ function EventRow({
                 <button
                   onClick={() => onAddTeam(event)}
                   disabled={addTeamDisabled}
-                  title={addTeamDisabled ? "Team submissions open when the event is live" : undefined}
+                  title={addTeamDisabled ? "Team submissions are temporarily disabled" : undefined}
                   className={`text-sm font-semibold px-4 py-2 rounded-md transition-all ${
                     addTeamDisabled
                       ? "opacity-60 cursor-not-allowed bg-muted text-muted-foreground"

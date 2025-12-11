@@ -209,9 +209,6 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-pink-500/10 text-pink-600 dark:text-pink-300 border border-pink-500/30">
-                  Demo Day
-                </span>
                 <h1 className="text-3xl font-heading font-bold text-foreground">
                   {event.name}
                 </h1>
@@ -434,14 +431,18 @@ function BudgetIndicator({
 
   return (
     <div className="flex flex-col items-end">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-xl">❤️</span>
+      <div className="flex items-baseline gap-2 mb-1 text-right">
+        <span className="text-xl leading-none">❤️</span>
         <span
-          className={`text-xl font-bold ${isLow ? "text-red-500" : "text-foreground"}`}
+          className={`text-xl font-bold leading-none ${
+            isLow ? "text-red-500" : "text-foreground"
+          }`}
         >
           {remaining}
         </span>
-        <span className="text-muted-foreground text-sm">/ {total} left</span>
+        <span className="text-muted-foreground text-sm leading-none">
+          / {total} left
+        </span>
       </div>
       <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
         <div

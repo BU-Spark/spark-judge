@@ -547,18 +547,12 @@ export function ScoringWizard({
         />
       ) : (
         currentTeam && (
-          <div className="flex-1 overflow-y-auto px-6 py-8 flex justify-center">
+          <div className="flex-1 overflow-y-auto px-6 py-8 pb-16 flex justify-center">
             <div className="w-full max-w-3xl space-y-6">
               <div className="space-y-2 text-center">
                 <h2 className="text-3xl font-heading font-bold text-foreground">
                   {currentTeam.name}
                 </h2>
-                <p className="text-muted-foreground mx-auto max-w-3xl">
-                  {currentTeam.description}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Team Members: {currentTeam.members.join(", ")}
-                </p>
               </div>
 
               <div className="space-y-5 flex flex-col items-center">

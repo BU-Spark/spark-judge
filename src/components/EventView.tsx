@@ -159,11 +159,8 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
         Back to Events
       </button>
 
-      <div className="card-static mb-8 fade-in">
-        <div className="mb-4">
-          <h1 className="text-3xl font-heading font-bold text-foreground mb-2">{event.name}</h1>
-          <p className="text-muted-foreground text-lg">{event.description}</p>
-        </div>
+      <div className="mb-8 fade-in space-y-2">
+        <h1 className="text-3xl font-heading font-bold text-foreground">{event.name}</h1>
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,13 +195,13 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       )}
 
       {event.status === "active" && (
-        <div className="card mb-8 fade-in">
+        <div className="card p-6 mb-8 fade-in">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-heading font-bold text-foreground mb-2">
+              <div className="space-y-2">
+                <h2 className="text-xl font-heading font-bold text-foreground">
                   {scoringComplete ? "Scoring Complete!" : completedCount > 0 ? "Keep Scoring" : "Ready to Score?"}
-          </h2>
+                </h2>
                 {scoringComplete ? (
                   <p className="text-emerald-600 dark:text-emerald-400">
                     Thank you for judging. All teams have been scored.
@@ -218,17 +215,17 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
                         } categories.`}
                   </p>
                 )}
-                <p className={`text-sm mt-2 ${scoringComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                <p className={`text-sm ${scoringComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
                   Progress: {completedCount} / {totalTeams} teams scored
                 </p>
                 {justSubmitted && (
-                  <p className="text-xs text-muted-foreground mt-1">Your scores were submitted successfully.</p>
+                  <p className="text-xs text-muted-foreground">Your scores were submitted successfully.</p>
                 )}
               </div>
               {!scoringComplete && (
                 <button
                   onClick={() => setShowWizard(true)}
-                  className="btn-primary"
+                  className="btn-primary whitespace-nowrap"
                   disabled={(enableCohorts && myAssignments.length === 0) || totalTeams === 0}
                 >
                   {hasDraft
@@ -240,15 +237,15 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
                     : "Start Scoring"}
                 </button>
               )}
-                </div>
-            <div>
+            </div>
+            <div className="space-y-2">
               <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                 <div
                   className={`h-full transition-all duration-500 ${scoringComplete ? 'bg-emerald-500' : 'bg-primary'}`}
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground mt-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Completed: {completedCount}</span>
                 <span>Remaining: {Math.max(totalTeams - completedCount, 0)}</span>
               </div>
@@ -559,10 +556,10 @@ function TeamSelectionSection({
     return myScores.find((score: any) => score.teamId === teamId);
   };
   return (
-    <div className="card mb-8 fade-in">
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-xl font-heading font-bold text-foreground mb-2">
+    <div className="card p-6 mb-8 fade-in">
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-xl font-heading font-bold text-foreground">
             Select Your Teams to Judge
           </h2>
           <p className="text-muted-foreground">
@@ -571,16 +568,13 @@ function TeamSelectionSection({
         </div>
 
         {/* Search */}
-        <div className="relative">
-          <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+        <div>
           <input
             type="text"
             placeholder="Search teams..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground text-sm"
+            className="input"
           />
         </div>
 
@@ -596,7 +590,7 @@ function TeamSelectionSection({
                 return (
                   <div
                     key={team._id}
-                    className="px-4 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                    className="px-4 py-3 flex items-center justify-between hover:bg-muted/40 transition-colors"
                   >
                     <div className="flex items-center gap-3 flex-1">
                       {score && (
@@ -630,13 +624,11 @@ function TeamSelectionSection({
 
         {/* Add Teams Section */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-heading font-semibold text-foreground">
-              Browse Teams
-            </h3>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
+            <h3 className="text-lg font-heading font-semibold text-foreground">Browse Teams</h3>
             <button
               onClick={onStartScoring}
-              className="btn-primary"
+              className="btn-primary whitespace-nowrap"
               disabled={!canStart || locked}
             >
               {locked ? "Scoring Complete" : "Start Scoring Selected Teams"}
@@ -648,18 +640,23 @@ function TeamSelectionSection({
               {searchQuery ? "No teams match your search" : "All teams have been added to your queue"}
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-1 custom-scrollbar">
               {teams.map((team: any) => {
                 return (
                   <div
                     key={team._id}
-                    className="border border-border rounded-lg p-4 transition-all hover:shadow-sm bg-background"
+                    className="border border-border rounded-lg p-4 transition-all hover:shadow-md bg-background flex flex-col gap-2"
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-foreground">{team.name}</h3>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <h3 className="font-semibold text-foreground">{team.name}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {team.description}
+                        </p>
+                      </div>
                       <button
                         onClick={() => onToggleTeam(team._id, false)}
-                        className="p-2 bg-muted text-muted-foreground hover:bg-muted/80 rounded-lg transition-colors"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted/70 text-foreground hover:bg-muted transition-colors shadow-sm shrink-0"
                         disabled={locked}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -667,9 +664,6 @@ function TeamSelectionSection({
                         </svg>
                       </button>
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {team.description}
-                    </p>
                   </div>
                 );
               })}

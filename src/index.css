@@ -24,21 +24,43 @@
 }
 
 .dark {
-  /* Deep Muted Teal Theme (Professional) */
-  --logo-color: var(--foreground); /* use light text in dark mode */
-  --background: #0b1215; /* Charcoal Teal (More neutral) */
-  --foreground: #f1f5f9; /* Slate 100 */
-  --card: #141c21; /* Slightly lighter charcoal teal */
-  --card-foreground: #f1f5f9;
-  --border: #233038; /* Muted border */
-  --primary: #0d9488; /* Teal 600 - Professional, saturated but not neon */
-  --primary-foreground: #ffffff; /* White text is crisp on Teal 600 */
-  --secondary: #1e2930; /* Dark slate-teal for secondary buttons */
-  --secondary-foreground: #e2e8f0; /* Slate 200 */
-  --accent: #115e59; /* Teal 800 */
+  /* Premium Slate Dark Theme */
+  --logo-color: #ffffff;
+  --background: #09090b; /* Zinc 950 - Deepest neutral */
+  --foreground: #fafafa; /* Zinc 50 */
+  --card: #111114; /* Slightly lighter than background */
+  --card-foreground: #fafafa;
+  --border: #27272a; /* Zinc 800 */
+  --primary: #0ea5e9; /* Sky 500 - Vibrant blue-teal */
+  --primary-foreground: #ffffff;
+  --secondary: #27272a; /* Zinc 800 */
+  --secondary-foreground: #fafafa;
+  --accent: #0284c7; /* Sky 600 */
   --accent-foreground: #ffffff;
-  --muted: #1a242a; /* Card hover / Muted bg */
-  --muted-foreground: #94a3b8; /* Slate 400 - Classic muted text */
+  --muted: #18181b; /* Zinc 900 */
+  --muted-foreground: #a1a1aa; /* Zinc 400 */
+}
+
+/* Glassmorphism & Premium Utilities */
+.glass {
+  @apply bg-white/70 dark:bg-black/40 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-xl;
+}
+
+.glow-primary {
+  @apply shadow-[0_0_20px_rgba(14,165,233,0.15)] dark:shadow-[0_0_25px_rgba(14,165,233,0.1)];
+}
+
+.glow-hover:hover {
+  @apply shadow-[0_0_30px_rgba(14,165,233,0.25)] dark:shadow-[0_0_40px_rgba(14,165,233,0.2)] transition-all duration-300;
+}
+
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-br from-white to-zinc-400 font-bold;
+}
+
+.bg-mesh {
+  background-image: radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.05) 0, transparent 50%),
+                    radial-gradient(at 100% 100%, rgba(13, 148, 136, 0.05) 0, transparent 50%);
 }
 
 html {

@@ -1,3 +1,5 @@
+import { Card, Button, Text, Title, Icon } from "@tremor/react";
+
 interface ErrorStateProps {
   title?: string;
   description?: string;
@@ -13,8 +15,8 @@ export function ErrorState({
 }: ErrorStateProps) {
   return (
     <div className="min-h-[40vh] flex items-center justify-center px-4">
-      <div className="max-w-md w-full space-y-4 text-center border border-border rounded-2xl bg-card p-6 shadow-sm">
-        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+      <Card className="max-w-md w-full text-center">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -24,16 +26,14 @@ export function ErrorState({
             />
           </svg>
         </div>
-        <div className="space-y-2">
-          <h3 className="text-lg font-heading font-semibold text-foreground">{title}</h3>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
+        <Title className="mb-2">{title}</Title>
+        <Text className="mb-6">{description}</Text>
         {onAction && (
-          <button onClick={onAction} className="btn-secondary">
+          <Button onClick={onAction} color="red" variant="secondary">
             {actionLabel}
-          </button>
+          </Button>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

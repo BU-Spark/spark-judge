@@ -119,9 +119,9 @@ function Layout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background bg-mesh">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
+      <header className="sticky top-0 z-40 glass border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex justify-between items-center">
             <Link
@@ -173,7 +173,7 @@ function Layout() {
 
       {/* Toast Notifications - hidden on mobile */}
       {!isMobile && (
-        <Toaster 
+        <Toaster
           position="bottom-right"
           toastOptions={{
             style: {
@@ -188,11 +188,11 @@ function Layout() {
       {/* Sign In Modal */}
       {showSignIn && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowSignIn(false)}
           />
-          <div className="relative bg-background rounded-xl p-8 max-w-md w-full shadow-2xl border border-border slide-up">
+          <div className="relative glass rounded-2xl p-8 max-w-md w-full shadow-2xl slide-up">
             <button
               onClick={() => setShowSignIn(false)}
               className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
@@ -215,7 +215,7 @@ function Layout() {
  */
 function LandingPageWrapper() {
   const navigate = useNavigate();
-  
+
   const handleSelectEvent = (eventId: Id<"events">) => {
     void navigate(`/event/${eventId}`);
   };
@@ -235,9 +235,9 @@ function EventViewWrapper() {
   }
 
   return (
-    <EventView 
-      eventId={eventId as Id<"events">} 
-      onBack={() => void navigate("/")} 
+    <EventView
+      eventId={eventId as Id<"events">}
+      onBack={() => void navigate("/")}
     />
   );
 }
@@ -284,9 +284,9 @@ function ProfilePageWrapper() {
   };
 
   return (
-    <ProfilePage 
-      onSelectEvent={handleSelectEvent} 
-      onBackToLanding={() => void navigate("/")} 
+    <ProfilePage
+      onSelectEvent={handleSelectEvent}
+      onBackToLanding={() => void navigate("/")}
     />
   );
 }
@@ -317,10 +317,10 @@ function TeamPageWrapper() {
 function TeamRedirect() {
   const params = useParams<{ teamId: string; eventSlug?: string; teamSlug?: string }>();
   const navigate = useNavigate();
-  
+
   // Get teamId from the route
   const teamId = params.teamId;
-  
+
   // Look up the event for this team
   const eventId = useQuery(
     api.teams.getTeamEventId,

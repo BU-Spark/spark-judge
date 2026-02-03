@@ -46,7 +46,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
   // Check if cohorts are enabled
   const enableCohorts = event?.enableCohorts || false;
-  
+
   const visibleTeams = useMemo(
     () => (event?.teams ?? []).filter((team: any) => !team.hidden),
     [event?.teams]
@@ -66,13 +66,13 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
   // Filter teams by search query (only show unassigned teams or searching)
   const filteredTeams = useMemo(() => {
-    const baseTeams = searchQuery 
+    const baseTeams = searchQuery
       ? visibleTeams.filter((team: any) =>
-          team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          team.description.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+        team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        team.description.toLowerCase().includes(searchQuery.toLowerCase())
+      )
       : visibleTeams;
-    
+
     // If searching, show all matching teams. Otherwise show teams not in my queue
     if (searchQuery) return baseTeams;
     return baseTeams.filter((team: any) => !myAssignments?.includes(team._id));
@@ -92,7 +92,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       alert("You cannot remove teams from your queue after submitting scores.");
       return;
     }
-    
+
     try {
       if (isAssigned) {
         await removeTeamFromAssignment({ eventId, teamId });
@@ -195,7 +195,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       )}
 
       {event.status === "active" && (
-        <div className="card p-6 mb-8 fade-in">
+        <div className="glass p-6 mb-8 fade-in border-border/50">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="space-y-2">
@@ -210,9 +210,8 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
                   <p className="text-muted-foreground">
                     {hasDraft
                       ? "You have a saved scoring session. Continue where you left off."
-                      : `Score ${totalTeams} team${totalTeams === 1 ? "" : "s"} across ${
-                          event.categories.length
-                        } categories.`}
+                      : `Score ${totalTeams} team${totalTeams === 1 ? "" : "s"} across ${event.categories.length
+                      } categories.`}
                   </p>
                 )}
                 <p className={`text-sm ${scoringComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
@@ -231,10 +230,10 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
                   {hasDraft
                     ? "Continue Scoring"
                     : completedCount > 0
-                    ? "Resume Scoring"
-                    : enableCohorts && myAssignments.length === 0
-                    ? "Select Teams First"
-                    : "Start Scoring"}
+                      ? "Resume Scoring"
+                      : enableCohorts && myAssignments.length === 0
+                        ? "Select Teams First"
+                        : "Start Scoring"}
                 </button>
               )}
             </div>
@@ -256,14 +255,14 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
       {/* Score Summary Section - Show when scoring is complete */}
       {scoringComplete && myScores && myScores.length > 0 && (
-        <div className="card mb-8 fade-in">
+        <div className="glass mb-8 fade-in p-6 border-border/50">
           <h2 className="text-lg font-heading font-semibold mb-4">Your Score Summary</h2>
-          <ScoreSummary 
+          <ScoreSummary
             scores={myScores.map(score => {
               const team = visibleTeams.find(t => t._id === score.teamId);
               return { ...score, teamName: team?.name || 'Unknown Team' };
-            })} 
-            categories={event.categories.map(c => c.name)} 
+            })}
+            categories={event.categories.map(c => c.name)}
             categoryWeights={event.categories}
           />
         </div>
@@ -303,7 +302,7 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
 
   return (
     <div className="space-y-8">
-      <div className="card bg-amber-500/10 border-amber-500/20 text-center fade-in">
+      <div className="glass bg-amber-500/5 border-amber-500/20 text-center fade-in p-8">
         <div className="text-6xl mb-4">🏆</div>
         <h2 className="text-3xl font-heading font-bold text-foreground mb-2">Overall Winner</h2>
         {overallWinnerTeam && (
@@ -318,9 +317,9 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
             {event.categoryWinners.map((winner, index) => {
               const team = event.teams.find((t) => t._id === winner.teamId);
               return (
-                <div 
-                  key={winner.category} 
-                  className="card border-teal-500/20 bg-teal-500/5 transition-all duration-300"
+                <div
+                  key={winner.category}
+                  className="glass border-teal-500/20 bg-teal-500/5 transition-all duration-300 p-6"
                   style={{ animationDelay: `${0.2 + index * 0.1}s` }}
                 >
                   <div className="flex items-start justify-between mb-2">
@@ -337,7 +336,7 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
 
       <div className="fade-in" style={{ animationDelay: '0.3s' }}>
         <h2 className="text-xl font-heading font-bold mb-6 text-foreground">All Scores</h2>
-        <div className="card overflow-hidden p-0">
+        <div className="glass overflow-hidden p-0 border-border/50">
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead className="bg-muted">
@@ -360,8 +359,8 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
                 {eventScores.map((teamScore, index) => {
                   const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
                   return (
-                    <tr 
-                      key={teamScore.team._id} 
+                    <tr
+                      key={teamScore.team._id}
                       className={`
                         transition-colors hover:bg-muted/50
                         ${index < 3 ? 'bg-teal-500/5' : ''}
@@ -389,8 +388,8 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
             </table>
           </div>
         </div>
+      </div>
     </div>
-  </div>
   )
 }
 
@@ -404,16 +403,16 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
   // Calculate max possible weighted score
   const maxPossibleWeightedScore = categoryWeights?.reduce((sum, cat) => sum + (5 * cat.weight), 0) || categories.length * 5;
   const safeMaxPossible = maxPossibleWeightedScore || 1;
-  
+
   // Calculate statistics
   const totalScores = scores.length;
-  const averageScore = totalScores > 0 
-    ? scores.reduce((sum, score) => sum + score.totalScore, 0) / totalScores 
+  const averageScore = totalScores > 0
+    ? scores.reduce((sum, score) => sum + score.totalScore, 0) / totalScores
     : 0;
-  
+
   // Calculate category averages
   const categoryAverages = categories.map(category => {
-    const categoryScores = scores.flatMap(s => 
+    const categoryScores = scores.flatMap(s =>
       s.categoryScores.filter((cs: any) => cs.category === category && !cs.optedOut && cs.score !== null && typeof cs.score === "number")
     );
     const avg = categoryScores.length > 0
@@ -462,7 +461,7 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
               <span className="font-medium text-sm">{category}</span>
               <div className="flex items-center gap-2">
                 <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-primary transition-all duration-300"
                     style={{ width: `${(average / 5) * 100}%` }}
                   />
@@ -484,7 +483,7 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
             <div key={score} className="flex items-center gap-3">
               <span className="w-8 text-sm font-medium">{score}</span>
               <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-primary transition-all duration-300"
                   style={{ width: `${percentage}%` }}
                 />
@@ -510,7 +509,7 @@ function ScoreSummary({ scores, categories, categoryWeights }: ScoreSummaryProps
                 <span className="font-medium text-sm">{score.teamName || 'Unknown Team'}</span>
                 <div className="flex gap-1">
                   {score.categoryScores.map((cs: any, index: number) => (
-                    <span 
+                    <span
                       key={index}
                       className="px-2 py-1 text-xs bg-teal-500/20 text-primary rounded"
                     >

@@ -38,9 +38,9 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
     return (
       <ErrorState
         title="Project Not Found"
-        message="This project doesn't exist or has been removed."
+        description="This project doesn't exist or has been removed."
         actionLabel="Browse All Projects"
-        actionHref={`/event/${eventId}`}
+        onAction={() => { }}
       />
     );
   }
@@ -49,9 +49,9 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
     return (
       <ErrorState
         title="Project Unavailable"
-        message="This project is currently not available for viewing."
+        description="This project is currently not available for viewing."
         actionLabel="Browse All Projects"
-        actionHref={`/event/${eventId}`}
+        onAction={() => { }}
       />
     );
   }
@@ -60,9 +60,9 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
     return (
       <ErrorState
         title="Event Not Found"
-        message="The event for this project is unavailable."
+        description="The event for this project is unavailable."
         actionLabel="Browse All Projects"
-        actionHref={`/event/${eventId}`}
+        onAction={() => { }}
       />
     );
   }
@@ -93,7 +93,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
       </Link>
 
       {/* Main Card */}
-      <div className="card-static bg-card overflow-hidden">
+      <div className="glass overflow-hidden shadow-2xl">
         {/* Header with appreciation count */}
         <div className="bg-gradient-to-r from-pink-500 to-rose-500 px-6 py-8 text-white">
           <div className="flex items-start justify-between">
@@ -140,7 +140,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
                 {team.members.map((member, index) => (
                   <span
                     key={index}
-                    className="inline-flex items-center px-3 py-1.5 bg-muted text-foreground text-sm rounded-full"
+                    className="inline-flex items-center px-3 py-1.5 bg-muted/50 backdrop-blur-sm text-foreground text-sm rounded-full border border-border/50"
                   >
                     {member}
                   </span>
@@ -248,7 +248,7 @@ function AppreciationSection({
   };
 
   return (
-    <div className="text-center">
+    <div className="text-center p-6 rounded-2xl bg-muted/10 border border-border/30">
       <h2 className="text-lg font-heading font-semibold text-foreground mb-2">
         Show Your Appreciation
       </h2>
@@ -267,11 +267,10 @@ function AppreciationSection({
         {[...Array(maxPerTeam)].map((_, i) => (
           <div
             key={i}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-              i < attendeeCount
-                ? "bg-pink-500 text-white scale-110"
-                : "bg-muted text-muted-foreground"
-            }`}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${i < attendeeCount
+              ? "bg-pink-500 text-white scale-110"
+              : "bg-muted text-muted-foreground"
+              }`}
           >
             ❤️
           </div>
@@ -283,10 +282,9 @@ function AppreciationSection({
         disabled={!canAppreciate || isLoading}
         className={`
           inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl text-lg font-semibold transition-all shadow-lg
-          ${
-            canAppreciate
-              ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white hover:shadow-xl hover:scale-105 active:scale-100"
-              : "bg-muted text-muted-foreground cursor-not-allowed shadow-none"
+          ${canAppreciate
+            ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white hover:shadow-xl hover:scale-105 active:scale-100"
+            : "bg-muted text-muted-foreground cursor-not-allowed shadow-none"
           }
           ${isLoading ? "opacity-70" : ""}
         `}

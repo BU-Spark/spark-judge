@@ -72,30 +72,30 @@ module.exports = {
         // dark tremor-specific colors
         "dark-tremor": {
           brand: {
-            faint: "#0B1215",
-            muted: "#1E293B",
-            subtle: "#3B82F6",
-            DEFAULT: "#3B82F6",
-            emphasis: "#60A5FA",
-            inverted: "#030712",
+            faint: "#0B1221",
+            muted: "#172033",
+            subtle: "#1F2937", // Slate 800
+            DEFAULT: "#14B8A6", // Teal 500
+            emphasis: "#2DD4BF", // Teal 400
+            inverted: "#020817", // Rich dark
           },
           background: {
-            muted: "#131A2B",
-            subtle: "#1F2937",
-            DEFAULT: "#111827",
-            emphasis: "#D1D5DB",
+            muted: "#0f172a", // Slate 900
+            subtle: "#1e293b", // Slate 800
+            DEFAULT: "#020817", // Rich Dark
+            emphasis: "#cbd5e1", // Slate 300
           },
           border: {
-            DEFAULT: "#1F2937",
+            DEFAULT: "#1e293b", // Slate 800
           },
           ring: {
-            DEFAULT: "#1F2937",
+            DEFAULT: "#1e293b", // Slate 800
           },
           content: {
-            subtle: "#4B5563",
-            DEFAULT: "#6B7280",
-            emphasis: "#E5E7EB",
-            strong: "#F9FAF8",
+            subtle: "#64748b", // Slate 500
+            DEFAULT: "#94a3b8", // Slate 400
+            emphasis: "#e2e8f0", // Slate 200
+            strong: "#f8fafc", // Slate 50
             inverted: "#000000",
           },
         },

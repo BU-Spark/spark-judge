@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { isAdmin, requireAdmin, computeEventStatus } from "./helpers";
+import { Id } from "./_generated/dataModel";
 
 export const listEvents = query({
   args: {},
@@ -14,6 +15,27 @@ export const listEvents = query({
     const userId = await getAuthUserId(ctx);
     const userIsAdmin = await isAdmin(ctx);
     const events = await ctx.db.query("events").collect();
+
+    let judgesByEventId = new Map<Id<"events">, Id<"judges">>();
+    let participantEventIds = new Set<Id<"events">>();
+    if (userId) {
+      const [allMyJudgeRows, allMyParticipantRows] = await Promise.all([
+        ctx.db
+          .query("judges")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect(),
+        ctx.db
+          .query("participants")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect(),
+      ]);
+      judgesByEventId = new Map(
+        allMyJudgeRows.map((judge) => [judge.eventId, judge._id])
+      );
+      participantEventIds = new Set(
+        allMyParticipantRows.map((participant) => participant.eventId)
+      );
+    }
 
     const eventsWithTeamCounts = await Promise.all(
       events.map(async (event) => {
@@ -32,35 +54,20 @@ export const listEvents = query({
           totalTeams: number;
         } | null = null;
         if (userId) {
-          const judge = await ctx.db
-            .query("judges")
-            .withIndex("by_user_and_event", (q) =>
-              q.eq("userId", userId).eq("eventId", event._id)
-            )
-            .first();
-
-          if (judge) {
+          const judgeId = judgesByEventId.get(event._id);
+          if (judgeId) {
             userRole = { role: "judge" as const, isAdmin: userIsAdmin };
             const judgeScores = await ctx.db
               .query("scores")
               .withIndex("by_event", (q) => q.eq("eventId", event._id))
-              .filter((q) => q.eq(q.field("judgeId"), judge._id))
+              .filter((q) => q.eq(q.field("judgeId"), judgeId))
               .collect();
             judgeProgress = {
               completedTeams: judgeScores.length,
               totalTeams: teams.length,
             };
-          } else {
-            const participant = await ctx.db
-              .query("participants")
-              .withIndex("by_user_and_event", (q) =>
-                q.eq("userId", userId).eq("eventId", event._id)
-              )
-              .first();
-
-            if (participant) {
-              userRole = { role: "participant" as const };
-            }
+          } else if (participantEventIds.has(event._id)) {
+            userRole = { role: "participant" as const };
           }
         }
 
@@ -223,14 +230,7 @@ export const createEvent = mutation({
   },
   returns: v.id("events"),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
-    // Make the creator a global admin if they're not already
-    const user = await ctx.db.get(userId);
-    if (user && !user.isAdmin) {
-      await ctx.db.patch(userId, { isAdmin: true });
-    }
+    await requireAdmin(ctx);
 
     if (args.startDate >= args.endDate) {
       throw new Error("End date must be after start date");
@@ -314,7 +314,8 @@ export const removeEvent = mutation({
       throw new Error("Event not found");
     }
 
-    const [scores, teams, judges, participants] = await Promise.all([
+    const [scores, teams, judges, participants, prizes, prizeSubmissions, prizeWinners] =
+      await Promise.all([
       ctx.db
         .query("scores")
         .withIndex("by_event", (q) => q.eq("eventId", eventId))
@@ -329,6 +330,18 @@ export const removeEvent = mutation({
         .collect(),
       ctx.db
         .query("participants")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("prizes")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("teamPrizeSubmissions")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("prizeWinners")
         .withIndex("by_event", (q) => q.eq("eventId", eventId))
         .collect(),
     ]);
@@ -346,6 +359,9 @@ export const removeEvent = mutation({
     await Promise.all(
       participants.map((participant) => ctx.db.delete(participant._id))
     );
+    await Promise.all(prizeSubmissions.map((submission) => ctx.db.delete(submission._id)));
+    await Promise.all(prizeWinners.map((winner) => ctx.db.delete(winner._id)));
+    await Promise.all(prizes.map((prize) => ctx.db.delete(prize._id)));
 
     await ctx.db.delete(eventId);
     return null;
@@ -387,7 +403,38 @@ export const duplicateEvent = mutation({
       judgeCode: undefined,
       mode: event.mode,
       courseCodes: event.courseCodes,
+      scoringLockedAt: undefined,
+      scoringLockedBy: undefined,
+      scoringLockReason: undefined,
     });
+
+    if (event.mode !== "demo_day") {
+      const eventPrizes = await ctx.db
+        .query("prizes")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect();
+
+      const now = Date.now();
+      await Promise.all(
+        eventPrizes.map((prize) =>
+          ctx.db.insert("prizes", {
+            eventId: newEventId,
+            name: prize.name,
+            description: prize.description,
+            type: prize.type,
+            track: prize.track,
+            sponsorName: prize.sponsorName,
+            scoreBasis: prize.scoreBasis,
+            scoreCategoryNames: prize.scoreCategoryNames,
+            isActive: prize.isActive,
+            sortOrder: prize.sortOrder,
+            createdAt: now,
+            updatedAt: now,
+            createdBy: userId,
+          })
+        )
+      );
+    }
 
     return newEventId;
   },
@@ -477,6 +524,40 @@ export const updateEventDetails = mutation({
 
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch(args.eventId, updates);
+    }
+    return null;
+  },
+});
+
+export const setScoringLock = mutation({
+  args: {
+    eventId: v.id("events"),
+    locked: v.boolean(),
+    reason: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const adminId = await requireAdmin(ctx);
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event) throw new Error("Event not found");
+
+    if (event.mode === "demo_day") {
+      throw new Error("Scoring lock is only available for hackathon events");
+    }
+
+    if (args.locked) {
+      await ctx.db.patch(args.eventId, {
+        scoringLockedAt: Date.now(),
+        scoringLockedBy: adminId,
+        scoringLockReason: args.reason?.trim() || undefined,
+      });
+    } else {
+      await ctx.db.patch(args.eventId, {
+        scoringLockedAt: undefined,
+        scoringLockedBy: undefined,
+        scoringLockReason: undefined,
+      });
     }
     return null;
   },

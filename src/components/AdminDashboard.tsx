@@ -57,12 +57,77 @@ import {
 type SortField = "name" | "status" | "teamCount" | "startDate";
 type SortDirection = "asc" | "desc";
 type SortConfig = { field: SortField; direction: SortDirection };
+type PrizeType = "general" | "track" | "sponsor" | "track_sponsor";
+type PrizeScoreBasis = "overall" | "categories" | "none";
+type PrizeDraft = {
+  prizeId?: Id<"prizes">;
+  name: string;
+  description: string;
+  type: PrizeType;
+  track: string;
+  sponsorName: string;
+  scoreBasis: PrizeScoreBasis;
+  scoreCategoryNames: string[];
+  isActive: boolean;
+  sortOrder: number;
+};
+
+const PRIZE_TYPE_LABELS: Record<PrizeType, string> = {
+  general: "General",
+  track: "Track",
+  sponsor: "Sponsor",
+  track_sponsor: "Track + Sponsor",
+};
+
+const PRIZE_SCORE_LABELS: Record<PrizeScoreBasis, string> = {
+  overall: "Overall score",
+  categories: "Specific categories",
+  none: "No score hint",
+};
 
 const STATUS_SORT_ORDER: Record<"active" | "upcoming" | "past", number> = {
   active: 0,
   upcoming: 1,
   past: 2,
 };
+
+function createPrizeDraft(
+  sortOrder: number,
+  overrides?: Partial<PrizeDraft>
+): PrizeDraft {
+  return {
+    name: "",
+    description: "",
+    type: "general",
+    track: "",
+    sponsorName: "",
+    scoreBasis: "none",
+    scoreCategoryNames: [],
+    isActive: true,
+    sortOrder,
+    ...overrides,
+  };
+}
+
+function normalizePrizeDraftsForSave(prizes: PrizeDraft[]) {
+  return prizes
+    .map((prize, index) => ({
+      prizeId: prize.prizeId,
+      name: prize.name.trim(),
+      description: prize.description.trim() || undefined,
+      type: prize.type,
+      track: prize.track.trim() || undefined,
+      sponsorName: prize.sponsorName.trim() || undefined,
+      scoreBasis: prize.scoreBasis,
+      scoreCategoryNames:
+        prize.scoreBasis === "categories"
+          ? prize.scoreCategoryNames.filter(Boolean)
+          : undefined,
+      isActive: prize.isActive,
+      sortOrder: prize.sortOrder ?? index,
+    }))
+    .filter((prize) => prize.name.length > 0);
+}
 
 function formatDateTimeInput(timestamp: number) {
   const date = new Date(timestamp);
@@ -149,6 +214,372 @@ function SortButton({
   );
 }
 
+function PrizeCatalogEditor({
+  prizes,
+  setPrizes,
+  categories,
+  tracks,
+  disabled = false,
+}: {
+  prizes: PrizeDraft[];
+  setPrizes: Dispatch<SetStateAction<PrizeDraft[]>>;
+  categories: string[];
+  tracks: string[];
+  disabled?: boolean;
+}) {
+  const [selectedPrizeIndex, setSelectedPrizeIndex] = useState(0);
+
+  useEffect(() => {
+    if (prizes.length === 0) {
+      setSelectedPrizeIndex(0);
+      return;
+    }
+    if (selectedPrizeIndex > prizes.length - 1) {
+      setSelectedPrizeIndex(prizes.length - 1);
+    }
+  }, [prizes.length, selectedPrizeIndex]);
+
+  const selectedPrize = prizes[selectedPrizeIndex];
+
+  const addPrize = (overrides: Partial<PrizeDraft>) => {
+    const nextIndex = prizes.length;
+    setPrizes((prev) => [
+      ...prev,
+      createPrizeDraft(prev.length, overrides),
+    ]);
+    setSelectedPrizeIndex(nextIndex);
+  };
+
+  const updatePrize = (
+    index: number,
+    updater: (prize: PrizeDraft) => PrizeDraft
+  ) => {
+    setPrizes((prev) =>
+      prev.map((item, i) => (i === index ? updater(item) : item))
+    );
+  };
+
+  const removePrize = (index: number) => {
+    setPrizes((prev) =>
+      prev
+        .filter((_, i) => i !== index)
+        .map((item, i) => ({ ...item, sortOrder: i }))
+    );
+    setSelectedPrizeIndex((prev) => {
+      if (index < prev) return prev - 1;
+      return Math.max(0, prev - (index === prev ? 1 : 0));
+    });
+  };
+
+  const movePrize = (fromIndex: number, toIndex: number) => {
+    setPrizes((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next.map((item, i) => ({ ...item, sortOrder: i }));
+    });
+    setSelectedPrizeIndex(toIndex);
+  };
+
+  const typeBadgeColors: Record<
+    PrizeType,
+    "blue" | "indigo" | "amber" | "emerald"
+  > = {
+    general: "blue",
+    track: "emerald",
+    sponsor: "amber",
+    track_sponsor: "indigo",
+  };
+
+  return (
+    <div className="space-y-4">
+      <Flex justifyContent="between" alignItems="center" className="gap-3">
+        <Text className="text-sm text-foreground/75">
+          Add prizes and set each prize type in the detail panel.
+        </Text>
+        <Button
+          type="button"
+          variant="secondary"
+          color="gray"
+          icon={PlusIcon}
+          onClick={() =>
+            addPrize({
+              type: "general",
+              name: `Prize ${prizes.length + 1}`,
+              scoreBasis: "overall",
+            })
+          }
+          disabled={disabled}
+        >
+          Add Prize
+        </Button>
+      </Flex>
+
+      {prizes.length === 0 ? (
+        <Card className="p-6 text-center border-border/70">
+          <Text>No prizes added yet. Add at least one prize for hackathon submissions.</Text>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-4">
+          <Card className="p-0 overflow-hidden border-border/70 bg-card/95">
+            <div className="border-b border-border/70 px-4 py-3">
+              <Text className="font-medium">Prize List</Text>
+            </div>
+            <div className="max-h-[40rem] overflow-auto divide-y divide-border/60">
+              {prizes.map((prize, index) => (
+                <button
+                  key={`${prize.prizeId || "new"}-${index}`}
+                  type="button"
+                  onClick={() => setSelectedPrizeIndex(index)}
+                  className={`w-full text-left px-4 py-3 transition-colors ${selectedPrizeIndex === index
+                    ? "bg-muted ring-1 ring-teal-500/20"
+                    : "hover:bg-muted/60"
+                    }`}
+                >
+                  <Flex justifyContent="between" alignItems="start" className="gap-2">
+                    <div className="min-w-0">
+                      <Text className="font-medium truncate">
+                        {index + 1}. {prize.name.trim() || `Untitled Prize ${index + 1}`}
+                      </Text>
+                      <Text className="text-xs mt-1 text-foreground/70">
+                        {prize.type === "track" || prize.type === "track_sponsor"
+                          ? prize.track || "No track"
+                          : prize.type === "sponsor"
+                            ? prize.sponsorName || "No sponsor"
+                            : "Open to all teams"}
+                      </Text>
+                    </div>
+                    <Badge color={typeBadgeColors[prize.type]}>
+                      {PRIZE_TYPE_LABELS[prize.type]}
+                    </Badge>
+                  </Flex>
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          {selectedPrize && (
+            <Card className="p-5 border-border/70 bg-card/95">
+              <Flex justifyContent="between" alignItems="start" className="mb-4">
+                <div>
+                  <Title className="text-base">
+                    {selectedPrize.name.trim() || `Prize ${selectedPrizeIndex + 1}`}
+                  </Title>
+                  <Text className="text-xs text-foreground/70">
+                    Order #{selectedPrize.sortOrder + 1} · {PRIZE_TYPE_LABELS[selectedPrize.type]}
+                  </Text>
+                </div>
+                <Flex justifyContent="end" className="gap-2 w-auto">
+                  <Button
+                    type="button"
+                    icon={ChevronUpIcon}
+                    variant="light"
+                    color="gray"
+                    size="xs"
+                    onClick={() => movePrize(selectedPrizeIndex, selectedPrizeIndex - 1)}
+                    disabled={disabled || selectedPrizeIndex === 0}
+                    tooltip="Move up"
+                  />
+                  <Button
+                    type="button"
+                    icon={ChevronDownIcon}
+                    variant="light"
+                    color="gray"
+                    size="xs"
+                    onClick={() => movePrize(selectedPrizeIndex, selectedPrizeIndex + 1)}
+                    disabled={disabled || selectedPrizeIndex === prizes.length - 1}
+                    tooltip="Move down"
+                  />
+                  <Button
+                    type="button"
+                    icon={TrashIcon}
+                    variant="light"
+                    color="red"
+                    size="xs"
+                    onClick={() => removePrize(selectedPrizeIndex)}
+                    disabled={disabled}
+                    tooltip="Delete prize"
+                  />
+                </Flex>
+              </Flex>
+
+              <Grid numItems={1} numItemsMd={2} className="gap-4">
+                <div className="space-y-1">
+                  <Text className="font-medium">Prize Name</Text>
+                  <TextInput
+                    value={selectedPrize.name}
+                    onValueChange={(value) =>
+                      updatePrize(selectedPrizeIndex, (item) => ({ ...item, name: value }))
+                    }
+                    placeholder="Best AI Project"
+                    disabled={disabled}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Text className="font-medium">Prize Type</Text>
+                  <Select
+                    value={selectedPrize.type}
+                    onValueChange={(value) =>
+                      updatePrize(selectedPrizeIndex, (item) => ({
+                        ...item,
+                        type: value as PrizeType,
+                        track:
+                          value === "track" || value === "track_sponsor"
+                            ? item.track || tracks[0] || ""
+                            : "",
+                        sponsorName:
+                          value === "sponsor" || value === "track_sponsor"
+                            ? item.sponsorName || ""
+                            : "",
+                      }))
+                    }
+                    placeholder="Select prize type"
+                    disabled={disabled}
+                  >
+                    {(Object.keys(PRIZE_TYPE_LABELS) as PrizeType[]).map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {PRIZE_TYPE_LABELS[type]}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                </div>
+
+                {(selectedPrize.type === "track" || selectedPrize.type === "track_sponsor") && (
+                  <div className="space-y-1">
+                    <Text className="font-medium">Track</Text>
+                    <Select
+                      value={selectedPrize.track}
+                      onValueChange={(value) =>
+                        updatePrize(selectedPrizeIndex, (item) => ({ ...item, track: value }))
+                      }
+                      placeholder="Select track"
+                      disabled={disabled}
+                    >
+                      {tracks.map((track) => (
+                        <SelectItem key={track} value={track}>
+                          {track}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  </div>
+                )}
+
+                {(selectedPrize.type === "sponsor" || selectedPrize.type === "track_sponsor") && (
+                  <div className="space-y-1">
+                    <Text className="font-medium">Sponsor</Text>
+                    <TextInput
+                      value={selectedPrize.sponsorName}
+                      onValueChange={(value) =>
+                        updatePrize(selectedPrizeIndex, (item) => ({ ...item, sponsorName: value }))
+                      }
+                      placeholder="Acme Corp"
+                      disabled={disabled}
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <Text className="font-medium">Score Guidance</Text>
+                  <Select
+                    value={selectedPrize.scoreBasis}
+                    onValueChange={(value) =>
+                      updatePrize(selectedPrizeIndex, (item) => ({
+                        ...item,
+                        scoreBasis: value as PrizeScoreBasis,
+                        scoreCategoryNames:
+                          value === "categories" ? item.scoreCategoryNames : [],
+                      }))
+                    }
+                    placeholder="Select scoring guidance"
+                    disabled={disabled}
+                  >
+                    {(Object.keys(PRIZE_SCORE_LABELS) as PrizeScoreBasis[]).map((basis) => (
+                      <SelectItem key={basis} value={basis}>
+                        {PRIZE_SCORE_LABELS[basis]}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                </div>
+              </Grid>
+
+              <div className="mt-4 space-y-2">
+                <Text className="font-medium">Description (optional)</Text>
+                <Textarea
+                  value={selectedPrize.description}
+                  onValueChange={(value) =>
+                    updatePrize(selectedPrizeIndex, (item) => ({ ...item, description: value }))
+                  }
+                  rows={2}
+                  placeholder="What this prize recognizes and how to think about it."
+                  disabled={disabled}
+                />
+              </div>
+
+              {selectedPrize.scoreBasis === "categories" && (
+                <div className="mt-4 space-y-2">
+                  <Text className="font-medium">Use Category Scores As Signal</Text>
+                  <Grid numItems={1} numItemsMd={2} className="gap-2">
+                    {categories.map((category) => {
+                      const checked = selectedPrize.scoreCategoryNames.includes(category);
+                      return (
+                        <label
+                          key={category}
+                          className="flex items-center gap-2 rounded border border-border px-3 py-2"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) =>
+                              updatePrize(selectedPrizeIndex, (item) => {
+                                const nextSet = new Set(item.scoreCategoryNames);
+                                if (e.target.checked) nextSet.add(category);
+                                else nextSet.delete(category);
+                                return {
+                                  ...item,
+                                  scoreCategoryNames: Array.from(nextSet),
+                                };
+                              })
+                            }
+                            className="w-4 h-4 text-primary border-border rounded"
+                            disabled={disabled}
+                          />
+                          <Text>{category}</Text>
+                        </label>
+                      );
+                    })}
+                  </Grid>
+                </div>
+              )}
+
+              <Flex justifyContent="between" className="mt-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedPrize.isActive}
+                    onChange={(e) =>
+                      updatePrize(selectedPrizeIndex, (item) => ({
+                        ...item,
+                        isActive: e.target.checked,
+                      }))
+                    }
+                    className="w-4 h-4 text-primary border-border rounded"
+                    disabled={disabled}
+                  />
+                  <Text className="text-xs">Active</Text>
+                </label>
+                <Text className="text-xs text-muted-foreground">
+                  Team submissions are scoped by type/track.
+                </Text>
+              </Flex>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AdminDashboard({ onBackToLanding }: { onBackToLanding: () => void }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<Id<"events"> | null>(null);
@@ -172,33 +603,53 @@ export function AdminDashboard({ onBackToLanding }: { onBackToLanding: () => voi
   }
 
   return (
-    <div className="min-h-screen bg-mesh">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen pb-20">
+      <div
+        className={`mx-auto px-4 sm:px-6 lg:px-8 py-12 transition-all duration-500 ease-in-out ${isCreateOpen ? "max-w-[1800px]" : "max-w-7xl"
+          }`}
+      >
         <Button
           variant="light"
           icon={ArrowLeftIcon}
           onClick={onBackToLanding}
-          className="mb-6"
+          className="mb-8 hover:-translate-x-1 transition-transform"
         >
           Back to Events
         </Button>
 
-        <Flex justifyContent="between" alignItems="end" className="mb-8">
+        <Flex justifyContent="between" alignItems="end" className="mb-10">
           <div>
-            <Title className="text-3xl">Admin Dashboard</Title>
-            <Text>Manage your hackathon events and teams</Text>
+            <h1 className="text-4xl font-heading font-bold mb-3 tracking-tight text-gradient-primary">
+              {isCreateOpen ? "Create Event" : "Admin Dashboard"}
+            </h1>
+            <Text className="text-lg text-muted-foreground max-w-2xl">
+              {isCreateOpen
+                ? "Configure your event schedule, prizes, and judging criteria in one workspace."
+                : "Manage and monitor your hackathon events and teams."}
+            </Text>
           </div>
-          <Button
-            icon={PlusIcon}
-            onClick={() => setIsCreateOpen(true)}
-          >
-            Create Event
-          </Button>
+          {isCreateOpen ? (
+            <Button
+              variant="secondary"
+              color="gray"
+              onClick={() => setIsCreateOpen(false)}
+              className="shadow-sm hover:shadow-md transition-all"
+            >
+              Back to Event List
+            </Button>
+          ) : (
+            <Button
+              icon={PlusIcon}
+              onClick={() => setIsCreateOpen(true)}
+              className="shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 transition-all hover:scale-105"
+            >
+              Create Event
+            </Button>
+          )}
         </Flex>
 
-        <EventsList onSelectEvent={setSelectedEventId} />
-
-        {isCreateOpen && <CreateEventModal onClose={() => setIsCreateOpen(false)} />}
+        {!isCreateOpen && <EventsList onSelectEvent={setSelectedEventId} />}
+        {isCreateOpen && <CreateEventWorkspace onClose={() => setIsCreateOpen(false)} />}
         {selectedEventId && (
           <EventManagementModal eventId={selectedEventId} onClose={() => setSelectedEventId(null)} />
         )}
@@ -235,10 +686,10 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
 
   const allEvents = [...events.active, ...events.upcoming, ...events.past];
 
-  const statusColors: Record<"upcoming" | "active" | "past", "sky" | "emerald" | "zinc"> = {
+  const statusColors: Record<"upcoming" | "active" | "past", "blue" | "emerald" | "slate"> = {
     active: "emerald",
-    upcoming: "sky",
-    past: "zinc",
+    upcoming: "blue", // Changed to blue for better visibility
+    past: "slate",    // Changed to slate to match theme
   };
 
   const handleRemoveEvent = async (eventId: Id<"events">, name: string) => {
@@ -281,16 +732,16 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
 
   if (sortedEvents.length === 0) {
     return (
-      <Card className="text-center py-12">
-        <div className="text-6xl mb-4">📅</div>
-        <Title className="mb-2">No Events Yet</Title>
-        <Text>Create your first event to get started!</Text>
-      </Card>
+      <div className="card-professional p-12 text-center border-dashed border-2">
+        <div className="text-6xl mb-6">📅</div>
+        <Title className="mb-2 text-xl">No Events Yet</Title>
+        <Text className="text-muted-foreground">Create your first event to get started!</Text>
+      </div>
     );
   }
 
   return (
-    <Card className="p-0 overflow-hidden">
+    <div className="card-professional overflow-hidden ring-1 ring-white/5">
       <Table>
         <TableHead>
           <TableRow>
@@ -392,12 +843,13 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
           ))}
         </TableBody>
       </Table>
-    </Card>
+    </div>
   );
 }
 
-function CreateEventModal({ onClose }: { onClose: () => void }) {
+function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
   const createEvent = useMutation(api.events.createEvent);
+  const saveEventPrizes = useMutation(api.prizes.saveEventPrizes);
   const [submitting, setSubmitting] = useState(false);
   const [useTracksAsAwards, setUseTracksAsAwards] = useState(true);
   const [categories, setCategories] = useState([
@@ -406,6 +858,13 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
     { name: "Design", weight: 1, optOutAllowed: false },
     { name: "Presentation", weight: 1, optOutAllowed: false },
     { name: "Impact", weight: 1, optOutAllowed: false },
+  ]);
+  const [prizes, setPrizes] = useState<PrizeDraft[]>([
+    createPrizeDraft(0, {
+      name: "Best Overall",
+      type: "general",
+      scoreBasis: "overall",
+    }),
   ]);
   const [courseCodes, setCourseCodes] = useState<string[]>([...DEFAULT_DEMO_DAY_COURSES]);
   const [newCourseCode, setNewCourseCode] = useState("");
@@ -468,6 +927,26 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
     return "Upcoming (scheduled)";
   }, [derivedStatus]);
 
+  const derivedTracks = useMemo(() => {
+    if (useTracksAsAwards) {
+      return categories
+        .map((cat) => cat.name.trim())
+        .filter(Boolean);
+    }
+    return formData.tracks
+      .split(",")
+      .map((track) => track.trim())
+      .filter(Boolean);
+  }, [useTracksAsAwards, categories, formData.tracks]);
+
+  const derivedCategoryNames = useMemo(
+    () =>
+      categories
+        .map((cat) => cat.name.trim())
+        .filter(Boolean),
+    [categories]
+  );
+
   const handleAddCourseCode = () => {
     const code = newCourseCode.trim().toUpperCase();
     if (code && !courseCodes.includes(code)) {
@@ -513,6 +992,16 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
       return;
     }
 
+    const preparedPrizes =
+      formData.mode === "hackathon"
+        ? normalizePrizeDraftsForSave(prizes)
+        : [];
+    if (formData.mode === "hackathon" && preparedPrizes.length === 0) {
+      toast.error("Add at least one prize for hackathon events.");
+      setSubmitting(false);
+      return;
+    }
+
     const computedStatus = derivedStatus ?? "upcoming";
 
     try {
@@ -520,7 +1009,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
         ? undefined
         : formData.tracks.split(",").map((t) => t.trim()).filter(Boolean);
 
-      await createEvent({
+      const eventId = await createEvent({
         name: formData.name,
         description: formData.description,
         status: computedStatus,
@@ -533,159 +1022,175 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
         mode: formData.mode,
         courseCodes: formData.mode === "demo_day" ? courseCodes : undefined,
       });
+
+      if (formData.mode === "hackathon") {
+        try {
+          await saveEventPrizes({
+            eventId,
+            prizes: preparedPrizes,
+          });
+        } catch (error: any) {
+          toast.error(
+            error?.message ||
+            "Event created, but saving prizes failed. Re-open the event to configure prizes."
+          );
+          onClose();
+          return;
+        }
+      }
       toast.success("Event created successfully!");
       onClose();
-    } catch (error) {
-      toast.error("Failed to create event");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to create event");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={true} onClose={onClose} static={true}>
-      <DialogPanel className="max-w-2xl w-full max-h-[90vh] overflow-auto p-0 border border-tremor-border shadow-2xl">
-        <div className="sticky top-0 bg-tremor-background border-b border-tremor-border p-6 z-10">
-          <Flex justifyContent="between">
-            <Title className="text-2xl">Create New Event</Title>
-            <Button
-              variant="light"
-              color="gray"
-              onClick={onClose}
-              icon={Cog6ToothIcon}
-            />
-          </Flex>
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+        <div className="xl:col-span-4 space-y-6">
+          <div className="card-professional p-6 space-y-6">
+            <h3 className="text-xl font-heading font-semibold text-gradient-primary">Event Basics</h3>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div>
-            <Text className="font-medium mb-2">Event Name</Text>
-            <TextInput
-              required
-              value={formData.name}
-              onValueChange={(value) => setFormData({ ...formData, name: value })}
-              placeholder="HackBU Fall 2024"
-            />
-          </div>
+            <div>
+              <Text className="font-medium mb-2">Event Name</Text>
+              <TextInput
+                required
+                value={formData.name}
+                onValueChange={(value) => setFormData({ ...formData, name: value })}
+                placeholder="HackBU Fall 2024"
+              />
+            </div>
 
-          <div>
-            <Text className="font-medium mb-2">Description</Text>
-            <Textarea
-              required
-              value={formData.description}
-              onValueChange={(value) => setFormData({ ...formData, description: value })}
-              rows={3}
-              placeholder="Boston University's premier 24-hour hackathon..."
-            />
-          </div>
+            <div>
+              <Text className="font-medium mb-2">Description</Text>
+              <Textarea
+                required
+                value={formData.description}
+                onValueChange={(value) => setFormData({ ...formData, description: value })}
+                rows={3}
+                placeholder="Boston University's premier 24-hour hackathon..."
+              />
+            </div>
 
-          <div>
-            <Flex className="mb-3">
-              <Text className="font-medium">Schedule</Text>
-              {statusBadgeLabel && (
-                <Badge color={statusBadgeColor}>{statusBadgeLabel}</Badge>
+            <div>
+              <Flex className="mb-3">
+                <Text className="font-medium">Schedule</Text>
+                {statusBadgeLabel && (
+                  <Badge color={statusBadgeColor}>{statusBadgeLabel}</Badge>
+                )}
+              </Flex>
+
+              <Grid numItems={1} numItemsMd={2} className="gap-4">
+                <div>
+                  <Text className="text-xs mb-1">Start Date & Time</Text>
+                  <input
+                    type="datetime-local"
+                    required
+                    step="900"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    className="w-full flex items-center justify-between gap-x-2 bg-background border border-border px-3 py-2 text-foreground shadow-sm rounded-md focus:border-teal-500/60 focus:ring-2 focus:ring-teal-500/30 outline-none transition duration-100"
+                  />
+                </div>
+                <div>
+                  <Text className="text-xs mb-1">End Date & Time</Text>
+                  <input
+                    type="datetime-local"
+                    required
+                    step="900"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    className="w-full flex items-center justify-between gap-x-2 bg-background border border-border px-3 py-2 text-foreground shadow-sm rounded-md focus:border-teal-500/60 focus:ring-2 focus:ring-teal-500/30 outline-none transition duration-100"
+                  />
+                </div>
+              </Grid>
+
+              {hasInvalidRange && (
+                <Text color="red" className="text-xs mt-2">End time must be after the start time.</Text>
               )}
-            </Flex>
+            </div>
 
-            <Grid numItems={2} className="gap-4">
-              <div>
-                <Text className="text-xs mb-1">Start Date & Time</Text>
-                <input
-                  type="datetime-local"
-                  required
-                  step="900"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  className="w-full flex items-center justify-between gap-x-2 bg-tremor-background border px-3 py-2 text-tremor-default shadow-tremor-input border-tremor-border rounded-tremor-default focus:border-tremor-brand-subtle focus:ring-tremor-brand-muted outline-none transition duration-100"
-                />
-              </div>
-              <div>
-                <Text className="text-xs mb-1">End Date & Time</Text>
-                <input
-                  type="datetime-local"
-                  required
-                  step="900"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="w-full flex items-center justify-between gap-x-2 bg-tremor-background border px-3 py-2 text-tremor-default shadow-tremor-input border-tremor-border rounded-tremor-default focus:border-tremor-brand-subtle focus:ring-tremor-brand-muted outline-none transition duration-100"
-                />
-              </div>
-            </Grid>
-
-            {hasInvalidRange && (
-              <Text color="red" className="text-xs mt-2">End time must be after the start time.</Text>
-            )}
+            <div>
+              <Text className="font-medium mb-2">Event Mode</Text>
+              <Flex className="gap-3">
+                <Button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, mode: "hackathon" })}
+                  variant={formData.mode === "hackathon" ? "primary" : "secondary"}
+                  className="flex-1"
+                >
+                  Hackathon
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, mode: "demo_day" })}
+                  variant={formData.mode === "demo_day" ? "primary" : "secondary"}
+                  className="flex-1"
+                >
+                  Demo Day
+                </Button>
+              </Flex>
+              <Text className="text-xs text-muted-foreground mt-2">
+                {formData.mode === "hackathon"
+                  ? "Traditional judging with scores and categories"
+                  : "Public appreciation voting - attendees can give hearts to projects"}
+              </Text>
+            </div>
           </div>
 
-          <div>
-            <Text className="font-medium mb-2">Event Mode</Text>
-            <Flex className="gap-3">
-              <Button
-                type="button"
-                onClick={() => setFormData({ ...formData, mode: "hackathon" })}
-                variant={formData.mode === "hackathon" ? "primary" : "secondary"}
-                className="flex-1"
-                color="teal"
-              >
-                🏆 Hackathon
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setFormData({ ...formData, mode: "demo_day" })}
-                variant={formData.mode === "demo_day" ? "primary" : "secondary"}
-                className="flex-1"
-                color="pink"
-              >
-                ❤️ Demo Day
-              </Button>
-            </Flex>
-            <Text className="text-xs text-tremor-content mt-2">
-              {formData.mode === "hackathon"
-                ? "Traditional judging with scores and categories"
-                : "Public appreciation voting - attendees can give hearts to projects"}
-            </Text>
-          </div>
-
-          {/* Hackathon-specific fields */}
           {formData.mode === "hackathon" && (
-            <>
+            <div className="card-professional p-6 space-y-6 border-border/70">
+              <Title className="text-lg">Judging Setup</Title>
+
               <div>
                 <Text className="font-medium mb-3">
                   Judging Categories & Weights (0-2)
                 </Text>
-                <div className="rounded-tremor-default border border-tremor-border">
-                  <Grid numItems={4} className="gap-2 px-3 py-2 text-xs text-tremor-content uppercase tracking-wide border-b border-tremor-border bg-tremor-background-muted">
-                    <Text className="text-xs font-semibold">Category</Text>
-                    <Text className="text-xs font-semibold">Weight</Text>
-                    <Text className="text-xs font-semibold">Opt-out</Text>
-                    <span />
-                  </Grid>
-                  <div className="divide-y divide-tremor-border">
+                <div className="rounded-md border border-border/70 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-12 gap-3 px-3 py-2 text-xs text-foreground/70 uppercase tracking-wide border-b border-border/70 bg-muted/60">
+                    <Text className="text-xs font-semibold md:col-span-5">Category</Text>
+                    <Text className="text-xs font-semibold md:col-span-2">Weight</Text>
+                    <Text className="text-xs font-semibold md:col-span-4">Opt-out</Text>
+                    <span className="md:col-span-1" />
+                  </div>
+                  <div className="divide-y divide-border/60">
                     {categories.map((cat, index) => (
-                      <Grid key={index} numItems={4} className="gap-2 items-center p-3">
-                        <TextInput
-                          required
-                          value={cat.name}
-                          onValueChange={(value) => {
-                            const newCats = [...categories];
-                            newCats[index].name = value;
-                            setCategories(newCats);
-                          }}
-                          placeholder="Innovation"
-                        />
-                        <NumberInput
-                          required
-                          min={0}
-                          max={2}
-                          step={0.1}
-                          value={cat.weight}
-                          onValueChange={(value) => {
-                            const newCats = [...categories];
-                            newCats[index].weight = value || 0;
-                            setCategories(newCats);
-                          }}
-                        />
-                        <Flex justifyContent="start" className="gap-2">
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3">
+                        <div className="md:col-span-5">
+                          <TextInput
+                            required
+                            value={cat.name}
+                            onValueChange={(value) => {
+                              const newCats = [...categories];
+                              newCats[index].name = value;
+                              setCategories(newCats);
+                            }}
+                            placeholder="Innovation"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <input
+                            type="number"
+                            required
+                            min={0}
+                            max={2}
+                            step={0.1}
+                            value={cat.weight}
+                            onChange={(e) => {
+                              const newCats = [...categories];
+                              const parsed = Number(e.target.value);
+                              newCats[index].weight = Number.isFinite(parsed)
+                                ? Math.min(2, Math.max(0, parsed))
+                                : 0;
+                              setCategories(newCats);
+                            }}
+                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-teal-500/60 focus:ring-2 focus:ring-teal-500/30 outline-none transition"
+                          />
+                        </div>
+                        <label className="md:col-span-4 inline-flex items-center gap-2">
                           <input
                             type="checkbox"
                             checked={cat.optOutAllowed ?? false}
@@ -694,21 +1199,26 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                               newCats[index].optOutAllowed = e.target.checked;
                               setCategories(newCats);
                             }}
-                            className="w-4 h-4 text-tremor-brand border-tremor-border rounded"
+                            className="w-4 h-4 text-primary border-border rounded"
                           />
-                          <Text className="text-xs">Allow</Text>
-                        </Flex>
-                        <Button
-                          variant="light"
-                          color="red"
-                          icon={TrashIcon}
-                          onClick={() => setCategories(categories.filter((_, i) => i !== index))}
-                        />
-                      </Grid>
+                          <Text className="text-sm text-foreground/80">Allow opt-out</Text>
+                        </label>
+                        <div className="md:col-span-1 flex md:justify-end">
+                          <Button
+                            type="button"
+                            variant="light"
+                            color="red"
+                            size="xs"
+                            icon={TrashIcon}
+                            onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                          />
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
                 <Button
+                  type="button"
                   variant="light"
                   className="mt-3"
                   onClick={() => setCategories([...categories, { name: "", weight: 1, optOutAllowed: false }])}
@@ -723,10 +1233,10 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                     type="checkbox"
                     checked={useTracksAsAwards}
                     onChange={(e) => setUseTracksAsAwards(e.target.checked)}
-                    className="w-4 h-4 text-tremor-brand border-tremor-border rounded"
+                    className="w-4 h-4 text-primary border-border rounded"
                   />
                   <Text className="font-medium">
-                    Use awards as tracks (teams choose from same list)
+                    Use judging categories as tracks
                   </Text>
                 </Flex>
 
@@ -739,7 +1249,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                       onValueChange={(value) => setFormData({ ...formData, tracks: value })}
                       placeholder="AI/ML, Web Development, Hardware..."
                     />
-                    <Text className="text-xs text-tremor-content mt-2">
+                    <Text className="text-xs text-muted-foreground mt-2">
                       These are the tracks teams can choose when registering
                     </Text>
                   </>
@@ -752,11 +1262,11 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                     type="checkbox"
                     checked={formData.enableCohorts}
                     onChange={(e) => setFormData({ ...formData, enableCohorts: e.target.checked })}
-                    className="w-4 h-4 text-tremor-brand border-tremor-border rounded"
+                    className="w-4 h-4 text-primary border-border rounded"
                   />
                   <Text className="font-medium">Enable Multiple Judging Cohorts</Text>
                 </Flex>
-                <Text className="text-xs text-tremor-content ml-6 mb-4">
+                <Text className="text-xs text-muted-foreground ml-6 mb-4">
                   Judges will select their own teams to judge (for large events)
                 </Text>
 
@@ -767,13 +1277,13 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                   placeholder="secret-code-123"
                 />
               </div>
-            </>
+            </div>
           )}
 
           {formData.mode === "demo_day" && (
-            <div className="space-y-4">
-              <Text className="font-medium">Public Voting Settings</Text>
-              <Text className="text-xs text-tremor-content">
+            <div className="card-professional p-6 space-y-4 border-border/70">
+              <Title className="text-lg">Public Voting Settings</Title>
+              <Text className="text-xs text-muted-foreground">
                 Teams will select from these courses when submitting their projects.
               </Text>
 
@@ -809,34 +1319,63 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                     }
                   }}
                 />
-                <Button onClick={handleAddCourseCode} color="pink">
+                <Button type="button" onClick={handleAddCourseCode} color="pink">
                   Add
                 </Button>
               </Flex>
             </div>
           )}
+        </div>
 
-          <div className="sticky bottom-0 bg-tremor-background border-t border-tremor-border -mx-6 -mb-6 p-6 flex gap-4">
-            <Button
-              type="submit"
-              loading={submitting}
-              className="flex-1"
-            >
-              Create Event
-            </Button>
-            <Button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              variant="secondary"
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </DialogPanel>
-    </Dialog>
+        <div className="xl:col-span-8">
+          {formData.mode === "hackathon" ? (
+            <div className="card-professional p-6">
+              <Flex justifyContent="between" className="mb-4">
+                <h3 className="text-xl font-heading font-semibold text-gradient-primary">Prize Catalog</h3>
+                <Badge color="teal" size="lg" className="shadow-lg shadow-teal-500/20">{prizes.length} configured</Badge>
+              </Flex>
+              <Text className="text-xs text-muted-foreground mb-4">
+                Teams will select which prizes they want to submit for. Track and sponsor constraints are enforced automatically.
+              </Text>
+              <PrizeCatalogEditor
+                prizes={prizes}
+                setPrizes={setPrizes}
+                categories={derivedCategoryNames}
+                tracks={derivedTracks}
+                disabled={submitting}
+              />
+            </div>
+          ) : (
+            <div className="card-professional p-6 border-border/70">
+              <Title className="text-lg mb-2">Prize Catalog</Title>
+              <Text>
+                Demo Day mode uses appreciation voting and does not require a prize catalog.
+              </Text>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="card-professional p-4 border border-border/70 bg-card/95">
+        <Flex justifyContent="end" className="gap-3">
+          <Button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            variant="secondary"
+            color="gray"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            loading={submitting}
+          >
+            Create Event
+          </Button>
+        </Flex>
+      </div>
+    </form>
   );
 }
 
@@ -844,6 +1383,9 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const event = useQuery(api.events.getEvent, { eventId });
   const eventScores = useQuery(api.scores.getEventScores, { eventId });
   const detailedScores = useQuery(api.scores.getDetailedEventScores, { eventId });
+  const eventPrizes = useQuery(api.prizes.listEventPrizes, { eventId });
+  const prizeDeliberationData = useQuery(api.prizes.getPrizeDeliberationData, { eventId });
+  const prizeWinners = useQuery(api.prizes.listPrizeWinners, { eventId });
   const appreciationSummary = useQuery(api.appreciations.getEventAppreciationSummary, { eventId });
   const updateEventDetails = useMutation(api.events.updateEventDetails);
   const updateEventCategories = useMutation(api.events.updateEventCategories);
@@ -853,11 +1395,13 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const removeEvent = useMutation(api.events.removeEvent);
   const createTeam = useMutation(api.teams.createTeam);
   const updateTeamAdmin = useMutation(api.teams.updateTeamAdmin);
-  const setWinners = useMutation(api.scores.setWinners);
+  const saveEventPrizes = useMutation(api.prizes.saveEventPrizes);
+  const setPrizeWinners = useMutation(api.prizes.setPrizeWinners);
   const releaseResults = useMutation(api.scores.releaseResults);
   const hideTeam = useMutation(api.teams.hideTeam);
   const removeTeam = useMutation(api.teams.removeTeam);
   const updateStatus = useMutation(api.events.updateEventStatus);
+  const setScoringLock = useMutation(api.events.setScoringLock);
 
   const generateQrZip = useAction(api.qrCodes.generateQrCodeZip);
 
@@ -880,9 +1424,12 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const [eventStart, setEventStart] = useState("");
   const [eventEnd, setEventEnd] = useState("");
   const [categoriesEdit, setCategoriesEdit] = useState<Array<{ name: string; weight: number; optOutAllowed?: boolean }>>([]);
+  const [prizesEdit, setPrizesEdit] = useState<PrizeDraft[]>([]);
   const [enableCohorts, setEnableCohorts] = useState(false);
   const [judgeCodeEdit, setJudgeCodeEdit] = useState("");
   const [savingJudgeSettings, setSavingJudgeSettings] = useState(false);
+  const [savingPrizes, setSavingPrizes] = useState(false);
+  const [updatingScoringLock, setUpdatingScoringLock] = useState(false);
   const [appreciationBudget, setAppreciationBudget] = useState<number>(100);
   const [savingAppreciationSettings, setSavingAppreciationSettings] = useState(false);
 
@@ -910,11 +1457,39 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     }
   }, [event]);
 
+  useEffect(() => {
+    setPrizesEdit([]);
+  }, [eventId]);
+
+  useEffect(() => {
+    if (!eventPrizes) return;
+    setPrizesEdit(
+      eventPrizes.map((prize: any, index: number) =>
+        createPrizeDraft(index, {
+          prizeId: prize._id,
+          name: prize.name || "",
+          description: prize.description || "",
+          type: prize.type || "general",
+          track: prize.track || "",
+          sponsorName: prize.sponsorName || "",
+          scoreBasis: prize.scoreBasis || "none",
+          scoreCategoryNames: prize.scoreCategoryNames || [],
+          isActive: prize.isActive !== false,
+          sortOrder: prize.sortOrder ?? index,
+        })
+      )
+    );
+  }, [eventPrizes]);
+
   if (!event) {
     return null;
   }
 
   const isDemoDayMode = event.mode === "demo_day";
+  const scoringLocked = !!event.scoringLockedAt;
+  const scoringLockedLabel = event.scoringLockedAt
+    ? formatDateTime(event.scoringLockedAt)
+    : null;
 
   const derivedStatus = (() => {
     const now = Date.now();
@@ -922,6 +1497,18 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     if (now > event.endDate) return "past";
     return "active";
   })();
+
+  const categoriesForPrizeEditor = useMemo(() =>
+    categoriesEdit.map(c => c.name).filter(Boolean),
+    [categoriesEdit]
+  );
+
+  const tracksForPrizeEditor = useMemo(() => {
+    if (event?.tracks && event.tracks.length > 0) {
+      return event.tracks;
+    }
+    return categoriesForPrizeEditor;
+  }, [event, categoriesForPrizeEditor]);
 
   const scoresLoaded = eventScores !== undefined;
   // Treat judging as started only if any team has at least one score submitted.
@@ -931,6 +1518,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
         (teamScore as any)?.judgeCount > 0 ||
         ((teamScore as any)?.scores?.length || 0) > 0
     ) ?? false;
+  const hasConfiguredPrizes = (eventPrizes?.length || 0) > 0;
 
   const handleModeChange = async (mode: "hackathon" | "demo_day") => {
     try {
@@ -1065,6 +1653,22 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
           ((teamScore as any)?.scores?.length || 0) > 0
       ) ?? false;
 
+    const categoriesForPrizeEditor = useMemo(
+      () =>
+        categoriesEdit
+          .map((cat) => cat.name.trim())
+          .filter(Boolean),
+      [categoriesEdit]
+    );
+
+    const tracksForPrizeEditor = useMemo(() => {
+      const eventTracks =
+        event.tracks && event.tracks.length > 0
+          ? event.tracks
+          : categoriesForPrizeEditor;
+      return eventTracks.filter(Boolean);
+    }, [event.tracks, categoriesForPrizeEditor]);
+
     if (!scoresLoaded) {
       toast.error("Scores are still loading. Please try again.");
       return;
@@ -1123,6 +1727,28 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     }
   };
 
+  const handleSavePrizes = async () => {
+    if (isDemoDayMode) return;
+    const normalizedPrizes = normalizePrizeDraftsForSave(prizesEdit);
+    if (normalizedPrizes.length === 0) {
+      toast.error("Add at least one active prize before saving.");
+      return;
+    }
+
+    setSavingPrizes(true);
+    try {
+      await saveEventPrizes({
+        eventId,
+        prizes: normalizedPrizes,
+      });
+      toast.success("Prize catalog saved");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to save prizes");
+    } finally {
+      setSavingPrizes(false);
+    }
+  };
+
   const handleRemoveEvent = async () => {
     const confirmed = window.confirm(
       `Remove "${event.name}"? This will delete teams, scores, and access for this event.`
@@ -1159,8 +1785,38 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     try {
       await releaseResults({ eventId });
       toast.success("Results released!");
-    } catch (error) {
-      toast.error("Failed to release results");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to release results");
+    }
+  };
+
+  const handleSetScoringLock = async (locked: boolean) => {
+    if (isDemoDayMode) return;
+
+    const confirmed = window.confirm(
+      locked
+        ? "Lock scoring now? Judges will no longer be able to edit scores."
+        : "Unlock scoring? Judges will be able to edit scores again."
+    );
+    if (!confirmed) return;
+
+    let reason: string | undefined;
+    if (locked) {
+      reason =
+        window.prompt(
+          "Optional: add a short lock reason (for audit/projection context).",
+          "Deliberation session started"
+        )?.trim() || undefined;
+    }
+
+    try {
+      setUpdatingScoringLock(true);
+      await setScoringLock({ eventId, locked, reason });
+      toast.success(locked ? "Scoring locked" : "Scoring unlocked");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update scoring lock");
+    } finally {
+      setUpdatingScoringLock(false);
     }
   };
 
@@ -1225,7 +1881,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
               <TabPanel>
                 <div className="space-y-6">
                   {/* Event Details */}
-                  <Card className="p-6">
+                  <div className="card-professional p-6">
                     <Flex justifyContent="between" alignItems="start" className="mb-4">
                       <div>
                         <Title>Event Details</Title>
@@ -1284,12 +1940,12 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                         Save Details
                       </Button>
                     </Flex>
-                  </Card>
+                  </div>
 
                   {/* Event Mode */}
-                  <Card className="p-6">
-                    <Title className="mb-4">Event Mode</Title>
-                    <Flex className="gap-3">
+                  <div className="card-professional p-6">
+                    <h3 className="text-xl font-heading font-semibold text-gradient-primary mb-2">Event Mode</h3>
+                    <Flex className="gap-4">
                       <Button
                         onClick={() => handleModeChange("hackathon")}
                         variant={!isDemoDayMode ? "primary" : "secondary"}
@@ -1312,19 +1968,35 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                         ? "Public appreciation voting - attendees can give hearts to projects without signing in"
                         : "Traditional judging with scores and categories - requires judge registration"}
                     </Text>
-                  </Card>
+                  </div>
 
                   {/* Judging Settings - editable only before scoring starts */}
-                  <Card className="p-6">
+                  <div className="card-professional p-6">
                     <Flex justifyContent="between" alignItems="start" className="mb-4">
                       <div>
-                        <Title>Judging Settings</Title>
+                        <h3 className="text-xl font-heading font-semibold text-gradient-primary">Judging Settings</h3>
                         <Text>Configure how judges will score teams</Text>
                       </div>
-                      {hasScores && (
-                        <Badge color="amber">Locked (judging started)</Badge>
-                      )}
+                      <Flex className="gap-2 w-auto">
+                        {hasScores && (
+                          <Badge color="amber">Locked (judging started)</Badge>
+                        )}
+                        {scoringLocked && (
+                          <Badge color="red">Scores locked</Badge>
+                        )}
+                      </Flex>
                     </Flex>
+                    {!isDemoDayMode && (
+                      <Text className="text-xs mb-4">
+                        Judges can revise scores until you lock scoring in the Actions panel.
+                      </Text>
+                    )}
+                    {!isDemoDayMode && scoringLocked && scoringLockedLabel && (
+                      <Text className="text-xs mb-4 text-red-600 dark:text-red-400">
+                        Scores locked at {scoringLockedLabel}
+                        {event.scoringLockReason ? ` (${event.scoringLockReason})` : ""}.
+                      </Text>
+                    )}
 
                     <Grid numItems={1} numItemsMd={2} className="gap-6">
                       <div className="space-y-1">
@@ -1453,11 +2125,47 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                         </Button>
                       </Flex>
                     </div>
-                  </Card>
+                  </div>
+
+                  {!isDemoDayMode && (
+                    <div className="card-professional p-6">
+                      <Flex justifyContent="between" alignItems="start" className="mb-4">
+                        <div>
+                          <h3 className="text-xl font-heading font-semibold text-gradient-primary">Prize Catalog</h3>
+                          <Text>Define general, track, sponsor, and combined prizes.</Text>
+                        </div>
+                        <Badge color="teal" size="lg" className="shadow-lg shadow-teal-500/20">{prizesEdit.length} prizes</Badge>
+                      </Flex>
+                      <Text className="text-xs mb-4">
+                        Teams can only submit for prizes they are eligible for. Track-bound prizes are filtered automatically in team submission.
+                      </Text>
+                      <PrizeCatalogEditor
+                        prizes={prizesEdit}
+                        setPrizes={setPrizesEdit}
+                        categories={categoriesForPrizeEditor}
+                        tracks={tracksForPrizeEditor}
+                        disabled={scoringLocked}
+                      />
+                      <Flex justifyContent="end" className="mt-4">
+                        <Button
+                          onClick={handleSavePrizes}
+                          loading={savingPrizes}
+                          disabled={scoringLocked}
+                        >
+                          Save Prize Catalog
+                        </Button>
+                      </Flex>
+                      {scoringLocked && (
+                        <Text className="text-xs mt-3 text-amber-700 dark:text-amber-300">
+                          Unlock scoring to edit the prize catalog.
+                        </Text>
+                      )}
+                    </div>
+                  )}
 
                   {isDemoDayMode && (
-                    <Card className="p-6">
-                      <Title className="mb-1">Appreciation Settings (Demo Day)</Title>
+                    <div className="card-professional p-6">
+                      <Title className="mb-1 text-gradient-primary">Appreciation Settings (Demo Day)</Title>
                       <Text className="mb-4">Configure heart budget for attendees</Text>
 
                       <Grid numItems={1} numItemsMd={2} className="gap-6">
@@ -1492,14 +2200,14 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                           Save Appreciation Settings
                         </Button>
                       </Flex>
-                    </Card>
+                    </div>
                   )}
 
                   {/* Teams */}
-                  <Card className="p-6">
+                  <div className="card-professional p-6">
                     <Flex justifyContent="between" alignItems="center" className="mb-4">
                       <div>
-                        <Title>Teams ({event.teams.length})</Title>
+                        <h3 className="text-xl font-heading font-semibold text-gradient-primary">Teams ({event.teams.length})</h3>
                         <Text>Manage participants and team projects</Text>
                       </div>
                       <Button
@@ -1518,9 +2226,9 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                         <Text className="text-center py-8">No teams added yet</Text>
                       ) : (
                         event.teams.map((team, index) => (
-                          <Card
+                          <div
                             key={team._id}
-                            className={`p-4 hover:bg-tremor-background-muted transition-colors ${(team as any).hidden ? 'opacity-60 border-dashed border-amber-500' : ''
+                            className={`p-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors ${(team as any).hidden ? 'opacity-60 border-dashed border-amber-500' : ''
                               }`}
                           >
                             <Flex justifyContent="between" alignItems="start">
@@ -1583,15 +2291,15 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                                 </Flex>
                               </div>
                             </Flex>
-                          </Card>
+                          </div>
                         ))
                       )}
                     </div>
-                  </Card>
+                  </div>
 
                   {/* Actions */}
-                  <Card className="p-6">
-                    <Title className="mb-4">Actions</Title>
+                  <div className="card-professional p-6">
+                    <h3 className="text-xl font-heading font-semibold text-gradient-primary mb-4">Actions</h3>
                     <Flex className="gap-3 flex-wrap sm:flex-nowrap" justifyContent="start">
                       {event.status === "active" && (
                         <Button
@@ -1604,18 +2312,36 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                         </Button>
                       )}
 
-                      <Button
-                        onClick={() => setShowSelectWinners(true)}
-                        variant="secondary"
-                        icon={TrophyIcon}
-                        className="flex-1"
-                      >
-                        Select Winners
-                      </Button>
+                      {!isDemoDayMode && (
+                        <Button
+                          onClick={() => void handleSetScoringLock(!scoringLocked)}
+                          loading={updatingScoringLock}
+                          color={scoringLocked ? "amber" : "red"}
+                          variant={scoringLocked ? "secondary" : "primary"}
+                          className="flex-1"
+                        >
+                          {scoringLocked ? "Unlock Scores" : "Lock Scores"}
+                        </Button>
+                      )}
+
+                      {!isDemoDayMode && (
+                        <Button
+                          onClick={() => setShowSelectWinners(true)}
+                          variant="secondary"
+                          icon={TrophyIcon}
+                          className="flex-1"
+                          disabled={!scoringLocked || !hasConfiguredPrizes}
+                        >
+                          Prize Winner Wizard
+                        </Button>
+                      )}
 
                       <Button
                         onClick={handleReleaseResults}
-                        disabled={event.resultsReleased}
+                        disabled={
+                          event.resultsReleased ||
+                          (!isDemoDayMode && !scoringLocked)
+                        }
                         color="emerald"
                         className="flex-1"
                         icon={CheckCircleIcon}
@@ -1623,7 +2349,17 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                         {event.resultsReleased ? "Results Released" : "Release Results"}
                       </Button>
                     </Flex>
-                  </Card>
+                    {!isDemoDayMode && !scoringLocked && (
+                      <Text className="text-xs mt-3 text-amber-700 dark:text-amber-300">
+                        Lock scores before selecting winners or releasing results.
+                      </Text>
+                    )}
+                    {!isDemoDayMode && scoringLocked && !hasConfiguredPrizes && (
+                      <Text className="text-xs mt-3 text-amber-700 dark:text-amber-300">
+                        Add and save at least one prize to run the winner wizard.
+                      </Text>
+                    )}
+                  </div>
                 </div>
               </TabPanel>
 
@@ -1634,18 +2370,18 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                       <div className="space-y-6">
                         {/* Summary Stats */}
                         <Grid numItems={1} numItemsMd={3} className="gap-4">
-                          <Card className="text-center p-6">
-                            <Text className="text-3xl font-bold text-pink-500">{appreciationSummary.totalAppreciations}</Text>
-                            <Text className="mt-1">Total Appreciations</Text>
-                          </Card>
-                          <Card className="text-center p-6">
-                            <Text className="text-3xl font-bold text-tremor-content-emphasis">{appreciationSummary.uniqueAttendees}</Text>
-                            <Text className="mt-1">Unique Attendees</Text>
-                          </Card>
-                          <Card className="text-center p-6">
-                            <Text className="text-3xl font-bold text-tremor-content-emphasis">{appreciationSummary.teams.length}</Text>
-                            <Text className="mt-1">Projects</Text>
-                          </Card>
+                          <div className="card-professional text-center p-6 flex flex-col items-center justify-center space-y-2">
+                            <Text className="text-4xl font-bold text-pink-500 drop-shadow-sm">{appreciationSummary.totalAppreciations}</Text>
+                            <Text className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Total Appreciations</Text>
+                          </div>
+                          <div className="card-professional text-center p-6 flex flex-col items-center justify-center space-y-2">
+                            <Text className="text-4xl font-bold text-tremor-content-emphasis">{appreciationSummary.uniqueAttendees}</Text>
+                            <Text className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Unique Attendees</Text>
+                          </div>
+                          <div className="card-professional text-center p-6 flex flex-col items-center justify-center space-y-2">
+                            <Text className="text-4xl font-bold text-tremor-content-emphasis">{appreciationSummary.teams.length}</Text>
+                            <Text className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Projects</Text>
+                          </div>
                         </Grid>
 
                         {/* Export Buttons */}
@@ -1668,7 +2404,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                         </Flex>
 
                         {/* Team Rankings */}
-                        <Card className="p-6">
+                        <div className="card-professional p-6">
                           <Title className="mb-4">Project Rankings</Title>
                           <Table>
                             <TableHead>
@@ -1706,14 +2442,14 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                               ))}
                             </TableBody>
                           </Table>
-                        </Card>
+                        </div>
                       </div>
                     ) : (
-                      <Card className="text-center py-12">
+                      <div className="card-professional text-center py-12">
                         <div className="text-6xl mb-4">❤️</div>
                         <Title>No Appreciations Yet</Title>
                         <Text>Attendees haven't given any appreciations yet. Share the event link to get started!</Text>
-                      </Card>
+                      </div>
                     )
                   ) : (
                     // Hackathon Scores View
@@ -1724,7 +2460,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                         setViewMode={setViewMode}
                       />
                     ) : (
-                      <Card className="text-center py-12">
+                      <div className="card-professional text-center py-12">
                         <div className="text-6xl mb-4">📊</div>
                         <Title>No Scores Yet</Title>
                         <Text className="mb-6">Judges haven't submitted any scores for this event yet.</Text>
@@ -1736,7 +2472,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                             <li>Click "Run" to generate demo data</li>
                           </ol>
                         </div>
-                      </Card>
+                      </div>
                     )
                   )}
                 </div>
@@ -1761,17 +2497,17 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
           />
         )}
 
-        {showSelectWinners && event.teams.length > 0 && (
-          <SelectWinnersModal
+        {showSelectWinners && !isDemoDayMode && prizeDeliberationData && (
+          <PrizeWinnersWizardModal
             eventId={eventId}
-            teams={event.teams}
-            categories={event.categories.map(c => c.name)}
+            deliberationData={prizeDeliberationData}
+            existingWinners={prizeWinners || []}
             onClose={() => setShowSelectWinners(false)}
-            onSubmit={setWinners}
+            onSubmit={setPrizeWinners}
           />
         )}
       </DialogPanel>
-    </Dialog>
+    </Dialog >
   );
 }
 
@@ -1854,7 +2590,7 @@ function ScoringDashboard({
       {viewMode === 'table' ? (
         <div className="space-y-6">
           {/* Overall Rankings Table */}
-          <Card>
+          <div className="card-professional p-6">
             <Title className="mb-4">Overall Rankings</Title>
             <Table>
               <TableHead>
@@ -1911,12 +2647,12 @@ function ScoringDashboard({
                 ))}
               </TableBody>
             </Table>
-          </Card>
+          </div>
 
           {/* Category Rankings */}
           <Grid numItems={1} numItemsMd={2} className="gap-6">
             {scores.categories.map((category) => (
-              <Card key={category}>
+              <div key={category} className="card-professional p-6">
                 <Title className="mb-4">{category}</Title>
                 <div className="space-y-2">
                   {scores.categoryRankings[category]?.slice(0, 5).map((team, idx) => (
@@ -1929,17 +2665,17 @@ function ScoringDashboard({
                     </Flex>
                   ))}
                 </div>
-              </Card>
+              </div>
             ))}
           </Grid>
         </div>
       ) : (
         <div className="space-y-6">
           {/* Overall Rankings Chart */}
-          <Card>
+          <div className="card-professional p-6">
             <Title className="mb-6">Overall Rankings</Title>
             <BarList data={overallChartData} valueFormatter={(number: number) => number.toFixed(2)} />
-          </Card>
+          </div>
 
           {/* Category Charts */}
           <Grid numItems={1} numItemsMd={2} className="gap-6">
@@ -1949,10 +2685,10 @@ function ScoringDashboard({
                 value: t.categoryAverage
               }));
               return (
-                <Card key={category}>
+                <div key={category} className="card-professional p-6">
                   <Title className="mb-4">{category}</Title>
                   <BarList data={data} valueFormatter={(number: number) => number.toFixed(2)} color="indigo" />
-                </Card>
+                </div>
               );
             })}
           </Grid>
@@ -1986,6 +2722,7 @@ function AddTeamModal({
     description: "",
     members: "",
     projectUrl: "",
+    devpostUrl: "",
     courseCode: "",
   });
 
@@ -1996,6 +2733,7 @@ function AddTeamModal({
         description: editingTeam.description || "",
         members: editingTeam.members?.join(", ") || "",
         projectUrl: editingTeam.githubUrl || "",
+        devpostUrl: editingTeam.devpostUrl || "",
         courseCode: editingTeam.courseCode || "",
       });
     } else {
@@ -2004,6 +2742,7 @@ function AddTeamModal({
         description: "",
         members: "",
         projectUrl: "",
+        devpostUrl: "",
         courseCode: "",
       });
     }
@@ -2040,6 +2779,15 @@ function AddTeamModal({
         setSubmitting(false);
         return;
       }
+      if (
+        !isDemoDay &&
+        formData.devpostUrl &&
+        !formData.devpostUrl.startsWith("https://")
+      ) {
+        toast.error("Devpost URL must start with https://");
+        setSubmitting(false);
+        return;
+      }
 
       if (editingTeam && onSubmitEdit) {
         await onSubmitEdit({
@@ -2049,7 +2797,10 @@ function AddTeamModal({
           members,
           ...(isDemoDay
             ? { courseCode: formData.courseCode || undefined }
-            : { projectUrl: formData.projectUrl || undefined }),
+            : {
+              projectUrl: formData.projectUrl || undefined,
+              devpostUrl: formData.devpostUrl || undefined,
+            }),
         });
         toast.success("Team updated successfully!");
       } else {
@@ -2060,7 +2811,10 @@ function AddTeamModal({
           members,
           ...(isDemoDay
             ? { courseCode: formData.courseCode || undefined }
-            : { projectUrl: formData.projectUrl || undefined }),
+            : {
+              projectUrl: formData.projectUrl || undefined,
+              devpostUrl: formData.devpostUrl || undefined,
+            }),
         });
         toast.success("Team added successfully!");
       }
@@ -2121,13 +2875,23 @@ function AddTeamModal({
               </Select>
             </div>
           ) : (
-            <div>
-              <Text className="mb-1">Project URL</Text>
-              <TextInput
-                value={formData.projectUrl}
-                onValueChange={(val) => setFormData({ ...formData, projectUrl: val })}
-                placeholder="https://github.com/..."
-              />
+            <div className="space-y-3">
+              <div>
+                <Text className="mb-1">Project URL</Text>
+                <TextInput
+                  value={formData.projectUrl}
+                  onValueChange={(val) => setFormData({ ...formData, projectUrl: val })}
+                  placeholder="https://github.com/..."
+                />
+              </div>
+              <div>
+                <Text className="mb-1">Devpost URL (optional)</Text>
+                <TextInput
+                  value={formData.devpostUrl}
+                  onValueChange={(val) => setFormData({ ...formData, devpostUrl: val })}
+                  placeholder="https://devpost.com/software/..."
+                />
+              </div>
             </div>
           )}
 
@@ -2145,43 +2909,126 @@ function AddTeamModal({
   );
 }
 
-function SelectWinnersModal({
+function PrizeWinnersWizardModal({
   eventId,
-  teams,
-  categories,
+  deliberationData,
+  existingWinners,
   onClose,
   onSubmit,
 }: {
   eventId: Id<"events">;
-  teams: Array<any>;
-  categories: string[];
+  deliberationData: any;
+  existingWinners: any[];
   onClose: () => void;
   onSubmit: any;
 }) {
+  const prizes = deliberationData?.prizes || [];
+  const [activePrizeIndex, setActivePrizeIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [overallWinner, setOverallWinner] = useState<string>("");
-  const [categoryWinners, setCategoryWinners] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
+  const [trackFilter, setTrackFilter] = useState("all");
+  const [minScore, setMinScore] = useState("");
+  const [selectedByPrize, setSelectedByPrize] = useState<Record<string, string>>(
+    {}
+  );
+  const [notesByPrize, setNotesByPrize] = useState<Record<string, string>>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!overallWinner) {
-      toast.error("Please select an overall winner");
-      return;
+  useEffect(() => {
+    if (!existingWinners || existingWinners.length === 0) return;
+    const selected: Record<string, string> = {};
+    const notes: Record<string, string> = {};
+    existingWinners.forEach((winner) => {
+      selected[String(winner.prizeId)] = String(winner.teamId);
+      notes[String(winner.prizeId)] = winner.notes || "";
+    });
+    setSelectedByPrize(selected);
+    setNotesByPrize(notes);
+  }, [existingWinners]);
+
+  useEffect(() => {
+    if (activePrizeIndex < prizes.length) return;
+    setActivePrizeIndex(Math.max(0, prizes.length - 1));
+  }, [activePrizeIndex, prizes.length]);
+
+  const activePrize = prizes[activePrizeIndex];
+  const activePrizeId = String(activePrize?.prize?._id || "");
+  const selectedWinnerId = selectedByPrize[activePrizeId] || "";
+
+  const availableTracks = useMemo(() => {
+    if (!activePrize?.candidates) return [];
+    return Array.from(
+      new Set(
+        activePrize.candidates
+          .map((candidate: any) => candidate.track)
+          .filter(Boolean)
+      )
+    ).sort() as string[];
+  }, [activePrize]);
+
+  useEffect(() => {
+    setTrackFilter("all");
+    setSearch("");
+    setMinScore("");
+  }, [activePrizeId]);
+
+  const filteredCandidates = useMemo(() => {
+    if (!activePrize?.candidates) return [];
+    const threshold = Number(minScore);
+    const hasThreshold = Number.isFinite(threshold) && minScore !== "";
+
+    return [...activePrize.candidates]
+      .filter((candidate: any) => {
+        const nameMatch =
+          candidate.teamName.toLowerCase().includes(search.toLowerCase()) ||
+          (candidate.track || "").toLowerCase().includes(search.toLowerCase());
+        if (!nameMatch) return false;
+        if (trackFilter !== "all" && candidate.track !== trackFilter) return false;
+        if (hasThreshold && candidate.averageScore < threshold) return false;
+        return true;
+      })
+      .sort((a: any, b: any) => b.averageScore - a.averageScore);
+  }, [activePrize, minScore, search, trackFilter]);
+
+  const completedPrizeCount = Object.keys(selectedByPrize).filter(
+    (prizeId) => !!selectedByPrize[prizeId]
+  ).length;
+
+  const handleConfirm = async () => {
+    const missingPrizeNames = prizes
+      .filter((entry: any) => !selectedByPrize[String(entry.prize._id)])
+      .map((entry: any) => entry.prize.name);
+
+    if (missingPrizeNames.length > 0) {
+      const proceed = window.confirm(
+        `You still have ${missingPrizeNames.length} prize(s) without winners. Continue anyway?`
+      );
+      if (!proceed) return;
     }
+
+    const winnersPayload = prizes
+      .map((entry: any) => {
+        const prizeId = String(entry.prize._id);
+        const selectedTeamId = selectedByPrize[prizeId];
+        if (!selectedTeamId) return null;
+        return {
+          prizeId: entry.prize._id as Id<"prizes">,
+          teamId: selectedTeamId as Id<"teams">,
+          placement: 1,
+          notes: notesByPrize[prizeId]?.trim() || undefined,
+        };
+      })
+      .filter(Boolean);
 
     setSubmitting(true);
     try {
       await onSubmit({
         eventId,
-        overallWinner: overallWinner as Id<"teams">,
-        categoryWinners: Object.entries(categoryWinners)
-          .filter(([_, teamId]) => teamId)
-          .map(([category, teamId]) => ({ category, teamId: teamId as Id<"teams"> })),
+        winners: winnersPayload,
       });
-      toast.success("Winners selected successfully!");
+      toast.success("Prize winners saved");
       onClose();
-    } catch (error) {
-      toast.error("Failed to select winners");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to save prize winners");
     } finally {
       setSubmitting(false);
     }
@@ -2189,70 +3036,244 @@ function SelectWinnersModal({
 
   return (
     <Dialog open={true} onClose={onClose} static={true}>
-      <DialogPanel className="max-w-2xl">
-        <Flex alignItems="center" className="mb-4 gap-2">
-          <Icon icon={TrophyIcon} size="lg" color="yellow" />
-          <div>
-            <Title>Select Winners</Title>
-            <Text>Choose the overall winner and category winners</Text>
-          </div>
-        </Flex>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <Card className="bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
-            <Flex justifyContent="start" className="gap-2 mb-2">
-              <Text className="text-xl">🏆</Text>
-              <Title>Overall Winner</Title>
-            </Flex>
-            <Select
-              value={overallWinner}
-              onValueChange={setOverallWinner}
-              placeholder="Select a team..."
-            >
-              {teams.map((team) => (
-                <SelectItem key={team._id} value={team._id}>
-                  {team.name}
-                </SelectItem>
-              ))}
-            </Select>
-          </Card>
-
-          <div>
-            <Title className="mb-4">Category Winners</Title>
-            <Grid numItems={1} numItemsMd={2} className="gap-4">
-              {categories.map((category) => (
-                <Card key={category} className="p-4">
-                  <Text className="font-medium mb-2">{category}</Text>
-                  <Select
-                    value={categoryWinners[category] || ""}
-                    onValueChange={(val) =>
-                      setCategoryWinners({
-                        ...categoryWinners,
-                        [category]: val
-                      })
-                    }
-                    placeholder="Select a team..."
-                  >
-                    {teams.map((team) => (
-                      <SelectItem key={team._id} value={team._id}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </Select>
-                </Card>
-              ))}
-            </Grid>
-          </div>
-
-          <Flex className="gap-2 justify-end mt-6">
-            <Button variant="secondary" onClick={onClose} type="button">
-              Cancel
-            </Button>
-            <Button loading={submitting} type="submit">
-              Confirm Winners
-            </Button>
+      <DialogPanel className="max-w-6xl w-full max-h-[90vh] overflow-auto p-0">
+        <div className="sticky top-0 z-10 bg-tremor-background border-b border-tremor-border p-5">
+          <Flex justifyContent="between" alignItems="start">
+            <div>
+              <Title>Prize Winner Wizard</Title>
+              <Text>
+                Deliberate prize-by-prize with score insights and project links.
+              </Text>
+            </div>
+            <Badge color="teal">
+              {completedPrizeCount}/{prizes.length} assigned
+            </Badge>
           </Flex>
-        </form>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-0 min-h-[70vh]">
+          <div className="border-r border-tremor-border bg-tremor-background-muted p-4 space-y-2">
+            {prizes.map((entry: any, index: number) => {
+              const prizeId = String(entry.prize._id);
+              const isActive = index === activePrizeIndex;
+              const hasWinner = !!selectedByPrize[prizeId];
+              return (
+                <button
+                  key={prizeId}
+                  type="button"
+                  onClick={() => setActivePrizeIndex(index)}
+                  className={`w-full rounded-lg border px-3 py-3 text-left transition-colors ${isActive
+                    ? "border-teal-500 bg-teal-500/10"
+                    : "border-tremor-border bg-tremor-background hover:bg-tremor-background-subtle"
+                    }`}
+                >
+                  <Text className="font-medium">{entry.prize.name}</Text>
+                  <Text className="text-xs mt-1">
+                    {entry.submissionCount} submission{entry.submissionCount === 1 ? "" : "s"}
+                  </Text>
+                  <Text className={`text-xs mt-1 ${hasWinner ? "text-emerald-600" : "text-amber-600"}`}>
+                    {hasWinner ? "Winner selected" : "Pending"}
+                  </Text>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="p-5 space-y-5">
+            {!activePrize ? (
+              <div className="card-professional p-8 text-center">
+                <Text>No prizes configured yet.</Text>
+              </div>
+            ) : (
+              <>
+                <div className="card-professional p-5">
+                  <Flex justifyContent="between" alignItems="start">
+                    <div>
+                      <Title>{activePrize.prize.name}</Title>
+                      <Text className="mt-1">
+                        {activePrize.prize.description || "No description provided."}
+                      </Text>
+                      <Text className="text-xs mt-2">
+                        Type: {PRIZE_TYPE_LABELS[activePrize.prize.type as PrizeType]}
+                        {activePrize.prize.track ? ` · Track: ${activePrize.prize.track}` : ""}
+                        {activePrize.prize.sponsorName
+                          ? ` · Sponsor: ${activePrize.prize.sponsorName}`
+                          : ""}
+                      </Text>
+                    </div>
+                    <Badge color="blue">
+                      {activePrize.submissionCount} candidates
+                    </Badge>
+                  </Flex>
+                </div>
+
+                <div className="card-professional p-5 space-y-4">
+                  <Grid numItems={1} numItemsMd={3} className="gap-3">
+                    <TextInput
+                      value={search}
+                      onValueChange={setSearch}
+                      placeholder="Search by team or track..."
+                    />
+                    <Select
+                      value={trackFilter}
+                      onValueChange={setTrackFilter}
+                      placeholder="Filter by track"
+                    >
+                      <SelectItem value="all">All tracks</SelectItem>
+                      {availableTracks.map((track: string) => (
+                        <SelectItem key={track} value={track}>
+                          {track}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                    <TextInput
+                      value={minScore}
+                      onValueChange={setMinScore}
+                      placeholder="Minimum avg score (optional)"
+                    />
+                  </Grid>
+
+                  <div className="rounded border border-tremor-border overflow-hidden">
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableHeaderCell>Team</TableHeaderCell>
+                          <TableHeaderCell>Track</TableHeaderCell>
+                          <TableHeaderCell>Avg Score</TableHeaderCell>
+                          <TableHeaderCell>Judge Count</TableHeaderCell>
+                          <TableHeaderCell>Links</TableHeaderCell>
+                          <TableHeaderCell>Winner</TableHeaderCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {filteredCandidates.map((candidate: any) => {
+                          const isSelected =
+                            selectedWinnerId &&
+                            String(selectedWinnerId) === String(candidate.teamId);
+                          return (
+                            <TableRow key={candidate.teamId} className={isSelected ? "bg-emerald-500/5" : ""}>
+                              <TableCell>
+                                <Text className="font-semibold">{candidate.teamName}</Text>
+                              </TableCell>
+                              <TableCell>
+                                <Text>{candidate.track || "-"}</Text>
+                              </TableCell>
+                              <TableCell>
+                                <Text className="font-mono">
+                                  {Number(candidate.averageScore || 0).toFixed(2)}
+                                </Text>
+                              </TableCell>
+                              <TableCell>
+                                <Text>{candidate.judgeCount}</Text>
+                              </TableCell>
+                              <TableCell>
+                                <Flex className="gap-2">
+                                  {candidate.githubUrl ? (
+                                    <a
+                                      href={candidate.githubUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-xs text-blue-600 hover:underline"
+                                    >
+                                      GitHub
+                                    </a>
+                                  ) : (
+                                    <Text className="text-xs text-tremor-content-subtle">GitHub -</Text>
+                                  )}
+                                  {candidate.devpostUrl ? (
+                                    <a
+                                      href={candidate.devpostUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-xs text-teal-600 hover:underline"
+                                    >
+                                      Devpost
+                                    </a>
+                                  ) : (
+                                    <Text className="text-xs text-tremor-content-subtle">Devpost -</Text>
+                                  )}
+                                </Flex>
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  type="button"
+                                  size="xs"
+                                  variant={isSelected ? "primary" : "secondary"}
+                                  color={isSelected ? "emerald" : "gray"}
+                                  onClick={() =>
+                                    setSelectedByPrize((prev) => ({
+                                      ...prev,
+                                      [activePrizeId]: String(candidate.teamId),
+                                    }))
+                                  }
+                                >
+                                  {isSelected ? "Selected" : "Choose"}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {filteredCandidates.length === 0 && (
+                    <Text className="text-sm text-tremor-content">
+                      No teams match your current filters.
+                    </Text>
+                  )}
+                </div>
+
+                <div className="card-professional p-4">
+                  <Text className="font-medium mb-2">Winner Notes (optional)</Text>
+                  <Textarea
+                    value={notesByPrize[activePrizeId] || ""}
+                    onValueChange={(value) =>
+                      setNotesByPrize((prev) => ({
+                        ...prev,
+                        [activePrizeId]: value,
+                      }))
+                    }
+                    rows={2}
+                    placeholder="Reasoning, sponsor context, deliberation notes..."
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 z-10 bg-tremor-background border-t border-tremor-border p-4">
+          <Flex justifyContent="between" className="gap-3">
+            <Flex className="gap-2">
+              <Button
+                variant="secondary"
+                disabled={activePrizeIndex === 0}
+                onClick={() => setActivePrizeIndex((value) => Math.max(0, value - 1))}
+              >
+                Previous Prize
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={activePrizeIndex >= prizes.length - 1}
+                onClick={() =>
+                  setActivePrizeIndex((value) =>
+                    Math.min(prizes.length - 1, value + 1)
+                  )
+                }
+              >
+                Next Prize
+              </Button>
+            </Flex>
+            <Flex className="gap-2">
+              <Button variant="secondary" onClick={onClose}>
+                Close
+              </Button>
+              <Button loading={submitting} onClick={handleConfirm} color="emerald">
+                Save Winners
+              </Button>
+            </Flex>
+          </Flex>
+        </div>
       </DialogPanel>
     </Dialog>
   );

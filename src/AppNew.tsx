@@ -119,15 +119,15 @@ function Layout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background bg-mesh">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 glass border-b border-border/50">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex justify-between items-center">
             <Link
               to="/"
               onClick={closeMobileMenu}
-              className="text-xl font-logo logo-color hover:text-primary dark:hover:text-primary/80 transition-colors"
+              className="text-xl font-logo logo-color hover:text-primary transition-colors"
             >
               HackJudge
             </Link>

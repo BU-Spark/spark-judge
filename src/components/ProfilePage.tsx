@@ -64,7 +64,7 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
               return (
                 <div
                   key={event._id}
-                  className="glass flex items-center justify-between p-4 glow-hover border-border/50"
+                  className="card-professional flex items-center justify-between p-4 glow-hover border-border/50"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
@@ -113,7 +113,7 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
                 </div>
                 <button
                   onClick={() => onSelectEvent(event._id)}
-                  className="btn-ghost text-sm hover:bg-primary/10 hover:text-primary rounded-xl"
+                  className="btn-ghost text-sm hover:bg-teal-500/10 hover:text-primary rounded-xl"
                 >
                   View Details
                 </button>
@@ -130,7 +130,7 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
             onClick={() => setExpandedPastEvents(!expandedPastEvents)}
             className="flex items-center gap-2 mb-4 text-lg font-heading font-semibold hover:text-primary transition-colors group"
           >
-            <div className="p-1 px-2 rounded-lg bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+            <div className="p-1 px-2 rounded-lg bg-muted group-hover:bg-teal-500/10 group-hover:text-primary transition-colors">
               <svg
                 className={`w-4 h-4 transition-transform ${expandedPastEvents ? "rotate-90" : ""}`}
                 fill="none"
@@ -170,7 +170,7 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
                     </div>
                     <button
                       onClick={() => onSelectEvent(event._id)}
-                      className="btn-ghost text-sm hover:bg-primary/10 rounded-xl"
+                      className="btn-ghost text-sm hover:bg-teal-500/10 rounded-xl"
                     >
                       View Results
                     </button>
@@ -184,7 +184,7 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
 
       {/* No events message */}
       {activeEvents.length === 0 && upcomingEvents.length === 0 && pastEvents.length === 0 && (
-        <div className="glass text-center py-16 border-border/50">
+        <div className="card-professional text-center py-16 border-border/50">
           <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -194,7 +194,7 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
           <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
             You haven't joined any events yet. Check out the featured events to get started!
           </p>
-          <button onClick={onBackToLanding} className="btn-primary shadow-xl shadow-primary/20">
+          <button onClick={onBackToLanding} className="btn-primary shadow-xl shadow-teal-500/20">
             Browse Featured Events
           </button>
         </div>

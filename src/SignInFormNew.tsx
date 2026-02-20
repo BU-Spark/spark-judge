@@ -13,7 +13,7 @@ export function SignInForm() {
     <div className="space-y-6">
       <button
         onClick={handleGoogleSignIn}
-        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white/5 glass-hover text-foreground border border-border/50 rounded-2xl font-semibold transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 active:scale-[0.98] group"
+        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-foreground border border-border/50 rounded-2xl font-semibold transition-all duration-300 hover:shadow-md active:scale-[0.98] group"
       >
         <div className="bg-white p-2 rounded-lg group-hover:scale-110 transition-transform duration-300 shadow-sm">
           <svg className="w-5 h-5" viewBox="0 0 24 24">

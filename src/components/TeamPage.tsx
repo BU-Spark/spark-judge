@@ -93,7 +93,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
       </Link>
 
       {/* Main Card */}
-      <div className="glass overflow-hidden shadow-2xl">
+      <div className="card-professional overflow-hidden shadow-2xl">
         {/* Header with appreciation count */}
         <div className="bg-gradient-to-r from-pink-500 to-rose-500 px-6 py-8 text-white">
           <div className="flex items-start justify-between">

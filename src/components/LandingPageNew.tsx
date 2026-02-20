@@ -120,10 +120,17 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
       return;
     }
 
+    const derivedTracks =
+      event.tracks && event.tracks.length > 0
+        ? event.tracks
+        : (event.categories || []).map((category: any) =>
+          typeof category === "string" ? category : category.name
+        );
+
     setTeamSubmissionModal({
       isOpen: true,
       eventId: event._id,
-      tracks: event.tracks || event.categories, // Use tracks if defined, otherwise categories
+      tracks: derivedTracks,
       courseCodes: event.courseCodes || [],
       eventMode: event.mode || "hackathon",
       existingTeam: null, // Modal will fetch team itself
@@ -191,7 +198,7 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowSignIn(false)}
           />
-          <div className="relative glass rounded-2xl p-8 max-w-md w-full shadow-2xl slide-up">
+          <div className="relative card-professional rounded-2xl p-8 max-w-md w-full shadow-2xl slide-up">
             <button
               onClick={() => setShowSignIn(false)}
               className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
@@ -610,7 +617,7 @@ function EventRow({
           </Title>
           <Flex justifyContent="start" className="gap-4">
             <Text color="gray" className="text-xs">{event.teamCount} {isDemoDay ? "projects" : "teams"}</Text>
-            {isPastSection && event.overallWinner && (
+            {isPastSection && event.resultsReleased && (
               <Badge color="amber" icon={CheckCircleIcon}>
                 Winner announced
               </Badge>

@@ -7,16 +7,127 @@ import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
 import { DEFAULT_DEMO_DAY_COURSES } from "../lib/constants";
 import { formatDateTime } from "../lib/utils";
+import {
+  Card,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+  Text,
+  Title,
+  Subtitle,
+  Badge,
+  Button,
+  Flex,
+  Icon,
+  TextInput,
+  Textarea,
+  NumberInput,
+  TabGroup,
+  TabList,
+  Tab,
+  TabPanels,
+  TabPanel,
+  Grid,
+  Dialog,
+  DialogPanel,
+  Select,
+  SelectItem,
+  BarList,
+} from "@tremor/react";
+import {
+  PlusIcon,
+  ArrowLeftIcon,
+  TrashIcon,
+  DocumentDuplicateIcon,
+  Cog6ToothIcon,
+  UserGroupIcon,
+  CalendarIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  HeartIcon,
+  TrophyIcon,
+  PencilSquareIcon,
+  EyeSlashIcon,
+  CheckCircleIcon,
+} from "@heroicons/react/24/outline";
 
 type SortField = "name" | "status" | "teamCount" | "startDate";
 type SortDirection = "asc" | "desc";
 type SortConfig = { field: SortField; direction: SortDirection };
+type PrizeType = "general" | "track" | "sponsor" | "track_sponsor";
+type PrizeScoreBasis = "overall" | "categories" | "none";
+type PrizeDraft = {
+  prizeId?: Id<"prizes">;
+  name: string;
+  description: string;
+  type: PrizeType;
+  track: string;
+  sponsorName: string;
+  scoreBasis: PrizeScoreBasis;
+  scoreCategoryNames: string[];
+  isActive: boolean;
+  sortOrder: number;
+};
+
+const PRIZE_TYPE_LABELS: Record<PrizeType, string> = {
+  general: "General",
+  track: "Track",
+  sponsor: "Sponsor",
+  track_sponsor: "Track + Sponsor",
+};
+
+const PRIZE_SCORE_LABELS: Record<PrizeScoreBasis, string> = {
+  overall: "Overall score",
+  categories: "Specific categories",
+  none: "No score hint",
+};
 
 const STATUS_SORT_ORDER: Record<"active" | "upcoming" | "past", number> = {
   active: 0,
   upcoming: 1,
   past: 2,
 };
+
+function createPrizeDraft(
+  sortOrder: number,
+  overrides?: Partial<PrizeDraft>
+): PrizeDraft {
+  return {
+    name: "",
+    description: "",
+    type: "general",
+    track: "",
+    sponsorName: "",
+    scoreBasis: "none",
+    scoreCategoryNames: [],
+    isActive: true,
+    sortOrder,
+    ...overrides,
+  };
+}
+
+function normalizePrizeDraftsForSave(prizes: PrizeDraft[]) {
+  return prizes
+    .map((prize, index) => ({
+      prizeId: prize.prizeId,
+      name: prize.name.trim(),
+      description: prize.description.trim() || undefined,
+      type: prize.type,
+      track: prize.track.trim() || undefined,
+      sponsorName: prize.sponsorName.trim() || undefined,
+      scoreBasis: prize.scoreBasis,
+      scoreCategoryNames:
+        prize.scoreBasis === "categories"
+          ? prize.scoreCategoryNames.filter(Boolean)
+          : undefined,
+      isActive: prize.isActive,
+      sortOrder: prize.sortOrder ?? index,
+    }))
+    .filter((prize) => prize.name.length > 0);
+}
 
 function formatDateTimeInput(timestamp: number) {
   const date = new Date(timestamp);
@@ -71,33 +182,401 @@ function SortButton({
   onSort: (config: SortConfig) => void;
 }) {
   const isActive = sortConfig.field === field;
-  
+
   return (
-    <button
+    <Flex
+      justifyContent="start"
+      className="cursor-pointer group gap-1"
       onClick={() => onSort({
         field,
         direction: isActive && sortConfig.direction === "asc" ? "desc" : "asc"
       })}
-      className="flex items-center gap-1 hover:text-foreground transition-colors group"
     >
-      {label}
-      <span className="flex flex-col ml-1">
-        <svg 
-          className={`w-2 h-2 -mb-0.5 ${isActive && sortConfig.direction === "asc" ? "text-primary" : "text-muted-foreground/30 group-hover:text-muted-foreground"}`} 
-          fill="currentColor" 
-          viewBox="0 0 24 24"
+      <Text className={`font-semibold uppercase text-xs ${isActive ? "text-tremor-content-emphasis" : "text-tremor-content"}`}>
+        {label}
+      </Text>
+      <Flex flexDirection="col" className="w-auto gap-0">
+        <Icon
+          icon={ChevronUpIcon}
+          size="xs"
+          variant="simple"
+          color={isActive && sortConfig.direction === "asc" ? "teal" : "gray"}
+          className="-mb-1.5"
+        />
+        <Icon
+          icon={ChevronDownIcon}
+          size="xs"
+          variant="simple"
+          color={isActive && sortConfig.direction === "desc" ? "teal" : "gray"}
+        />
+      </Flex>
+    </Flex>
+  );
+}
+
+function PrizeCatalogEditor({
+  prizes,
+  setPrizes,
+  categories,
+  tracks,
+  disabled = false,
+}: {
+  prizes: PrizeDraft[];
+  setPrizes: Dispatch<SetStateAction<PrizeDraft[]>>;
+  categories: string[];
+  tracks: string[];
+  disabled?: boolean;
+}) {
+  const [selectedPrizeIndex, setSelectedPrizeIndex] = useState(0);
+
+  useEffect(() => {
+    if (prizes.length === 0) {
+      setSelectedPrizeIndex(0);
+      return;
+    }
+    if (selectedPrizeIndex > prizes.length - 1) {
+      setSelectedPrizeIndex(prizes.length - 1);
+    }
+  }, [prizes.length, selectedPrizeIndex]);
+
+  const selectedPrize = prizes[selectedPrizeIndex];
+
+  const addPrize = (overrides: Partial<PrizeDraft>) => {
+    const nextIndex = prizes.length;
+    setPrizes((prev) => [
+      ...prev,
+      createPrizeDraft(prev.length, overrides),
+    ]);
+    setSelectedPrizeIndex(nextIndex);
+  };
+
+  const updatePrize = (
+    index: number,
+    updater: (prize: PrizeDraft) => PrizeDraft
+  ) => {
+    setPrizes((prev) =>
+      prev.map((item, i) => (i === index ? updater(item) : item))
+    );
+  };
+
+  const removePrize = (index: number) => {
+    setPrizes((prev) =>
+      prev
+        .filter((_, i) => i !== index)
+        .map((item, i) => ({ ...item, sortOrder: i }))
+    );
+    setSelectedPrizeIndex((prev) => {
+      if (index < prev) return prev - 1;
+      return Math.max(0, prev - (index === prev ? 1 : 0));
+    });
+  };
+
+  const movePrize = (fromIndex: number, toIndex: number) => {
+    setPrizes((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next.map((item, i) => ({ ...item, sortOrder: i }));
+    });
+    setSelectedPrizeIndex(toIndex);
+  };
+
+  const typeBadgeColors: Record<
+    PrizeType,
+    "blue" | "indigo" | "amber" | "emerald"
+  > = {
+    general: "blue",
+    track: "emerald",
+    sponsor: "amber",
+    track_sponsor: "indigo",
+  };
+
+  return (
+    <div className="space-y-4">
+      <Flex justifyContent="between" alignItems="center" className="gap-3">
+        <Text className="text-sm text-foreground/75">
+          Add prizes and set each prize type in the detail panel.
+        </Text>
+        <Button
+          type="button"
+          variant="secondary"
+          color="gray"
+          icon={PlusIcon}
+          onClick={() =>
+            addPrize({
+              type: "general",
+              name: `Prize ${prizes.length + 1}`,
+              scoreBasis: "overall",
+            })
+          }
+          disabled={disabled}
         >
-          <path d="M12 4l-8 8h16l-8-8z" />
-        </svg>
-        <svg 
-          className={`w-2 h-2 ${isActive && sortConfig.direction === "desc" ? "text-primary" : "text-muted-foreground/30 group-hover:text-muted-foreground"}`} 
-          fill="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path d="M12 20l8-8H4l8 8z" />
-        </svg>
-      </span>
-    </button>
+          Add Prize
+        </Button>
+      </Flex>
+
+      {prizes.length === 0 ? (
+        <Card className="p-6 text-center border-border/70">
+          <Text>No prizes added yet. Add at least one prize for hackathon submissions.</Text>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-4">
+          <Card className="p-0 overflow-hidden border-border/70 bg-card/95">
+            <div className="border-b border-border/70 px-4 py-3">
+              <Text className="font-medium">Prize List</Text>
+            </div>
+            <div className="max-h-[40rem] overflow-auto divide-y divide-border/60">
+              {prizes.map((prize, index) => (
+                <button
+                  key={`${prize.prizeId || "new"}-${index}`}
+                  type="button"
+                  onClick={() => setSelectedPrizeIndex(index)}
+                  className={`w-full text-left px-4 py-3 transition-colors ${selectedPrizeIndex === index
+                    ? "bg-muted ring-1 ring-teal-500/20"
+                    : "hover:bg-muted/60"
+                    }`}
+                >
+                  <Flex justifyContent="between" alignItems="start" className="gap-2">
+                    <div className="min-w-0">
+                      <Text className="font-medium truncate">
+                        {index + 1}. {prize.name.trim() || `Untitled Prize ${index + 1}`}
+                      </Text>
+                      <Text className="text-xs mt-1 text-foreground/70">
+                        {prize.type === "track" || prize.type === "track_sponsor"
+                          ? prize.track || "No track"
+                          : prize.type === "sponsor"
+                            ? prize.sponsorName || "No sponsor"
+                            : "Open to all teams"}
+                      </Text>
+                    </div>
+                    <Badge color={typeBadgeColors[prize.type]}>
+                      {PRIZE_TYPE_LABELS[prize.type]}
+                    </Badge>
+                  </Flex>
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          {selectedPrize && (
+            <Card className="p-5 border-border/70 bg-card/95">
+              <Flex justifyContent="between" alignItems="start" className="mb-4">
+                <div>
+                  <Title className="text-base">
+                    {selectedPrize.name.trim() || `Prize ${selectedPrizeIndex + 1}`}
+                  </Title>
+                  <Text className="text-xs text-foreground/70">
+                    Order #{selectedPrize.sortOrder + 1} · {PRIZE_TYPE_LABELS[selectedPrize.type]}
+                  </Text>
+                </div>
+                <Flex justifyContent="end" className="gap-2 w-auto">
+                  <Button
+                    type="button"
+                    icon={ChevronUpIcon}
+                    variant="light"
+                    color="gray"
+                    size="xs"
+                    onClick={() => movePrize(selectedPrizeIndex, selectedPrizeIndex - 1)}
+                    disabled={disabled || selectedPrizeIndex === 0}
+                    tooltip="Move up"
+                  />
+                  <Button
+                    type="button"
+                    icon={ChevronDownIcon}
+                    variant="light"
+                    color="gray"
+                    size="xs"
+                    onClick={() => movePrize(selectedPrizeIndex, selectedPrizeIndex + 1)}
+                    disabled={disabled || selectedPrizeIndex === prizes.length - 1}
+                    tooltip="Move down"
+                  />
+                  <Button
+                    type="button"
+                    icon={TrashIcon}
+                    variant="light"
+                    color="red"
+                    size="xs"
+                    onClick={() => removePrize(selectedPrizeIndex)}
+                    disabled={disabled}
+                    tooltip="Delete prize"
+                  />
+                </Flex>
+              </Flex>
+
+              <Grid numItems={1} numItemsMd={2} className="gap-4">
+                <div className="space-y-1">
+                  <Text className="font-medium">Prize Name</Text>
+                  <TextInput
+                    value={selectedPrize.name}
+                    onValueChange={(value) =>
+                      updatePrize(selectedPrizeIndex, (item) => ({ ...item, name: value }))
+                    }
+                    placeholder="Best AI Project"
+                    disabled={disabled}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Text className="font-medium">Prize Type</Text>
+                  <Select
+                    value={selectedPrize.type}
+                    onValueChange={(value) =>
+                      updatePrize(selectedPrizeIndex, (item) => ({
+                        ...item,
+                        type: value as PrizeType,
+                        track:
+                          value === "track" || value === "track_sponsor"
+                            ? item.track || tracks[0] || ""
+                            : "",
+                        sponsorName:
+                          value === "sponsor" || value === "track_sponsor"
+                            ? item.sponsorName || ""
+                            : "",
+                      }))
+                    }
+                    placeholder="Select prize type"
+                    disabled={disabled}
+                  >
+                    {(Object.keys(PRIZE_TYPE_LABELS) as PrizeType[]).map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {PRIZE_TYPE_LABELS[type]}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                </div>
+
+                {(selectedPrize.type === "track" || selectedPrize.type === "track_sponsor") && (
+                  <div className="space-y-1">
+                    <Text className="font-medium">Track</Text>
+                    <Select
+                      value={selectedPrize.track}
+                      onValueChange={(value) =>
+                        updatePrize(selectedPrizeIndex, (item) => ({ ...item, track: value }))
+                      }
+                      placeholder="Select track"
+                      disabled={disabled}
+                    >
+                      {tracks.map((track) => (
+                        <SelectItem key={track} value={track}>
+                          {track}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  </div>
+                )}
+
+                {(selectedPrize.type === "sponsor" || selectedPrize.type === "track_sponsor") && (
+                  <div className="space-y-1">
+                    <Text className="font-medium">Sponsor</Text>
+                    <TextInput
+                      value={selectedPrize.sponsorName}
+                      onValueChange={(value) =>
+                        updatePrize(selectedPrizeIndex, (item) => ({ ...item, sponsorName: value }))
+                      }
+                      placeholder="Acme Corp"
+                      disabled={disabled}
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <Text className="font-medium">Score Guidance</Text>
+                  <Select
+                    value={selectedPrize.scoreBasis}
+                    onValueChange={(value) =>
+                      updatePrize(selectedPrizeIndex, (item) => ({
+                        ...item,
+                        scoreBasis: value as PrizeScoreBasis,
+                        scoreCategoryNames:
+                          value === "categories" ? item.scoreCategoryNames : [],
+                      }))
+                    }
+                    placeholder="Select scoring guidance"
+                    disabled={disabled}
+                  >
+                    {(Object.keys(PRIZE_SCORE_LABELS) as PrizeScoreBasis[]).map((basis) => (
+                      <SelectItem key={basis} value={basis}>
+                        {PRIZE_SCORE_LABELS[basis]}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                </div>
+              </Grid>
+
+              <div className="mt-4 space-y-2">
+                <Text className="font-medium">Description (optional)</Text>
+                <Textarea
+                  value={selectedPrize.description}
+                  onValueChange={(value) =>
+                    updatePrize(selectedPrizeIndex, (item) => ({ ...item, description: value }))
+                  }
+                  rows={2}
+                  placeholder="What this prize recognizes and how to think about it."
+                  disabled={disabled}
+                />
+              </div>
+
+              {selectedPrize.scoreBasis === "categories" && (
+                <div className="mt-4 space-y-2">
+                  <Text className="font-medium">Use Category Scores As Signal</Text>
+                  <Grid numItems={1} numItemsMd={2} className="gap-2">
+                    {categories.map((category) => {
+                      const checked = selectedPrize.scoreCategoryNames.includes(category);
+                      return (
+                        <label
+                          key={category}
+                          className="flex items-center gap-2 rounded border border-border px-3 py-2"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) =>
+                              updatePrize(selectedPrizeIndex, (item) => {
+                                const nextSet = new Set(item.scoreCategoryNames);
+                                if (e.target.checked) nextSet.add(category);
+                                else nextSet.delete(category);
+                                return {
+                                  ...item,
+                                  scoreCategoryNames: Array.from(nextSet),
+                                };
+                              })
+                            }
+                            className="w-4 h-4 text-primary border-border rounded"
+                            disabled={disabled}
+                          />
+                          <Text>{category}</Text>
+                        </label>
+                      );
+                    })}
+                  </Grid>
+                </div>
+              )}
+
+              <Flex justifyContent="between" className="mt-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedPrize.isActive}
+                    onChange={(e) =>
+                      updatePrize(selectedPrizeIndex, (item) => ({
+                        ...item,
+                        isActive: e.target.checked,
+                      }))
+                    }
+                    className="w-4 h-4 text-primary border-border rounded"
+                    disabled={disabled}
+                  />
+                  <Text className="text-xs">Active</Text>
+                </label>
+                <Text className="text-xs text-muted-foreground">
+                  Team submissions are scoped by type/track.
+                </Text>
+              </Flex>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -124,39 +603,57 @@ export function AdminDashboard({ onBackToLanding }: { onBackToLanding: () => voi
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <button
-        onClick={onBackToLanding}
-        className="flex items-center gap-2 btn-ghost mb-6 fade-in"
+    <div className="min-h-screen pb-20">
+      <div
+        className={`mx-auto px-4 sm:px-6 lg:px-8 py-12 transition-all duration-500 ease-in-out ${isCreateOpen ? "max-w-[1800px]" : "max-w-7xl"
+          }`}
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        Back to Events
-      </button>
-
-      <div className="flex justify-between items-center mb-8 fade-in">
-        <div>
-          <h1 className="text-3xl font-heading font-bold text-foreground mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage your hackathon events and teams</p>
-        </div>
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="btn-primary flex items-center gap-2"
+        <Button
+          variant="light"
+          icon={ArrowLeftIcon}
+          onClick={onBackToLanding}
+          className="mb-8 hover:-translate-x-1 transition-transform"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Create Event
-        </button>
+          Back to Events
+        </Button>
+
+        <Flex justifyContent="between" alignItems="end" className="mb-10">
+          <div>
+            <h1 className="text-4xl font-heading font-bold mb-3 tracking-tight text-gradient-primary">
+              {isCreateOpen ? "Create Event" : "Admin Dashboard"}
+            </h1>
+            <Text className="text-lg text-muted-foreground max-w-2xl">
+              {isCreateOpen
+                ? "Configure your event schedule, prizes, and judging criteria in one workspace."
+                : "Manage and monitor your hackathon events and teams."}
+            </Text>
+          </div>
+          {isCreateOpen ? (
+            <Button
+              variant="secondary"
+              color="gray"
+              onClick={() => setIsCreateOpen(false)}
+              className="shadow-sm hover:shadow-md transition-all"
+            >
+              Back to Event List
+            </Button>
+          ) : (
+            <Button
+              icon={PlusIcon}
+              onClick={() => setIsCreateOpen(true)}
+              className="shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 transition-all hover:scale-105"
+            >
+              Create Event
+            </Button>
+          )}
+        </Flex>
+
+        {!isCreateOpen && <EventsList onSelectEvent={setSelectedEventId} />}
+        {isCreateOpen && <CreateEventWorkspace onClose={() => setIsCreateOpen(false)} />}
+        {selectedEventId && (
+          <EventManagementModal eventId={selectedEventId} onClose={() => setSelectedEventId(null)} />
+        )}
       </div>
-
-      <EventsList onSelectEvent={setSelectedEventId} />
-
-      {isCreateOpen && <CreateEventModal onClose={() => setIsCreateOpen(false)} />}
-      {selectedEventId && (
-        <EventManagementModal eventId={selectedEventId} onClose={() => setSelectedEventId(null)} />
-      )}
     </div>
   );
 }
@@ -189,10 +686,10 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
 
   const allEvents = [...events.active, ...events.upcoming, ...events.past];
 
-  const statusStyles: Record<"upcoming" | "active" | "past", string> = {
-    active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-    upcoming: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
-    past: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
+  const statusColors: Record<"upcoming" | "active" | "past", "blue" | "emerald" | "slate"> = {
+    active: "emerald",
+    upcoming: "blue", // Changed to blue for better visibility
+    past: "slate",    // Changed to slate to match theme
   };
 
   const handleRemoveEvent = async (eventId: Id<"events">, name: string) => {
@@ -235,156 +732,124 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
 
   if (sortedEvents.length === 0) {
     return (
-      <div className="card-static text-center py-12 fade-in">
-        <div className="text-6xl mb-4">📅</div>
-        <h3 className="text-xl font-heading font-semibold text-foreground mb-2">No Events Yet</h3>
-        <p className="text-muted-foreground">Create your first event to get started!</p>
+      <div className="card-professional p-12 text-center border-dashed border-2">
+        <div className="text-6xl mb-6">📅</div>
+        <Title className="mb-2 text-xl">No Events Yet</Title>
+        <Text className="text-muted-foreground">Create your first event to get started!</Text>
       </div>
     );
   }
 
   return (
-    <div className="card-static overflow-hidden fade-in p-0 bg-card shadow-sm border border-border rounded-lg">
-      <div className="overflow-x-auto">
-        <table className="min-w-full">
-          <thead className="bg-muted border-b border-border">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                <SortButton
-                  field="name"
-                  label="Event Name"
-                  sortConfig={sortConfig}
-                  onSort={setSortConfig}
-                />
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                <SortButton
-                  field="status"
-                  label="Status"
-                  sortConfig={sortConfig}
-                  onSort={setSortConfig}
-                />
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                <SortButton
-                  field="teamCount"
-                  label="Teams"
-                  sortConfig={sortConfig}
-                  onSort={setSortConfig}
-                />
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                <SortButton
-                  field="startDate"
-                  label="Date"
-                  sortConfig={sortConfig}
-                  onSort={setSortConfig}
-                />
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {sortedEvents.map((event, index) => (
-              <tr 
-                key={event._id}
-                onClick={() => onSelectEvent(event._id)}
-                className="transition-colors hover:bg-muted/50 cursor-pointer"
-              >
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground">{event.name}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`badge ${statusStyles[event.status as "upcoming" | "active" | "past"]}`}
-                  >
-                    {event.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    {event.teamCount}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {formatDateTime(event.startDate)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectEvent(event._id);
-                      }}
-                      className="inline-flex items-center justify-center p-2 rounded-md transition-colors text-primary hover:bg-teal-500/10"
-                      title="Manage event"
-                    >
-                      <span className="sr-only">Manage event</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.094c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.095c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.02-.398-1.11-.94l-.149-.894c-.071-.424-.383-.764-.781-.93-.397-.164-.853-.142-1.203.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.095c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDuplicateEvent(event._id, event.name);
-                      }}
-                      disabled={duplicatingEventId === event._id}
-                      className={`inline-flex items-center justify-center p-2 rounded-md transition-colors text-blue-500 hover:bg-blue-500/10 ${
-                        duplicatingEventId === event._id ? "opacity-60 cursor-not-allowed" : ""
-                      }`}
-                      title="Duplicate event"
-                    >
-                      <span className="sr-only">Duplicate event</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h6a2 2 0 002-2v-8a2 2 0 00-2-2h-6a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveEvent(event._id, event.name);
-                      }}
-                      disabled={removingEventId === event._id}
-                      className={`inline-flex items-center justify-center p-2 rounded-md transition-colors text-red-500 hover:bg-red-500/10 ${
-                        removingEventId === event._id ? "opacity-60 cursor-not-allowed" : ""
-                      }`}
-                      title="Remove event"
-                    >
-                      <span className="sr-only">Remove event</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="card-professional overflow-hidden ring-1 ring-white/5">
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableHeaderCell>
+              <SortButton
+                field="name"
+                label="Event Name"
+                sortConfig={sortConfig}
+                onSort={setSortConfig}
+              />
+            </TableHeaderCell>
+            <TableHeaderCell>
+              <SortButton
+                field="status"
+                label="Status"
+                sortConfig={sortConfig}
+                onSort={setSortConfig}
+              />
+            </TableHeaderCell>
+            <TableHeaderCell>
+              <SortButton
+                field="teamCount"
+                label="Teams"
+                sortConfig={sortConfig}
+                onSort={setSortConfig}
+              />
+            </TableHeaderCell>
+            <TableHeaderCell>
+              <SortButton
+                field="startDate"
+                label="Date"
+                sortConfig={sortConfig}
+                onSort={setSortConfig}
+              />
+            </TableHeaderCell>
+            <TableHeaderCell>
+              <Text className="text-xs font-semibold uppercase text-tremor-content">Actions</Text>
+            </TableHeaderCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {sortedEvents.map((event) => (
+            <TableRow
+              key={event._id}
+              onClick={() => onSelectEvent(event._id)}
+              className="hover:bg-tremor-background-muted cursor-pointer transition-colors"
+            >
+              <TableCell>
+                <Text className="font-medium text-tremor-content-emphasis">{event.name}</Text>
+              </TableCell>
+              <TableCell>
+                <Badge color={statusColors[event.status as "upcoming" | "active" | "past"]}>
+                  {event.status}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Flex justifyContent="start" className="gap-2">
+                  <Icon icon={UserGroupIcon} size="xs" color="gray" variant="simple" />
+                  <Text>{event.teamCount}</Text>
+                </Flex>
+              </TableCell>
+              <TableCell>
+                <Flex justifyContent="start" className="gap-2">
+                  <Icon icon={CalendarIcon} size="xs" color="gray" variant="simple" />
+                  <Text>{formatDateTime(event.startDate)}</Text>
+                </Flex>
+              </TableCell>
+              <TableCell>
+                <Flex justifyContent="start" className="gap-1" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    icon={Cog6ToothIcon}
+                    variant="light"
+                    size="xs"
+                    color="teal"
+                    onClick={() => onSelectEvent(event._id)}
+                    tooltip="Manage event"
+                  />
+                  <Button
+                    icon={DocumentDuplicateIcon}
+                    variant="light"
+                    size="xs"
+                    color="blue"
+                    loading={duplicatingEventId === event._id}
+                    onClick={() => handleDuplicateEvent(event._id, event.name)}
+                    tooltip="Duplicate event"
+                  />
+                  <Button
+                    icon={TrashIcon}
+                    variant="light"
+                    size="xs"
+                    color="red"
+                    loading={removingEventId === event._id}
+                    onClick={() => handleRemoveEvent(event._id, event.name)}
+                    tooltip="Remove event"
+                  />
+                </Flex>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
 
-function CreateEventModal({ onClose }: { onClose: () => void }) {
+function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
   const createEvent = useMutation(api.events.createEvent);
+  const saveEventPrizes = useMutation(api.prizes.saveEventPrizes);
   const [submitting, setSubmitting] = useState(false);
   const [useTracksAsAwards, setUseTracksAsAwards] = useState(true);
   const [categories, setCategories] = useState([
@@ -393,6 +858,13 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
     { name: "Design", weight: 1, optOutAllowed: false },
     { name: "Presentation", weight: 1, optOutAllowed: false },
     { name: "Impact", weight: 1, optOutAllowed: false },
+  ]);
+  const [prizes, setPrizes] = useState<PrizeDraft[]>([
+    createPrizeDraft(0, {
+      name: "Best Overall",
+      type: "general",
+      scoreBasis: "overall",
+    }),
   ]);
   const [courseCodes, setCourseCodes] = useState<string[]>([...DEFAULT_DEMO_DAY_COURSES]);
   const [newCourseCode, setNewCourseCode] = useState("");
@@ -439,16 +911,12 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
     [startTimestamp, endTimestamp]
   );
 
-  const statusBadgeClass = useMemo(() => {
+  const statusBadgeColor = useMemo(() => {
     switch (derivedStatus) {
-      case "active":
-        return "bg-emerald-500/15 text-emerald-500 border-emerald-500/30";
-      case "past":
-        return "bg-orange-500/15 text-orange-500 border-orange-500/30";
-      case "upcoming":
-        return "bg-blue-500/15 text-blue-500 border-blue-500/30";
-      default:
-        return "bg-muted text-muted-foreground border-border";
+      case "active": return "emerald";
+      case "past": return "orange";
+      case "upcoming": return "blue";
+      default: return "gray";
     }
   }, [derivedStatus]);
 
@@ -458,6 +926,26 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
     if (derivedStatus === "past") return "Past (already ended)";
     return "Upcoming (scheduled)";
   }, [derivedStatus]);
+
+  const derivedTracks = useMemo(() => {
+    if (useTracksAsAwards) {
+      return categories
+        .map((cat) => cat.name.trim())
+        .filter(Boolean);
+    }
+    return formData.tracks
+      .split(",")
+      .map((track) => track.trim())
+      .filter(Boolean);
+  }, [useTracksAsAwards, categories, formData.tracks]);
+
+  const derivedCategoryNames = useMemo(
+    () =>
+      categories
+        .map((cat) => cat.name.trim())
+        .filter(Boolean),
+    [categories]
+  );
 
   const handleAddCourseCode = () => {
     const code = newCourseCode.trim().toUpperCase();
@@ -504,14 +992,24 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
       return;
     }
 
+    const preparedPrizes =
+      formData.mode === "hackathon"
+        ? normalizePrizeDraftsForSave(prizes)
+        : [];
+    if (formData.mode === "hackathon" && preparedPrizes.length === 0) {
+      toast.error("Add at least one prize for hackathon events.");
+      setSubmitting(false);
+      return;
+    }
+
     const computedStatus = derivedStatus ?? "upcoming";
 
     try {
-      const tracks = useTracksAsAwards 
-        ? undefined 
+      const tracks = useTracksAsAwards
+        ? undefined
         : formData.tracks.split(",").map((t) => t.trim()).filter(Boolean);
-      
-      await createEvent({
+
+      const eventId = await createEvent({
         name: formData.name,
         description: formData.description,
         status: computedStatus,
@@ -524,371 +1022,360 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
         mode: formData.mode,
         courseCodes: formData.mode === "demo_day" ? courseCodes : undefined,
       });
+
+      if (formData.mode === "hackathon") {
+        try {
+          await saveEventPrizes({
+            eventId,
+            prizes: preparedPrizes,
+          });
+        } catch (error: any) {
+          toast.error(
+            error?.message ||
+            "Event created, but saving prizes failed. Re-open the event to configure prizes."
+          );
+          onClose();
+          return;
+        }
+      }
       toast.success("Event created successfully!");
       onClose();
-    } catch (error) {
-      toast.error("Failed to create event");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to create event");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative bg-background rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-auto border border-border slide-up">
-        <div className="sticky top-0 bg-background border-b border-border p-6 z-10">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          <h2 className="text-3xl font-heading font-bold text-foreground">Create New Event</h2>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Event Name</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="input"
-              placeholder="HackBU Fall 2024"
-            />
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+        <div className="xl:col-span-4 space-y-6">
+          <div className="card-professional p-6 space-y-6">
+            <h3 className="text-xl font-heading font-semibold text-gradient-primary">Event Basics</h3>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Description</label>
-            <textarea
-              required
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              className="input h-auto resize-none"
-              placeholder="Boston University's premier 24-hour hackathon..."
-            />
-          </div>
+            <div>
+              <Text className="font-medium mb-2">Event Name</Text>
+              <TextInput
+                required
+                value={formData.name}
+                onValueChange={(value) => setFormData({ ...formData, name: value })}
+                placeholder="HackBU Fall 2024"
+              />
+            </div>
 
-          <div>
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div aria-hidden />
-              {statusBadgeLabel && (
-                <span className={`badge ${statusBadgeClass}`}>{statusBadgeLabel}</span>
+            <div>
+              <Text className="font-medium mb-2">Description</Text>
+              <Textarea
+                required
+                value={formData.description}
+                onValueChange={(value) => setFormData({ ...formData, description: value })}
+                rows={3}
+                placeholder="Boston University's premier 24-hour hackathon..."
+              />
+            </div>
+
+            <div>
+              <Flex className="mb-3">
+                <Text className="font-medium">Schedule</Text>
+                {statusBadgeLabel && (
+                  <Badge color={statusBadgeColor}>{statusBadgeLabel}</Badge>
+                )}
+              </Flex>
+
+              <Grid numItems={1} numItemsMd={2} className="gap-4">
+                <div>
+                  <Text className="text-xs mb-1">Start Date & Time</Text>
+                  <input
+                    type="datetime-local"
+                    required
+                    step="900"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    className="w-full flex items-center justify-between gap-x-2 bg-background border border-border px-3 py-2 text-foreground shadow-sm rounded-md focus:border-teal-500/60 focus:ring-2 focus:ring-teal-500/30 outline-none transition duration-100"
+                  />
+                </div>
+                <div>
+                  <Text className="text-xs mb-1">End Date & Time</Text>
+                  <input
+                    type="datetime-local"
+                    required
+                    step="900"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    className="w-full flex items-center justify-between gap-x-2 bg-background border border-border px-3 py-2 text-foreground shadow-sm rounded-md focus:border-teal-500/60 focus:ring-2 focus:ring-teal-500/30 outline-none transition duration-100"
+                  />
+                </div>
+              </Grid>
+
+              {hasInvalidRange && (
+                <Text color="red" className="text-xs mt-2">End time must be after the start time.</Text>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Start Date &amp; Time</label>
-                <input
-                  type="datetime-local"
-                  required
-                  step="900"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">End Date &amp; Time</label>
-                <input
-                  type="datetime-local"
-                  required
-                  step="900"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="input"
-                />
-              </div>
+            <div>
+              <Text className="font-medium mb-2">Event Mode</Text>
+              <Flex className="gap-3">
+                <Button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, mode: "hackathon" })}
+                  variant={formData.mode === "hackathon" ? "primary" : "secondary"}
+                  className="flex-1"
+                >
+                  Hackathon
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, mode: "demo_day" })}
+                  variant={formData.mode === "demo_day" ? "primary" : "secondary"}
+                  className="flex-1"
+                >
+                  Demo Day
+                </Button>
+              </Flex>
+              <Text className="text-xs text-muted-foreground mt-2">
+                {formData.mode === "hackathon"
+                  ? "Traditional judging with scores and categories"
+                  : "Public appreciation voting - attendees can give hearts to projects"}
+              </Text>
             </div>
-
-            {hasInvalidRange && (
-              <p className="text-xs text-red-500 mt-2">End time must be after the start time.</p>
-            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Event Mode</label>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, mode: "hackathon" })}
-                className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
-                  formData.mode === "hackathon"
-                    ? "bg-primary text-white"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                🏆 Hackathon
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, mode: "demo_day" })}
-                className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
-                  formData.mode === "demo_day"
-                    ? "bg-pink-500 text-white"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                ❤️ Demo Day
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {formData.mode === "hackathon" 
-                ? "Traditional judging with scores and categories"
-                : "Public appreciation voting - attendees can give hearts to projects"}
-            </p>
-          </div>
-
-          {/* Hackathon-specific fields */}
           {formData.mode === "hackathon" && (
-            <>
+            <div className="card-professional p-6 space-y-6 border-border/70">
+              <Title className="text-lg">Judging Setup</Title>
+
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Judging Categories &amp; Weights (0-2)
-                </label>
-                <div className="rounded-lg border border-border">
-                <div className="grid grid-cols-[1fr,110px,150px,40px] gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide">
-                    <span>Category</span>
-                    <span>Weight</span>
-                  <span>Opt-out allowed</span>
-                    <span className="text-right" aria-hidden />
+                <Text className="font-medium mb-3">
+                  Judging Categories & Weights (0-2)
+                </Text>
+                <div className="rounded-md border border-border/70 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-12 gap-3 px-3 py-2 text-xs text-foreground/70 uppercase tracking-wide border-b border-border/70 bg-muted/60">
+                    <Text className="text-xs font-semibold md:col-span-5">Category</Text>
+                    <Text className="text-xs font-semibold md:col-span-2">Weight</Text>
+                    <Text className="text-xs font-semibold md:col-span-4">Opt-out</Text>
+                    <span className="md:col-span-1" />
                   </div>
-                  <div className="space-y-2 p-3">
+                  <div className="divide-y divide-border/60">
                     {categories.map((cat, index) => (
-                    <div key={index} className="grid grid-cols-[1fr,110px,150px,40px] gap-2 items-center">
-                        <input
-                          type="text"
-                          required
-                          value={cat.name}
-                          onChange={(e) => {
-                            const newCats = [...categories];
-                            newCats[index].name = e.target.value;
-                            setCategories(newCats);
-                          }}
-                          className="input w-full"
-                          placeholder="e.g., Innovation"
-                        />
-                        <input
-                          type="number"
-                          required
-                          min="0"
-                          max="2"
-                          step="0.1"
-                          inputMode="decimal"
-                          value={cat.weight}
-                          onChange={(e) => {
-                            const numericValue = parseFloat(e.target.value);
-                            const clamped = Math.max(0, Math.min(2, Number.isFinite(numericValue) ? numericValue : 0));
-                            const newCats = [...categories];
-                            newCats[index].weight = clamped;
-                            setCategories(newCats);
-                          }}
-                          className="input w-full"
-                          placeholder="1.0"
-                        />
-                      <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          checked={cat.optOutAllowed ?? false}
-                          onChange={(e) => {
-                            const newCats = [...categories];
-                            newCats[index].optOutAllowed = e.target.checked;
-                            setCategories(newCats);
-                          }}
-                          className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
-                        />
-                        <span>Allow judges to opt out</span>
-                      </label>
-                        <button
-                          type="button"
-                          onClick={() => setCategories(categories.filter((_, i) => i !== index))}
-                          className="p-2.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                          aria-label={`Remove ${cat.name || "category"}`}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3">
+                        <div className="md:col-span-5">
+                          <TextInput
+                            required
+                            value={cat.name}
+                            onValueChange={(value) => {
+                              const newCats = [...categories];
+                              newCats[index].name = value;
+                              setCategories(newCats);
+                            }}
+                            placeholder="Innovation"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <input
+                            type="number"
+                            required
+                            min={0}
+                            max={2}
+                            step={0.1}
+                            value={cat.weight}
+                            onChange={(e) => {
+                              const newCats = [...categories];
+                              const parsed = Number(e.target.value);
+                              newCats[index].weight = Number.isFinite(parsed)
+                                ? Math.min(2, Math.max(0, parsed))
+                                : 0;
+                              setCategories(newCats);
+                            }}
+                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm focus:border-teal-500/60 focus:ring-2 focus:ring-teal-500/30 outline-none transition"
+                          />
+                        </div>
+                        <label className="md:col-span-4 inline-flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={cat.optOutAllowed ?? false}
+                            onChange={(e) => {
+                              const newCats = [...categories];
+                              newCats[index].optOutAllowed = e.target.checked;
+                              setCategories(newCats);
+                            }}
+                            className="w-4 h-4 text-primary border-border rounded"
+                          />
+                          <Text className="text-sm text-foreground/80">Allow opt-out</Text>
+                        </label>
+                        <div className="md:col-span-1 flex md:justify-end">
+                          <Button
+                            type="button"
+                            variant="light"
+                            color="red"
+                            size="xs"
+                            icon={TrashIcon}
+                            onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="flex items-center justify-between mt-3">
-                  <button
-                    type="button"
+                <Button
+                  type="button"
+                  variant="light"
+                  className="mt-3"
                   onClick={() => setCategories([...categories, { name: "", weight: 1, optOutAllowed: false }])}
-                    className="btn-ghost text-sm"
-                  >
-                    + Add Category
-                  </button>
-                  <div aria-hidden />
-                </div>
+                >
+                  + Add Category
+                </Button>
               </div>
 
               <div>
-                <label className="flex items-center gap-2 mb-3">
+                <Flex justifyContent="start" className="gap-2 mb-3">
                   <input
                     type="checkbox"
                     checked={useTracksAsAwards}
                     onChange={(e) => setUseTracksAsAwards(e.target.checked)}
-                    className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
+                    className="w-4 h-4 text-primary border-border rounded"
                   />
-                  <span className="text-sm font-medium text-foreground">
-                    Use awards as tracks (teams choose from same list)
-                  </span>
-                </label>
-                
+                  <Text className="font-medium">
+                    Use judging categories as tracks
+                  </Text>
+                </Flex>
+
                 {!useTracksAsAwards && (
                   <>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Tracks (comma-separated)
-                    </label>
-                    <input
-                      type="text"
+                    <Text className="font-medium mb-2">Tracks (comma-separated)</Text>
+                    <TextInput
                       required
                       value={formData.tracks}
-                      onChange={(e) => setFormData({ ...formData, tracks: e.target.value })}
-                      className="input"
+                      onValueChange={(value) => setFormData({ ...formData, tracks: value })}
                       placeholder="AI/ML, Web Development, Hardware..."
                     />
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <Text className="text-xs text-muted-foreground mt-2">
                       These are the tracks teams can choose when registering
-                    </p>
+                    </Text>
                   </>
                 )}
               </div>
 
               <div>
-                <label className="flex items-center gap-2 mb-3">
+                <Flex justifyContent="start" className="gap-2 mb-1">
                   <input
                     type="checkbox"
                     checked={formData.enableCohorts}
                     onChange={(e) => setFormData({ ...formData, enableCohorts: e.target.checked })}
-                    className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
+                    className="w-4 h-4 text-primary border-border rounded"
                   />
-                  <span className="text-sm font-medium text-foreground">
-                    Enable Multiple Judging Cohorts
-                  </span>
-                </label>
-                <p className="text-xs text-muted-foreground ml-6 mb-4">
-                  Judges will select their own teams to judge (for large events with 40+ teams)
-                </p>
-              </div>
+                  <Text className="font-medium">Enable Multiple Judging Cohorts</Text>
+                </Flex>
+                <Text className="text-xs text-muted-foreground ml-6 mb-4">
+                  Judges will select their own teams to judge (for large events)
+                </Text>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Judge Code (Optional)
-                </label>
-                <input
-                  type="text"
+                <Text className="font-medium mb-2">Judge Code (Optional)</Text>
+                <TextInput
                   value={formData.judgeCode}
-                  onChange={(e) => setFormData({ ...formData, judgeCode: e.target.value })}
-                  className="input"
+                  onValueChange={(value) => setFormData({ ...formData, judgeCode: value })}
                   placeholder="secret-code-123"
                 />
-                <p className="text-xs text-muted-foreground mt-2">
-                  If set, judges must enter this code to start judging active events
-                </p>
               </div>
-            </>
+            </div>
           )}
 
-          {/* Demo Day-specific fields */}
           {formData.mode === "demo_day" && (
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Course Codes
-              </label>
-              <p className="text-xs text-muted-foreground mb-3">
+            <div className="card-professional p-6 space-y-4 border-border/70">
+              <Title className="text-lg">Public Voting Settings</Title>
+              <Text className="text-xs text-muted-foreground">
                 Teams will select from these courses when submitting their projects.
-              </p>
-              
-              {/* Current course codes */}
-              <div className="flex flex-wrap gap-2 mb-3">
+              </Text>
+
+              <div className="flex flex-wrap gap-2">
                 {courseCodes.map((code) => (
-                  <span
-                    key={code}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-pink-500/10 text-pink-600 dark:text-pink-400 rounded-lg text-sm font-medium"
-                  >
-                    {code}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveCourseCode(code)}
-                      className="hover:text-pink-800 dark:hover:text-pink-200 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </span>
+                  <Badge key={code} color="pink">
+                    <Flex className="gap-1">
+                      {code}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCourseCode(code)}
+                        className="hover:text-pink-800"
+                      >
+                        ×
+                      </button>
+                    </Flex>
+                  </Badge>
                 ))}
                 {courseCodes.length === 0 && (
-                  <span className="text-sm text-muted-foreground italic">No courses added</span>
+                  <Text className="italic">No courses added</Text>
                 )}
               </div>
 
-              {/* Add new course code */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
+              <Flex className="gap-2">
+                <TextInput
                   value={newCourseCode}
-                  onChange={(e) => setNewCourseCode(e.target.value)}
+                  onValueChange={setNewCourseCode}
+                  placeholder="Add course code (e.g., CS101)"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
                       handleAddCourseCode();
                     }
                   }}
-                  className="flex-1 input"
-                  placeholder="Add course code (e.g., CS101)"
                 />
-                <button
-                  type="button"
-                  onClick={handleAddCourseCode}
-                  className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-medium transition-colors"
-                >
+                <Button type="button" onClick={handleAddCourseCode} color="pink">
                   Add
-                </button>
-              </div>
+                </Button>
+              </Flex>
             </div>
           )}
+        </div>
 
-          <div className="sticky bottom-0 bg-background border-t border-border -mx-6 -mb-6 p-6 flex gap-4">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Creating...
-                </span>
-              ) : (
-                "Create Event"
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="flex-1 btn-secondary"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        <div className="xl:col-span-8">
+          {formData.mode === "hackathon" ? (
+            <div className="card-professional p-6">
+              <Flex justifyContent="between" className="mb-4">
+                <h3 className="text-xl font-heading font-semibold text-gradient-primary">Prize Catalog</h3>
+                <Badge color="teal" size="lg" className="shadow-lg shadow-teal-500/20">{prizes.length} configured</Badge>
+              </Flex>
+              <Text className="text-xs text-muted-foreground mb-4">
+                Teams will select which prizes they want to submit for. Track and sponsor constraints are enforced automatically.
+              </Text>
+              <PrizeCatalogEditor
+                prizes={prizes}
+                setPrizes={setPrizes}
+                categories={derivedCategoryNames}
+                tracks={derivedTracks}
+                disabled={submitting}
+              />
+            </div>
+          ) : (
+            <div className="card-professional p-6 border-border/70">
+              <Title className="text-lg mb-2">Prize Catalog</Title>
+              <Text>
+                Demo Day mode uses appreciation voting and does not require a prize catalog.
+              </Text>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <div className="card-professional p-4 border border-border/70 bg-card/95">
+        <Flex justifyContent="end" className="gap-3">
+          <Button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            variant="secondary"
+            color="gray"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            loading={submitting}
+          >
+            Create Event
+          </Button>
+        </Flex>
+      </div>
+    </form>
   );
 }
 
@@ -896,6 +1383,9 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const event = useQuery(api.events.getEvent, { eventId });
   const eventScores = useQuery(api.scores.getEventScores, { eventId });
   const detailedScores = useQuery(api.scores.getDetailedEventScores, { eventId });
+  const eventPrizes = useQuery(api.prizes.listEventPrizes, { eventId });
+  const prizeDeliberationData = useQuery(api.prizes.getPrizeDeliberationData, { eventId });
+  const prizeWinners = useQuery(api.prizes.listPrizeWinners, { eventId });
   const appreciationSummary = useQuery(api.appreciations.getEventAppreciationSummary, { eventId });
   const updateEventDetails = useMutation(api.events.updateEventDetails);
   const updateEventCategories = useMutation(api.events.updateEventCategories);
@@ -905,12 +1395,19 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const removeEvent = useMutation(api.events.removeEvent);
   const createTeam = useMutation(api.teams.createTeam);
   const updateTeamAdmin = useMutation(api.teams.updateTeamAdmin);
-  const setWinners = useMutation(api.scores.setWinners);
+  const saveEventPrizes = useMutation(api.prizes.saveEventPrizes);
+  const setPrizeWinners = useMutation(api.prizes.setPrizeWinners);
   const releaseResults = useMutation(api.scores.releaseResults);
   const hideTeam = useMutation(api.teams.hideTeam);
   const removeTeam = useMutation(api.teams.removeTeam);
+  const updateStatus = useMutation(api.events.updateEventStatus);
+  const setScoringLock = useMutation(api.events.setScoringLock);
 
   const generateQrZip = useAction(api.qrCodes.generateQrCodeZip);
+
+  const handleStatusChange = (status: string) => {
+    updateStatus({ eventId, status: status as "active" | "upcoming" | "past" });
+  };
 
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [editingTeam, setEditingTeam] = useState<any | null>(null);
@@ -927,9 +1424,12 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const [eventStart, setEventStart] = useState("");
   const [eventEnd, setEventEnd] = useState("");
   const [categoriesEdit, setCategoriesEdit] = useState<Array<{ name: string; weight: number; optOutAllowed?: boolean }>>([]);
+  const [prizesEdit, setPrizesEdit] = useState<PrizeDraft[]>([]);
   const [enableCohorts, setEnableCohorts] = useState(false);
   const [judgeCodeEdit, setJudgeCodeEdit] = useState("");
   const [savingJudgeSettings, setSavingJudgeSettings] = useState(false);
+  const [savingPrizes, setSavingPrizes] = useState(false);
+  const [updatingScoringLock, setUpdatingScoringLock] = useState(false);
   const [appreciationBudget, setAppreciationBudget] = useState<number>(100);
   const [savingAppreciationSettings, setSavingAppreciationSettings] = useState(false);
 
@@ -957,11 +1457,39 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     }
   }, [event]);
 
+  useEffect(() => {
+    setPrizesEdit([]);
+  }, [eventId]);
+
+  useEffect(() => {
+    if (!eventPrizes) return;
+    setPrizesEdit(
+      eventPrizes.map((prize: any, index: number) =>
+        createPrizeDraft(index, {
+          prizeId: prize._id,
+          name: prize.name || "",
+          description: prize.description || "",
+          type: prize.type || "general",
+          track: prize.track || "",
+          sponsorName: prize.sponsorName || "",
+          scoreBasis: prize.scoreBasis || "none",
+          scoreCategoryNames: prize.scoreCategoryNames || [],
+          isActive: prize.isActive !== false,
+          sortOrder: prize.sortOrder ?? index,
+        })
+      )
+    );
+  }, [eventPrizes]);
+
   if (!event) {
     return null;
   }
 
   const isDemoDayMode = event.mode === "demo_day";
+  const scoringLocked = !!event.scoringLockedAt;
+  const scoringLockedLabel = event.scoringLockedAt
+    ? formatDateTime(event.scoringLockedAt)
+    : null;
 
   const derivedStatus = (() => {
     const now = Date.now();
@@ -969,6 +1497,18 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     if (now > event.endDate) return "past";
     return "active";
   })();
+
+  const categoriesForPrizeEditor = useMemo(() =>
+    categoriesEdit.map(c => c.name).filter(Boolean),
+    [categoriesEdit]
+  );
+
+  const tracksForPrizeEditor = useMemo(() => {
+    if (event?.tracks && event.tracks.length > 0) {
+      return event.tracks;
+    }
+    return categoriesForPrizeEditor;
+  }, [event, categoriesForPrizeEditor]);
 
   const scoresLoaded = eventScores !== undefined;
   // Treat judging as started only if any team has at least one score submitted.
@@ -978,6 +1518,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
         (teamScore as any)?.judgeCount > 0 ||
         ((teamScore as any)?.scores?.length || 0) > 0
     ) ?? false;
+  const hasConfiguredPrizes = (eventPrizes?.length || 0) > 0;
 
   const handleModeChange = async (mode: "hackathon" | "demo_day") => {
     try {
@@ -990,7 +1531,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
 
   const handleExportAppreciationsCsv = () => {
     if (!appreciationSummary) return;
-    
+
     const headers = ["Team Name", "Course Code", "Total Appreciations", "Unique Attendees"];
     const rows = appreciationSummary.teams.map(team => [
       team.teamName,
@@ -999,12 +1540,12 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
       // We don't have unique attendees per team in summary, use rawScore as proxy
       team.rawScore.toString(),
     ]);
-    
+
     const csvContent = [
       headers.join(","),
       ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
     ].join("\n");
-    
+
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -1019,22 +1560,22 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
 
   const handleDownloadQrCodes = async () => {
     if (!event) return;
-    
+
     setIsGeneratingQr(true);
     try {
       // Get the current origin for building URLs
       const baseUrl = window.location.origin;
-      
+
       const result = await generateQrZip({
         eventId,
         baseUrl,
       });
-      
+
       if (!result.success || !result.zipBase64) {
         toast.error(result.error || "Failed to generate QR codes");
         return;
       }
-      
+
       // Convert base64 to blob and download
       const binaryString = atob(result.zipBase64);
       const bytes = new Uint8Array(binaryString.length);
@@ -1042,7 +1583,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
         bytes[i] = binaryString.charCodeAt(i);
       }
       const blob = new Blob([bytes], { type: "application/zip" });
-      
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
@@ -1052,7 +1593,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
       toast.success("QR codes downloaded!");
     } catch (error) {
       console.error("Error downloading QR codes:", error);
@@ -1112,6 +1653,22 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
           ((teamScore as any)?.scores?.length || 0) > 0
       ) ?? false;
 
+    const categoriesForPrizeEditor = useMemo(
+      () =>
+        categoriesEdit
+          .map((cat) => cat.name.trim())
+          .filter(Boolean),
+      [categoriesEdit]
+    );
+
+    const tracksForPrizeEditor = useMemo(() => {
+      const eventTracks =
+        event.tracks && event.tracks.length > 0
+          ? event.tracks
+          : categoriesForPrizeEditor;
+      return eventTracks.filter(Boolean);
+    }, [event.tracks, categoriesForPrizeEditor]);
+
     if (!scoresLoaded) {
       toast.error("Scores are still loading. Please try again.");
       return;
@@ -1170,6 +1727,28 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     }
   };
 
+  const handleSavePrizes = async () => {
+    if (isDemoDayMode) return;
+    const normalizedPrizes = normalizePrizeDraftsForSave(prizesEdit);
+    if (normalizedPrizes.length === 0) {
+      toast.error("Add at least one active prize before saving.");
+      return;
+    }
+
+    setSavingPrizes(true);
+    try {
+      await saveEventPrizes({
+        eventId,
+        prizes: normalizedPrizes,
+      });
+      toast.success("Prize catalog saved");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to save prizes");
+    } finally {
+      setSavingPrizes(false);
+    }
+  };
+
   const handleRemoveEvent = async () => {
     const confirmed = window.confirm(
       `Remove "${event.name}"? This will delete teams, scores, and access for this event.`
@@ -1206,814 +1785,729 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     try {
       await releaseResults({ eventId });
       toast.success("Results released!");
-    } catch (error) {
-      toast.error("Failed to release results");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to release results");
+    }
+  };
+
+  const handleSetScoringLock = async (locked: boolean) => {
+    if (isDemoDayMode) return;
+
+    const confirmed = window.confirm(
+      locked
+        ? "Lock scoring now? Judges will no longer be able to edit scores."
+        : "Unlock scoring? Judges will be able to edit scores again."
+    );
+    if (!confirmed) return;
+
+    let reason: string | undefined;
+    if (locked) {
+      reason =
+        window.prompt(
+          "Optional: add a short lock reason (for audit/projection context).",
+          "Deliberation session started"
+        )?.trim() || undefined;
+    }
+
+    try {
+      setUpdatingScoringLock(true);
+      await setScoringLock({ eventId, locked, reason });
+      toast.success(locked ? "Scoring locked" : "Scoring unlocked");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update scoring lock");
+    } finally {
+      setUpdatingScoringLock(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative bg-background rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto border border-border slide-up">
-        <div className="sticky top-0 bg-background border-b border-border z-10">
-          <div className="p-6 pb-0">
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors z-20"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between pr-12">
+    <Dialog open={true} onClose={onClose} static={true}>
+      <DialogPanel className="max-w-4xl w-full max-h-[90vh] overflow-auto p-0 border border-tremor-border shadow-2xl">
+        <div className="sticky top-0 bg-tremor-background border-b border-tremor-border z-10">
+          <div className="p-6">
+            <Flex justifyContent="between" alignItems="start">
               <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h2 className="text-3xl font-heading font-bold text-foreground">{event.name}</h2>
+                <Flex justifyContent="start" className="gap-3 mb-1">
+                  <Title className="text-3xl">{event.name}</Title>
                   {isDemoDayMode && (
-                    <span className="badge bg-pink-500/20 text-pink-500 border-pink-500/30">
-                      Demo Day
-                    </span>
+                    <Badge color="pink">Demo Day</Badge>
                   )}
-                </div>
-                <p className="text-muted-foreground">Manage event settings and teams</p>
+                </Flex>
+                <Text>Manage event settings, teams, and scoring</Text>
               </div>
-              <div className="flex items-center gap-2 flex-nowrap">
-                <button
-                  type="button"
+              <Flex className="w-auto gap-2">
+                <Button
+                  variant="secondary"
+                  color="blue"
+                  icon={DocumentDuplicateIcon}
                   onClick={handleDuplicateEvent}
-                  disabled={isDuplicatingEvent}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                    isDuplicatingEvent
-                      ? "border-blue-300 text-blue-300 cursor-not-allowed"
-                      : "border-blue-500/40 text-blue-500 hover:bg-blue-500/10"
-                  }`}
+                  loading={isDuplicatingEvent}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h6a2 2 0 002-2v-8a2 2 0 00-2-2h-6a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  {isDuplicatingEvent ? "Duplicating..." : "Duplicate"}
-                </button>
-                <button
-                  type="button"
+                  Duplicate
+                </Button>
+                <Button
+                  variant="secondary"
+                  color="red"
+                  icon={TrashIcon}
                   onClick={handleRemoveEvent}
-                  disabled={isRemovingEvent}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                    isRemovingEvent
-                      ? "border-red-400 text-red-400 cursor-not-allowed"
-                      : "border-red-500/40 text-red-500 hover:bg-red-500/10"
-                  }`}
+                  loading={isRemovingEvent}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  {isRemovingEvent ? "Removing..." : "Remove"}
-                </button>
-              </div>
-            </div>
+                  Remove
+                </Button>
+                <Button
+                  variant="light"
+                  color="gray"
+                  icon={Cog6ToothIcon}
+                  onClick={onClose}
+                  className="ml-2"
+                />
+              </Flex>
+            </Flex>
           </div>
-          
-          {/* Tabs */}
-          <div className="flex gap-1 px-6 mt-4">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-                activeTab === 'overview'
-                  ? 'bg-background text-foreground border-t border-x border-border'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('scores')}
-              className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-                activeTab === 'scores'
-                  ? 'bg-background text-foreground border-t border-x border-border'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {isDemoDayMode ? "Appreciations" : "Scores"}
-            </button>
-          </div>
+
+          <TabGroup index={activeTab === 'overview' ? 0 : 1} onIndexChange={(index) => setActiveTab(index === 0 ? 'overview' : 'scores')}>
+            <TabList className="px-6">
+              <Tab icon={CalendarIcon}>Overview</Tab>
+              <Tab icon={isDemoDayMode ? HeartIcon : TrophyIcon}>
+                {isDemoDayMode ? "Appreciations" : "Scores"}
+              </Tab>
+            </TabList>
+          </TabGroup>
         </div>
 
-        <div className="p-6 space-y-6">
-          {activeTab === 'overview' && (
-            <>
-              {/* Event Details */}
-              <div className="card-static p-6 bg-card space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div>
-                      <h3 className="text-lg font-heading font-semibold text-foreground">Event Details</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Status updates automatically from the schedule
-                      </p>
+        <div className="p-6">
+          <TabGroup index={activeTab === 'overview' ? 0 : 1}>
+            <TabPanels>
+              <TabPanel>
+                <div className="space-y-6">
+                  {/* Event Details */}
+                  <div className="card-professional p-6">
+                    <Flex justifyContent="between" alignItems="start" className="mb-4">
+                      <div>
+                        <Title>Event Details</Title>
+                        <Text>Basic information and schedule</Text>
+                      </div>
+                      <Badge color={
+                        derivedStatus === "active" ? "emerald" :
+                          derivedStatus === "upcoming" ? "blue" : "gray"
+                      }>
+                        {derivedStatus.charAt(0).toUpperCase() + derivedStatus.slice(1)}
+                      </Badge>
+                    </Flex>
+
+                    <Grid numItems={1} numItemsMd={2} className="gap-4">
+                      <div className="space-y-1">
+                        <Text className="font-medium">Event Title</Text>
+                        <TextInput
+                          value={eventName}
+                          onValueChange={setEventName}
+                          placeholder="Event Title"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Text className="font-medium">Description</Text>
+                        <TextInput
+                          value={eventDescription}
+                          onValueChange={setEventDescription}
+                          placeholder="Description"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Text className="font-medium">Start Date & Time</Text>
+                        <input
+                          type="datetime-local"
+                          value={eventStart}
+                          onChange={(e) => setEventStart(e.target.value)}
+                          className="w-full flex items-center justify-between gap-x-2 bg-tremor-background border px-3 py-2 text-tremor-default shadow-tremor-input border-tremor-border rounded-tremor-default focus:border-tremor-brand-subtle focus:ring-tremor-brand-muted outline-none transition duration-100"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Text className="font-medium">End Date & Time</Text>
+                        <input
+                          type="datetime-local"
+                          value={eventEnd}
+                          onChange={(e) => setEventEnd(e.target.value)}
+                          className="w-full flex items-center justify-between gap-x-2 bg-tremor-background border px-3 py-2 text-tremor-default shadow-tremor-input border-tremor-border rounded-tremor-default focus:border-tremor-brand-subtle focus:ring-tremor-brand-muted outline-none transition duration-100"
+                        />
+                      </div>
+                    </Grid>
+
+                    <Flex justifyContent="end" className="mt-6">
+                      <Button
+                        onClick={handleSaveDetails}
+                        loading={savingDetails}
+                      >
+                        Save Details
+                      </Button>
+                    </Flex>
+                  </div>
+
+                  {/* Event Mode */}
+                  <div className="card-professional p-6">
+                    <h3 className="text-xl font-heading font-semibold text-gradient-primary mb-2">Event Mode</h3>
+                    <Flex className="gap-4">
+                      <Button
+                        onClick={() => handleModeChange("hackathon")}
+                        variant={!isDemoDayMode ? "primary" : "secondary"}
+                        color="teal"
+                        className="flex-1"
+                      >
+                        🏆 Hackathon
+                      </Button>
+                      <Button
+                        onClick={() => handleModeChange("demo_day")}
+                        variant={isDemoDayMode ? "primary" : "secondary"}
+                        color="pink"
+                        className="flex-1"
+                      >
+                        ❤️ Demo Day
+                      </Button>
+                    </Flex>
+                    <Text className="mt-3 text-xs">
+                      {isDemoDayMode
+                        ? "Public appreciation voting - attendees can give hearts to projects without signing in"
+                        : "Traditional judging with scores and categories - requires judge registration"}
+                    </Text>
+                  </div>
+
+                  {/* Judging Settings - editable only before scoring starts */}
+                  <div className="card-professional p-6">
+                    <Flex justifyContent="between" alignItems="start" className="mb-4">
+                      <div>
+                        <h3 className="text-xl font-heading font-semibold text-gradient-primary">Judging Settings</h3>
+                        <Text>Configure how judges will score teams</Text>
+                      </div>
+                      <Flex className="gap-2 w-auto">
+                        {hasScores && (
+                          <Badge color="amber">Locked (judging started)</Badge>
+                        )}
+                        {scoringLocked && (
+                          <Badge color="red">Scores locked</Badge>
+                        )}
+                      </Flex>
+                    </Flex>
+                    {!isDemoDayMode && (
+                      <Text className="text-xs mb-4">
+                        Judges can revise scores until you lock scoring in the Actions panel.
+                      </Text>
+                    )}
+                    {!isDemoDayMode && scoringLocked && scoringLockedLabel && (
+                      <Text className="text-xs mb-4 text-red-600 dark:text-red-400">
+                        Scores locked at {scoringLockedLabel}
+                        {event.scoringLockReason ? ` (${event.scoringLockReason})` : ""}.
+                      </Text>
+                    )}
+
+                    <Grid numItems={1} numItemsMd={2} className="gap-6">
+                      <div className="space-y-1">
+                        <Text className="font-medium">Judge Code (optional)</Text>
+                        <TextInput
+                          value={judgeCodeEdit}
+                          onValueChange={setJudgeCodeEdit}
+                          disabled={hasScores}
+                          placeholder="Enter code required for judges"
+                        />
+                        <Text className="text-xs">
+                          Leave empty to allow judges without a code.
+                        </Text>
+                      </div>
+                      <div className="space-y-4 pt-2">
+                        <Flex justifyContent="start" className="gap-2">
+                          <input
+                            type="checkbox"
+                            checked={enableCohorts}
+                            onChange={(e) => setEnableCohorts(e.target.checked)}
+                            disabled={hasScores}
+                            className="w-4 h-4 text-tremor-brand border-tremor-border rounded focus:ring-2 focus:ring-tremor-brand"
+                          />
+                          <Text className="font-medium">Enable Multiple Judging Cohorts</Text>
+                        </Flex>
+                        <Text className="text-xs">
+                          Judges pick their own teams (useful for large events).
+                        </Text>
+                      </div>
+                    </Grid>
+
+                    <div className="mt-6 space-y-4">
+                      <Flex justifyContent="between">
+                        <Text className="font-medium">Judging Categories & Weights (0-2)</Text>
+                        {!scoresLoaded && (
+                          <Text className="text-xs">Loading scores...</Text>
+                        )}
+                      </Flex>
+
+                      <div className="rounded-tremor-default border border-tremor-border overflow-hidden">
+                        <Table>
+                          <TableHead>
+                            <TableRow>
+                              <TableHeaderCell>Category</TableHeaderCell>
+                              <TableHeaderCell>Weight</TableHeaderCell>
+                              <TableHeaderCell>Opt-out</TableHeaderCell>
+                              <TableHeaderCell><span className="sr-only">Actions</span></TableHeaderCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {categoriesEdit.map((cat, index) => (
+                              <TableRow key={index}>
+                                <TableCell>
+                                  <TextInput
+                                    value={cat.name}
+                                    onValueChange={(val) => {
+                                      const newCats = [...categoriesEdit];
+                                      newCats[index].name = val;
+                                      setCategoriesEdit(newCats);
+                                    }}
+                                    placeholder="e.g., Innovation"
+                                    disabled={hasScores}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <NumberInput
+                                    value={cat.weight}
+                                    onValueChange={(val) => {
+                                      const clamped = Math.max(0, Math.min(2, val));
+                                      const newCats = [...categoriesEdit];
+                                      newCats[index].weight = clamped;
+                                      setCategoriesEdit(newCats);
+                                    }}
+                                    step="0.1"
+                                    min={0}
+                                    max={2}
+                                    disabled={hasScores}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Flex justifyContent="start" className="gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={cat.optOutAllowed ?? false}
+                                      onChange={(e) => {
+                                        const newCats = [...categoriesEdit];
+                                        newCats[index].optOutAllowed = e.target.checked;
+                                        setCategoriesEdit(newCats);
+                                      }}
+                                      className="w-4 h-4 text-tremor-brand border-tremor-border rounded focus:ring-2 focus:ring-tremor-brand"
+                                      disabled={hasScores}
+                                    />
+                                    <Text className="text-xs">Allow opt-out</Text>
+                                  </Flex>
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    icon={TrashIcon}
+                                    variant="light"
+                                    color="red"
+                                    onClick={() => setCategoriesEdit(categoriesEdit.filter((_, i) => i !== index))}
+                                    disabled={hasScores}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      <Flex justifyContent="between" className="mt-2">
+                        <Button
+                          variant="light"
+                          icon={PlusIcon}
+                          onClick={() => setCategoriesEdit([...categoriesEdit, { name: "", weight: 1, optOutAllowed: false }])}
+                          disabled={hasScores}
+                        >
+                          Add Category
+                        </Button>
+                        <Button
+                          onClick={handleSaveJudgeSettings}
+                          loading={savingJudgeSettings}
+                          disabled={hasScores || !scoresLoaded}
+                        >
+                          Save Judging Settings
+                        </Button>
+                      </Flex>
                     </div>
                   </div>
-                  <span className={`badge ${
-                    derivedStatus === "active"
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                      : derivedStatus === "upcoming"
-                      ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20"
-                      : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20"
-                  }`}>
-                    {derivedStatus.charAt(0).toUpperCase() + derivedStatus.slice(1)}
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      Event Title <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={eventName}
-                      onChange={(e) => setEventName(e.target.value)}
-                      className="input"
-                      placeholder="Demo Day Fall 2025"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      Description <span className="text-muted-foreground text-xs">(optional)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={eventDescription}
-                      onChange={(e) => setEventDescription(e.target.value)}
-                      className="input"
-                      placeholder="Manage event settings and teams"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      Start Date & Time <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={eventStart}
-                      onChange={(e) => setEventStart(e.target.value)}
-                      className="input"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      End Date & Time <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={eventEnd}
-                      onChange={(e) => setEventEnd(e.target.value)}
-                      className="input"
-                    />
-                  </div>
-                </div>
+                  {!isDemoDayMode && (
+                    <div className="card-professional p-6">
+                      <Flex justifyContent="between" alignItems="start" className="mb-4">
+                        <div>
+                          <h3 className="text-xl font-heading font-semibold text-gradient-primary">Prize Catalog</h3>
+                          <Text>Define general, track, sponsor, and combined prizes.</Text>
+                        </div>
+                        <Badge color="teal" size="lg" className="shadow-lg shadow-teal-500/20">{prizesEdit.length} prizes</Badge>
+                      </Flex>
+                      <Text className="text-xs mb-4">
+                        Teams can only submit for prizes they are eligible for. Track-bound prizes are filtered automatically in team submission.
+                      </Text>
+                      <PrizeCatalogEditor
+                        prizes={prizesEdit}
+                        setPrizes={setPrizesEdit}
+                        categories={categoriesForPrizeEditor}
+                        tracks={tracksForPrizeEditor}
+                        disabled={scoringLocked}
+                      />
+                      <Flex justifyContent="end" className="mt-4">
+                        <Button
+                          onClick={handleSavePrizes}
+                          loading={savingPrizes}
+                          disabled={scoringLocked}
+                        >
+                          Save Prize Catalog
+                        </Button>
+                      </Flex>
+                      {scoringLocked && (
+                        <Text className="text-xs mt-3 text-amber-700 dark:text-amber-300">
+                          Unlock scoring to edit the prize catalog.
+                        </Text>
+                      )}
+                    </div>
+                  )}
 
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleSaveDetails}
-                    disabled={savingDetails}
-                    className="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {savingDetails ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Details"
+                  {isDemoDayMode && (
+                    <div className="card-professional p-6">
+                      <Title className="mb-1 text-gradient-primary">Appreciation Settings (Demo Day)</Title>
+                      <Text className="mb-4">Configure heart budget for attendees</Text>
+
+                      <Grid numItems={1} numItemsMd={2} className="gap-6">
+                        <div className="space-y-1">
+                          <Text className="font-medium">Total appreciations per attendee</Text>
+                          <NumberInput
+                            value={appreciationBudget}
+                            onValueChange={setAppreciationBudget}
+                            min={0}
+                          />
+                          <Text className="text-xs">
+                            Limit of hearts each attendee can give across all teams. Defaults to 100.
+                          </Text>
+                        </div>
+                        <div className="space-y-1">
+                          <Text className="font-medium">Max per team</Text>
+                          <TextInput
+                            value="3"
+                            disabled
+                          />
+                          <Text className="text-xs">
+                            Per-team cap remains 3 to encourage distribution.
+                          </Text>
+                        </div>
+                      </Grid>
+
+                      <Flex justifyContent="end" className="mt-6">
+                        <Button
+                          onClick={handleSaveAppreciationSettings}
+                          loading={savingAppreciationSettings}
+                        >
+                          Save Appreciation Settings
+                        </Button>
+                      </Flex>
+                    </div>
+                  )}
+
+                  {/* Teams */}
+                  <div className="card-professional p-6">
+                    <Flex justifyContent="between" alignItems="center" className="mb-4">
+                      <div>
+                        <h3 className="text-xl font-heading font-semibold text-gradient-primary">Teams ({event.teams.length})</h3>
+                        <Text>Manage participants and team projects</Text>
+                      </div>
+                      <Button
+                        icon={PlusIcon}
+                        onClick={() => {
+                          setEditingTeam(null);
+                          setShowAddTeam(true);
+                        }}
+                      >
+                        Add Team
+                      </Button>
+                    </Flex>
+
+                    <div className="space-y-2">
+                      {event.teams.length === 0 ? (
+                        <Text className="text-center py-8">No teams added yet</Text>
+                      ) : (
+                        event.teams.map((team, index) => (
+                          <div
+                            key={team._id}
+                            className={`p-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors ${(team as any).hidden ? 'opacity-60 border-dashed border-amber-500' : ''
+                              }`}
+                          >
+                            <Flex justifyContent="between" alignItems="start">
+                              <div className="flex-1">
+                                <Flex justifyContent="start" className="gap-2 mb-1">
+                                  <Text className="font-bold text-tremor-content-emphasis">{team.name}</Text>
+                                  {(team as any).hidden && (
+                                    <Badge color="amber">Hidden</Badge>
+                                  )}
+                                  {isDemoDayMode && (team as any).courseCode && (
+                                    <Badge color="pink">{(team as any).courseCode}</Badge>
+                                  )}
+                                </Flex>
+                                <Text className="text-sm">{team.members.join(", ")}</Text>
+                              </div>
+                              <div className="relative ml-2">
+                                <Flex className="gap-1">
+                                  <Button
+                                    icon={PencilSquareIcon}
+                                    variant="light"
+                                    size="xs"
+                                    onClick={() => {
+                                      setEditingTeam(team);
+                                      setShowAddTeam(true);
+                                    }}
+                                    tooltip="Edit Team"
+                                  />
+                                  <Button
+                                    icon={EyeSlashIcon}
+                                    variant="light"
+                                    size="xs"
+                                    color="amber"
+                                    onClick={async () => {
+                                      try {
+                                        await hideTeam({ teamId: team._id, hidden: !(team as any).hidden });
+                                        toast.success((team as any).hidden ? "Team unhidden" : "Team hidden");
+                                      } catch (error: any) {
+                                        toast.error(error.message);
+                                      }
+                                    }}
+                                    tooltip={(team as any).hidden ? "Unhide" : "Hide"}
+                                  />
+                                  <Button
+                                    icon={TrashIcon}
+                                    variant="light"
+                                    size="xs"
+                                    color="red"
+                                    onClick={async () => {
+                                      if (confirm(`Are you sure you want to permanently delete "${team.name}"?`)) {
+                                        try {
+                                          await removeTeam({ teamId: team._id });
+                                          toast.success("Team removed");
+                                        } catch (error: any) {
+                                          toast.error(error.message);
+                                        }
+                                      }
+                                    }}
+                                    tooltip="Remove"
+                                  />
+                                </Flex>
+                              </div>
+                            </Flex>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="card-professional p-6">
+                    <h3 className="text-xl font-heading font-semibold text-gradient-primary mb-4">Actions</h3>
+                    <Flex className="gap-3 flex-wrap sm:flex-nowrap" justifyContent="start">
+                      {event.status === "active" && (
+                        <Button
+                          onClick={() => handleStatusChange("past")}
+                          icon={CheckCircleIcon}
+                          color="amber"
+                          className="flex-1"
+                        >
+                          Finish Event
+                        </Button>
+                      )}
+
+                      {!isDemoDayMode && (
+                        <Button
+                          onClick={() => void handleSetScoringLock(!scoringLocked)}
+                          loading={updatingScoringLock}
+                          color={scoringLocked ? "amber" : "red"}
+                          variant={scoringLocked ? "secondary" : "primary"}
+                          className="flex-1"
+                        >
+                          {scoringLocked ? "Unlock Scores" : "Lock Scores"}
+                        </Button>
+                      )}
+
+                      {!isDemoDayMode && (
+                        <Button
+                          onClick={() => setShowSelectWinners(true)}
+                          variant="secondary"
+                          icon={TrophyIcon}
+                          className="flex-1"
+                          disabled={!scoringLocked || !hasConfiguredPrizes}
+                        >
+                          Prize Winner Wizard
+                        </Button>
+                      )}
+
+                      <Button
+                        onClick={handleReleaseResults}
+                        disabled={
+                          event.resultsReleased ||
+                          (!isDemoDayMode && !scoringLocked)
+                        }
+                        color="emerald"
+                        className="flex-1"
+                        icon={CheckCircleIcon}
+                      >
+                        {event.resultsReleased ? "Results Released" : "Release Results"}
+                      </Button>
+                    </Flex>
+                    {!isDemoDayMode && !scoringLocked && (
+                      <Text className="text-xs mt-3 text-amber-700 dark:text-amber-300">
+                        Lock scores before selecting winners or releasing results.
+                      </Text>
                     )}
-                  </button>
+                    {!isDemoDayMode && scoringLocked && !hasConfiguredPrizes && (
+                      <Text className="text-xs mt-3 text-amber-700 dark:text-amber-300">
+                        Add and save at least one prize to run the winner wizard.
+                      </Text>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </TabPanel>
 
-              {/* Event Mode */}
-              <div className="card-static p-6 bg-card">
-                <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                  </svg>
-                  Event Mode
-                </h3>
-                <div className="flex gap-3 flex-wrap">
-                  <button
-                    onClick={() => handleModeChange("hackathon")}
-                    className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-                      !isDemoDayMode
-                        ? "bg-primary text-white shadow-md"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    }`}
-                  >
-                    🏆 Hackathon
-                  </button>
-                  <button
-                    onClick={() => handleModeChange("demo_day")}
-                    className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-                      isDemoDayMode
-                        ? "bg-pink-500 text-white shadow-md"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    }`}
-                  >
-                    ❤️ Demo Day
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-3">
-                  {isDemoDayMode 
-                    ? "Public appreciation voting - attendees can give hearts to projects without signing in"
-                    : "Traditional judging with scores and categories - requires judge registration"}
-                </p>
-              </div>
+              <TabPanel>
+                <div className="space-y-6">
+                  {isDemoDayMode ? (
+                    appreciationSummary ? (
+                      <div className="space-y-6">
+                        {/* Summary Stats */}
+                        <Grid numItems={1} numItemsMd={3} className="gap-4">
+                          <div className="card-professional text-center p-6 flex flex-col items-center justify-center space-y-2">
+                            <Text className="text-4xl font-bold text-pink-500 drop-shadow-sm">{appreciationSummary.totalAppreciations}</Text>
+                            <Text className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Total Appreciations</Text>
+                          </div>
+                          <div className="card-professional text-center p-6 flex flex-col items-center justify-center space-y-2">
+                            <Text className="text-4xl font-bold text-tremor-content-emphasis">{appreciationSummary.uniqueAttendees}</Text>
+                            <Text className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Unique Attendees</Text>
+                          </div>
+                          <div className="card-professional text-center p-6 flex flex-col items-center justify-center space-y-2">
+                            <Text className="text-4xl font-bold text-tremor-content-emphasis">{appreciationSummary.teams.length}</Text>
+                            <Text className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Projects</Text>
+                          </div>
+                        </Grid>
 
-              {/* Judging Settings - editable only before scoring starts */}
-              <div className="card-static p-6 bg-card space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Judging Settings
-                  </h3>
-                  {hasScores && (
-                    <span className="badge bg-amber-500/15 text-amber-600 border-amber-500/30">
-                      Locked (judging started)
-                    </span>
+                        {/* Export Buttons */}
+                        <Flex justifyContent="end" className="gap-3">
+                          <Button
+                            variant="secondary"
+                            icon={DocumentDuplicateIcon}
+                            onClick={handleExportAppreciationsCsv}
+                          >
+                            Export CSV
+                          </Button>
+                          <Button
+                            color="pink"
+                            loading={isGeneratingQr}
+                            onClick={() => void handleDownloadQrCodes()}
+                            icon={UserGroupIcon}
+                          >
+                            Download QR Codes
+                          </Button>
+                        </Flex>
+
+                        {/* Team Rankings */}
+                        <div className="card-professional p-6">
+                          <Title className="mb-4">Project Rankings</Title>
+                          <Table>
+                            <TableHead>
+                              <TableRow>
+                                <TableHeaderCell>Rank</TableHeaderCell>
+                                <TableHeaderCell>Project</TableHeaderCell>
+                                <TableHeaderCell>Course</TableHeaderCell>
+                                <TableHeaderCell>Appreciations</TableHeaderCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {appreciationSummary.teams.map((team, index) => (
+                                <TableRow key={team.teamId}>
+                                  <TableCell>
+                                    <span className="flex items-center gap-2 font-bold">
+                                      #{index + 1}
+                                      {index === 0 && <span className="text-lg">🥇</span>}
+                                      {index === 1 && <span className="text-lg">🥈</span>}
+                                      {index === 2 && <span className="text-lg">🥉</span>}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Text className="font-semibold text-tremor-content-emphasis">{team.teamName}</Text>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Text>{team.courseCode || "-"}</Text>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Flex justifyContent="start" className="gap-2">
+                                      <Text className="text-pink-500">❤️</Text>
+                                      <Text className="font-bold">{team.rawScore}</Text>
+                                    </Flex>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="card-professional text-center py-12">
+                        <div className="text-6xl mb-4">❤️</div>
+                        <Title>No Appreciations Yet</Title>
+                        <Text>Attendees haven't given any appreciations yet. Share the event link to get started!</Text>
+                      </div>
+                    )
+                  ) : (
+                    // Hackathon Scores View
+                    detailedScores ? (
+                      <ScoringDashboard
+                        scores={detailedScores}
+                        viewMode={viewMode}
+                        setViewMode={setViewMode}
+                      />
+                    ) : (
+                      <div className="card-professional text-center py-12">
+                        <div className="text-6xl mb-4">📊</div>
+                        <Title>No Scores Yet</Title>
+                        <Text className="mb-6">Judges haven't submitted any scores for this event yet.</Text>
+                        <div className="max-w-md mx-auto text-left bg-tremor-background-muted rounded-lg p-4 text-sm text-tremor-content">
+                          <Text className="font-semibold mb-2">💡 To see demo scores:</Text>
+                          <ol className="list-decimal list-inside space-y-1">
+                            <li>Open your Convex dashboard</li>
+                            <li>Go to Functions → seed:seedJudgeScores</li>
+                            <li>Click "Run" to generate demo data</li>
+                          </ol>
+                        </div>
+                      </div>
+                    )
                   )}
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      Judge Code <span className="text-muted-foreground text-xs">(optional)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={judgeCodeEdit}
-                      onChange={(e) => setJudgeCodeEdit(e.target.value)}
-                      className="input"
-                      disabled={hasScores}
-                      placeholder="Enter code required for judges"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Leave empty to allow judges without a code.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
-                        checked={enableCohorts}
-                        onChange={(e) => setEnableCohorts(e.target.checked)}
-                        disabled={hasScores}
-                      />
-                      Enable Multiple Judging Cohorts
-                    </label>
-                    <p className="text-xs text-muted-foreground">
-                      Judges pick their own teams (useful for large events).
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-foreground">
-                      Judging Categories &amp; Weights (0-2)
-                    </label>
-                    {!scoresLoaded && (
-                      <span className="text-xs text-muted-foreground">Loading scores...</span>
-                    )}
-                  </div>
-                  <div className="rounded-lg border border-border">
-                    <div className="grid grid-cols-[1fr,110px,150px,40px] gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide">
-                      <span>Category</span>
-                      <span>Weight</span>
-                      <span>Opt-out allowed</span>
-                      <span className="text-right" aria-hidden />
-                    </div>
-                    <div className="space-y-2 p-3">
-                      {categoriesEdit.map((cat, index) => (
-                        <div key={index} className="grid grid-cols-[1fr,110px,150px,40px] gap-2 items-center">
-                          <input
-                            type="text"
-                            required
-                            value={cat.name}
-                            onChange={(e) => {
-                              const newCats = [...categoriesEdit];
-                              newCats[index].name = e.target.value;
-                              setCategoriesEdit(newCats);
-                            }}
-                            className="input w-full"
-                            placeholder="e.g., Innovation"
-                            disabled={hasScores}
-                          />
-                          <input
-                            type="number"
-                            required
-                            min="0"
-                            max="2"
-                            step="0.1"
-                            inputMode="decimal"
-                            value={cat.weight}
-                            onChange={(e) => {
-                              const numericValue = parseFloat(e.target.value);
-                              const clamped = Math.max(0, Math.min(2, Number.isFinite(numericValue) ? numericValue : 0));
-                              const newCats = [...categoriesEdit];
-                              newCats[index].weight = clamped;
-                              setCategoriesEdit(newCats);
-                            }}
-                            className="input w-full"
-                            placeholder="1.0"
-                            disabled={hasScores}
-                          />
-                          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <input
-                              type="checkbox"
-                              checked={cat.optOutAllowed ?? false}
-                              onChange={(e) => {
-                                const newCats = [...categoriesEdit];
-                                newCats[index].optOutAllowed = e.target.checked;
-                                setCategoriesEdit(newCats);
-                              }}
-                              className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
-                              disabled={hasScores}
-                            />
-                            <span>Allow judges to opt out</span>
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setCategoriesEdit(categoriesEdit.filter((_, i) => i !== index))}
-                            className="p-2.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            aria-label={`Remove ${cat.name || "category"}`}
-                            disabled={hasScores}
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mt-3">
-                    <button
-                      type="button"
-                      onClick={() => setCategoriesEdit([...categoriesEdit, { name: "", weight: 1, optOutAllowed: false }])}
-                      className="btn-ghost text-sm"
-                      disabled={hasScores}
-                    >
-                      + Add Category
-                    </button>
-                    <div aria-hidden />
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleSaveJudgeSettings}
-                    disabled={savingJudgeSettings || hasScores || !scoresLoaded}
-                    className="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {savingJudgeSettings ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Judging Settings"
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {isDemoDayMode && (
-                <div className="card-static p-6 bg-card space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c1.657 0 3-1.343 3-3S13.657 2 12 2 9 3.343 9 5s1.343 3 3 3zm0 2c-2.667 0-8 1.334-8 4v2a2 2 0 002 2h12a2 2 0 002-2v-2c0-2.666-5.333-4-8-4z" />
-                      </svg>
-                      Appreciation Settings (Demo Day)
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Total appreciations per attendee
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        className="input"
-                        value={appreciationBudget}
-                        onChange={(e) =>
-                          setAppreciationBudget(
-                            Number.isFinite(Number(e.target.value))
-                              ? Number(e.target.value)
-                              : 0
-                          )
-                        }
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Limit of hearts each attendee can give across all teams. Defaults to 100.
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Max per team
-                      </label>
-                      <input
-                        type="number"
-                        value={3}
-                        readOnly
-                        className="input bg-muted cursor-not-allowed"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Per-team cap remains 3 to encourage distribution.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleSaveAppreciationSettings}
-                      disabled={savingAppreciationSettings}
-                      className="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {savingAppreciationSettings ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        "Save Appreciation Settings"
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-          {/* Teams */}
-          <div className="card-static p-6 bg-card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                Teams ({event.teams.length})
-              </h3>
-              <button
-                onClick={() => {
-                  setEditingTeam(null);
-                  setShowAddTeam(true);
-                }}
-                className="btn-primary text-sm flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Team
-              </button>
-            </div>
-            <div className="space-y-2">
-              {event.teams.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No teams added yet</p>
-              ) : (
-                event.teams.map((team, index) => (
-                  <div 
-                    key={team._id} 
-                    className={`rounded-lg p-4 transition-colors border border-border ${
-                      index % 2 === 0 
-                        ? 'bg-muted/30' 
-                        : 'bg-background'
-                    } ${
-                      (team as any).hidden ? 'opacity-50 border-dashed border-yellow-500/50' : ''
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-foreground">{team.name}</h4>
-                          {(team as any).hidden && (
-                            <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-xs rounded-full">
-                              Hidden
-                            </span>
-                          )}
-                          {isDemoDayMode && (team as any).courseCode && (
-                            <span className="px-2 py-0.5 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 text-xs rounded-full">
-                              {(team as any).courseCode}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{team.members.join(", ")}</p>
-                      </div>
-                      <div className="relative ml-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setTeamMenuOpen(teamMenuOpen === team._id ? null : team._id);
-                          }}
-                          className="p-1 rounded-lg hover:bg-muted transition-colors"
-                        >
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                          </svg>
-                        </button>
-                        {teamMenuOpen === team._id && (
-                          <>
-                            <div
-                              className="fixed inset-0 z-10"
-                              onClick={() => setTeamMenuOpen(null)}
-                            />
-                            <div className="absolute right-0 top-8 z-20 bg-background border border-border rounded-lg shadow-xl py-1 min-w-[150px]">
-                              <button
-                                onClick={() => {
-                                  setEditingTeam(team);
-                                  setShowAddTeam(true);
-                                  setTeamMenuOpen(null);
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors"
-                              >
-                                Edit Team
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await hideTeam({ teamId: team._id, hidden: !(team as any).hidden });
-                                    toast.success((team as any).hidden ? "Team unhidden" : "Team hidden");
-                                    setTeamMenuOpen(null);
-                                  } catch (error: any) {
-                                    toast.error(error.message);
-                                  }
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors"
-                              >
-                                {(team as any).hidden ? "Unhide Team" : "Hide Team"}
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  if (confirm(`Are you sure you want to permanently delete "${team.name}"? This will also delete all scores for this team.`)) {
-                                    try {
-                                      await removeTeam({ teamId: team._id });
-                                      toast.success("Team removed");
-                                      setTeamMenuOpen(null);
-                                    } catch (error: any) {
-                                      toast.error(error.message);
-                                    }
-                                  }
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              >
-                                Remove Team
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Scores - only show for hackathon mode */}
-          {!isDemoDayMode && eventScores && eventScores.length > 0 && (
-            <div className="card-static p-6 bg-card">
-              <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Scores
-              </h3>
-              <div className="bg-muted/30 rounded-lg overflow-hidden border border-border">
-                <table className="min-w-full">
-                  <thead className="bg-muted/50 border-b border-border">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Rank</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Team</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Avg Score</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Judges</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {eventScores.map((teamScore, index) => (
-                      <tr key={teamScore.team._id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 text-sm font-bold text-foreground">#{index + 1}</td>
-                        <td className="px-4 py-3 text-sm font-semibold text-foreground">{teamScore.team.name}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground font-mono">{teamScore.averageScore.toFixed(2)}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{teamScore.judgeCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-              {/* Actions */}
-              <div className="flex gap-3 flex-wrap">
-                {event.status === "active" && (
-                  <button
-                    onClick={() => handleStatusChange("past")}
-                    className="flex-1 min-w-[200px] bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Finish Event
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowSelectWinners(true)}
-                  className="flex-1 min-w-[200px] btn-secondary flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                  </svg>
-                  Select Winners
-                </button>
-                <button
-                  onClick={handleReleaseResults}
-                  disabled={event.resultsReleased}
-                  className="flex-1 min-w-[200px] bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {event.resultsReleased ? "Results Released" : "Release Results"}
-                </button>
-              </div>
-            </>
-          )}
-
-          {activeTab === 'scores' && (
-            <>
-              {isDemoDayMode ? (
-                // Demo Day Appreciations View
-                appreciationSummary ? (
-                  <div className="space-y-6">
-                    {/* Summary Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="card-static p-6 bg-card text-center">
-                        <div className="text-3xl font-bold text-pink-500">{appreciationSummary.totalAppreciations}</div>
-                        <div className="text-sm text-muted-foreground mt-1">Total Appreciations</div>
-                      </div>
-                      <div className="card-static p-6 bg-card text-center">
-                        <div className="text-3xl font-bold text-foreground">{appreciationSummary.uniqueAttendees}</div>
-                        <div className="text-sm text-muted-foreground mt-1">Unique Attendees</div>
-                      </div>
-                      <div className="card-static p-6 bg-card text-center">
-                        <div className="text-3xl font-bold text-foreground">{appreciationSummary.teams.length}</div>
-                        <div className="text-sm text-muted-foreground mt-1">Projects</div>
-                      </div>
-                    </div>
-
-                    {/* Export Buttons */}
-                    <div className="flex justify-end gap-3">
-                      <button
-                        onClick={handleExportAppreciationsCsv}
-                        className="btn-secondary flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        Export CSV
-                      </button>
-                      <button
-                        onClick={() => void handleDownloadQrCodes()}
-                        disabled={isGeneratingQr}
-                        className="bg-pink-500 hover:bg-pink-600 text-white font-medium px-4 py-2 rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isGeneratingQr ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                            </svg>
-                            Download QR Codes
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Team Rankings */}
-                    <div className="card-static p-6 bg-card">
-                      <h4 className="text-xl font-heading font-bold text-foreground mb-4">Project Rankings</h4>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                          <thead className="bg-muted/50 border-b border-border">
-                            <tr>
-                              <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Rank</th>
-                              <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Project</th>
-                              <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Course</th>
-                              <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase">Appreciations</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-border">
-                            {appreciationSummary.teams.map((team, index) => (
-                              <tr key={team.teamId} className={index % 2 === 0 ? 'bg-muted/20' : ''}>
-                                <td className="px-4 py-3 text-sm font-bold text-foreground">
-                                  <span className="flex items-center gap-2">
-                                    #{index + 1}
-                                    {index === 0 && <span className="text-lg">🥇</span>}
-                                    {index === 1 && <span className="text-lg">🥈</span>}
-                                    {index === 2 && <span className="text-lg">🥉</span>}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-sm font-semibold text-foreground">{team.teamName}</td>
-                                <td className="px-4 py-3 text-sm text-muted-foreground">
-                                  {team.courseCode || "-"}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-pink-500">❤️</span>
-                                    <span className="font-bold text-foreground">{team.rawScore}</span>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="card-static p-12 bg-card text-center">
-                    <div className="text-6xl mb-4">❤️</div>
-                    <h3 className="text-2xl font-heading font-bold text-foreground mb-2">No Appreciations Yet</h3>
-                    <p className="text-muted-foreground">
-                      Attendees haven't given any appreciations yet. Share the event link to get started!
-                    </p>
-                  </div>
-                )
-              ) : (
-                // Hackathon Scores View
-                detailedScores ? (
-                  <ScoringDashboard 
-                    scores={detailedScores}
-                    viewMode={viewMode}
-                    setViewMode={setViewMode}
-                  />
-                ) : (
-                  <div className="card-static p-12 bg-card text-center">
-                    <div className="text-6xl mb-4">📊</div>
-                    <h3 className="text-2xl font-heading font-bold text-foreground mb-2">No Scores Yet</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Judges haven't submitted any scores for this event yet.
-                    </p>
-                    <div className="max-w-md mx-auto text-left bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
-                      <p className="font-semibold mb-2">💡 To see demo scores:</p>
-                      <ol className="list-decimal list-inside space-y-1">
-                        <li>Open your Convex dashboard</li>
-                        <li>Go to Functions → seed:seedJudgeScores</li>
-                        <li>Click "Run" to generate demo data</li>
-                      </ol>
-                    </div>
-                  </div>
-                )
-              )}
-            </>
-          )}
+              </TabPanel>
+            </TabPanels>
+          </TabGroup>
         </div>
-      </div>
 
-      {showAddTeam && (
-        <AddTeamModal
-          eventId={eventId}
-          onClose={() => {
-            setShowAddTeam(false);
-            setEditingTeam(null);
-          }}
-          onSubmit={createTeam}
-          onSubmitEdit={updateTeamAdmin}
-          editingTeam={editingTeam}
-          eventMode={event.mode}
-          courseCodes={event.courseCodes || []}
-        />
-      )}
+        {/* Modals placed outside strict layout constraints but inside logical component */}
+        {showAddTeam && (
+          <AddTeamModal
+            eventId={eventId}
+            onClose={() => {
+              setShowAddTeam(false);
+              setEditingTeam(null);
+            }}
+            onSubmit={createTeam}
+            onSubmitEdit={updateTeamAdmin}
+            editingTeam={editingTeam}
+            eventMode={event.mode}
+            courseCodes={event.courseCodes || []}
+          />
+        )}
 
-      {showSelectWinners && event.teams.length > 0 && (
-        <SelectWinnersModal
-          eventId={eventId}
-          teams={event.teams}
-          categories={event.categories.map(c => c.name)}
-          onClose={() => setShowSelectWinners(false)}
-          onSubmit={setWinners}
-        />
-      )}
-    </div>
+        {showSelectWinners && !isDemoDayMode && prizeDeliberationData && (
+          <PrizeWinnersWizardModal
+            eventId={eventId}
+            deliberationData={prizeDeliberationData}
+            existingWinners={prizeWinners || []}
+            onClose={() => setShowSelectWinners(false)}
+            onSubmit={setPrizeWinners}
+          />
+        )}
+      </DialogPanel>
+    </Dialog >
   );
 }
 
@@ -2045,7 +2539,7 @@ function ScoringDashboard({
 
   const sortedRankings = [...scores.teamRankings].sort((a, b) => {
     let comparison = 0;
-    
+
     switch (sortColumn) {
       case 'name':
         comparison = a.team.name.localeCompare(b.team.name);
@@ -2065,227 +2559,140 @@ function ScoringDashboard({
         }
         break;
     }
-    
+
     return sortDirection === 'asc' ? comparison : -comparison;
   });
 
-  const SortIcon = ({ column }: { column: string }) => {
-    if (sortColumn !== column) {
-      return (
-        <svg className="w-4 h-4 inline-block ml-1 text-muted-foreground opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
-    }
-    return sortDirection === 'asc' ? (
-      <svg className="w-4 h-4 inline-block ml-1 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
-    ) : (
-      <svg className="w-4 h-4 inline-block ml-1 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    );
+  const getSortIcon = (column: string) => {
+    if (sortColumn !== column) return undefined;
+    if (sortDirection === 'asc') return ChevronUpIcon;
+    return ChevronDownIcon;
   };
+
+  // Data for charts
+  const overallChartData = scores.teamRankings.map(r => ({
+    name: r.team.name,
+    value: r.averageScore,
+  })).sort((a, b) => b.value - a.value);
 
   return (
     <div className="space-y-6">
-      {/* View Toggle */}
-      <div className="flex justify-between items-center">
-        <h3 className="text-2xl font-heading font-bold text-foreground">Scoring Dashboard</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setViewMode('table')}
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              viewMode === 'table'
-                ? 'bg-primary text-white shadow-md'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-          >
-            <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            Table
-          </button>
-          <button
-            onClick={() => setViewMode('chart')}
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              viewMode === 'chart'
-                ? 'bg-primary text-white shadow-md'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-          >
-            <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Charts
-          </button>
-        </div>
-      </div>
+      <Flex justifyContent="between" alignItems="center">
+        <Title>Scoring Dashboard</Title>
+        <TabGroup index={viewMode === 'table' ? 0 : 1} onIndexChange={(i) => setViewMode(i === 0 ? 'table' : 'chart')}>
+          <TabList variant="solid">
+            <Tab>Table</Tab>
+            <Tab>Charts</Tab>
+          </TabList>
+        </TabGroup>
+      </Flex>
 
       {viewMode === 'table' ? (
-        <>
+        <div className="space-y-6">
           {/* Overall Rankings Table */}
-          <div className="card-static p-6 bg-card">
-            <h4 className="text-xl font-heading font-bold text-foreground mb-4">Overall Rankings</h4>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-muted/50 border-b border-border">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-foreground">
-                      Rank
-                    </th>
-                    <th 
-                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
-                      onClick={() => handleSort('name')}
-                    >
+          <div className="card-professional p-6">
+            <Title className="mb-4">Overall Rankings</Title>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell onClick={() => handleSort('name')} className="cursor-pointer hover:text-tremor-content-emphasis transition-colors">
+                    <Flex justifyContent="start" className="gap-1">
                       Team Name
-                      <SortIcon column="name" />
-                    </th>
-                    <th 
-                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
-                      onClick={() => handleSort('averageScore')}
-                    >
+                      {sortColumn === 'name' && <Icon icon={getSortIcon('name')!} size="xs" />}
+                    </Flex>
+                  </TableHeaderCell>
+                  <TableHeaderCell onClick={() => handleSort('averageScore')} className="cursor-pointer hover:text-tremor-content-emphasis transition-colors">
+                    <Flex justifyContent="start" className="gap-1">
                       Avg Score
-                      <SortIcon column="averageScore" />
-                    </th>
-                    <th 
-                      className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
-                      onClick={() => handleSort('judges')}
-                    >
+                      {sortColumn === 'averageScore' && <Icon icon={getSortIcon('averageScore')!} size="xs" />}
+                    </Flex>
+                  </TableHeaderCell>
+                  <TableHeaderCell onClick={() => handleSort('judges')} className="cursor-pointer hover:text-tremor-content-emphasis transition-colors">
+                    <Flex justifyContent="start" className="gap-1">
                       Judges
-                      <SortIcon column="judges" />
-                    </th>
-                    {scores.categories.map((cat) => (
-                      <th 
-                        key={cat} 
-                        className="px-6 py-4 text-left text-sm font-bold text-foreground cursor-pointer hover:bg-muted/70 transition-colors select-none"
-                        onClick={() => handleSort(cat)}
-                      >
+                      {sortColumn === 'judges' && <Icon icon={getSortIcon('judges')!} size="xs" />}
+                    </Flex>
+                  </TableHeaderCell>
+                  {scores.categories.map((cat) => (
+                    <TableHeaderCell key={cat} onClick={() => handleSort(cat)} className="cursor-pointer hover:text-tremor-content-emphasis transition-colors">
+                      <Flex justifyContent="start" className="gap-1">
                         {cat}
-                        <SortIcon column={cat} />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {sortedRankings.map((ranking, index) => (
-                    <tr 
-                      key={ranking.team._id}
-                      className={index % 2 === 0 ? 'bg-muted/20' : ''}
-                    >
-                      <td className="px-6 py-4 text-lg font-bold text-foreground">#{index + 1}</td>
-                      <td className="px-6 py-4 text-lg font-semibold text-foreground">{ranking.team.name}</td>
-                      <td className="px-6 py-4 text-lg font-mono text-foreground">{ranking.averageScore.toFixed(2)}</td>
-                      <td className="px-6 py-4 text-lg text-muted-foreground">{ranking.judgeCount}</td>
-                      {scores.categories.map((cat) => (
-                        <td key={cat} className="px-6 py-4 text-base font-mono text-muted-foreground">
-                          {ranking.categoryAverages[cat]?.toFixed(2) || '-'}
-                        </td>
-                      ))}
-                    </tr>
+                        {sortColumn === cat && <Icon icon={getSortIcon(cat)!} size="xs" />}
+                      </Flex>
+                    </TableHeaderCell>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {sortedRankings.map((ranking, index) => (
+                  <TableRow key={ranking.team._id}>
+                    <TableCell>
+                      <Flex justifyContent="start" className="gap-3">
+                        <Badge>{index + 1}</Badge>
+                        <Text className="font-semibold text-tremor-content-emphasis">{ranking.team.name}</Text>
+                      </Flex>
+                    </TableCell>
+                    <TableCell>
+                      <Text className="font-mono">{ranking.averageScore.toFixed(2)}</Text>
+                    </TableCell>
+                    <TableCell>
+                      <Text>{ranking.judgeCount}</Text>
+                    </TableCell>
+                    {scores.categories.map((cat) => (
+                      <TableCell key={cat}>
+                        <Text className="font-mono text-tremor-content-subtle">{ranking.categoryAverages[cat]?.toFixed(2) || '-'}</Text>
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
 
           {/* Category Rankings */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Grid numItems={1} numItemsMd={2} className="gap-6">
             {scores.categories.map((category) => (
-              <div key={category} className="card-static p-6 bg-card">
-                <h4 className="text-lg font-heading font-bold text-foreground mb-4">{category}</h4>
+              <div key={category} className="card-professional p-6">
+                <Title className="mb-4">{category}</Title>
                 <div className="space-y-2">
                   {scores.categoryRankings[category]?.slice(0, 5).map((team, idx) => (
-                    <div 
-                      key={team.team._id}
-                      className={`flex justify-between items-center p-3 rounded-lg ${
-                        idx % 2 === 0 ? 'bg-muted/30' : 'bg-background border border-border'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg font-bold text-muted-foreground">#{idx + 1}</span>
-                        <span className="text-base font-semibold text-foreground">{team.team.name}</span>
-                      </div>
-                      <span className="text-base font-mono text-foreground">{team.categoryAverage.toFixed(2)}</span>
-                    </div>
+                    <Flex key={team.team._id} className="p-2 border-b border-tremor-border last:border-0">
+                      <Flex justifyContent="start" className="gap-3">
+                        <Text className="font-bold w-6">#{idx + 1}</Text>
+                        <Text className="truncate">{team.team.name}</Text>
+                      </Flex>
+                      <Text className="font-mono font-semibold">{team.categoryAverage.toFixed(2)}</Text>
+                    </Flex>
                   ))}
                 </div>
               </div>
             ))}
-          </div>
-        </>
+          </Grid>
+        </div>
       ) : (
-        <>
+        <div className="space-y-6">
           {/* Overall Rankings Chart */}
-          <div className="card-static p-6 bg-card">
-            <h4 className="text-xl font-heading font-bold text-foreground mb-6">Overall Rankings</h4>
-            <div className="space-y-4">
-              {scores.teamRankings.map((ranking, index) => {
-                const maxScore = Math.max(...scores.teamRankings.map(r => r.averageScore));
-                const percentage = (ranking.averageScore / maxScore) * 100;
-                
-                return (
-                  <div key={ranking.team._id} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg font-bold text-muted-foreground w-8">#{index + 1}</span>
-                        <span className="text-lg font-semibold text-foreground">{ranking.team.name}</span>
-                      </div>
-                      <span className="text-lg font-mono font-bold text-foreground">{ranking.averageScore.toFixed(2)}</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-8 overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full flex items-center justify-end pr-3 transition-all duration-500"
-                        style={{ width: `${percentage}%` }}
-                      >
-                        <span className="text-xs font-medium text-white">{percentage.toFixed(0)}%</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="card-professional p-6">
+            <Title className="mb-6">Overall Rankings</Title>
+            <BarList data={overallChartData} valueFormatter={(number: number) => number.toFixed(2)} />
           </div>
 
-          {/* Category Comparison Chart */}
-          <div className="card-static p-6 bg-card">
-            <h4 className="text-xl font-heading font-bold text-foreground mb-6">Top 5 Teams by Category</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {scores.categories.map((category) => (
-                <div key={category}>
-                  <h5 className="text-lg font-semibold text-foreground mb-4">{category}</h5>
-                  <div className="space-y-3">
-                    {scores.categoryRankings[category]?.slice(0, 5).map((team, idx) => {
-                      const maxCategoryScore = Math.max(...(scores.categoryRankings[category]?.map(t => t.categoryAverage) || [1]));
-                      const percentage = (team.categoryAverage / maxCategoryScore) * 100;
-                      
-                      return (
-                        <div key={team.team._id} className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="font-medium text-foreground">{team.team.name}</span>
-                            <span className="font-mono text-muted-foreground">{team.categoryAverage.toFixed(2)}</span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-6 overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full transition-all duration-500 ${
-                                idx === 0 ? 'bg-amber-400' :
-                                idx === 1 ? 'bg-zinc-400' :
-                                idx === 2 ? 'bg-orange-400' :
-                                'bg-primary'
-                              }`}
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+          {/* Category Charts */}
+          <Grid numItems={1} numItemsMd={2} className="gap-6">
+            {scores.categories.map((category) => {
+              const data = scores.categoryRankings[category]?.slice(0, 5).map(t => ({
+                name: t.team.name,
+                value: t.categoryAverage
+              }));
+              return (
+                <div key={category} className="card-professional p-6">
+                  <Title className="mb-4">{category}</Title>
+                  <BarList data={data} valueFormatter={(number: number) => number.toFixed(2)} color="indigo" />
                 </div>
-              ))}
-            </div>
-          </div>
-        </>
+              );
+            })}
+          </Grid>
+        </div>
       )}
     </div>
   );
@@ -2315,6 +2722,7 @@ function AddTeamModal({
     description: "",
     members: "",
     projectUrl: "",
+    devpostUrl: "",
     courseCode: "",
   });
 
@@ -2325,6 +2733,7 @@ function AddTeamModal({
         description: editingTeam.description || "",
         members: editingTeam.members?.join(", ") || "",
         projectUrl: editingTeam.githubUrl || "",
+        devpostUrl: editingTeam.devpostUrl || "",
         courseCode: editingTeam.courseCode || "",
       });
     } else {
@@ -2333,6 +2742,7 @@ function AddTeamModal({
         description: "",
         members: "",
         projectUrl: "",
+        devpostUrl: "",
         courseCode: "",
       });
     }
@@ -2360,8 +2770,21 @@ function AddTeamModal({
         return;
       }
 
-      if (!isDemoDay && formData.projectUrl && !formData.projectUrl.startsWith("https://github.com/")) {
+      if (
+        !isDemoDay &&
+        formData.projectUrl &&
+        !formData.projectUrl.startsWith("https://github.com/")
+      ) {
         toast.error("Project URL must start with https://github.com/");
+        setSubmitting(false);
+        return;
+      }
+      if (
+        !isDemoDay &&
+        formData.devpostUrl &&
+        !formData.devpostUrl.startsWith("https://")
+      ) {
+        toast.error("Devpost URL must start with https://");
         setSubmitting(false);
         return;
       }
@@ -2374,7 +2797,10 @@ function AddTeamModal({
           members,
           ...(isDemoDay
             ? { courseCode: formData.courseCode || undefined }
-            : { projectUrl: formData.projectUrl || undefined }),
+            : {
+              projectUrl: formData.projectUrl || undefined,
+              devpostUrl: formData.devpostUrl || undefined,
+            }),
         });
         toast.success("Team updated successfully!");
       } else {
@@ -2385,7 +2811,10 @@ function AddTeamModal({
           members,
           ...(isDemoDay
             ? { courseCode: formData.courseCode || undefined }
-            : { projectUrl: formData.projectUrl || undefined }),
+            : {
+              projectUrl: formData.projectUrl || undefined,
+              devpostUrl: formData.devpostUrl || undefined,
+            }),
         });
         toast.success("Team added successfully!");
       }
@@ -2398,273 +2827,454 @@ function AddTeamModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <div 
-        className="absolute inset-0"
-        onClick={onClose}
-      />
-      <div className="relative bg-background rounded-2xl shadow-2xl max-w-md w-full border border-border slide-up">
-        <div className="p-6 border-b border-border">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          <h3 className="text-2xl font-heading font-bold text-foreground">
-            {editingTeam ? "Edit Team" : "Add Team"}
-          </h3>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+    <Dialog open={true} onClose={onClose} static={true}>
+      <DialogPanel className="max-w-md">
+        <Title className="mb-4">{editingTeam ? "Edit Team" : "Add Team"}</Title>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Team Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
+            <Text className="mb-1">Team Name <span className="text-red-500">*</span></Text>
+            <TextInput
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
+              onValueChange={(val) => setFormData({ ...formData, name: val })}
               placeholder="Code Crusaders"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Description <span className="text-muted-foreground text-xs">(optional)</span>
-            </label>
-            <textarea
+            <Text className="mb-1">Description</Text>
+            <Textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground resize-none"
+              onValueChange={(val) => setFormData({ ...formData, description: val })}
               placeholder="AI-powered study assistant"
+              rows={2}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Members (comma-separated) <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
+            <Text className="mb-1">Members (comma-separated) <span className="text-red-500">*</span></Text>
+            <TextInput
               required
               value={formData.members}
-              onChange={(e) => setFormData({ ...formData, members: e.target.value })}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
-              placeholder="Alice Smith, Bob Johnson, Carol Lee"
+              onValueChange={(val) => setFormData({ ...formData, members: val })}
+              placeholder="Alice, Bob, Carol"
             />
           </div>
-          {/* Course Code (Demo Day) or Project URL (Hackathon) */}
+
           {isDemoDay ? (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Course <span className="text-red-500">*</span>
-              </label>
-              <select
-                required
+              <Text className="mb-1">Course <span className="text-red-500">*</span></Text>
+              <Select
                 value={formData.courseCode}
-                onChange={(e) => setFormData({ ...formData, courseCode: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all text-foreground"
+                onValueChange={(val) => setFormData({ ...formData, courseCode: val })}
+                placeholder="Select course..."
               >
-                <option value="">Select course...</option>
                 {(courseCodes || []).map((code) => (
-                  <option key={code} value={code}>
+                  <SelectItem key={code} value={code}>
                     {code}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
+              </Select>
             </div>
           ) : (
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Project URL <span className="text-muted-foreground text-xs">(optional)</span>
-              </label>
-              <input
-                type="url"
-                value={formData.projectUrl}
-                onChange={(e) => setFormData({ ...formData, projectUrl: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
-                placeholder="https://github.com/team/project"
-              />
+            <div className="space-y-3">
+              <div>
+                <Text className="mb-1">Project URL</Text>
+                <TextInput
+                  value={formData.projectUrl}
+                  onValueChange={(val) => setFormData({ ...formData, projectUrl: val })}
+                  placeholder="https://github.com/..."
+                />
+              </div>
+              <div>
+                <Text className="mb-1">Devpost URL (optional)</Text>
+                <TextInput
+                  value={formData.devpostUrl}
+                  onValueChange={(val) => setFormData({ ...formData, devpostUrl: val })}
+                  placeholder="https://devpost.com/software/..."
+                />
+              </div>
             </div>
           )}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Saving...
-                </span>
-              ) : (
-                editingTeam ? "Save Changes" : "Add Team"
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="flex-1 btn-secondary"
-            >
+
+          <Flex className="gap-2 mt-6">
+            <Button variant="secondary" onClick={onClose} type="button">
               Cancel
-            </button>
-          </div>
+            </Button>
+            <Button loading={submitting} type="submit">
+              {editingTeam ? "Save Changes" : "Add Team"}
+            </Button>
+          </Flex>
         </form>
-      </div>
-    </div>
+      </DialogPanel>
+    </Dialog>
   );
 }
 
-function SelectWinnersModal({
+function PrizeWinnersWizardModal({
   eventId,
-  teams,
-  categories,
+  deliberationData,
+  existingWinners,
   onClose,
   onSubmit,
 }: {
   eventId: Id<"events">;
-  teams: Array<any>;
-  categories: string[];
+  deliberationData: any;
+  existingWinners: any[];
   onClose: () => void;
   onSubmit: any;
 }) {
+  const prizes = deliberationData?.prizes || [];
+  const [activePrizeIndex, setActivePrizeIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [overallWinner, setOverallWinner] = useState<Id<"teams"> | "">("");
-  const [categoryWinners, setCategoryWinners] = useState<Record<string, Id<"teams"> | "">>({});
+  const [search, setSearch] = useState("");
+  const [trackFilter, setTrackFilter] = useState("all");
+  const [minScore, setMinScore] = useState("");
+  const [selectedByPrize, setSelectedByPrize] = useState<Record<string, string>>(
+    {}
+  );
+  const [notesByPrize, setNotesByPrize] = useState<Record<string, string>>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!overallWinner) {
-      toast.error("Please select an overall winner");
-      return;
+  useEffect(() => {
+    if (!existingWinners || existingWinners.length === 0) return;
+    const selected: Record<string, string> = {};
+    const notes: Record<string, string> = {};
+    existingWinners.forEach((winner) => {
+      selected[String(winner.prizeId)] = String(winner.teamId);
+      notes[String(winner.prizeId)] = winner.notes || "";
+    });
+    setSelectedByPrize(selected);
+    setNotesByPrize(notes);
+  }, [existingWinners]);
+
+  useEffect(() => {
+    if (activePrizeIndex < prizes.length) return;
+    setActivePrizeIndex(Math.max(0, prizes.length - 1));
+  }, [activePrizeIndex, prizes.length]);
+
+  const activePrize = prizes[activePrizeIndex];
+  const activePrizeId = String(activePrize?.prize?._id || "");
+  const selectedWinnerId = selectedByPrize[activePrizeId] || "";
+
+  const availableTracks = useMemo(() => {
+    if (!activePrize?.candidates) return [];
+    return Array.from(
+      new Set(
+        activePrize.candidates
+          .map((candidate: any) => candidate.track)
+          .filter(Boolean)
+      )
+    ).sort() as string[];
+  }, [activePrize]);
+
+  useEffect(() => {
+    setTrackFilter("all");
+    setSearch("");
+    setMinScore("");
+  }, [activePrizeId]);
+
+  const filteredCandidates = useMemo(() => {
+    if (!activePrize?.candidates) return [];
+    const threshold = Number(minScore);
+    const hasThreshold = Number.isFinite(threshold) && minScore !== "";
+
+    return [...activePrize.candidates]
+      .filter((candidate: any) => {
+        const nameMatch =
+          candidate.teamName.toLowerCase().includes(search.toLowerCase()) ||
+          (candidate.track || "").toLowerCase().includes(search.toLowerCase());
+        if (!nameMatch) return false;
+        if (trackFilter !== "all" && candidate.track !== trackFilter) return false;
+        if (hasThreshold && candidate.averageScore < threshold) return false;
+        return true;
+      })
+      .sort((a: any, b: any) => b.averageScore - a.averageScore);
+  }, [activePrize, minScore, search, trackFilter]);
+
+  const completedPrizeCount = Object.keys(selectedByPrize).filter(
+    (prizeId) => !!selectedByPrize[prizeId]
+  ).length;
+
+  const handleConfirm = async () => {
+    const missingPrizeNames = prizes
+      .filter((entry: any) => !selectedByPrize[String(entry.prize._id)])
+      .map((entry: any) => entry.prize.name);
+
+    if (missingPrizeNames.length > 0) {
+      const proceed = window.confirm(
+        `You still have ${missingPrizeNames.length} prize(s) without winners. Continue anyway?`
+      );
+      if (!proceed) return;
     }
+
+    const winnersPayload = prizes
+      .map((entry: any) => {
+        const prizeId = String(entry.prize._id);
+        const selectedTeamId = selectedByPrize[prizeId];
+        if (!selectedTeamId) return null;
+        return {
+          prizeId: entry.prize._id as Id<"prizes">,
+          teamId: selectedTeamId as Id<"teams">,
+          placement: 1,
+          notes: notesByPrize[prizeId]?.trim() || undefined,
+        };
+      })
+      .filter(Boolean);
 
     setSubmitting(true);
     try {
       await onSubmit({
         eventId,
-        overallWinner,
-        categoryWinners: Object.entries(categoryWinners)
-          .filter(([_, teamId]) => teamId)
-          .map(([category, teamId]) => ({ category, teamId })),
+        winners: winnersPayload,
       });
-      toast.success("Winners selected successfully!");
+      toast.success("Prize winners saved");
       onClose();
-    } catch (error) {
-      toast.error("Failed to select winners");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to save prize winners");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <div 
-        className="absolute inset-0"
-        onClick={onClose}
-      />
-      <div className="relative bg-background rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-auto border border-border slide-up">
-        <div className="sticky top-0 bg-background border-b border-border p-6 z-10">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          <h3 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
-            <svg className="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            Select Winners
-          </h3>
-          <p className="text-muted-foreground mt-1">Choose the overall winner and category winners</p>
+    <Dialog open={true} onClose={onClose} static={true}>
+      <DialogPanel className="max-w-6xl w-full max-h-[90vh] overflow-auto p-0">
+        <div className="sticky top-0 z-10 bg-tremor-background border-b border-tremor-border p-5">
+          <Flex justifyContent="between" alignItems="start">
+            <div>
+              <Title>Prize Winner Wizard</Title>
+              <Text>
+                Deliberate prize-by-prize with score insights and project links.
+              </Text>
+            </div>
+            <Badge color="teal">
+              {completedPrizeCount}/{prizes.length} assigned
+            </Badge>
+          </Flex>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="card p-6 bg-amber-500/10 border-amber-500/20">
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-3">
-              <span className="text-2xl">🏆</span>
-              Overall Winner
-            </label>
-            <select
-              required
-              value={overallWinner}
-              onChange={(e) => setOverallWinner(e.target.value as Id<"teams">)}
-              className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
-            >
-              <option value="">Select a team</option>
-              {teams.map((team) => (
-                <option key={team._id} value={team._id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-0 min-h-[70vh]">
+          <div className="border-r border-tremor-border bg-tremor-background-muted p-4 space-y-2">
+            {prizes.map((entry: any, index: number) => {
+              const prizeId = String(entry.prize._id);
+              const isActive = index === activePrizeIndex;
+              const hasWinner = !!selectedByPrize[prizeId];
+              return (
+                <button
+                  key={prizeId}
+                  type="button"
+                  onClick={() => setActivePrizeIndex(index)}
+                  className={`w-full rounded-lg border px-3 py-3 text-left transition-colors ${isActive
+                    ? "border-teal-500 bg-teal-500/10"
+                    : "border-tremor-border bg-tremor-background hover:bg-tremor-background-subtle"
+                    }`}
+                >
+                  <Text className="font-medium">{entry.prize.name}</Text>
+                  <Text className="text-xs mt-1">
+                    {entry.submissionCount} submission{entry.submissionCount === 1 ? "" : "s"}
+                  </Text>
+                  <Text className={`text-xs mt-1 ${hasWinner ? "text-emerald-600" : "text-amber-600"}`}>
+                    {hasWinner ? "Winner selected" : "Pending"}
+                  </Text>
+                </button>
+              );
+            })}
           </div>
 
-          <div>
-            <h4 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
-              <span className="text-xl">🥇</span>
-              Category Winners
-            </h4>
-            <div className="space-y-4">
-              {categories.map((category) => (
-                <div key={category} className="card p-4">
-                  <label className="block text-sm font-medium text-foreground mb-2">{category}</label>
-                  <select
-                    value={categoryWinners[category] || ""}
-                    onChange={(e) =>
-                      setCategoryWinners({
-                        ...categoryWinners,
-                        [category]: e.target.value as Id<"teams">,
-                      })
-                    }
-                    className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-foreground"
-                  >
-                    <option value="">Select a team</option>
-                    {teams.map((team) => (
-                      <option key={team._id} value={team._id}>
-                        {team.name}
-                      </option>
-                    ))}
-                  </select>
+          <div className="p-5 space-y-5">
+            {!activePrize ? (
+              <div className="card-professional p-8 text-center">
+                <Text>No prizes configured yet.</Text>
+              </div>
+            ) : (
+              <>
+                <div className="card-professional p-5">
+                  <Flex justifyContent="between" alignItems="start">
+                    <div>
+                      <Title>{activePrize.prize.name}</Title>
+                      <Text className="mt-1">
+                        {activePrize.prize.description || "No description provided."}
+                      </Text>
+                      <Text className="text-xs mt-2">
+                        Type: {PRIZE_TYPE_LABELS[activePrize.prize.type as PrizeType]}
+                        {activePrize.prize.track ? ` · Track: ${activePrize.prize.track}` : ""}
+                        {activePrize.prize.sponsorName
+                          ? ` · Sponsor: ${activePrize.prize.sponsorName}`
+                          : ""}
+                      </Text>
+                    </div>
+                    <Badge color="blue">
+                      {activePrize.submissionCount} candidates
+                    </Badge>
+                  </Flex>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="sticky bottom-0 bg-background border-t border-border -mx-6 -mb-6 p-6 flex gap-4">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Saving...
-                </span>
-              ) : (
-                "Save Winners"
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="flex-1 btn-secondary"
-            >
-              Cancel
-            </button>
+                <div className="card-professional p-5 space-y-4">
+                  <Grid numItems={1} numItemsMd={3} className="gap-3">
+                    <TextInput
+                      value={search}
+                      onValueChange={setSearch}
+                      placeholder="Search by team or track..."
+                    />
+                    <Select
+                      value={trackFilter}
+                      onValueChange={setTrackFilter}
+                      placeholder="Filter by track"
+                    >
+                      <SelectItem value="all">All tracks</SelectItem>
+                      {availableTracks.map((track: string) => (
+                        <SelectItem key={track} value={track}>
+                          {track}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                    <TextInput
+                      value={minScore}
+                      onValueChange={setMinScore}
+                      placeholder="Minimum avg score (optional)"
+                    />
+                  </Grid>
+
+                  <div className="rounded border border-tremor-border overflow-hidden">
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableHeaderCell>Team</TableHeaderCell>
+                          <TableHeaderCell>Track</TableHeaderCell>
+                          <TableHeaderCell>Avg Score</TableHeaderCell>
+                          <TableHeaderCell>Judge Count</TableHeaderCell>
+                          <TableHeaderCell>Links</TableHeaderCell>
+                          <TableHeaderCell>Winner</TableHeaderCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {filteredCandidates.map((candidate: any) => {
+                          const isSelected =
+                            selectedWinnerId &&
+                            String(selectedWinnerId) === String(candidate.teamId);
+                          return (
+                            <TableRow key={candidate.teamId} className={isSelected ? "bg-emerald-500/5" : ""}>
+                              <TableCell>
+                                <Text className="font-semibold">{candidate.teamName}</Text>
+                              </TableCell>
+                              <TableCell>
+                                <Text>{candidate.track || "-"}</Text>
+                              </TableCell>
+                              <TableCell>
+                                <Text className="font-mono">
+                                  {Number(candidate.averageScore || 0).toFixed(2)}
+                                </Text>
+                              </TableCell>
+                              <TableCell>
+                                <Text>{candidate.judgeCount}</Text>
+                              </TableCell>
+                              <TableCell>
+                                <Flex className="gap-2">
+                                  {candidate.githubUrl ? (
+                                    <a
+                                      href={candidate.githubUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-xs text-blue-600 hover:underline"
+                                    >
+                                      GitHub
+                                    </a>
+                                  ) : (
+                                    <Text className="text-xs text-tremor-content-subtle">GitHub -</Text>
+                                  )}
+                                  {candidate.devpostUrl ? (
+                                    <a
+                                      href={candidate.devpostUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-xs text-teal-600 hover:underline"
+                                    >
+                                      Devpost
+                                    </a>
+                                  ) : (
+                                    <Text className="text-xs text-tremor-content-subtle">Devpost -</Text>
+                                  )}
+                                </Flex>
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  type="button"
+                                  size="xs"
+                                  variant={isSelected ? "primary" : "secondary"}
+                                  color={isSelected ? "emerald" : "gray"}
+                                  onClick={() =>
+                                    setSelectedByPrize((prev) => ({
+                                      ...prev,
+                                      [activePrizeId]: String(candidate.teamId),
+                                    }))
+                                  }
+                                >
+                                  {isSelected ? "Selected" : "Choose"}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {filteredCandidates.length === 0 && (
+                    <Text className="text-sm text-tremor-content">
+                      No teams match your current filters.
+                    </Text>
+                  )}
+                </div>
+
+                <div className="card-professional p-4">
+                  <Text className="font-medium mb-2">Winner Notes (optional)</Text>
+                  <Textarea
+                    value={notesByPrize[activePrizeId] || ""}
+                    onValueChange={(value) =>
+                      setNotesByPrize((prev) => ({
+                        ...prev,
+                        [activePrizeId]: value,
+                      }))
+                    }
+                    rows={2}
+                    placeholder="Reasoning, sponsor context, deliberation notes..."
+                  />
+                </div>
+              </>
+            )}
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        <div className="sticky bottom-0 z-10 bg-tremor-background border-t border-tremor-border p-4">
+          <Flex justifyContent="between" className="gap-3">
+            <Flex className="gap-2">
+              <Button
+                variant="secondary"
+                disabled={activePrizeIndex === 0}
+                onClick={() => setActivePrizeIndex((value) => Math.max(0, value - 1))}
+              >
+                Previous Prize
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={activePrizeIndex >= prizes.length - 1}
+                onClick={() =>
+                  setActivePrizeIndex((value) =>
+                    Math.min(prizes.length - 1, value + 1)
+                  )
+                }
+              >
+                Next Prize
+              </Button>
+            </Flex>
+            <Flex className="gap-2">
+              <Button variant="secondary" onClick={onClose}>
+                Close
+              </Button>
+              <Button loading={submitting} onClick={handleConfirm} color="emerald">
+                Save Winners
+              </Button>
+            </Flex>
+          </Flex>
+        </div>
+      </DialogPanel>
+    </Dialog>
   );
 }

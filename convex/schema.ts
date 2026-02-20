@@ -48,6 +48,10 @@ const applicationTables = {
     // Demo Day mode support
     mode: v.optional(v.union(v.literal("hackathon"), v.literal("demo_day"))), // undefined = "hackathon" for backwards compatibility
     courseCodes: v.optional(v.array(v.string())), // Available course codes for Demo Day mode
+    // Hackathon scoring lock - when set, judges can no longer modify scores
+    scoringLockedAt: v.optional(v.number()),
+    scoringLockedBy: v.optional(v.id("users")),
+    scoringLockReason: v.optional(v.string()),
   }).index("by_status", ["status"]),
 
   teams: defineTable({
@@ -61,6 +65,7 @@ const applicationTables = {
     submittedBy: v.optional(v.id("users")),
     submittedAt: v.optional(v.number()),
     projectUrl: v.optional(v.string()),
+    devpostUrl: v.optional(v.string()),
     hidden: v.optional(v.boolean()),
     // Demo Day appreciation scores (optional, can be computed from appreciations table)
     rawScore: v.optional(v.number()), // Total appreciations count
@@ -120,6 +125,61 @@ const applicationTables = {
     .index("by_judge_and_team", ["judgeId", "teamId"])
     .index("by_event", ["eventId"])
     .index("by_team", ["teamId"]),
+
+  prizes: defineTable({
+    eventId: v.id("events"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    type: v.union(
+      v.literal("general"),
+      v.literal("track"),
+      v.literal("sponsor"),
+      v.literal("track_sponsor")
+    ),
+    track: v.optional(v.string()),
+    sponsorName: v.optional(v.string()),
+    // How to surface scoring insight when deliberating this prize
+    scoreBasis: v.optional(
+      v.union(v.literal("overall"), v.literal("categories"), v.literal("none"))
+    ),
+    scoreCategoryNames: v.optional(v.array(v.string())),
+    isActive: v.optional(v.boolean()),
+    sortOrder: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.id("users"),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_event_and_active", ["eventId", "isActive"])
+    .index("by_event_and_track", ["eventId", "track"])
+    .index("by_event_and_sponsor", ["eventId", "sponsorName"]),
+
+  teamPrizeSubmissions: defineTable({
+    eventId: v.id("events"),
+    teamId: v.id("teams"),
+    prizeId: v.id("prizes"),
+    submittedAt: v.number(),
+    submittedBy: v.optional(v.id("users")),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_team", ["teamId"])
+    .index("by_prize", ["prizeId"])
+    .index("by_team_and_prize", ["teamId", "prizeId"])
+    .index("by_event_and_team", ["eventId", "teamId"])
+    .index("by_event_and_prize", ["eventId", "prizeId"]),
+
+  prizeWinners: defineTable({
+    eventId: v.id("events"),
+    prizeId: v.id("prizes"),
+    teamId: v.id("teams"),
+    placement: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    selectedAt: v.number(),
+    selectedBy: v.id("users"),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_prize", ["prizeId"])
+    .index("by_event_and_prize", ["eventId", "prizeId"]),
 
   // Demo Day appreciations table
   appreciations: defineTable({

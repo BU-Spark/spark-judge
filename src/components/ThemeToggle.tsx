@@ -6,7 +6,10 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="btn-ghost p-2 rounded-full hover:bg-muted transition-colors"
+      className={`p-2 rounded-xl transition-all duration-300 ${theme === "dark"
+          ? "bg-teal-500/10 text-teal-400 border border-teal-500/20 shadow-[0_0_15px_-3px_rgba(20,184,166,0.3)] hover:shadow-[0_0_20px_-3px_rgba(20,184,166,0.5)]"
+          : "bg-muted/50 text-muted-foreground hover:bg-muted"
+        }`}
       title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       type="button"
     >
@@ -42,4 +45,5 @@ export function ThemeToggle() {
     </button>
   );
 }
+
 

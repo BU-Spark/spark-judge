@@ -9,6 +9,24 @@ import { TeamSubmissionModal } from "./TeamSubmissionModalNew";
 import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
 import { formatDateTime, formatDateRange } from "../lib/utils";
+import {
+  Card,
+  Text,
+  Title,
+  Badge,
+  Button,
+  Grid,
+  Flex,
+  ProgressBar,
+  Icon,
+} from "@tremor/react";
+import {
+  ClockIcon,
+  BoltIcon,
+  CheckCircleIcon,
+  ArrowRightIcon,
+  MagnifyingGlassIcon,
+} from "@heroicons/react/24/outline";
 
 const withEllipsis = (text: string | undefined, maxLength = 100) => {
   if (!text) return "";
@@ -26,7 +44,7 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
   const events = useQuery(api.events.listEvents);
   const loggedInUser = useQuery(api.auth.loggedInUser);
   const joinAsJudge = useMutation(api.events.joinAsJudge);
-  
+
   const [showSignIn, setShowSignIn] = useState(false);
   const [joiningEvents, setJoiningEvents] = useState<Set<Id<"events">>>(new Set());
   const [judgeCodeModal, setJudgeCodeModal] = useState<{
@@ -102,10 +120,17 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
       return;
     }
 
+    const derivedTracks =
+      event.tracks && event.tracks.length > 0
+        ? event.tracks
+        : (event.categories || []).map((category: any) =>
+          typeof category === "string" ? category : category.name
+        );
+
     setTeamSubmissionModal({
       isOpen: true,
       eventId: event._id,
-      tracks: event.tracks || event.categories, // Use tracks if defined, otherwise categories
+      tracks: derivedTracks,
       courseCodes: event.courseCodes || [],
       eventMode: event.mode || "hackathon",
       existingTeam: null, // Modal will fetch team itself
@@ -169,11 +194,11 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
       {/* Sign In Modal */}
       {showSignIn && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowSignIn(false)}
           />
-          <div className="relative bg-background rounded-lg p-8 max-w-md w-full shadow-pop border border-border">
+          <div className="relative card-professional rounded-2xl p-8 max-w-md w-full shadow-2xl slide-up">
             <button
               onClick={() => setShowSignIn(false)}
               className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
@@ -235,16 +260,16 @@ function ActiveEventSection({
 }) {
   return (
     <section className="mb-12">
-      <h2 className="text-xl font-heading font-bold mb-6 text-foreground flex items-center gap-3">
-        {title}
-        {events.length > 0 && <span className="text-xs font-medium text-primary-foreground bg-primary px-2 py-0.5 rounded-full">{events.length}</span>}
-      </h2>
+      <Flex justifyContent="start" alignItems="center" className="gap-3 mb-6">
+        <Title>{title}</Title>
+        {events.length > 0 && <Badge color="teal">{events.length}</Badge>}
+      </Flex>
       {events.length === 0 ? (
-        <div className="text-muted-foreground text-center py-12 bg-card rounded-lg border border-border shadow-sm">
-          {emptyMessage}
-        </div>
+        <Card className="text-center py-12">
+          <Text>{emptyMessage}</Text>
+        </Card>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4 px-5 snap-x snap-mandatory flex-nowrap md:px-0">
+        <Grid numItemsLg={3} numItemsMd={2} numItemsSm={1} className="gap-6">
           {events.map((event) => (
             <EventCard
               key={event._id}
@@ -256,7 +281,7 @@ function ActiveEventSection({
               isJoining={joiningEvents.has(event._id)}
             />
           ))}
-        </div>
+        </Grid>
       )}
     </section>
   );
@@ -285,14 +310,14 @@ function CompactEventSection({
 }) {
   return (
     <section className="mb-12">
-      <h2 className="text-lg font-heading font-semibold mb-6 text-foreground flex items-center gap-3">
-        {title}
-        {events.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{events.length}</span>}
-      </h2>
+      <Flex justifyContent="start" alignItems="center" className="gap-3 mb-6">
+        <Title>{title}</Title>
+        {events.length > 0 && <Badge color="gray">{events.length}</Badge>}
+      </Flex>
       {events.length === 0 ? (
-        <div className="text-muted-foreground text-sm py-6 border-b border-border">
+        <Text className="py-6 border-b border-tremor-border">
           {emptyMessage}
-        </div>
+        </Text>
       ) : (
         <div className="flex flex-col gap-3">
           {events.map((event) => (
@@ -338,178 +363,129 @@ function EventCard({
   );
   const showSideBySide = !isDemoDay && !userRole;
   const addTeamTemporarilyDisabled = !isDemoDay; // Hackathon add-team temporarily disabled
-  
+
   const truncatedDescription = withEllipsis(event.description, 100);
 
   return (
-    <div className="card-static flex flex-col overflow-hidden w-[320px] sm:w-[360px] flex-shrink-0 snap-start h-[360px]">
-      <div className="p-5 pb-4 flex flex-col h-full">
-        <div className="flex justify-between items-start gap-3 mb-4">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Live</span>
-            </div>
-            <h3 className="text-xl font-heading font-bold text-foreground leading-snug line-clamp-2 break-words">
-              {event.name}
-            </h3>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            {isDemoDay && (
-              <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">
-                Demo Day
-              </span>
-            )}
-            {userRole && (
-              <span className={`badge flex-shrink-0 ${
-                isJudge ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20" : 
-                "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-              }`}>
-                {isJudge ? "Judge" : "Participant"}
-              </span>
-            )}
-          </div>
-        </div>
+    <Card className="flex flex-col h-full snap-start glow-hover border-border/50">
+      <Flex className="items-start gap-4 mb-4">
+        <Flex flexDirection="col" className="items-start gap-1">
+          <Badge color="emerald" icon={BoltIcon}>Live</Badge>
+          <Title className="line-clamp-2">{event.name}</Title>
+        </Flex>
+        <Flex flexDirection="col" className="items-end gap-2 shrink-0">
+          {isDemoDay && <Badge color="pink">Demo Day</Badge>}
+          {userRole && (
+            <Badge color={isJudge ? "violet" : "blue"}>
+              {isJudge ? "Judge" : "Participant"}
+            </Badge>
+          )}
+        </Flex>
+      </Flex>
 
-        <p
-          className="text-base text-muted-foreground line-clamp-3 mb-6 flex-grow leading-relaxed"
-          title={event.description}
-        >
-          {truncatedDescription}
-        </p>
-        
-        <div className="flex justify-between text-xs text-muted-foreground mb-6 items-center border-t border-border pt-4">
-          <span className="flex items-center gap-1.5 font-medium">
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span>{formatDateRange(event.startDate, event.endDate)}</span>
-          </span>
-          <span className="bg-muted/50 px-2.5 py-1 rounded-md text-xs font-semibold text-muted-foreground">
+      <Text className="flex-grow mb-4 line-clamp-3">
+        {truncatedDescription}
+      </Text>
+
+      <div className="border-t border-tremor-border pt-4 mt-auto">
+        <Flex justifyContent="between" className="mb-6">
+          <Text className="flex items-center gap-1.5 font-medium">
+            <ClockIcon className="w-4 h-4" />
+            {formatDateRange(event.startDate, event.endDate)}
+          </Text>
+          <Badge color="gray">
             {event.teamCount} {isDemoDay ? "projects" : "teams"}
-          </span>
-        </div>
+          </Badge>
+        </Flex>
 
-        <div className="mt-auto flex flex-col gap-2 justify-end pb-0">
+        {isJudge && judgeProgress && !isDemoDay && (
+          <div className="mb-4">
+            <Flex className="mb-1">
+              <Text className="text-xs">Judging Progress</Text>
+              <Text color="gray" className="text-xs">{judgeProgress.completedTeams}/{judgeProgress.totalTeams}</Text>
+            </Flex>
+            <ProgressBar value={(judgeProgress.completedTeams / judgeProgress.totalTeams) * 100} color="violet" />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
           {isDemoDay && (
-            <button
+            <Button
               onClick={() => onBrowseDemoDay(event._id)}
-              className="w-full h-12 px-4 rounded-md text-sm font-medium flex items-center justify-center shadow-md transition-all bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 hover:shadow-lg"
+              className="w-full"
+              icon={MagnifyingGlassIcon}
             >
-              <span className="flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                Browse & Appreciate
-              </span>
-            </button>
+              Browse & Appreciate
+            </Button>
           )}
 
           {showSideBySide ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  void onJoinAsJudge(event._id);
-                }}
+            <Flex className="gap-2">
+              <Button
+                onClick={() => void onJoinAsJudge(event._id)}
                 disabled={isJoining}
-                className="flex-1 h-12 px-3 rounded-md text-sm font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                loading={isJoining}
+                variant="secondary"
+                className="flex-1"
               >
-                {isJoining ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    Joining...
-                  </span>
-                ) : (
-                  "Join as Judge"
-                )}
-              </button>
-              <button
+                Join as Judge
+              </Button>
+              <Button
                 onClick={() => onAddTeam(event)}
                 disabled={addTeamTemporarilyDisabled}
-                title={addTeamTemporarilyDisabled ? "Team submissions are temporarily disabled" : undefined}
-                className={`flex-1 h-12 px-3 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
-                  addTeamTemporarilyDisabled
-                    ? "bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60"
-                    : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
-                }`}
+                variant="secondary"
+                className="flex-1"
+                color="gray"
               >
-                Add Your Team
-              </button>
-            </div>
+                Add Team
+              </Button>
+            </Flex>
           ) : (
             <>
               {!isDemoDay && !isParticipant && (
                 <>
                   {!isJudge ? (
-                    <button
-                      onClick={() => {
-                        void onJoinAsJudge(event._id);
-                      }}
+                    <Button
+                      onClick={() => void onJoinAsJudge(event._id)}
                       disabled={isJoining}
-                    className="w-full h-12 px-4 rounded-md text-sm font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                      loading={isJoining}
+                      variant="secondary"
+                      className="w-full"
                     >
-                      {isJoining ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                          Joining...
-                        </span>
-                      ) : (
-                        "Join as Judge"
-                      )}
-                    </button>
+                      Join as Judge
+                    </Button>
                   ) : (
-                    <button
+                    <Button
                       onClick={() => onStartScoring(event)}
-                      className={`w-full h-12 px-4 rounded-md text-sm font-medium btn-primary shadow-md hover:shadow-lg transition-all ${hasCompletedScoring ? 'opacity-90' : ''} flex items-center justify-center`}
+                      className="w-full"
+                      color={hasCompletedScoring ? "emerald" : "violet"}
+                      icon={hasCompletedScoring ? CheckCircleIcon : ArrowRightIcon}
                     >
-                      <span className="flex items-center justify-center gap-2">
-                        {hasCompletedScoring ? (
-                          <>
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                            Scoring Complete
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                            {judgeProgress && judgeProgress.completedTeams > 0
-                              ? `Resume (${judgeProgress.completedTeams}/${judgeProgress.totalTeams})`
-                              : "Start Scoring"}
-                          </>
-                        )}
-                      </span>
-                    </button>
+                      {hasCompletedScoring ? "Scoring Complete" :
+                        (judgeProgress && judgeProgress.completedTeams > 0
+                          ? `Resume (${judgeProgress.completedTeams}/${judgeProgress.totalTeams})`
+                          : "Start Scoring")}
+                    </Button>
                   )}
                 </>
               )}
 
               {!isDemoDay && !isJudge && (
-                <button
+                <Button
                   onClick={() => onAddTeam(event)}
                   disabled={addTeamTemporarilyDisabled}
-                  title={addTeamTemporarilyDisabled ? "Team submissions are temporarily disabled" : undefined}
-                  className={`w-full h-12 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
-                    addTeamTemporarilyDisabled
-                      ? "bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60"
-                      : isParticipant
-                        ? "bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 shadow-sm hover:shadow-md"
-                        : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
-                  }`}
+                  variant={isParticipant ? "primary" : "secondary"}
+                  color={isParticipant ? "teal" : "gray"}
+                  className="w-full"
                 >
                   {isParticipant ? "View/Edit Team" : "Add Your Team"}
-                </button>
+                </Button>
               )}
             </>
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -536,97 +512,90 @@ function EventRow({
   const isDemoDay = event.mode === "demo_day";
   const [isExpanded, setIsExpanded] = useState(false);
   const addTeamDisabled = true; // Temporarily disable add-team on hackathon cards
-  
+
   return (
-    <div className="card-static bg-card transition-colors hover:bg-muted/50">
+    <Card className="p-0 overflow-hidden glow-hover border-border/50">
       {/* Mobile Layout */}
       <div className="md:hidden p-4">
-        <div 
-          className="flex justify-between items-start cursor-pointer"
+        <Flex
+          justifyContent="between"
+          alignItems="center"
+          className="cursor-pointer"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="flex-1 min-w-0 pr-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-bold text-muted-foreground">
+            <Flex justifyContent="start" className="gap-2 mb-1">
+              <Text className="text-xs">
                 {formatDateTime(event.startDate).split(',')[0]}
-              </span>
+              </Text>
               {isDemoDay && (
-                <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20 text-[10px] px-1.5 py-0.5 h-5">
+                <Badge color="pink">
                   Demo Day
-                </span>
+                </Badge>
               )}
-            </div>
-            <h3 className="font-bold text-foreground truncate">
+            </Flex>
+            <Title className="truncate">
               {event.name}
-            </h3>
-            <div className="text-xs text-muted-foreground mt-1">
+            </Title>
+            <Text color="gray" className="mt-1 text-xs">
               {event.teamCount} {isDemoDay ? "projects" : "teams"}
-            </div>
+            </Text>
           </div>
-          <button className="text-muted-foreground p-1">
-            <svg 
-              className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-        </div>
+          <Icon
+            icon={ArrowRightIcon}
+            className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
+            color="gray"
+            size="sm"
+          />
+        </Flex>
 
         {isExpanded && (
-          <div className="mt-4 pt-4 border-t border-border space-y-3">
+          <div className="mt-4 pt-4 border-t border-tremor-border space-y-3">
             <div className="flex flex-col gap-2">
               {isPastSection ? (
-                <button
+                <Button
                   onClick={() => onStartScoring(event)}
-                  className="w-full text-sm font-semibold text-primary px-4 py-2 rounded-md transition-all hover:bg-primary hover:text-primary-foreground border border-teal-500/20"
+                  variant="secondary"
+                  className="w-full"
                 >
                   View Results
-                </button>
+                </Button>
               ) : isDemoDay ? (
-                <button
+                <Button
                   onClick={() => onBrowseDemoDay(event._id)}
-                  className="w-full py-2 px-4 text-sm rounded-md font-medium bg-primary text-primary-foreground shadow-sm transition-all hover:bg-teal-700 dark:hover:bg-teal-500 hover:shadow-md"
+                  className="w-full"
+                  icon={MagnifyingGlassIcon}
                 >
                   Browse
-                </button>
+                </Button>
               ) : (
                 <>
                   {!isJudge && !isPastSection && (
-                    <button
+                    <Button
                       onClick={() => onAddTeam(event)}
                       disabled={addTeamDisabled}
-                  title={addTeamDisabled ? "Team submissions are temporarily disabled" : undefined}
-                      className={`w-full text-sm font-semibold px-4 py-2 rounded-md transition-all ${
-                        addTeamDisabled
-                          ? "opacity-60 cursor-not-allowed bg-muted text-muted-foreground"
-                          : isParticipant 
-                            ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm border border-border"
-                      }`}
+                      variant="secondary"
+                      color="gray"
+                      className="w-full"
                     >
                       {isParticipant ? "View Team" : "Add Team"}
-                    </button>
+                    </Button>
                   )}
-                  
+
                   {!userRole ? (
-                    <button
+                    <Button
                       onClick={() => void onJoinAsJudge(event._id)}
                       disabled={isJoining}
-                      className="w-full py-2 px-4 text-sm rounded-md font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      loading={isJoining}
+                      variant="secondary"
+                      className="w-full"
                     >
-                      {isJoining ? "Joining..." : "Join as Judge"}
-                    </button>
+                      Join as Judge
+                    </Button>
                   ) : (
-                    <div className={`w-full text-center text-sm font-bold px-4 py-2 rounded-md border ${
-                      isJudge 
-                        ? "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/20" 
-                        : "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20"
-                    }`}>
+                    <Badge color={isJudge ? "violet" : "blue"} className="w-full justify-center">
                       Registered as {userRole === 'judge' ? 'Judge' : 'Participant'}
-                    </div>
+                    </Badge>
                   )}
                 </>
               )}
@@ -637,98 +606,80 @@ function EventRow({
 
       {/* Desktop Layout */}
       <div className="hidden md:flex p-4 items-center gap-6">
-        <div className="flex-shrink-0 w-32 text-sm">
-          <div className="font-bold text-foreground">{formatDateTime(event.startDate).split(',')[0]}</div>
-          <div className="text-muted-foreground text-xs font-medium">{formatDateTime(event.startDate).split(',')[1]}</div>
+        <div className="flex-shrink-0 w-32 border-r border-tremor-border pr-4">
+          <Text className="font-bold">{formatDateTime(event.startDate).split(',')[0]}</Text>
+          <Text color="gray" className="text-xs">{formatDateTime(event.startDate).split(',')[1]}</Text>
         </div>
 
         <div className="flex-grow min-w-0">
-          <div className="flex items-center gap-3 mb-1.5">
-            <h3 className="text-base font-bold text-foreground truncate">
-              {event.name}
-            </h3>
-          </div>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
-            <span>{event.teamCount} {isDemoDay ? "projects" : "teams"}</span>
-            {isPastSection && event.overallWinner && (
-              <span className="text-amber-600 dark:text-amber-500 flex items-center gap-1 font-bold">
-                🏆 Winner announced
-              </span>
+          <Title className="truncate mb-1">
+            {event.name}
+          </Title>
+          <Flex justifyContent="start" className="gap-4">
+            <Text color="gray" className="text-xs">{event.teamCount} {isDemoDay ? "projects" : "teams"}</Text>
+            {isPastSection && event.resultsReleased && (
+              <Badge color="amber" icon={CheckCircleIcon}>
+                Winner announced
+              </Badge>
             )}
-          </div>
+          </Flex>
         </div>
 
-        <div className="flex items-center gap-2">
-          {isDemoDay && (
-            <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20 flex-shrink-0">
-              Demo Day
-            </span>
-          )}
+        <Flex justifyContent="end" className="gap-3 w-auto shrink-0">
+          {isDemoDay && <Badge color="pink">Demo Day</Badge>}
           {userRole && (
-            <span className={`badge flex-shrink-0 ${
-              isJudge ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20" : 
-              "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-            }`}>
+            <Badge color={isJudge ? "violet" : "blue"}>
               {isJudge ? "Judge" : "Participant"}
-            </span>
+            </Badge>
           )}
-        </div>
 
-        <div className="flex-shrink-0 flex items-center gap-3">
           {isPastSection ? (
-            <button
+            <Button
               onClick={() => onStartScoring(event)}
-              className="text-sm font-semibold text-primary px-4 py-2 rounded-md transition-all hover:bg-primary hover:text-primary-foreground"
+              variant="light"
             >
               View Results
-            </button>
+            </Button>
           ) : isDemoDay ? (
-            <button
+            <Button
               onClick={() => onBrowseDemoDay(event._id)}
-              className="py-2 px-4 text-sm h-9 rounded-md font-medium bg-primary text-primary-foreground shadow-sm transition-all hover:bg-teal-700 dark:hover:bg-teal-500 hover:shadow-md"
+              size="sm"
+              icon={MagnifyingGlassIcon}
             >
               Browse
-            </button>
+            </Button>
           ) : (
             <>
               {!isJudge && !isPastSection && (
-                <button
+                <Button
                   onClick={() => onAddTeam(event)}
                   disabled={addTeamDisabled}
-                  title={addTeamDisabled ? "Team submissions are temporarily disabled" : undefined}
-                  className={`text-sm font-semibold px-4 py-2 rounded-md transition-all ${
-                    addTeamDisabled
-                      ? "opacity-60 cursor-not-allowed bg-muted text-muted-foreground"
-                      : isParticipant 
-                        ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm"
-                  }`}
+                  variant="light"
+                  color="gray"
                 >
                   {isParticipant ? "View Team" : "Add Team"}
-                </button>
+                </Button>
               )}
-              
+
               {!userRole ? (
-                <button
+                <Button
                   onClick={() => void onJoinAsJudge(event._id)}
                   disabled={isJoining}
-                  className="py-2 px-4 text-sm h-9 rounded-md font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  loading={isJoining}
+                  variant="secondary"
+                  size="sm"
                 >
-                  {isJoining ? "Joining..." : "Join as Judge"}
-                </button>
+                  Join as Judge
+                </Button>
               ) : (
-                <div className={`text-sm font-bold px-4 py-1.5 rounded-full border ${
-                  isJudge
-                    ? "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/20"
-                    : "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20"
-                }`}>
+                <Badge color={isJudge ? "violet" : "blue"}>
                   Registered
-                </div>
+                </Badge>
               )}
             </>
           )}
-        </div>
+        </Flex>
       </div>
-    </div>
+    </Card>
   );
 }

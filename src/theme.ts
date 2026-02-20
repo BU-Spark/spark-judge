@@ -9,9 +9,9 @@ const config: ThemeConfig = {
 const theme = extendTheme({
   config,
   styles: {
-    global: (props) => ({
+    global: (props: any) => ({
       body: {
-        bg: mode("#f8f9fb", "#0c0c0f")(props),
+        bg: mode("#f8f9fb", "#09090b")(props),
         color: mode("#111112", "#e5e7eb")(props),
       },
     }),
@@ -38,9 +38,9 @@ const theme = extendTheme({
       50: "#f8f9fb",
       100: "#f1f3f5",
       200: "#e3e5e8",
-      700: "#2a2a2e",
-      800: "#1c1c1f",
-      900: "#0f0f12",
+      700: "#27272a", // zinc-800
+      800: "#18181b", // zinc-900
+      900: "#09090b", // zinc-950
     },
   },
   fonts: {
@@ -101,7 +101,7 @@ const theme = extendTheme({
   },
   components: {
     Card: {
-      baseStyle: (props) => ({
+      baseStyle: (props: any) => ({
         bg: mode("neutral.100", "neutral.800")(props),
         border: "1px solid",
         borderColor: mode("neutral.200", "neutral.700")(props),
@@ -114,14 +114,14 @@ const theme = extendTheme({
     },
     Button: {
       variants: {
-        solid: (props) => ({
+        solid: (props: any) => ({
           bg: mode("brand.600", "brand.500")(props),
           color: "white",
           _hover: {
             bg: mode("brand.700", "brand.600")(props),
           },
         }),
-        ghost: (props) => ({
+        ghost: (props: any) => ({
           color: mode("brand.600", "brand.400")(props),
           _hover: {
             bg: mode("neutral.100", "neutral.800")(props),

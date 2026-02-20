@@ -428,9 +428,9 @@ export function ScoringWizard({
 
       toast.success("Scores submitted successfully!");
       onSubmitted();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to submit scores");
+      toast.error(error?.message || "Failed to submit scores");
     } finally {
       setSubmitting(false);
     }
@@ -582,7 +582,7 @@ export function ScoringWizard({
                             className={clsx(
                               "w-12 h-12 rounded-xl font-semibold text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary",
                               selected === value && !isOptedOut
-                                ? "bg-primary text-white scale-110 shadow-lg shadow-primary/30"
+                                ? "bg-primary text-white scale-110 shadow-lg shadow-teal-500/30"
                                 : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105",
                               isOptedOut && "opacity-50"
                             )}

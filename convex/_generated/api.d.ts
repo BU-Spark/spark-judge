@@ -22,6 +22,7 @@ import type * as http from "../http.js";
 import type * as judgeAssignments from "../judgeAssignments.js";
 import type * as migrations from "../migrations.js";
 import type * as participants from "../participants.js";
+import type * as prizes from "../prizes.js";
 import type * as qrCodes from "../qrCodes.js";
 import type * as qrCodesQueries from "../qrCodesQueries.js";
 import type * as router from "../router.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   judgeAssignments: typeof judgeAssignments;
   migrations: typeof migrations;
   participants: typeof participants;
+  prizes: typeof prizes;
   qrCodes: typeof qrCodes;
   qrCodesQueries: typeof qrCodesQueries;
   router: typeof router;

@@ -102,10 +102,17 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
       return;
     }
 
+    const derivedTracks =
+      event.tracks && event.tracks.length > 0
+        ? event.tracks
+        : (event.categories || []).map((category: any) =>
+            typeof category === "string" ? category : category.name
+          );
+
     setTeamSubmissionModal({
       isOpen: true,
       eventId: event._id,
-      tracks: event.tracks || event.categories, // Use tracks if defined, otherwise categories
+      tracks: derivedTracks,
       courseCodes: event.courseCodes || [],
       eventMode: event.mode || "hackathon",
       existingTeam: null, // Modal will fetch team itself
@@ -650,7 +657,7 @@ function EventRow({
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
             <span>{event.teamCount} {isDemoDay ? "projects" : "teams"}</span>
-            {isPastSection && event.overallWinner && (
+            {isPastSection && event.resultsReleased && (
               <span className="text-amber-600 dark:text-amber-500 flex items-center gap-1 font-bold">
                 🏆 Winner announced
               </span>

@@ -46,6 +46,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
   // Check if cohorts are enabled
   const enableCohorts = event?.enableCohorts || false;
+  const scoringLocked = !!event?.scoringLockedAt;
   
   const visibleTeams = useMemo(
     () => (event?.teams ?? []).filter((team: any) => !team.hidden),
@@ -58,8 +59,15 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     return visibleTeams.filter((team: any) => myAssignments.includes(team._id));
   }, [enableCohorts, visibleTeams, myAssignments]);
 
-  const totalTeams = enableCohorts && myAssignments ? myAssignments.length : visibleTeams.length;
-  const completedCount = myScores?.length ?? 0;
+  const relevantTeamIds = useMemo(
+    () => new Set(teamsToJudge.map((team: any) => String(team._id))),
+    [teamsToJudge]
+  );
+
+  const totalTeams = teamsToJudge.length;
+  const completedCount =
+    myScores?.filter((score: any) => relevantTeamIds.has(String(score.teamId)))
+      .length ?? 0;
   const progressPercent =
     totalTeams === 0 ? 0 : Math.round((completedCount / totalTeams) * 100);
   const scoringComplete = totalTeams > 0 && completedCount >= totalTeams;
@@ -87,6 +95,11 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
   const hasSubmittedScores = myScores && myScores.length > 0;
 
   const handleToggleTeam = async (teamId: Id<"teams">, isAssigned: boolean) => {
+    if (scoringLocked) {
+      alert("Scoring has been locked by an admin. Team assignments can no longer be changed.");
+      return;
+    }
+
     // Prevent changes after scores have been submitted
     if (hasSubmittedScores && isAssigned) {
       alert("You cannot remove teams from your queue after submitting scores.");
@@ -184,14 +197,21 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
             void handleToggleTeam(teamId, isAssigned);
           }}
           onStartScoring={() => {
+            if (scoringLocked) return;
             if (myAssignments && myAssignments.length > 0) {
               setShowWizard(true);
             }
           }}
           canStart={(myAssignments?.length ?? 0) > 0}
-          locked={!!hasSubmittedScores}
+          locked={scoringLocked || !!hasSubmittedScores}
           myScores={myScores}
         />
+      )}
+
+      {event.status === "active" && scoringLocked && (
+        <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-700 dark:text-amber-300">
+          Scoring is locked for this event. Judges can view scores, but edits are disabled until an admin unlocks scoring.
+        </div>
       )}
 
       {event.status === "active" && (
@@ -200,9 +220,19 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="space-y-2">
                 <h2 className="text-xl font-heading font-bold text-foreground">
-                  {scoringComplete ? "Scoring Complete!" : completedCount > 0 ? "Keep Scoring" : "Ready to Score?"}
+                  {scoringLocked
+                    ? "Scoring Locked"
+                    : scoringComplete
+                      ? "Scoring Complete!"
+                      : completedCount > 0
+                        ? "Keep Scoring"
+                        : "Ready to Score?"}
                 </h2>
-                {scoringComplete ? (
+                {scoringLocked ? (
+                  <p className="text-amber-700 dark:text-amber-300">
+                    Score updates are disabled while deliberation is in progress.
+                  </p>
+                ) : scoringComplete ? (
                   <p className="text-emerald-600 dark:text-emerald-400">
                     Thank you for judging. All teams have been scored.
                   </p>
@@ -222,26 +252,34 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
                   <p className="text-xs text-muted-foreground">Your scores were submitted successfully.</p>
                 )}
               </div>
-              {!scoringComplete && (
+              {!scoringLocked && (
                 <button
                   onClick={() => setShowWizard(true)}
                   className="btn-primary whitespace-nowrap"
-                  disabled={(enableCohorts && myAssignments.length === 0) || totalTeams === 0}
+                  disabled={(enableCohorts && myAssignments.length === 0) || totalTeams === 0 || scoringLocked}
                 >
                   {hasDraft
                     ? "Continue Scoring"
-                    : completedCount > 0
-                    ? "Resume Scoring"
-                    : enableCohorts && myAssignments.length === 0
-                    ? "Select Teams First"
-                    : "Start Scoring"}
+                    : scoringComplete
+                      ? "Review / Edit Scores"
+                      : completedCount > 0
+                        ? "Resume Scoring"
+                        : enableCohorts && myAssignments.length === 0
+                          ? "Select Teams First"
+                          : "Start Scoring"}
                 </button>
               )}
             </div>
             <div className="space-y-2">
               <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-500 ${scoringComplete ? 'bg-emerald-500' : 'bg-primary'}`}
+                  className={`h-full transition-all duration-500 ${
+                    scoringLocked
+                      ? "bg-amber-500"
+                      : scoringComplete
+                        ? "bg-emerald-500"
+                        : "bg-primary"
+                  }`}
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -273,7 +311,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
         <ResultsView eventId={eventId} />
       )}
 
-      {showWizard && judgeStatus && (
+      {showWizard && judgeStatus && !scoringLocked && (
         <ScoringWizard
           eventId={eventId}
           teams={teamsToJudge}
@@ -294,32 +332,92 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 function ResultsView({ eventId }: { eventId: Id<"events"> }) {
   const event = useQuery(api.events.getEvent, { eventId });
   const eventScores = useQuery(api.scores.getEventScores, { eventId });
+  const prizeWinners = useQuery(api.prizes.listPrizeWinners, { eventId });
 
-  if (!event || !eventScores) return null;
+  if (!event || !eventScores || prizeWinners === undefined) return null;
 
   const overallWinnerTeam = event.overallWinner
     ? event.teams.find((t) => t._id === event.overallWinner)
     : null;
+  const hasPrizeWinners = prizeWinners.length > 0;
+  const groupedPrizeWinners = hasPrizeWinners
+    ? prizeWinners.reduce<Record<string, any[]>>((acc, row: any) => {
+        const key = row.prizeId as string;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(row);
+        return acc;
+      }, {})
+    : {};
 
   return (
     <div className="space-y-8">
-      <div className="card bg-amber-500/10 border-amber-500/20 text-center fade-in">
-        <div className="text-6xl mb-4">🏆</div>
-        <h2 className="text-3xl font-heading font-bold text-foreground mb-2">Overall Winner</h2>
-        {overallWinnerTeam && (
-          <p className="text-2xl font-bold text-amber-500">{overallWinnerTeam.name}</p>
-        )}
-      </div>
+      {hasPrizeWinners ? (
+        <div className="fade-in space-y-6">
+          <div className="card bg-amber-500/10 border-amber-500/20 text-center">
+            <div className="text-5xl mb-3">🏆</div>
+            <h2 className="text-3xl font-heading font-bold text-foreground mb-2">
+              Prize Winners
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Winners were selected after judge deliberation using score insights.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Object.values(groupedPrizeWinners).map((winnerRows: any[]) => {
+              const first = winnerRows[0];
+              const prizeName = first?.prize?.name || "Prize";
+              return (
+                <div
+                  key={first.prizeId}
+                  className="card border-teal-500/20 bg-teal-500/5 transition-all duration-300"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-heading font-semibold text-foreground">
+                      {prizeName}
+                    </h3>
+                    <span className="text-2xl">🥇</span>
+                  </div>
+                  <div className="space-y-2">
+                    {winnerRows
+                      .sort((a: any, b: any) => (a.placement ?? 999) - (b.placement ?? 999))
+                      .map((row: any) => (
+                        <div key={row._id} className="rounded-lg border border-border bg-muted/20 px-3 py-2">
+                          <p className="font-semibold text-foreground">{row.team?.name || "Unknown Team"}</p>
+                          {typeof row.placement === "number" && (
+                            <p className="text-xs text-muted-foreground">
+                              Placement: {row.placement}
+                            </p>
+                          )}
+                          {row.notes && (
+                            <p className="text-xs text-muted-foreground mt-1">{row.notes}</p>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="card bg-amber-500/10 border-amber-500/20 text-center fade-in">
+          <div className="text-6xl mb-4">🏆</div>
+          <h2 className="text-3xl font-heading font-bold text-foreground mb-2">Overall Winner</h2>
+          {overallWinnerTeam && (
+            <p className="text-2xl font-bold text-amber-500">{overallWinnerTeam.name}</p>
+          )}
+        </div>
+      )}
 
-      {event.categoryWinners && event.categoryWinners.length > 0 && (
-        <div className="fade-in" style={{ animationDelay: '0.1s' }}>
+      {!hasPrizeWinners && event.categoryWinners && event.categoryWinners.length > 0 && (
+        <div className="fade-in" style={{ animationDelay: "0.1s" }}>
           <h2 className="text-xl font-heading font-bold mb-6 text-foreground">Category Winners</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {event.categoryWinners.map((winner, index) => {
               const team = event.teams.find((t) => t._id === winner.teamId);
               return (
-                <div 
-                  key={winner.category} 
+                <div
+                  key={winner.category}
                   className="card border-teal-500/20 bg-teal-500/5 transition-all duration-300"
                   style={{ animationDelay: `${0.2 + index * 0.1}s` }}
                 >
@@ -335,7 +433,7 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
         </div>
       )}
 
-      <div className="fade-in" style={{ animationDelay: '0.3s' }}>
+      <div className="fade-in" style={{ animationDelay: "0.3s" }}>
         <h2 className="text-xl font-heading font-bold mb-6 text-foreground">All Scores</h2>
         <div className="card overflow-hidden p-0">
           <div className="overflow-x-auto">
@@ -389,9 +487,9 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
             </table>
           </div>
         </div>
+      </div>
     </div>
-  </div>
-  )
+  );
 }
 
 type ScoreSummaryProps = {
@@ -563,7 +661,9 @@ function TeamSelectionSection({
             Select Your Teams to Judge
           </h2>
           <p className="text-muted-foreground">
-            Choose which teams you'll score. You can change this later if needed.
+            {locked
+              ? "Scoring is locked. Team assignments are currently read-only."
+              : "Choose which teams you'll score. You can change this later if needed."}
           </p>
         </div>
 
@@ -631,7 +731,7 @@ function TeamSelectionSection({
               className="btn-primary whitespace-nowrap"
               disabled={!canStart || locked}
             >
-              {locked ? "Scoring Complete" : "Start Scoring Selected Teams"}
+              {locked ? "Scoring Locked" : "Start Scoring Selected Teams"}
             </button>
           </div>
 

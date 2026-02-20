@@ -11,12 +11,77 @@ import { formatDateTime } from "../lib/utils";
 type SortField = "name" | "status" | "teamCount" | "startDate";
 type SortDirection = "asc" | "desc";
 type SortConfig = { field: SortField; direction: SortDirection };
+type PrizeType = "general" | "track" | "sponsor" | "track_sponsor";
+type PrizeScoreBasis = "overall" | "categories" | "none";
+type PrizeDraft = {
+  prizeId?: Id<"prizes">;
+  name: string;
+  description: string;
+  type: PrizeType;
+  track: string;
+  sponsorName: string;
+  scoreBasis: PrizeScoreBasis;
+  scoreCategoryNames: string[];
+  isActive: boolean;
+  sortOrder: number;
+};
+
+const PRIZE_TYPE_LABELS: Record<PrizeType, string> = {
+  general: "General",
+  track: "Track",
+  sponsor: "Sponsor",
+  track_sponsor: "Track + Sponsor",
+};
+
+const PRIZE_SCORE_LABELS: Record<PrizeScoreBasis, string> = {
+  overall: "Overall score",
+  categories: "Specific categories",
+  none: "No score hint",
+};
 
 const STATUS_SORT_ORDER: Record<"active" | "upcoming" | "past", number> = {
   active: 0,
   upcoming: 1,
   past: 2,
 };
+
+function createPrizeDraft(
+  sortOrder: number,
+  overrides?: Partial<PrizeDraft>
+): PrizeDraft {
+  return {
+    name: "",
+    description: "",
+    type: "general",
+    track: "",
+    sponsorName: "",
+    scoreBasis: "none",
+    scoreCategoryNames: [],
+    isActive: true,
+    sortOrder,
+    ...overrides,
+  };
+}
+
+function normalizePrizeDraftsForSave(prizes: PrizeDraft[]) {
+  return prizes
+    .map((prize, index) => ({
+      prizeId: prize.prizeId,
+      name: prize.name.trim(),
+      description: prize.description.trim() || undefined,
+      type: prize.type,
+      track: prize.track.trim() || undefined,
+      sponsorName: prize.sponsorName.trim() || undefined,
+      scoreBasis: prize.scoreBasis,
+      scoreCategoryNames:
+        prize.scoreBasis === "categories"
+          ? prize.scoreCategoryNames.filter(Boolean)
+          : undefined,
+      isActive: prize.isActive,
+      sortOrder: prize.sortOrder ?? index,
+    }))
+    .filter((prize) => prize.name.length > 0);
+}
 
 function formatDateTimeInput(timestamp: number) {
   const date = new Date(timestamp);
@@ -98,6 +163,276 @@ function SortButton({
         </svg>
       </span>
     </button>
+  );
+}
+
+function PrizeCatalogEditor({
+  prizes,
+  setPrizes,
+  categories,
+  tracks,
+  disabled = false,
+}: {
+  prizes: PrizeDraft[];
+  setPrizes: Dispatch<SetStateAction<PrizeDraft[]>>;
+  categories: string[];
+  tracks: string[];
+  disabled?: boolean;
+}) {
+  const updatePrize = (index: number, updater: (item: PrizeDraft) => PrizeDraft) => {
+    setPrizes((prev) =>
+      prev.map((prize, prizeIndex) =>
+        prizeIndex === index ? updater(prize) : prize
+      )
+    );
+  };
+
+  const addPrize = () => {
+    setPrizes((prev) => [
+      ...prev,
+      createPrizeDraft(prev.length, { name: `Prize ${prev.length + 1}` }),
+    ]);
+  };
+
+  const removePrize = (index: number) => {
+    setPrizes((prev) => prev.filter((_, prizeIndex) => prizeIndex !== index));
+  };
+
+  const movePrize = (fromIndex: number, toIndex: number) => {
+    setPrizes((prev) => {
+      if (toIndex < 0 || toIndex >= prev.length) return prev;
+      const copy = [...prev];
+      const [item] = copy.splice(fromIndex, 1);
+      copy.splice(toIndex, 0, item);
+      return copy.map((prize, idx) => ({ ...prize, sortOrder: idx }));
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Configure the prizes teams can submit to.
+        </p>
+        <button
+          type="button"
+          onClick={addPrize}
+          disabled={disabled}
+          className="btn-secondary text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          + Add Prize
+        </button>
+      </div>
+
+      {prizes.length === 0 ? (
+        <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+          No prizes yet. Add at least one prize to run award-based judging.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {prizes.map((prize, index) => (
+            <div key={`${prize.prizeId || "new"}-${index}`} className="rounded-lg border border-border bg-card p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Prize {index + 1}
+                  </span>
+                  {!prize.isActive && (
+                    <span className="badge bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20">
+                      Inactive
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => movePrize(index, index - 1)}
+                    disabled={disabled || index === 0}
+                    className="btn-ghost text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => movePrize(index, index + 1)}
+                    disabled={disabled || index === prizes.length - 1}
+                    className="btn-ghost text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Down
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removePrize(index)}
+                    disabled={disabled}
+                    className="btn-ghost text-xs text-red-500 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Name</label>
+                  <input
+                    type="text"
+                    value={prize.name}
+                    onChange={(e) =>
+                      updatePrize(index, (item) => ({ ...item, name: e.target.value }))
+                    }
+                    className="input"
+                    disabled={disabled}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Type</label>
+                  <select
+                    value={prize.type}
+                    onChange={(e) =>
+                      updatePrize(index, (item) => ({
+                        ...item,
+                        type: e.target.value as PrizeType,
+                      }))
+                    }
+                    className="input"
+                    disabled={disabled}
+                  >
+                    {(Object.keys(PRIZE_TYPE_LABELS) as PrizeType[]).map((type) => (
+                      <option key={type} value={type}>
+                        {PRIZE_TYPE_LABELS[type]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {(prize.type === "track" || prize.type === "track_sponsor") && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Track</label>
+                    <select
+                      value={prize.track}
+                      onChange={(e) =>
+                        updatePrize(index, (item) => ({ ...item, track: e.target.value }))
+                      }
+                      className="input"
+                      disabled={disabled}
+                    >
+                      <option value="">Select track...</option>
+                      {tracks.map((track) => (
+                        <option key={track} value={track}>
+                          {track}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {(prize.type === "sponsor" || prize.type === "track_sponsor") && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Sponsor</label>
+                    <input
+                      type="text"
+                      value={prize.sponsorName}
+                      onChange={(e) =>
+                        updatePrize(index, (item) => ({ ...item, sponsorName: e.target.value }))
+                      }
+                      className="input"
+                      placeholder="Sponsor name"
+                      disabled={disabled}
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Score Hint</label>
+                  <select
+                    value={prize.scoreBasis}
+                    onChange={(e) =>
+                      updatePrize(index, (item) => ({
+                        ...item,
+                        scoreBasis: e.target.value as PrizeScoreBasis,
+                        scoreCategoryNames:
+                          e.target.value === "categories" ? item.scoreCategoryNames : [],
+                      }))
+                    }
+                    className="input"
+                    disabled={disabled}
+                  >
+                    {(Object.keys(PRIZE_SCORE_LABELS) as PrizeScoreBasis[]).map((basis) => (
+                      <option key={basis} value={basis}>
+                        {PRIZE_SCORE_LABELS[basis]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {prize.scoreBasis === "categories" && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Use categories for this prize
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map((category) => {
+                      const checked = prize.scoreCategoryNames.includes(category);
+                      return (
+                        <label
+                          key={`${prize.prizeId || index}-${category}`}
+                          className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs text-foreground"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              updatePrize(index, (item) => {
+                                const next = e.target.checked
+                                  ? [...item.scoreCategoryNames, category]
+                                  : item.scoreCategoryNames.filter((name) => name !== category);
+                                return { ...item, scoreCategoryNames: next };
+                              });
+                            }}
+                            disabled={disabled}
+                            className="w-4 h-4 text-primary border-border rounded"
+                          />
+                          {category}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Description</label>
+                <textarea
+                  value={prize.description}
+                  onChange={(e) =>
+                    updatePrize(index, (item) => ({ ...item, description: e.target.value }))
+                  }
+                  rows={2}
+                  className="input h-auto resize-y"
+                  placeholder="What this prize recognizes."
+                  disabled={disabled}
+                />
+              </div>
+
+              <label className="inline-flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={prize.isActive}
+                  onChange={(e) =>
+                    updatePrize(index, (item) => ({ ...item, isActive: e.target.checked }))
+                  }
+                  className="w-4 h-4 text-primary border-border rounded"
+                  disabled={disabled}
+                />
+                Prize is active
+              </label>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -385,6 +720,7 @@ function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) 
 
 function CreateEventModal({ onClose }: { onClose: () => void }) {
   const createEvent = useMutation(api.events.createEvent);
+  const saveEventPrizes = useMutation(api.prizes.saveEventPrizes);
   const [submitting, setSubmitting] = useState(false);
   const [useTracksAsAwards, setUseTracksAsAwards] = useState(true);
   const [categories, setCategories] = useState([
@@ -393,6 +729,13 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
     { name: "Design", weight: 1, optOutAllowed: false },
     { name: "Presentation", weight: 1, optOutAllowed: false },
     { name: "Impact", weight: 1, optOutAllowed: false },
+  ]);
+  const [prizes, setPrizes] = useState<PrizeDraft[]>([
+    createPrizeDraft(0, {
+      name: "Best Overall",
+      type: "general",
+      scoreBasis: "overall",
+    }),
   ]);
   const [courseCodes, setCourseCodes] = useState<string[]>([...DEFAULT_DEMO_DAY_COURSES]);
   const [newCourseCode, setNewCourseCode] = useState("");
@@ -459,6 +802,22 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
     return "Upcoming (scheduled)";
   }, [derivedStatus]);
 
+  const derivedCategoryNames = useMemo(
+    () =>
+      categories
+        .map((category) => category.name.trim())
+        .filter(Boolean),
+    [categories]
+  );
+
+  const derivedTracks = useMemo(() => {
+    if (useTracksAsAwards) return derivedCategoryNames;
+    return formData.tracks
+      .split(",")
+      .map((track) => track.trim())
+      .filter(Boolean);
+  }, [useTracksAsAwards, derivedCategoryNames, formData.tracks]);
+
   const handleAddCourseCode = () => {
     const code = newCourseCode.trim().toUpperCase();
     if (code && !courseCodes.includes(code)) {
@@ -504,6 +863,17 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
       return;
     }
 
+    const preparedPrizes =
+      formData.mode === "hackathon"
+        ? normalizePrizeDraftsForSave(prizes)
+        : [];
+
+    if (formData.mode === "hackathon" && preparedPrizes.length === 0) {
+      toast.error("Add at least one prize for hackathon events.");
+      setSubmitting(false);
+      return;
+    }
+
     const computedStatus = derivedStatus ?? "upcoming";
 
     try {
@@ -511,7 +881,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
         ? undefined 
         : formData.tracks.split(",").map((t) => t.trim()).filter(Boolean);
       
-      await createEvent({
+      const eventId = await createEvent({
         name: formData.name,
         description: formData.description,
         status: computedStatus,
@@ -524,10 +894,27 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
         mode: formData.mode,
         courseCodes: formData.mode === "demo_day" ? courseCodes : undefined,
       });
+
+      if (formData.mode === "hackathon") {
+        try {
+          await saveEventPrizes({
+            eventId,
+            prizes: preparedPrizes,
+          });
+        } catch (error: any) {
+          toast.error(
+            error?.message ||
+              "Event created, but saving prizes failed. Re-open the event to configure prizes."
+          );
+          onClose();
+          return;
+        }
+      }
+
       toast.success("Event created successfully!");
       onClose();
-    } catch (error) {
-      toast.error("Failed to create event");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to create event");
     } finally {
       setSubmitting(false);
     }
@@ -767,6 +1154,24 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
                 )}
               </div>
 
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-base font-heading font-semibold text-foreground">
+                    Prize Catalog
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Teams submit to prizes, and winners are selected prize-by-prize after scores are locked.
+                  </p>
+                </div>
+                <PrizeCatalogEditor
+                  prizes={prizes}
+                  setPrizes={setPrizes}
+                  categories={derivedCategoryNames}
+                  tracks={derivedTracks}
+                  disabled={submitting}
+                />
+              </div>
+
               <div>
                 <label className="flex items-center gap-2 mb-3">
                   <input
@@ -897,6 +1302,9 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const eventScores = useQuery(api.scores.getEventScores, { eventId });
   const detailedScores = useQuery(api.scores.getDetailedEventScores, { eventId });
   const appreciationSummary = useQuery(api.appreciations.getEventAppreciationSummary, { eventId });
+  const eventPrizes = useQuery(api.prizes.listEventPrizes, { eventId });
+  const prizeDeliberationData = useQuery(api.prizes.getPrizeDeliberationData, { eventId });
+  const prizeWinners = useQuery(api.prizes.listPrizeWinners, { eventId });
   const updateEventDetails = useMutation(api.events.updateEventDetails);
   const updateEventCategories = useMutation(api.events.updateEventCategories);
   const updateEventCohorts = useMutation(api.events.updateEventCohorts);
@@ -906,7 +1314,10 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const createTeam = useMutation(api.teams.createTeam);
   const updateTeamAdmin = useMutation(api.teams.updateTeamAdmin);
   const setWinners = useMutation(api.scores.setWinners);
+  const saveEventPrizes = useMutation(api.prizes.saveEventPrizes);
+  const setPrizeWinners = useMutation(api.prizes.setPrizeWinners);
   const releaseResults = useMutation(api.scores.releaseResults);
+  const setScoringLock = useMutation(api.events.setScoringLock);
   const hideTeam = useMutation(api.teams.hideTeam);
   const removeTeam = useMutation(api.teams.removeTeam);
 
@@ -930,6 +1341,9 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   const [enableCohorts, setEnableCohorts] = useState(false);
   const [judgeCodeEdit, setJudgeCodeEdit] = useState("");
   const [savingJudgeSettings, setSavingJudgeSettings] = useState(false);
+  const [prizesEdit, setPrizesEdit] = useState<PrizeDraft[]>([]);
+  const [savingPrizes, setSavingPrizes] = useState(false);
+  const [lockingScores, setLockingScores] = useState(false);
   const [appreciationBudget, setAppreciationBudget] = useState<number>(100);
   const [savingAppreciationSettings, setSavingAppreciationSettings] = useState(false);
 
@@ -957,6 +1371,26 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     }
   }, [event]);
 
+  useEffect(() => {
+    if (!eventPrizes) return;
+    setPrizesEdit(
+      eventPrizes.map((prize: any, index: number) =>
+        createPrizeDraft(index, {
+          prizeId: prize._id,
+          name: prize.name || "",
+          description: prize.description || "",
+          type: prize.type || "general",
+          track: prize.track || "",
+          sponsorName: prize.sponsorName || "",
+          scoreBasis: prize.scoreBasis || "none",
+          scoreCategoryNames: prize.scoreCategoryNames || [],
+          isActive: prize.isActive !== false,
+          sortOrder: prize.sortOrder ?? index,
+        })
+      )
+    );
+  }, [eventPrizes]);
+
   if (!event) {
     return null;
   }
@@ -978,6 +1412,20 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
         (teamScore as any)?.judgeCount > 0 ||
         ((teamScore as any)?.scores?.length || 0) > 0
     ) ?? false;
+  const scoringLocked = !!event.scoringLockedAt;
+  const scoringLockedLabel = event.scoringLockedAt
+    ? formatDateTime(event.scoringLockedAt)
+    : null;
+  const canEditJudgeSettings = !hasScores && !scoringLocked;
+  const categoriesForPrizeEditor = useMemo(
+    () => categoriesEdit.map((category) => category.name.trim()).filter(Boolean),
+    [categoriesEdit]
+  );
+  const tracksForPrizeEditor = useMemo(() => {
+    if (event.tracks && event.tracks.length > 0) return event.tracks;
+    return categoriesForPrizeEditor;
+  }, [event.tracks, categoriesForPrizeEditor]);
+  const hasConfiguredPrizes = (eventPrizes?.length || 0) > 0;
 
   const handleModeChange = async (mode: "hackathon" | "demo_day") => {
     try {
@@ -1104,21 +1552,13 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
   };
 
   const handleSaveJudgeSettings = async () => {
-    const scoresLoaded = eventScores !== undefined;
-    const hasScores =
-      eventScores?.some(
-        (teamScore) =>
-          (teamScore as any)?.judgeCount > 0 ||
-          ((teamScore as any)?.scores?.length || 0) > 0
-      ) ?? false;
-
     if (!scoresLoaded) {
       toast.error("Scores are still loading. Please try again.");
       return;
     }
 
-    if (hasScores) {
-      toast.error("Judging has started; these settings are locked.");
+    if (!canEditJudgeSettings) {
+      toast.error("Judging settings are locked while scoring is in progress or locked.");
       return;
     }
 
@@ -1150,6 +1590,45 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
       toast.error("Failed to save judging settings");
     } finally {
       setSavingJudgeSettings(false);
+    }
+  };
+
+  const handleSavePrizes = async () => {
+    if (isDemoDayMode) return;
+
+    const normalizedPrizes = normalizePrizeDraftsForSave(prizesEdit);
+    if (normalizedPrizes.length === 0) {
+      toast.error("Add at least one active prize before saving.");
+      return;
+    }
+
+    setSavingPrizes(true);
+    try {
+      await saveEventPrizes({
+        eventId,
+        prizes: normalizedPrizes,
+      });
+      toast.success("Prize catalog saved");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to save prizes");
+    } finally {
+      setSavingPrizes(false);
+    }
+  };
+
+  const handleSetScoringLock = async (locked: boolean) => {
+    if (isDemoDayMode) return;
+    setLockingScores(true);
+    try {
+      const reason = locked
+        ? "Deliberation in progress"
+        : "Reopened for score adjustments";
+      await setScoringLock({ eventId, locked, reason });
+      toast.success(locked ? "Scoring locked" : "Scoring unlocked");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update scoring lock");
+    } finally {
+      setLockingScores(false);
     }
   };
 
@@ -1202,12 +1681,21 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
     }
   };
 
+  const handleStatusChange = async (status: "upcoming" | "active" | "past") => {
+    try {
+      await updateEventDetails({ eventId, status });
+      toast.success(`Event marked as ${status}`);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update event status");
+    }
+  };
+
   const handleReleaseResults = async () => {
     try {
       await releaseResults({ eventId });
       toast.success("Results released!");
-    } catch (error) {
-      toast.error("Failed to release results");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to release results");
     }
   };
 
@@ -1441,12 +1929,18 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                     </svg>
                     Judging Settings
                   </h3>
-                  {hasScores && (
+                  {!canEditJudgeSettings && (
                     <span className="badge bg-amber-500/15 text-amber-600 border-amber-500/30">
-                      Locked (judging started)
+                      {scoringLocked ? "Locked (scoring locked)" : "Locked (judging started)"}
                     </span>
                   )}
                 </div>
+
+                {!isDemoDayMode && scoringLocked && scoringLockedLabel && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    Scores locked at {scoringLockedLabel}
+                  </p>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -1458,7 +1952,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                       value={judgeCodeEdit}
                       onChange={(e) => setJudgeCodeEdit(e.target.value)}
                       className="input"
-                      disabled={hasScores}
+                      disabled={!canEditJudgeSettings}
                       placeholder="Enter code required for judges"
                     />
                     <p className="text-xs text-muted-foreground">
@@ -1472,7 +1966,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                         className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
                         checked={enableCohorts}
                         onChange={(e) => setEnableCohorts(e.target.checked)}
-                        disabled={hasScores}
+                        disabled={!canEditJudgeSettings}
                       />
                       Enable Multiple Judging Cohorts
                     </label>
@@ -1512,7 +2006,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                             }}
                             className="input w-full"
                             placeholder="e.g., Innovation"
-                            disabled={hasScores}
+                            disabled={!canEditJudgeSettings}
                           />
                           <input
                             type="number"
@@ -1531,7 +2025,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                             }}
                             className="input w-full"
                             placeholder="1.0"
-                            disabled={hasScores}
+                            disabled={!canEditJudgeSettings}
                           />
                           <label className="flex items-center gap-2 text-xs text-muted-foreground">
                             <input
@@ -1543,7 +2037,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                                 setCategoriesEdit(newCats);
                               }}
                               className="w-4 h-4 text-primary border-border rounded focus:ring-2 focus:ring-primary"
-                              disabled={hasScores}
+                              disabled={!canEditJudgeSettings}
                             />
                             <span>Allow judges to opt out</span>
                           </label>
@@ -1552,7 +2046,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                             onClick={() => setCategoriesEdit(categoriesEdit.filter((_, i) => i !== index))}
                             className="p-2.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             aria-label={`Remove ${cat.name || "category"}`}
-                            disabled={hasScores}
+                            disabled={!canEditJudgeSettings}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1567,7 +2061,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                       type="button"
                       onClick={() => setCategoriesEdit([...categoriesEdit, { name: "", weight: 1, optOutAllowed: false }])}
                       className="btn-ghost text-sm"
-                      disabled={hasScores}
+                      disabled={!canEditJudgeSettings}
                     >
                       + Add Category
                     </button>
@@ -1578,7 +2072,7 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                 <div className="flex justify-end">
                   <button
                     onClick={handleSaveJudgeSettings}
-                    disabled={savingJudgeSettings || hasScores || !scoresLoaded}
+                    disabled={savingJudgeSettings || !canEditJudgeSettings || !scoresLoaded}
                     className="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {savingJudgeSettings ? (
@@ -1592,6 +2086,38 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                   </button>
                 </div>
               </div>
+
+              {!isDemoDayMode && (
+                <div className="card-static p-6 bg-card space-y-4">
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-heading font-semibold text-foreground">Prize Catalog</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Define prize rules and scoring hints for award deliberation.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleSavePrizes}
+                      disabled={savingPrizes || scoringLocked}
+                      className="btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {savingPrizes ? "Saving..." : "Save Prize Catalog"}
+                    </button>
+                  </div>
+                  <PrizeCatalogEditor
+                    prizes={prizesEdit}
+                    setPrizes={setPrizesEdit}
+                    categories={categoriesForPrizeEditor}
+                    tracks={tracksForPrizeEditor}
+                    disabled={scoringLocked}
+                  />
+                  {scoringLocked && (
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      Unlock scoring to edit the prize catalog.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {isDemoDayMode && (
                 <div className="card-static p-6 bg-card space-y-4">
@@ -1831,18 +2357,40 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                     Finish Event
                   </button>
                 )}
+
+                {!isDemoDayMode && (
+                  <button
+                    onClick={() => void handleSetScoringLock(!scoringLocked)}
+                    disabled={lockingScores}
+                    className={`flex-1 min-w-[200px] font-medium py-3 px-6 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                      scoringLocked
+                        ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/30"
+                        : "bg-red-600 hover:bg-red-700 text-white"
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c1.105 0 2-.895 2-2V7a2 2 0 10-4 0v2c0 1.105.895 2 2 2zm-6 2a2 2 0 012-2h8a2 2 0 012 2v6H6v-6z" />
+                    </svg>
+                    {lockingScores ? "Updating..." : scoringLocked ? "Unlock Scores" : "Lock Scores"}
+                  </button>
+                )}
+
                 <button
                   onClick={() => setShowSelectWinners(true)}
-                  className="flex-1 min-w-[200px] btn-secondary flex items-center justify-center gap-2"
+                  disabled={
+                    !isDemoDayMode &&
+                    (!scoringLocked || !hasConfiguredPrizes || !prizeDeliberationData)
+                  }
+                  className="flex-1 min-w-[200px] btn-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                   </svg>
-                  Select Winners
+                  {isDemoDayMode ? "Select Winners" : "Prize Winner Wizard"}
                 </button>
                 <button
                   onClick={handleReleaseResults}
-                  disabled={event.resultsReleased}
+                  disabled={event.resultsReleased || (!isDemoDayMode && !scoringLocked)}
                   className="flex-1 min-w-[200px] bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1851,6 +2399,18 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
                   {event.resultsReleased ? "Results Released" : "Release Results"}
                 </button>
               </div>
+
+              {!isDemoDayMode && !scoringLocked && (
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Lock scoring before selecting winners or releasing results.
+                </p>
+              )}
+
+              {!isDemoDayMode && scoringLocked && !hasConfiguredPrizes && (
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Add and save at least one prize to run the winner wizard.
+                </p>
+              )}
             </>
           )}
 
@@ -2004,7 +2564,17 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
         />
       )}
 
-      {showSelectWinners && event.teams.length > 0 && (
+      {showSelectWinners && !isDemoDayMode && prizeDeliberationData && (
+        <PrizeWinnersWizardModal
+          eventId={eventId}
+          deliberationData={prizeDeliberationData}
+          existingWinners={prizeWinners || []}
+          onClose={() => setShowSelectWinners(false)}
+          onSubmit={setPrizeWinners}
+        />
+      )}
+
+      {showSelectWinners && isDemoDayMode && event.teams.length > 0 && (
         <SelectWinnersModal
           eventId={eventId}
           teams={event.teams}
@@ -2013,6 +2583,228 @@ function EventManagementModal({ eventId, onClose }: { eventId: Id<"events">; onC
           onSubmit={setWinners}
         />
       )}
+    </div>
+  );
+}
+
+function PrizeWinnersWizardModal({
+  eventId,
+  deliberationData,
+  existingWinners,
+  onClose,
+  onSubmit,
+}: {
+  eventId: Id<"events">;
+  deliberationData: any;
+  existingWinners: any[];
+  onClose: () => void;
+  onSubmit: (args: {
+    eventId: Id<"events">;
+    winners: Array<{
+      prizeId: Id<"prizes">;
+      teamId: Id<"teams">;
+      placement?: number;
+      notes?: string;
+    }>;
+  }) => Promise<any>;
+}) {
+  const prizes = deliberationData?.prizes || [];
+  const [selectedByPrize, setSelectedByPrize] = useState<Record<string, string>>({});
+  const [notesByPrize, setNotesByPrize] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const selected: Record<string, string> = {};
+    const notes: Record<string, string> = {};
+    for (const winner of existingWinners || []) {
+      selected[String(winner.prizeId)] = String(winner.teamId);
+      notes[String(winner.prizeId)] = winner.notes || "";
+    }
+    setSelectedByPrize(selected);
+    setNotesByPrize(notes);
+  }, [existingWinners]);
+
+  const assignedCount = Object.values(selectedByPrize).filter(Boolean).length;
+
+  const handleSave = async () => {
+    if (prizes.length === 0) {
+      toast.error("No prizes configured for this event.");
+      return;
+    }
+
+    const winners = prizes
+      .map((entry: any) => {
+        const prizeId = String(entry.prize._id);
+        const selectedTeamId = selectedByPrize[prizeId];
+        if (!selectedTeamId) return null;
+        return {
+          prizeId: entry.prize._id as Id<"prizes">,
+          teamId: selectedTeamId as Id<"teams">,
+          placement: 1,
+          notes: notesByPrize[prizeId]?.trim() || undefined,
+        };
+      })
+      .filter(Boolean) as Array<{
+      prizeId: Id<"prizes">;
+      teamId: Id<"teams">;
+      placement?: number;
+      notes?: string;
+    }>;
+
+    if (winners.length === 0) {
+      toast.error("Select at least one prize winner.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSubmit({
+        eventId,
+        winners,
+      });
+      toast.success("Prize winners saved");
+      onClose();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to save prize winners");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-background rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto border border-border slide-up">
+        <div className="sticky top-0 bg-background border-b border-border p-6 z-10">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <h2 className="text-2xl font-heading font-bold text-foreground">Prize Winner Wizard</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Assign one winner per prize. {assignedCount}/{prizes.length} assigned.
+          </p>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {prizes.length === 0 && (
+            <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+              No prizes configured yet.
+            </div>
+          )}
+
+          {prizes.map((entry: any, index: number) => {
+            const prizeId = String(entry.prize._id);
+            const candidates = [...(entry.candidates || [])].sort(
+              (a: any, b: any) => b.averageScore - a.averageScore
+            );
+            return (
+              <div key={prizeId} className="rounded-lg border border-border bg-card p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      {index + 1}. {entry.prize.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {PRIZE_TYPE_LABELS[entry.prize.type as PrizeType]}
+                      {entry.prize.track ? ` · Track: ${entry.prize.track}` : ""}
+                      {entry.prize.sponsorName ? ` · Sponsor: ${entry.prize.sponsorName}` : ""}
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {candidates.length} candidates
+                  </span>
+                </div>
+
+                {entry.prize.description && (
+                  <p className="text-sm text-muted-foreground">{entry.prize.description}</p>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Winner</label>
+                    <select
+                      value={selectedByPrize[prizeId] || ""}
+                      onChange={(e) =>
+                        setSelectedByPrize((prev) => ({
+                          ...prev,
+                          [prizeId]: e.target.value,
+                        }))
+                      }
+                      className="input"
+                    >
+                      <option value="">Select winner...</option>
+                      {candidates.map((candidate: any) => (
+                        <option key={candidate.teamId} value={String(candidate.teamId)}>
+                          {candidate.teamName} ({candidate.averageScore.toFixed(2)} avg)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Notes (optional)
+                    </label>
+                    <textarea
+                      value={notesByPrize[prizeId] || ""}
+                      onChange={(e) =>
+                        setNotesByPrize((prev) => ({
+                          ...prev,
+                          [prizeId]: e.target.value,
+                        }))
+                      }
+                      className="input h-auto resize-y"
+                      rows={2}
+                      placeholder="Decision notes"
+                    />
+                  </div>
+                </div>
+
+                {candidates.length > 0 && (
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Candidates</p>
+                    <div className="space-y-1">
+                      {candidates.map((candidate: any) => (
+                        <div
+                          key={`${prizeId}-${candidate.teamId}`}
+                          className="flex items-center justify-between text-sm"
+                        >
+                          <span className="text-foreground">{candidate.teamName}</span>
+                          <span className="text-muted-foreground">
+                            {candidate.averageScore.toFixed(2)} avg · {candidate.judgeCount} judges
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="sticky bottom-0 bg-background border-t border-border p-6 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 btn-secondary"
+            disabled={saving}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="flex-1 btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Save Winners"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

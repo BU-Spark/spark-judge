@@ -21,6 +21,19 @@ export const addTeamToAssignment = mutation({
 
     if (!judge) throw new Error("Not a judge for this event");
 
+    const team = await ctx.db.get(args.teamId);
+    if (!team || team.eventId !== args.eventId) {
+      throw new Error("Invalid team for this event");
+    }
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event) {
+      throw new Error("Event not found");
+    }
+    if (event.mode !== "demo_day" && event.scoringLockedAt) {
+      throw new Error("Scoring is locked for this event");
+    }
+
     // Check if assignment already exists
     const existing = await ctx.db
       .query("judgeAssignments")
@@ -61,6 +74,19 @@ export const removeTeamFromAssignment = mutation({
 
     if (!judge) throw new Error("Not a judge for this event");
 
+    const team = await ctx.db.get(args.teamId);
+    if (!team || team.eventId !== args.eventId) {
+      throw new Error("Invalid team for this event");
+    }
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event) {
+      throw new Error("Event not found");
+    }
+    if (event.mode !== "demo_day" && event.scoringLockedAt) {
+      throw new Error("Scoring is locked for this event");
+    }
+
     const assignment = await ctx.db
       .query("judgeAssignments")
       .withIndex("by_judge_and_team", (q) =>
@@ -70,6 +96,17 @@ export const removeTeamFromAssignment = mutation({
 
     if (assignment) {
       await ctx.db.delete(assignment._id);
+    }
+
+    const existingScore = await ctx.db
+      .query("scores")
+      .withIndex("by_judge_and_team", (q) =>
+        q.eq("judgeId", judge._id).eq("teamId", args.teamId)
+      )
+      .first();
+
+    if (existingScore) {
+      await ctx.db.delete(existingScore._id);
     }
 
     return null;

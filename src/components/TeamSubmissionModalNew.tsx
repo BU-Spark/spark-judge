@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -24,14 +24,24 @@ export function TeamSubmissionModal({
   existingTeam: existingTeamProp
 }: TeamSubmissionModalProps) {
   const myTeam = useQuery(api.teams.getMyTeam, isOpen ? { eventId } : "skip");
+  const availablePrizes = useQuery(
+    api.prizes.listEventPrizes,
+    isOpen && eventMode === "hackathon" ? { eventId } : "skip"
+  );
+  const myPrizeSubmissions = useQuery(
+    api.prizes.getMyTeamPrizeSubmissions,
+    isOpen && eventMode === "hackathon" ? { eventId } : "skip"
+  );
   const existingTeam = existingTeamProp || myTeam;
   const isDemoDay = eventMode === "demo_day";
   const [name, setName] = useState(existingTeam?.name || "");
   const [description, setDescription] = useState(existingTeam?.description || "");
   const [members, setMembers] = useState<string[]>(existingTeam?.members || [""]);
   const [githubUrl, setGithubUrl] = useState(existingTeam?.githubUrl || "");
+  const [devpostUrl, setDevpostUrl] = useState(existingTeam?.devpostUrl || "");
   const [track, setTrack] = useState(existingTeam?.track || "");
   const [courseCode, setCourseCode] = useState(existingTeam?.courseCode || "");
+  const [selectedPrizeIds, setSelectedPrizeIds] = useState<string[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,6 +49,9 @@ export function TeamSubmissionModal({
   const submitTeam = useMutation(api.teams.submitTeam);
   const updateTeam = useMutation(api.teams.updateTeam);
   const generateUploadUrl = useMutation(api.teams.generateUploadUrl);
+  const setMyTeamPrizeSubmissions = useMutation(
+    api.prizes.setMyTeamPrizeSubmissions
+  );
 
   const isEditMode = !!existingTeam;
 
@@ -49,10 +62,37 @@ export function TeamSubmissionModal({
       setDescription(existingTeam.description || "");
       setMembers(existingTeam.members || [""]);
       setGithubUrl(existingTeam.githubUrl || "");
+      setDevpostUrl(existingTeam.devpostUrl || "");
       setTrack(existingTeam.track || "");
       setCourseCode(existingTeam.courseCode || "");
     }
   }, [existingTeam]);
+
+  useEffect(() => {
+    if (isDemoDay) return;
+    if (myPrizeSubmissions !== undefined) {
+      setSelectedPrizeIds(myPrizeSubmissions.map((id) => String(id)));
+    }
+  }, [isDemoDay, myPrizeSubmissions]);
+
+  const filteredPrizes = useMemo(() => {
+    if (isDemoDay || !availablePrizes) return [];
+    return availablePrizes.filter((prize: any) => {
+      if (prize.isActive === false) return false;
+      if (prize.type === "track" || prize.type === "track_sponsor") {
+        return !!track && prize.track === track;
+      }
+      return true;
+    });
+  }, [isDemoDay, availablePrizes, track]);
+
+  useEffect(() => {
+    if (isDemoDay || !track) return;
+    const allowedIds = new Set(filteredPrizes.map((prize: any) => String(prize._id)));
+    setSelectedPrizeIds((prev) =>
+      prev.filter((id) => allowedIds.has(id))
+    );
+  }, [isDemoDay, filteredPrizes, track]);
 
   const addMember = () => {
     setMembers([...members, ""]);
@@ -87,6 +127,10 @@ export function TeamSubmissionModal({
     } else if (githubUrl.trim() && !githubUrl.startsWith("https://github.com/")) {
       // For Demo Day, only validate format if URL is provided
       newErrors.githubUrl = "GitHub URL must start with https://github.com/";
+    }
+
+    if (devpostUrl.trim() && !devpostUrl.startsWith("https://")) {
+      newErrors.devpostUrl = "Devpost URL must start with https://";
     }
     
     // Validate track or course code based on event mode
@@ -134,9 +178,16 @@ export function TeamSubmissionModal({
           description: description.trim(),
           members: filteredMembers,
           githubUrl: githubUrl.trim(),
+          devpostUrl: devpostUrl.trim(),
           ...(isDemoDay ? { courseCode } : { track }),
           ...(logoStorageId && { logoStorageId }),
         });
+        if (!isDemoDay) {
+          await setMyTeamPrizeSubmissions({
+            eventId,
+            prizeIds: selectedPrizeIds as Id<"prizes">[],
+          });
+        }
         toast.success("Team updated successfully!");
       } else {
         await submitTeam({
@@ -145,9 +196,16 @@ export function TeamSubmissionModal({
           description: description.trim(),
           members: filteredMembers,
           githubUrl: githubUrl.trim(),
+          devpostUrl: devpostUrl.trim(),
           ...(isDemoDay ? { courseCode } : { track }),
           logoStorageId,
         });
+        if (!isDemoDay) {
+          await setMyTeamPrizeSubmissions({
+            eventId,
+            prizeIds: selectedPrizeIds as Id<"prizes">[],
+          });
+        }
         toast.success("Team submitted successfully!");
       }
       
@@ -165,8 +223,10 @@ export function TeamSubmissionModal({
       setDescription("");
       setMembers([""]);
       setGithubUrl("");
+      setDevpostUrl("");
       setTrack("");
       setCourseCode("");
+      setSelectedPrizeIds([]);
       setLogoFile(null);
     }
     setErrors({});
@@ -295,6 +355,26 @@ export function TeamSubmissionModal({
             {errors.githubUrl && <p className="mt-1 text-sm text-red-500">{errors.githubUrl}</p>}
           </div>
 
+          {!isDemoDay && (
+            <div>
+              <label htmlFor="devpostUrl" className="block text-sm font-medium mb-2">
+                Devpost URL <span className="text-muted-foreground text-xs">(recommended)</span>
+              </label>
+              <input
+                id="devpostUrl"
+                type="url"
+                value={devpostUrl}
+                onChange={(e) => {
+                  setDevpostUrl(e.target.value);
+                  setErrors({ ...errors, devpostUrl: "" });
+                }}
+                placeholder="https://devpost.com/software/..."
+                className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              />
+              {errors.devpostUrl && <p className="mt-1 text-sm text-red-500">{errors.devpostUrl}</p>}
+            </div>
+          )}
+
           {/* Track (hackathon) or Course (demo day) */}
           {isDemoDay ? (
             <div>
@@ -360,6 +440,71 @@ export function TeamSubmissionModal({
             </div>
           )}
 
+          {!isDemoDay && (
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Prize Submissions
+              </label>
+              <div className="rounded-xl border border-border bg-card/60 p-3 space-y-2 max-h-56 overflow-auto">
+                {availablePrizes === undefined && (
+                  <p className="text-sm text-muted-foreground">Loading prizes...</p>
+                )}
+                {availablePrizes && availablePrizes.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No prizes configured yet for this event.
+                  </p>
+                )}
+                {availablePrizes && filteredPrizes.length === 0 && availablePrizes.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Select a track to see track-specific prizes.
+                  </p>
+                )}
+                {filteredPrizes.map((prize: any) => {
+                  const checked = selectedPrizeIds.includes(String(prize._id));
+                  return (
+                    <label
+                      key={prize._id}
+                      className="flex items-start gap-3 rounded-lg border border-border/70 bg-background px-3 py-2 hover:bg-muted/30 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const id = String(prize._id);
+                          if (e.target.checked) {
+                            setSelectedPrizeIds((prev) =>
+                              prev.includes(id) ? prev : [...prev, id]
+                            );
+                          } else {
+                            setSelectedPrizeIds((prev) =>
+                              prev.filter((value) => value !== id)
+                            );
+                          }
+                        }}
+                        className="mt-1 w-4 h-4 text-primary border-border rounded"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {prize.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {prize.type === "general" && "General prize"}
+                          {prize.type === "track" && `Track prize${prize.track ? ` · ${prize.track}` : ""}`}
+                          {prize.type === "sponsor" && `Sponsor prize${prize.sponsorName ? ` · ${prize.sponsorName}` : ""}`}
+                          {prize.type === "track_sponsor" &&
+                            `Track + Sponsor${prize.track ? ` · ${prize.track}` : ""}${prize.sponsorName ? ` · ${prize.sponsorName}` : ""}`}
+                        </p>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                You can update prize submissions any time before admin locks scoring.
+              </p>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={isSubmitting}
@@ -379,4 +524,3 @@ export function TeamSubmissionModal({
     </div>
   );
 }
-

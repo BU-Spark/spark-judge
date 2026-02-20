@@ -428,9 +428,9 @@ export function ScoringWizard({
 
       toast.success("Scores submitted successfully!");
       onSubmitted();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to submit scores");
+      toast.error(error?.message || "Failed to submit scores");
     } finally {
       setSubmitting(false);
     }

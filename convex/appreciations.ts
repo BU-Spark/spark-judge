@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { computeEventStatus } from "./helpers";
+import { requireAdmin } from "./helpers";
 
 // Constants for rate limiting
 const MAX_TAPS_PER_PROJECT_PER_ATTENDEE = 3;
@@ -70,14 +71,26 @@ export const getTeamAppreciations = query({
         .collect();
     }
 
-    // Build team counts
+    const totalByTeam = new Map<Id<"teams">, number>();
+    for (const appreciation of allAppreciations) {
+      totalByTeam.set(
+        appreciation.teamId,
+        (totalByTeam.get(appreciation.teamId) ?? 0) + 1
+      );
+    }
+
+    const attendeeByTeam = new Map<Id<"teams">, number>();
+    for (const appreciation of attendeeAppreciations) {
+      attendeeByTeam.set(
+        appreciation.teamId,
+        (attendeeByTeam.get(appreciation.teamId) ?? 0) + 1
+      );
+    }
+
+    // Build team counts in O(teams + appreciations) time.
     const teamCounts = teams.map((team) => {
-      const totalCount = allAppreciations.filter(
-        (a) => a.teamId === team._id
-      ).length;
-      const attendeeCount = attendeeAppreciations.filter(
-        (a) => a.teamId === team._id
-      ).length;
+      const totalCount = totalByTeam.get(team._id) ?? 0;
+      const attendeeCount = attendeeByTeam.get(team._id) ?? 0;
       return {
         teamId: team._id,
         totalCount,
@@ -213,17 +226,23 @@ export const getEventAppreciationSummary = query({
     const uniqueAttendees = new Set(allAppreciations.map((a) => a.attendeeId))
       .size;
 
-    // Build team summary
-    const teamSummary = teams.map((team) => {
-      const teamAppreciations = allAppreciations.filter(
-        (a) => a.teamId === team._id
+    const countsByTeam = new Map<Id<"teams">, number>();
+    for (const appreciation of allAppreciations) {
+      countsByTeam.set(
+        appreciation.teamId,
+        (countsByTeam.get(appreciation.teamId) ?? 0) + 1
       );
+    }
+
+    // Build team summary without repeated full-array scans.
+    const teamSummary = teams.map((team) => {
+      const teamCount = countsByTeam.get(team._id) ?? 0;
       return {
         teamId: team._id,
         teamName: team.name,
         courseCode: team.courseCode ?? null,
-        rawScore: team.rawScore ?? teamAppreciations.length,
-        cleanScore: team.cleanScore ?? teamAppreciations.length,
+        rawScore: team.rawScore ?? teamCount,
+        cleanScore: team.cleanScore ?? teamCount,
         flagged: team.flagged ?? false,
       };
     });
@@ -383,14 +402,8 @@ export const createAppreciationInternal = internalMutation({
       timestamp: now,
     });
 
-    // 7. Optionally update team's rawScore (denormalized count)
-    const newTeamCount = (
-      await ctx.db
-        .query("appreciations")
-        .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
-        .collect()
-    ).length;
-    await ctx.db.patch(args.teamId, { rawScore: newTeamCount });
+    // 7. Update denormalized score without a full recount query.
+    await ctx.db.patch(args.teamId, { rawScore: (team.rawScore ?? 0) + 1 });
 
     return {
       success: true,
@@ -524,14 +537,8 @@ export const createAppreciation = mutation({
       timestamp: now,
     });
 
-    // 6. Update team's rawScore
-    const newTeamCount = (
-      await ctx.db
-        .query("appreciations")
-        .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
-        .collect()
-    ).length;
-    await ctx.db.patch(args.teamId, { rawScore: newTeamCount });
+    // 6. Update denormalized score without a full recount query.
+    await ctx.db.patch(args.teamId, { rawScore: (team.rawScore ?? 0) + 1 });
 
     return {
       success: true,
@@ -576,20 +583,29 @@ export const getAppreciationsCsvData = query({
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
 
-    // Build CSV data
-    const csvData = teams.map((team) => {
-      const teamAppreciations = allAppreciations.filter(
-        (a) => a.teamId === team._id
+    const totalByTeam = new Map<Id<"teams">, number>();
+    const uniqueAttendeesByTeam = new Map<Id<"teams">, Set<string>>();
+    for (const appreciation of allAppreciations) {
+      totalByTeam.set(
+        appreciation.teamId,
+        (totalByTeam.get(appreciation.teamId) ?? 0) + 1
       );
-      const uniqueAttendees = new Set(
-        teamAppreciations.map((a) => a.attendeeId)
-      ).size;
+      const attendees =
+        uniqueAttendeesByTeam.get(appreciation.teamId) ?? new Set<string>();
+      attendees.add(appreciation.attendeeId);
+      uniqueAttendeesByTeam.set(appreciation.teamId, attendees);
+    }
+
+    // Build CSV data without repeated filtering.
+    const csvData = teams.map((team) => {
+      const totalAppreciations = totalByTeam.get(team._id) ?? 0;
+      const uniqueAttendees = uniqueAttendeesByTeam.get(team._id)?.size ?? 0;
 
       return {
         teamId: team._id,
         teamName: team.name,
         courseCode: team.courseCode ?? "",
-        totalAppreciations: teamAppreciations.length,
+        totalAppreciations,
         uniqueAttendees,
       };
     });
@@ -613,6 +629,8 @@ export const clearTeamAppreciations = mutation({
     deletedCount: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
     const team = await ctx.db.get(args.teamId);
     if (!team) {
       throw new Error("Team not found");
@@ -648,6 +666,8 @@ export const clearEventAppreciations = mutation({
     teamUpdates: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
     const event = await ctx.db.get(args.eventId);
     if (!event) {
       throw new Error("Event not found");

@@ -3,6 +3,11 @@ import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { requireAdmin, computeEventStatus } from "./helpers";
 
+function normalizeOptionalString(value?: string) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
 export const createTeam = mutation({
   args: {
     eventId: v.id("events"),
@@ -10,6 +15,8 @@ export const createTeam = mutation({
     description: v.string(),
     members: v.array(v.string()),
     projectUrl: v.optional(v.string()),
+    devpostUrl: v.optional(v.string()),
+    track: v.optional(v.string()),
     courseCode: v.optional(v.string()),
     logoStorageId: v.optional(v.id("_storage")),
   },
@@ -23,10 +30,22 @@ export const createTeam = mutation({
 
     const isDemoDay = event.mode === "demo_day";
 
-    // Validate course code for Demo Day
+    // Validate mode-specific fields.
     if (isDemoDay && args.courseCode) {
       if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
         throw new Error("Invalid course code");
+      }
+    }
+
+    if (!isDemoDay) {
+      if (!args.track) {
+        throw new Error("Track is required");
+      }
+      const availableTracks =
+        event.tracks ||
+        event.categories.map((c: any) => (typeof c === "string" ? c : c.name));
+      if (!availableTracks.includes(args.track)) {
+        throw new Error("Invalid track");
       }
     }
 
@@ -37,7 +56,8 @@ export const createTeam = mutation({
       description: args.description,
       members: args.members,
       githubUrl: args.projectUrl || "",
-      track: "",
+      devpostUrl: args.devpostUrl || "",
+      track: isDemoDay ? "" : args.track || "",
       courseCode: args.courseCode,
       logoStorageId: args.logoStorageId,
       submittedBy: userId,
@@ -53,6 +73,8 @@ export const updateTeamAdmin = mutation({
     description: v.string(),
     members: v.array(v.string()),
     projectUrl: v.optional(v.string()),
+    devpostUrl: v.optional(v.string()),
+    track: v.optional(v.string()),
     courseCode: v.optional(v.string()),
   },
   returns: v.null(),
@@ -67,10 +89,22 @@ export const updateTeamAdmin = mutation({
 
     const isDemoDay = event.mode === "demo_day";
 
-    // Validate course code for Demo Day
+    // Validate mode-specific fields.
     if (isDemoDay && args.courseCode) {
       if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
         throw new Error("Invalid course code");
+      }
+    }
+
+    if (!isDemoDay) {
+      if (!args.track) {
+        throw new Error("Track is required");
+      }
+      const availableTracks =
+        event.tracks ||
+        event.categories.map((c: any) => (typeof c === "string" ? c : c.name));
+      if (!availableTracks.includes(args.track)) {
+        throw new Error("Invalid track");
       }
     }
 
@@ -81,12 +115,19 @@ export const updateTeamAdmin = mutation({
       }
     }
 
+    if (args.devpostUrl && !args.devpostUrl.startsWith("https://")) {
+      throw new Error("Devpost URL must start with https://");
+    }
+
     await ctx.db.patch(args.teamId, {
       name: args.name,
       description: args.description,
       members: args.members,
       githubUrl: args.projectUrl || "",
-      ...(isDemoDay ? { courseCode: args.courseCode } : {}),
+      ...(args.devpostUrl !== undefined
+        ? { devpostUrl: args.devpostUrl || "" }
+        : {}),
+      ...(isDemoDay ? { courseCode: args.courseCode } : { track: args.track || "" }),
     });
 
     return null;
@@ -100,6 +141,7 @@ export const submitTeam = mutation({
     description: v.string(),
     members: v.array(v.string()),
     githubUrl: v.optional(v.string()),
+    devpostUrl: v.optional(v.string()),
     track: v.optional(v.string()),
     courseCode: v.optional(v.string()),
     logoStorageId: v.optional(v.id("_storage")),
@@ -194,6 +236,14 @@ export const submitTeam = mutation({
       throw new Error("GitHub URL must start with https://github.com/");
     }
 
+    if (
+      args.devpostUrl &&
+      args.devpostUrl.trim() &&
+      !args.devpostUrl.startsWith("https://")
+    ) {
+      throw new Error("Devpost URL must start with https://");
+    }
+
     // Register as participant if not already
     const participant = await ctx.db
       .query("participants")
@@ -216,6 +266,7 @@ export const submitTeam = mutation({
       description: args.description,
       members: args.members,
       githubUrl: args.githubUrl || "",
+      devpostUrl: args.devpostUrl || "",
       track: args.track || "",
       courseCode: args.courseCode,
       logoStorageId: args.logoStorageId,
@@ -257,6 +308,7 @@ export const updateTeam = mutation({
     description: v.optional(v.string()),
     members: v.optional(v.array(v.string())),
     githubUrl: v.optional(v.string()),
+    devpostUrl: v.optional(v.string()),
     track: v.optional(v.string()),
     courseCode: v.optional(v.string()),
     logoStorageId: v.optional(v.id("_storage")),
@@ -299,11 +351,15 @@ export const updateTeam = mutation({
     if (args.githubUrl && !args.githubUrl.startsWith("https://github.com/")) {
       throw new Error("GitHub URL must start with https://github.com/");
     }
+    if (args.devpostUrl && !args.devpostUrl.startsWith("https://")) {
+      throw new Error("Devpost URL must start with https://");
+    }
 
     const updates: any = {};
     if (args.description !== undefined) updates.description = args.description;
     if (args.members !== undefined) updates.members = args.members;
     if (args.githubUrl !== undefined) updates.githubUrl = args.githubUrl;
+    if (args.devpostUrl !== undefined) updates.devpostUrl = args.devpostUrl;
     if (args.track !== undefined) updates.track = args.track;
     if (args.courseCode !== undefined) updates.courseCode = args.courseCode;
     if (args.logoStorageId !== undefined)

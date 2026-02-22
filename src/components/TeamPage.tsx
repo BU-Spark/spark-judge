@@ -38,9 +38,9 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
     return (
       <ErrorState
         title="Project Not Found"
-        message="This project doesn't exist or has been removed."
+        description="This project doesn't exist or has been removed."
         actionLabel="Browse All Projects"
-        actionHref={`/event/${eventId}`}
+        onAction={() => window.location.href = `/event/${eventId}`}
       />
     );
   }
@@ -49,9 +49,9 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
     return (
       <ErrorState
         title="Project Unavailable"
-        message="This project is currently not available for viewing."
+        description="This project is currently not available for viewing."
         actionLabel="Browse All Projects"
-        actionHref={`/event/${eventId}`}
+        onAction={() => window.location.href = `/event/${eventId}`}
       />
     );
   }
@@ -60,9 +60,9 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
     return (
       <ErrorState
         title="Event Not Found"
-        message="The event for this project is unavailable."
+        description="The event for this project is unavailable."
         actionLabel="Browse All Projects"
-        actionHref={`/event/${eventId}`}
+        onAction={() => window.location.href = `/event/${eventId}`}
       />
     );
   }
@@ -99,9 +99,11 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               {team.courseCode && (
-                <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm font-medium rounded-full mb-3">
-                  {team.courseCode}
-                </span>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm font-medium rounded-full">
+                    {team.courseCode}
+                  </span>
+                </div>
               )}
               <h1 className="text-2xl sm:text-3xl font-heading font-bold mb-2">
                 {team.name}
@@ -267,11 +269,10 @@ function AppreciationSection({
         {[...Array(maxPerTeam)].map((_, i) => (
           <div
             key={i}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-              i < attendeeCount
-                ? "bg-pink-500 text-white scale-110"
-                : "bg-muted text-muted-foreground"
-            }`}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${i < attendeeCount
+              ? "bg-pink-500 text-white scale-110"
+              : "bg-muted text-muted-foreground"
+              }`}
           >
             ❤️
           </div>
@@ -283,10 +284,9 @@ function AppreciationSection({
         disabled={!canAppreciate || isLoading}
         className={`
           inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl text-lg font-semibold transition-all shadow-lg
-          ${
-            canAppreciate
-              ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white hover:shadow-xl hover:scale-105 active:scale-100"
-              : "bg-muted text-muted-foreground cursor-not-allowed shadow-none"
+          ${canAppreciate
+            ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white hover:shadow-xl hover:scale-105 active:scale-100"
+            : "bg-muted text-muted-foreground cursor-not-allowed shadow-none"
           }
           ${isLoading ? "opacity-70" : ""}
         `}
@@ -325,4 +325,3 @@ function AppreciationSection({
     </div>
   );
 }
-

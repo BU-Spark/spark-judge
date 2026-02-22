@@ -70,6 +70,15 @@ export const submitScore = mutation({
     // Fetch event to get category weights
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
+    if (event.mode !== "demo_day" && event.scoringLockedAt) {
+      throw new Error("Scoring is locked for this event");
+    }
+
+    // Ensure the submitted team belongs to this event.
+    const team = await ctx.db.get(args.teamId);
+    if (!team || team.eventId !== args.eventId) {
+      throw new Error("Invalid team for this event");
+    }
 
     const sanitizedCategoryScores = args.categoryScores.map((cs) => {
       const category = event.categories.find((c) => c.name === cs.category);
@@ -143,6 +152,9 @@ export const submitBatchScores = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
+    if (event.mode !== "demo_day" && event.scoringLockedAt) {
+      throw new Error("Scoring is locked for this event");
+    }
 
     const teamsForEvent = await ctx.db
       .query("teams")
@@ -301,6 +313,33 @@ export const setWinners = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
 
+    const event = await ctx.db.get(args.eventId);
+    if (!event) throw new Error("Event not found");
+    if (event.mode !== "demo_day" && !event.scoringLockedAt) {
+      throw new Error("Lock scoring before selecting winners");
+    }
+
+    const eventTeamIds = new Set(
+      (
+        await ctx.db
+          .query("teams")
+          .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+          .collect()
+      ).map((team) => team._id)
+    );
+
+    if (!eventTeamIds.has(args.overallWinner)) {
+      throw new Error("Overall winner must be a team in this event");
+    }
+
+    for (const winner of args.categoryWinners) {
+      if (!eventTeamIds.has(winner.teamId)) {
+        throw new Error(
+          `Category winner for ${winner.category} must be a team in this event`
+        );
+      }
+    }
+
     await ctx.db.patch(args.eventId, {
       overallWinner: args.overallWinner,
       categoryWinners: args.categoryWinners,
@@ -312,6 +351,13 @@ export const releaseResults = mutation({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event) throw new Error("Event not found");
+    if (event.mode !== "demo_day" && !event.scoringLockedAt) {
+      throw new Error("Lock scoring before releasing results");
+    }
+
     await ctx.db.patch(args.eventId, { resultsReleased: true });
   },
 });

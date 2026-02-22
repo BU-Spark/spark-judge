@@ -1542,6 +1542,7 @@ export function EventManagementModal({
   const [savingPrizes, setSavingPrizes] = useState(false);
   const [lockingScores, setLockingScores] = useState(false);
   const [appreciationBudget, setAppreciationBudget] = useState<number>(100);
+  const [tracksEdit, setTracksEdit] = useState("");
   const [savingAppreciationSettings, setSavingAppreciationSettings] = useState(false);
 
   const updateTab = (tab: EventManagementTab) => {
@@ -1587,6 +1588,7 @@ export function EventManagementModal({
           ? event.appreciationBudgetPerAttendee
           : 100
       );
+      setTracksEdit(event.tracks?.join(", ") || "");
     }
   }, [event]);
 
@@ -1615,9 +1617,14 @@ export function EventManagementModal({
     [categoriesEdit]
   );
   const tracksForPrizeEditor = useMemo(() => {
-    if (event?.tracks && event.tracks.length > 0) return event.tracks;
+    if (tracksEdit.trim()) {
+      return tracksEdit
+        .split(",")
+        .map((track) => track.trim())
+        .filter(Boolean);
+    }
     return categoriesForPrizeEditor;
-  }, [event?.tracks, categoriesForPrizeEditor]);
+  }, [tracksEdit, categoriesForPrizeEditor]);
   const teamPrizeIdsByTeamId = useMemo(() => {
     const prizeSelections = new Map<string, string[]>();
     const prizeCards = prizeDeliberationData?.prizes;
@@ -1893,6 +1900,7 @@ export function EventManagementModal({
         description: eventDescription.trim(),
         startDate: startMs,
         endDate: endMs,
+        tracks: tracksEdit.split(",").map(t => t.trim()).filter(Boolean),
       });
       toast.success("Event details saved");
     } catch (error) {
@@ -2310,6 +2318,8 @@ export function EventManagementModal({
                 setPrizesEdit={setPrizesEdit}
                 categoriesForPrizeEditor={categoriesForPrizeEditor}
                 tracksForPrizeEditor={tracksForPrizeEditor}
+                tracksEdit={tracksEdit}
+                setTracksEdit={setTracksEdit}
                 appreciationBudget={appreciationBudget}
                 setAppreciationBudget={setAppreciationBudget}
                 handleSaveAppreciationSettings={handleSaveAppreciationSettings}

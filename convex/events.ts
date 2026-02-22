@@ -316,35 +316,35 @@ export const removeEvent = mutation({
 
     const [scores, teams, judges, participants, prizes, prizeSubmissions, prizeWinners] =
       await Promise.all([
-      ctx.db
-        .query("scores")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("teams")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("judges")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("participants")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("prizes")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("teamPrizeSubmissions")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("prizeWinners")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-    ]);
+        ctx.db
+          .query("scores")
+          .withIndex("by_event", (q) => q.eq("eventId", eventId))
+          .collect(),
+        ctx.db
+          .query("teams")
+          .withIndex("by_event", (q) => q.eq("eventId", eventId))
+          .collect(),
+        ctx.db
+          .query("judges")
+          .withIndex("by_event", (q) => q.eq("eventId", eventId))
+          .collect(),
+        ctx.db
+          .query("participants")
+          .withIndex("by_event", (q) => q.eq("eventId", eventId))
+          .collect(),
+        ctx.db
+          .query("prizes")
+          .withIndex("by_event", (q) => q.eq("eventId", eventId))
+          .collect(),
+        ctx.db
+          .query("teamPrizeSubmissions")
+          .withIndex("by_event", (q) => q.eq("eventId", eventId))
+          .collect(),
+        ctx.db
+          .query("prizeWinners")
+          .withIndex("by_event", (q) => q.eq("eventId", eventId))
+          .collect(),
+      ]);
 
     await Promise.all(scores.map((score) => ctx.db.delete(score._id)));
 
@@ -494,6 +494,7 @@ export const updateEventDetails = mutation({
     endDate: v.optional(v.number()),
     judgeCode: v.optional(v.union(v.string(), v.null())),
     appreciationBudgetPerAttendee: v.optional(v.number()),
+    tracks: v.optional(v.array(v.string())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -506,11 +507,13 @@ export const updateEventDetails = mutation({
       endDate?: number;
       judgeCode?: string;
       appreciationBudgetPerAttendee?: number;
+      tracks?: string[];
     } = {};
     if (args.name !== undefined) updates.name = args.name;
     if (args.description !== undefined) updates.description = args.description;
     if (args.startDate !== undefined) updates.startDate = args.startDate;
     if (args.endDate !== undefined) updates.endDate = args.endDate;
+    if (args.tracks !== undefined) updates.tracks = args.tracks;
     if (args.judgeCode !== undefined) {
       // Treat null as a request to clear the judge code.
       updates.judgeCode = args.judgeCode ?? "";

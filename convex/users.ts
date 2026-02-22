@@ -139,3 +139,13 @@ export const getUserProfile = query({
     };
   },
 });
+
+export const debugMakeMeAdmin = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    await ctx.db.patch(userId, { isAdmin: true });
+    return { success: true };
+  },
+});

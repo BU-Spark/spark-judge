@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAttendeeIdentity } from "../../lib/demoDayIdentity";
 import { useAppreciation } from "../../lib/demoDayApi";
 import { toast } from "sonner";
+import { SearchIcon } from "../ui/AppIcons";
 import { LoadingState } from "../ui/LoadingState";
 import { Link } from "react-router-dom";
 
@@ -310,7 +311,9 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
       {/* Team Grid - Grouped by course when viewing all, flat when filtered */}
       {filteredTeams.length === 0 ? (
         <div className="card-static text-center py-12 bg-card">
-          <div className="text-4xl mb-4">🔍</div>
+          <div className="mb-4 flex justify-center">
+            <SearchIcon className="h-10 w-10 text-muted-foreground" />
+          </div>
           <h3 className="text-lg font-heading font-semibold text-foreground mb-2">
             No Projects Found
           </h3>

@@ -14,10 +14,10 @@ interface TeamSubmissionModalProps {
   existingTeam?: any;
 }
 
-export function TeamSubmissionModal({ 
-  isOpen, 
-  onClose, 
-  eventId, 
+export function TeamSubmissionModal({
+  isOpen,
+  onClose,
+  eventId,
   tracks,
   courseCodes = [],
   eventMode = "hackathon",
@@ -42,6 +42,7 @@ export function TeamSubmissionModal({
   const [track, setTrack] = useState(existingTeam?.track || "");
   const [courseCode, setCourseCode] = useState(existingTeam?.courseCode || "");
   const [selectedPrizeIds, setSelectedPrizeIds] = useState<string[]>([]);
+  const [sponsorFilter, setSponsorFilter] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,7 +76,12 @@ export function TeamSubmissionModal({
     }
   }, [isDemoDay, myPrizeSubmissions]);
 
-  const filteredPrizes = useMemo(() => {
+  useEffect(() => {
+    if (!isOpen) return;
+    setSponsorFilter("");
+  }, [isOpen]);
+
+  const eligiblePrizes = useMemo(() => {
     if (isDemoDay || !availablePrizes) return [];
     return availablePrizes.filter((prize: any) => {
       if (prize.isActive === false) return false;
@@ -87,12 +93,31 @@ export function TeamSubmissionModal({
   }, [isDemoDay, availablePrizes, track]);
 
   useEffect(() => {
-    if (isDemoDay || !track) return;
-    const allowedIds = new Set(filteredPrizes.map((prize: any) => String(prize._id)));
+    if (isDemoDay) return;
+    const allowedIds = new Set(eligiblePrizes.map((prize: any) => String(prize._id)));
     setSelectedPrizeIds((prev) =>
       prev.filter((id) => allowedIds.has(id))
     );
-  }, [isDemoDay, filteredPrizes, track]);
+  }, [isDemoDay, eligiblePrizes]);
+
+  const sponsorOptions = useMemo(
+    () =>
+      Array.from(
+        new Set<string>(
+          eligiblePrizes
+            .map((prize: any) => (prize.sponsorName || "").trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    [eligiblePrizes]
+  );
+
+  const filteredPrizes = useMemo(() => {
+    if (!sponsorFilter) return eligiblePrizes;
+    return eligiblePrizes.filter(
+      (prize: any) => (prize.sponsorName || "").trim() === sponsorFilter
+    );
+  }, [eligiblePrizes, sponsorFilter]);
 
   const addMember = () => {
     setMembers([...members, ""]);
@@ -132,7 +157,7 @@ export function TeamSubmissionModal({
     if (devpostUrl.trim() && !devpostUrl.startsWith("https://")) {
       newErrors.devpostUrl = "Devpost URL must start with https://";
     }
-    
+
     // Validate track or course code based on event mode
     if (isDemoDay) {
       if (!courseCode) {
@@ -150,7 +175,7 @@ export function TeamSubmissionModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validate()) return;
 
     setIsSubmitting(true);
@@ -208,7 +233,7 @@ export function TeamSubmissionModal({
         }
         toast.success("Team submitted successfully!");
       }
-      
+
       onClose();
     } catch (err: any) {
       toast.error(err.message || "Failed to submit team");
@@ -227,6 +252,7 @@ export function TeamSubmissionModal({
       setTrack("");
       setCourseCode("");
       setSelectedPrizeIds([]);
+      setSponsorFilter("");
       setLogoFile(null);
     }
     setErrors({});
@@ -237,7 +263,7 @@ export function TeamSubmissionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       />
@@ -250,7 +276,7 @@ export function TeamSubmissionModal({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        
+
         <h2 className="text-2xl font-heading font-bold mb-6 text-foreground">
           {isEditMode ? "Edit Team" : "Submit Your Team"}
         </h2>
@@ -445,6 +471,23 @@ export function TeamSubmissionModal({
               <label className="block text-sm font-medium mb-2">
                 Prize Submissions
               </label>
+              <div className="mb-2">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Sponsor Filter
+                </label>
+                <select
+                  value={sponsorFilter}
+                  onChange={(e) => setSponsorFilter(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                >
+                  <option value="">All sponsors</option>
+                  {sponsorOptions.map((sponsorName) => (
+                    <option key={sponsorName} value={sponsorName}>
+                      {sponsorName}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="rounded-xl border border-border bg-card/60 p-3 space-y-2 max-h-56 overflow-auto">
                 {availablePrizes === undefined && (
                   <p className="text-sm text-muted-foreground">Loading prizes...</p>
@@ -454,9 +497,14 @@ export function TeamSubmissionModal({
                     No prizes configured yet for this event.
                   </p>
                 )}
-                {availablePrizes && filteredPrizes.length === 0 && availablePrizes.length > 0 && (
+                {availablePrizes && eligiblePrizes.length === 0 && availablePrizes.length > 0 && (
                   <p className="text-sm text-muted-foreground">
                     Select a track to see track-specific prizes.
+                  </p>
+                )}
+                {availablePrizes && eligiblePrizes.length > 0 && filteredPrizes.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No prizes match this sponsor filter.
                   </p>
                 )}
                 {filteredPrizes.map((prize: any) => {

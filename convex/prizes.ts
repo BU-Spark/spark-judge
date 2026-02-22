@@ -243,6 +243,17 @@ export const getMyTeamPrizeSubmissions = query({
   },
 });
 
+export const getEventPrizeSubmissions = query({
+  args: { eventId: v.id("events") },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("teamPrizeSubmissions")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .collect();
+  },
+});
+
 export const setMyTeamPrizeSubmissions = mutation({
   args: {
     eventId: v.id("events"),

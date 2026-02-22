@@ -3,6 +3,11 @@ import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { requireAdmin, computeEventStatus } from "./helpers";
 
+function normalizeOptionalString(value?: string) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
 export const createTeam = mutation({
   args: {
     eventId: v.id("events"),
@@ -11,6 +16,7 @@ export const createTeam = mutation({
     members: v.array(v.string()),
     projectUrl: v.optional(v.string()),
     devpostUrl: v.optional(v.string()),
+    track: v.optional(v.string()),
     courseCode: v.optional(v.string()),
     logoStorageId: v.optional(v.id("_storage")),
   },
@@ -24,10 +30,22 @@ export const createTeam = mutation({
 
     const isDemoDay = event.mode === "demo_day";
 
-    // Validate course code for Demo Day
+    // Validate mode-specific fields.
     if (isDemoDay && args.courseCode) {
       if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
         throw new Error("Invalid course code");
+      }
+    }
+
+    if (!isDemoDay) {
+      if (!args.track) {
+        throw new Error("Track is required");
+      }
+      const availableTracks =
+        event.tracks ||
+        event.categories.map((c: any) => (typeof c === "string" ? c : c.name));
+      if (!availableTracks.includes(args.track)) {
+        throw new Error("Invalid track");
       }
     }
 
@@ -39,7 +57,7 @@ export const createTeam = mutation({
       members: args.members,
       githubUrl: args.projectUrl || "",
       devpostUrl: args.devpostUrl || "",
-      track: "",
+      track: isDemoDay ? "" : args.track || "",
       courseCode: args.courseCode,
       logoStorageId: args.logoStorageId,
       submittedBy: userId,
@@ -56,6 +74,7 @@ export const updateTeamAdmin = mutation({
     members: v.array(v.string()),
     projectUrl: v.optional(v.string()),
     devpostUrl: v.optional(v.string()),
+    track: v.optional(v.string()),
     courseCode: v.optional(v.string()),
   },
   returns: v.null(),
@@ -70,10 +89,22 @@ export const updateTeamAdmin = mutation({
 
     const isDemoDay = event.mode === "demo_day";
 
-    // Validate course code for Demo Day
+    // Validate mode-specific fields.
     if (isDemoDay && args.courseCode) {
       if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
         throw new Error("Invalid course code");
+      }
+    }
+
+    if (!isDemoDay) {
+      if (!args.track) {
+        throw new Error("Track is required");
+      }
+      const availableTracks =
+        event.tracks ||
+        event.categories.map((c: any) => (typeof c === "string" ? c : c.name));
+      if (!availableTracks.includes(args.track)) {
+        throw new Error("Invalid track");
       }
     }
 
@@ -96,7 +127,7 @@ export const updateTeamAdmin = mutation({
       ...(args.devpostUrl !== undefined
         ? { devpostUrl: args.devpostUrl || "" }
         : {}),
-      ...(isDemoDay ? { courseCode: args.courseCode } : {}),
+      ...(isDemoDay ? { courseCode: args.courseCode } : { track: args.track || "" }),
     });
 
     return null;

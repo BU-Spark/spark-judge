@@ -92,6 +92,8 @@ describe("DemoDayBrowse", () => {
       ],
       attendeeTotalCount: 1,
       attendeeRemainingBudget: 14,
+      maxPerAttendee: 15,
+      maxPerTeam: 3,
     });
   });
 
@@ -106,11 +108,11 @@ describe("DemoDayBrowse", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("Demo Day Fall 2024")).toBeInTheDocument();
+    expect(screen.getAllByText("Demo Day Fall 2024")).toHaveLength(2);
     expect(screen.getByText("Annual demo day event")).toBeInTheDocument();
   });
 
-  it("should render Demo Day badge", () => {
+  it("should render mobile back button", () => {
     render(
       <MemoryRouter>
         <DemoDayBrowse
@@ -121,7 +123,7 @@ describe("DemoDayBrowse", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("Demo Day")).toBeInTheDocument();
+    expect(screen.getByLabelText(/back to events/i)).toBeInTheDocument();
   });
 
   it("should render back button and call onBack when clicked", () => {
@@ -517,4 +519,3 @@ describe("DemoDayBrowse - Team Card interactions", () => {
     expect(spinnerContainer).toBeInTheDocument();
   });
 });
-

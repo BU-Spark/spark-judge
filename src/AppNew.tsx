@@ -5,9 +5,12 @@ import { SignOutButton } from "./SignOutButtonNew";
 import { Toaster } from "sonner";
 import { LandingPage } from "./components/LandingPageNew";
 import { EventView } from "./components/EventView";
-import { AdminDashboard } from "./components/AdminDashboard";
 import { ProfilePage } from "./components/ProfilePage";
 import { TeamPage } from "./components/TeamPage";
+import { AdminShell } from "./features/admin/shell/AdminShell";
+import { AdminHomeRoute } from "./features/admin/routes/AdminHomeRoute";
+import { AdminCreateEventRoute } from "./features/admin/routes/AdminCreateEventRoute";
+import { AdminEventRoute } from "./features/admin/routes/AdminEventRoute";
 import { useState, useEffect } from "react";
 import { Id } from "../convex/_generated/dataModel";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -31,7 +34,11 @@ export default function App() {
           <Route path="/event/:eventId" element={<EventViewWrapper />} />
           {/* Dedicated team page - direct route */}
           <Route path="/event/:eventId/team/:teamId" element={<TeamPageWrapper />} />
-          <Route path="/admin" element={<AdminDashboardWrapper />} />
+          <Route path="/admin" element={<AdminShell />}>
+            <Route index element={<AdminHomeRoute />} />
+            <Route path="events/new" element={<AdminCreateEventRoute />} />
+            <Route path="events/:eventId" element={<AdminEventRoute />} />
+          </Route>
           <Route path="/profile" element={<ProfilePageWrapper />} />
           {/* Deep link redirect for QR codes with slug format */}
           <Route path="/event/:eventSlug/:teamSlug/:teamId" element={<TeamRedirect />} />
@@ -240,37 +247,6 @@ function EventViewWrapper() {
       onBack={() => void navigate("/")} 
     />
   );
-}
-
-/**
- * Wrapper for AdminDashboard
- */
-function AdminDashboardWrapper() {
-  const navigate = useNavigate();
-  const loggedInUser = useQuery(api.auth.loggedInUser);
-
-  if (loggedInUser === undefined) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!loggedInUser) {
-    return (
-      <div className="max-w-md mx-auto mt-16 px-4">
-        <div className="card-static p-8 text-center bg-white dark:bg-zinc-900">
-          <h2 className="text-xl font-heading font-bold mb-2">Sign In Required</h2>
-          <p className="text-muted-foreground mb-6">
-            Please sign in to access the admin dashboard.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return <AdminDashboard onBackToLanding={() => void navigate("/")} />;
 }
 
 /**

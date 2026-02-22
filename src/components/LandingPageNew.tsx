@@ -8,6 +8,7 @@ import { JudgeCodeModal } from "./JudgeCodeModalNew";
 import { TeamSubmissionModal } from "./TeamSubmissionModalNew";
 import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
+import { TrophyIcon } from "./ui/AppIcons";
 import { formatDateTime, formatDateRange } from "../lib/utils";
 
 const withEllipsis = (text: string | undefined, maxLength = 100) => {
@@ -24,6 +25,7 @@ const withEllipsis = (text: string | undefined, maxLength = 100) => {
 
 export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) => void }) {
   const events = useQuery(api.events.listEvents);
+  const isAdmin = useQuery(api.events.isUserAdmin);
   const loggedInUser = useQuery(api.auth.loggedInUser);
   const joinAsJudge = useMutation(api.events.joinAsJudge);
   
@@ -140,6 +142,7 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
         <ActiveEventSection
           title="Active Events"
           events={events.active}
+          isAdmin={Boolean(isAdmin)}
           onJoinAsJudge={handleJoinAsJudgeSafe}
           onStartScoring={handleStartScoring}
           onBrowseDemoDay={handleBrowseDemoDay}
@@ -151,6 +154,7 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
         <CompactEventSection
           title="Upcoming Events"
           events={events.upcoming}
+          isAdmin={Boolean(isAdmin)}
           onJoinAsJudge={handleJoinAsJudgeSafe}
           onStartScoring={handleStartScoring}
           onBrowseDemoDay={handleBrowseDemoDay}
@@ -163,6 +167,7 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
         <CompactEventSection
           title="Past Events"
           events={events.past}
+          isAdmin={Boolean(isAdmin)}
           onJoinAsJudge={handleJoinAsJudgeSafe}
           onStartScoring={handleStartScoring}
           onBrowseDemoDay={handleBrowseDemoDay}
@@ -224,6 +229,7 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
 function ActiveEventSection({
   title,
   events,
+  isAdmin,
   onJoinAsJudge,
   onStartScoring,
   onBrowseDemoDay,
@@ -233,6 +239,7 @@ function ActiveEventSection({
 }: {
   title: string;
   events: Array<any>;
+  isAdmin: boolean;
   onJoinAsJudge: (eventId: Id<"events">) => void;
   onStartScoring: (event: any) => void;
   onBrowseDemoDay: (eventId: Id<"events">) => void;
@@ -256,6 +263,7 @@ function ActiveEventSection({
             <EventCard
               key={event._id}
               event={event}
+              isAdmin={isAdmin}
               onJoinAsJudge={onJoinAsJudge}
               onStartScoring={onStartScoring}
               onBrowseDemoDay={onBrowseDemoDay}
@@ -272,6 +280,7 @@ function ActiveEventSection({
 function CompactEventSection({
   title,
   events,
+  isAdmin,
   onJoinAsJudge,
   onStartScoring,
   onBrowseDemoDay,
@@ -282,6 +291,7 @@ function CompactEventSection({
 }: {
   title: string;
   events: Array<any>;
+  isAdmin: boolean;
   onJoinAsJudge: (eventId: Id<"events">) => void;
   onStartScoring: (event: any) => void;
   onBrowseDemoDay: (eventId: Id<"events">) => void;
@@ -306,6 +316,7 @@ function CompactEventSection({
             <EventRow
               key={event._id}
               event={event}
+              isAdmin={isAdmin}
               onJoinAsJudge={onJoinAsJudge}
               onStartScoring={onStartScoring}
               onBrowseDemoDay={onBrowseDemoDay}
@@ -322,6 +333,7 @@ function CompactEventSection({
 
 function EventCard({
   event,
+  isAdmin,
   onJoinAsJudge,
   onStartScoring,
   onBrowseDemoDay,
@@ -329,6 +341,7 @@ function EventCard({
   isJoining,
 }: {
   event: any;
+  isAdmin: boolean;
   onJoinAsJudge: (eventId: Id<"events">) => void;
   onStartScoring: (event: any) => void;
   onBrowseDemoDay: (eventId: Id<"events">) => void;
@@ -343,9 +356,7 @@ function EventCard({
   const hasCompletedScoring = Boolean(
     judgeProgress && judgeProgress.totalTeams > 0 && judgeProgress.completedTeams >= judgeProgress.totalTeams
   );
-  const showSideBySide = !isDemoDay && !userRole;
-  const addTeamTemporarilyDisabled = !isDemoDay; // Hackathon add-team temporarily disabled
-  
+  const showSideBySide = !isDemoDay && !userRole && isAdmin;
   const truncatedDescription = withEllipsis(event.description, 100);
 
   return (
@@ -435,15 +446,9 @@ function EventCard({
               </button>
               <button
                 onClick={() => onAddTeam(event)}
-                disabled={addTeamTemporarilyDisabled}
-                title={addTeamTemporarilyDisabled ? "Team submissions are temporarily disabled" : undefined}
-                className={`flex-1 h-12 px-3 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
-                  addTeamTemporarilyDisabled
-                    ? "bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60"
-                    : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
-                }`}
+                className="flex-1 h-12 px-3 rounded-md text-sm font-medium transition-all flex items-center justify-center bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
               >
-                Add Your Team
+                Add Teams
               </button>
             </div>
           ) : (
@@ -496,20 +501,16 @@ function EventCard({
                 </>
               )}
 
-              {!isDemoDay && !isJudge && (
+              {isAdmin && !isDemoDay && !isJudge && (
                 <button
                   onClick={() => onAddTeam(event)}
-                  disabled={addTeamTemporarilyDisabled}
-                  title={addTeamTemporarilyDisabled ? "Team submissions are temporarily disabled" : undefined}
                   className={`w-full h-12 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
-                    addTeamTemporarilyDisabled
-                      ? "bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60"
-                      : isParticipant
-                        ? "bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 shadow-sm hover:shadow-md"
-                        : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
+                    isParticipant
+                      ? "bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 shadow-sm hover:shadow-md"
+                      : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
                   }`}
                 >
-                  {isParticipant ? "View/Edit Team" : "Add Your Team"}
+                  Add Teams
                 </button>
               )}
             </>
@@ -522,6 +523,7 @@ function EventCard({
 
 function EventRow({
   event,
+  isAdmin,
   onJoinAsJudge,
   onStartScoring,
   onBrowseDemoDay,
@@ -530,6 +532,7 @@ function EventRow({
   isPastSection,
 }: {
   event: any;
+  isAdmin: boolean;
   onJoinAsJudge: (eventId: Id<"events">) => void;
   onStartScoring: (event: any) => void;
   onBrowseDemoDay: (eventId: Id<"events">) => void;
@@ -542,8 +545,6 @@ function EventRow({
   const isParticipant = userRole === "participant";
   const isDemoDay = event.mode === "demo_day";
   const [isExpanded, setIsExpanded] = useState(false);
-  const addTeamDisabled = true; // Temporarily disable add-team on hackathon cards
-  
   return (
     <div className="card-static bg-card transition-colors hover:bg-muted/50">
       {/* Mobile Layout */}
@@ -601,20 +602,16 @@ function EventRow({
                 </button>
               ) : (
                 <>
-                  {!isJudge && !isPastSection && (
+                  {isAdmin && !isJudge && !isPastSection && (
                     <button
                       onClick={() => onAddTeam(event)}
-                      disabled={addTeamDisabled}
-                  title={addTeamDisabled ? "Team submissions are temporarily disabled" : undefined}
                       className={`w-full text-sm font-semibold px-4 py-2 rounded-md transition-all ${
-                        addTeamDisabled
-                          ? "opacity-60 cursor-not-allowed bg-muted text-muted-foreground"
-                          : isParticipant 
-                            ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm border border-border"
+                        isParticipant 
+                          ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm border border-border"
                       }`}
                     >
-                      {isParticipant ? "View Team" : "Add Team"}
+                      Add Teams
                     </button>
                   )}
                   
@@ -659,7 +656,8 @@ function EventRow({
             <span>{event.teamCount} {isDemoDay ? "projects" : "teams"}</span>
             {isPastSection && event.resultsReleased && (
               <span className="text-amber-600 dark:text-amber-500 flex items-center gap-1 font-bold">
-                🏆 Winner announced
+                <TrophyIcon className="h-4 w-4" />
+                Winner announced
               </span>
             )}
           </div>
@@ -698,20 +696,16 @@ function EventRow({
             </button>
           ) : (
             <>
-              {!isJudge && !isPastSection && (
+              {isAdmin && !isJudge && !isPastSection && (
                 <button
                   onClick={() => onAddTeam(event)}
-                  disabled={addTeamDisabled}
-                  title={addTeamDisabled ? "Team submissions are temporarily disabled" : undefined}
                   className={`text-sm font-semibold px-4 py-2 rounded-md transition-all ${
-                    addTeamDisabled
-                      ? "opacity-60 cursor-not-allowed bg-muted text-muted-foreground"
-                      : isParticipant 
-                        ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm"
+                    isParticipant 
+                      ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm"
                   }`}
                 >
-                  {isParticipant ? "View Team" : "Add Team"}
+                  Add Teams
                 </button>
               )}
               

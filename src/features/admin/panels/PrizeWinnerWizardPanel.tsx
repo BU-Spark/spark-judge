@@ -183,7 +183,7 @@ export function PrizeWinnerWizardPanel({
 
   const activeFilterCount = activeFilters.length;
 
-  const handleSave = async () => {
+  const handleSave = async (closeOnSuccess: boolean = true) => {
     if (prizes.length === 0) {
       toast.error("No prizes configured for this event.");
       return;
@@ -219,10 +219,10 @@ export function PrizeWinnerWizardPanel({
         eventId,
         winners,
       });
-      toast.success("Prize winners saved");
+      toast.success(closeOnSuccess ? "Prize winners submitted" : "Progress saved");
       setSavedByPrize({ ...selectedByPrize });
       setSavedNotesByPrize({ ...notesByPrize });
-      onClose();
+      if (closeOnSuccess) onClose();
     } catch (error: any) {
       toast.error(error?.message || "Failed to save prize winners");
     } finally {
@@ -633,16 +633,20 @@ export function PrizeWinnerWizardPanel({
           )}
         </div>
 
-        <div className="sticky bottom-0 z-20 shrink-0 border-t border-border bg-background/95 px-4 py-3 backdrop-blur flex gap-3">
-          <button onClick={handleClose} className="flex-1 btn-secondary" disabled={saving}>
-            Cancel
-          </button>
+        <div className="sticky bottom-0 z-20 shrink-0 border-t border-border bg-background/95 px-6 py-4 backdrop-blur flex justify-end gap-3">
           <button
-            onClick={handleSave}
-            className="flex-1 btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+            onClick={() => handleSave(false)}
+            className="btn-secondary disabled:opacity-60 disabled:cursor-not-allowed min-w-[100px]"
             disabled={saving}
           >
-            {saving ? "Saving..." : "Save Winners"}
+            {saving ? "Saving..." : "Save"}
+          </button>
+          <button
+            onClick={() => handleSave(true)}
+            className="btn-primary disabled:opacity-60 disabled:cursor-not-allowed min-w-[100px]"
+            disabled={saving}
+          >
+            {saving ? "Submitting..." : "Submit"}
           </button>
         </div>
       </div>

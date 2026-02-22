@@ -38,6 +38,8 @@ export function DetailsTab({
   setPrizesEdit,
   categoriesForPrizeEditor,
   tracksForPrizeEditor,
+  tracksEdit,
+  setTracksEdit,
   appreciationBudget,
   setAppreciationBudget,
   handleSaveAppreciationSettings,
@@ -78,6 +80,8 @@ export function DetailsTab({
   setPrizesEdit: (value: any[]) => void;
   categoriesForPrizeEditor: string[];
   tracksForPrizeEditor: string[];
+  tracksEdit: string;
+  setTracksEdit: (value: string) => void;
   appreciationBudget: number;
   setAppreciationBudget: (value: number) => void;
   handleSaveAppreciationSettings: () => void;
@@ -162,6 +166,23 @@ export function DetailsTab({
                 className="input"
               />
             </div>
+            {!isDemoDayMode && (
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-medium text-foreground">
+                  Event Tracks <span className="text-muted-foreground text-xs">(comma-separated)</span>
+                </label>
+                <input
+                  type="text"
+                  value={tracksEdit}
+                  onChange={(e) => setTracksEdit(e.target.value)}
+                  className="input"
+                  placeholder="AI/ML, Web Development, Hardware..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tracks are used for team registration. If left empty, judging categories will be used as tracks.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end">

@@ -29,11 +29,18 @@ export function WinnersSummaryTab({
             return { prize, winningTeam, notes: winnerRecord?.notes };
         });
 
+    const groups = [
+        { title: "General Prizes", type: "general", items: prizesWithWinners.filter(p => p.prize.type === "general") },
+        { title: "Track Prizes", type: "track", items: prizesWithWinners.filter(p => p.prize.type === "track") },
+        { title: "Sponsor Prizes", type: "sponsor", items: prizesWithWinners.filter(p => p.prize.type === "sponsor") },
+        { title: "Sponsor + Track Prizes", type: "track_sponsor", items: prizesWithWinners.filter(p => p.prize.type === "track_sponsor") },
+    ].filter(g => g.items.length > 0);
+
     const assignedCount = prizesWithWinners.filter((p) => p.winningTeam).length;
     const isComplete = assignedCount === eventPrizes.length && eventPrizes.length > 0;
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="space-y-8 animate-in fade-in duration-300">
             <div className="flex items-center justify-between bg-card p-6 rounded-xl border border-border shadow-sm">
                 <div>
                     <h2 className="text-2xl font-heading font-bold text-foreground flex items-center gap-3">
@@ -53,43 +60,52 @@ export function WinnersSummaryTab({
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {prizesWithWinners.map(({ prize, winningTeam, notes }) => (
-                    <div key={prize._id} className="card-static flex flex-col p-5 bg-card">
-                        <div className="flex items-start justify-between mb-4 gap-4">
-                            <div>
-                                <h3 className="text-lg font-bold font-heading text-foreground">{prize.name}</h3>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    {prize.type === "track" && prize.track ? `Track: ${prize.track}` : prize.type}
-                                    {prize.sponsorName ? ` • ${prize.sponsorName}` : ""}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 flex flex-col justify-end">
-                            {winningTeam ? (
-                                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Winner</span>
+            <div className="space-y-10">
+                {groups.map((group) => (
+                    <div key={group.type} className="space-y-4">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b border-border pb-2">
+                            {group.title}
+                        </h3>
+                        <div className="divide-y divide-border border border-border rounded-xl bg-card overflow-hidden">
+                            {group.items.map(({ prize, winningTeam, notes }) => (
+                                <div key={prize._id} className="flex flex-col md:flex-row md:items-center p-4 gap-4 hover:bg-muted/10 transition-colors">
+                                    <div className="flex-1 min-w-[200px]">
+                                        <h4 className="font-bold text-foreground">{prize.name}</h4>
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                            {prize.type === "track" && prize.track ? `Track: ${prize.track}` :
+                                                prize.type === "sponsor" ? `Sponsor: ${prize.sponsorName}` :
+                                                    prize.type === "track_sponsor" ? `${prize.sponsorName} • ${prize.track}` :
+                                                        "General Prize"}
+                                        </p>
                                     </div>
-                                    <p className="text-lg font-semibold text-foreground break-words">{winningTeam.name}</p>
 
-                                    {notes && (
-                                        <div className="mt-3 pt-3 border-t border-border/50">
-                                            <p className="text-xs text-muted-foreground italic">"{notes}"</p>
-                                        </div>
-                                    )}
+                                    <div className="flex-[1.5] flex flex-col gap-1">
+                                        {winningTeam ? (
+                                            <>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">Winner</span>
+                                                    <span className="text-base font-bold text-foreground">{winningTeam.name}</span>
+                                                </div>
+                                                {notes && (
+                                                    <p className="text-xs text-muted-foreground italic pl-3 border-l-2 border-border/50">
+                                                        "{notes}"
+                                                    </p>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <span className="text-sm text-muted-foreground bg-muted/20 px-2 py-1 rounded border border-dashed border-border w-fit">
+                                                No winner selected yet
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                            ) : (
-                                <div className="bg-muted/30 border border-dashed border-border rounded-lg p-4 text-center">
-                                    <p className="text-sm text-muted-foreground">No winner selected yet</p>
-                                </div>
-                            )}
+                            ))}
                         </div>
                     </div>
                 ))}
+
                 {prizesWithWinners.length === 0 && (
-                    <div className="col-span-full card-static py-12 text-center text-muted-foreground border-dashed">
+                    <div className="card-static py-12 text-center text-muted-foreground border-dashed">
                         No prizes are configured for this event.
                     </div>
                 )}

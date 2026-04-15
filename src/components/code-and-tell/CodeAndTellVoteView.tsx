@@ -345,11 +345,8 @@ export function CodeAndTellVoteView({
   const renderBallot = () => (
     <div className="card p-5 bg-muted/30 h-full flex flex-col">
       <div className="border-b border-border pb-4 shrink-0">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Your Ballot
-        </div>
-        <h2 className="mt-2 text-xl font-heading font-bold text-foreground">
-          Rank {requiredRankCount} project{requiredRankCount === 1 ? "" : "s"}
+        <h2 className="text-xl font-heading font-bold text-foreground">
+          Rank your top {requiredRankCount} project{requiredRankCount === 1 ? "" : "s"}
         </h2>
       </div>
 

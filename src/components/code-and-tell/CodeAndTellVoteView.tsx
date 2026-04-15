@@ -809,7 +809,7 @@ export function CodeAndTellVoteView({
                             {project.members.join(" • ")}
                           </p>
                         )}
-                        {project.projectUrl && (
+                        {project.projectUrl && project.projectUrl.trim() !== "" && (
                           <a
                             href={project.projectUrl}
                             target="_blank"

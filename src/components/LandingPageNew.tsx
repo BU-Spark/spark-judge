@@ -10,7 +10,7 @@ import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
 import { TrophyIcon } from "./ui/AppIcons";
 import { getEventMode } from "../lib/eventModes";
-import { formatDateTime, formatDateRange } from "../lib/utils";
+import { formatDateTime, formatDateRange, formatDateRangeSimple } from "../lib/utils";
 
 const withEllipsis = (text: string | undefined, maxLength = 100) => {
   if (!text) return "";
@@ -434,7 +434,7 @@ function EventCard({
             <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span>{formatDateRange(event.startDate, event.endDate)}</span>
+            <span>{formatDateRangeSimple(event.startDate, event.endDate)}</span>
           </span>
           <span className="bg-muted/50 px-2.5 py-1 rounded-md text-xs font-semibold text-muted-foreground">
             {event.teamCount} {isHackathon ? "teams" : "projects"}
@@ -603,7 +603,7 @@ function EventRow({
           <div className="flex-1 min-w-0 pr-4">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-bold text-muted-foreground">
-                {formatDateTime(event.startDate).split(',')[0]}
+                {formatDateRangeSimple(event.startDate, event.endDate)}
               </span>
             </div>
             <h3 className="font-bold text-foreground truncate">
@@ -707,8 +707,7 @@ function EventRow({
       {/* Desktop Layout */}
       <div className="hidden md:flex p-4 items-center gap-6">
         <div className="flex-shrink-0 w-32 text-sm">
-          <div className="font-bold text-foreground">{formatDateTime(event.startDate).split(',')[0]}</div>
-          <div className="text-muted-foreground text-xs font-medium">{formatDateTime(event.startDate).split(',')[1]}</div>
+          <div className="font-bold text-foreground">{formatDateRangeSimple(event.startDate, event.endDate)}</div>
         </div>
 
         <div className="flex-grow min-w-0">

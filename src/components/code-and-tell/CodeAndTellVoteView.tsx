@@ -344,13 +344,7 @@ export function CodeAndTellVoteView({
 
   const renderBallot = () => (
     <div className="card p-5 bg-muted/30 h-full flex flex-col">
-      <div className="border-b border-border pb-4 shrink-0">
-        <h2 className="text-xl font-heading font-bold text-foreground">
-          Rank your top {requiredRankCount} project{requiredRankCount === 1 ? "" : "s"}
-        </h2>
-      </div>
-
-      <div className="mt-5 space-y-3 flex-1 overflow-y-auto min-h-[200px] custom-scrollbar pr-2">
+      <div className="space-y-3 flex-1 overflow-y-auto min-h-[200px] custom-scrollbar pr-2">
         <Reorder.Group
           axis="y"
           values={rankedTeamIds}
@@ -822,10 +816,7 @@ export function CodeAndTellVoteView({
           }`}
         >
           <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full mx-auto mb-3 shrink-0" />
-          <div className="flex items-start justify-between mb-3 gap-2 shrink-0">
-            <h3 className="text-lg font-heading font-semibold text-foreground">
-              Your Ballot
-            </h3>
+          <div className="flex items-start justify-end mb-1 gap-2 shrink-0">
             <button
               onClick={() => setIsMobileBallotOpen(false)}
               className="text-muted-foreground hover:text-foreground text-2xl -mt-2 mr-2"

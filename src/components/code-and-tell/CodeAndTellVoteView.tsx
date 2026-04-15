@@ -351,11 +351,6 @@ export function CodeAndTellVoteView({
         <h2 className="mt-2 text-xl font-heading font-bold text-foreground">
           Rank {requiredRankCount} project{requiredRankCount === 1 ? "" : "s"}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {requiredRankCount > 0
-            ? `Borda points on your ballot: ${requiredRankCount} for 1st, then ${requiredRankCount - 1}… down to 1 for last.`
-            : "Rank every project you are allowed to vote for."}
-        </p>
       </div>
 
       <div className="mt-5 space-y-3 flex-1 overflow-y-auto min-h-[200px] custom-scrollbar pr-2">

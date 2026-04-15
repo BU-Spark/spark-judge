@@ -89,7 +89,7 @@ export function TeamsTab({
                   {entityLabel} List
                 </p>
               </div>
-              <div className="max-h-[30rem] overflow-y-auto divide-y divide-border">
+              <div className="max-h-[30rem] overflow-y-auto">
                 {teamListContent}
               </div>
             </div>

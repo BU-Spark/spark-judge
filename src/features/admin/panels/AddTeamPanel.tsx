@@ -811,28 +811,28 @@ export function AddTeamPanel({
                     </select>
                   </div>
                   <div className="rounded-lg border border-border overflow-hidden bg-card max-h-56 overflow-y-auto">
-                    <div className="divide-y divide-border">
+                    <div className="w-full">
                       {prizesLoading && (
-                        <div className="p-4 text-sm text-muted-foreground">
+                        <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
                           Loading prizes...
                         </div>
                       )}
                       {!prizesLoading && (eventPrizes?.length || 0) === 0 && (
-                        <div className="p-4 text-sm text-muted-foreground">
+                        <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
                           No prizes configured for this event.
                         </div>
                       )}
                       {!prizesLoading &&
                         (eventPrizes?.length || 0) > 0 &&
                         eligiblePrizes.length === 0 && (
-                          <div className="p-4 text-sm text-muted-foreground">
+                          <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
                             Select a track to see track-specific prizes.
                           </div>
                         )}
                       {!prizesLoading &&
                         eligiblePrizes.length > 0 &&
                         filteredPrizes.length === 0 && (
-                          <div className="p-4 text-sm text-muted-foreground">
+                          <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
                             No prizes match this sponsor filter.
                           </div>
                         )}
@@ -843,7 +843,7 @@ export function AddTeamPanel({
                         return (
                           <label
                             key={prize._id}
-                            className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors relative group ${
+                            className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors relative group border-t border-border first:border-t-0 ${
                               checked
                                 ? "bg-teal-500/10 border-l-2 border-l-teal-500"
                                 : "hover:bg-muted/20 border-l-2 border-l-transparent"

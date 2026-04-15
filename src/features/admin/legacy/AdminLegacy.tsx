@@ -416,7 +416,7 @@ function PrizeCatalogEditor({
                 Prize List
               </p>
             </div>
-            <div className="max-h-[30rem] overflow-y-auto divide-y divide-border">
+            <div className="max-h-[30rem] overflow-y-auto">
               {prizes.map((prize, index) => {
                 const isSelected = selectedPrizeIndex === index;
                 return (
@@ -424,7 +424,7 @@ function PrizeCatalogEditor({
                     key={`${prize.prizeId || "new"}-${index}`}
                     type="button"
                     onClick={() => setSelectedPrizeIndex(index)}
-                    className={`w-full px-4 py-3 text-left transition-colors ${
+                    className={`w-full px-4 py-3 text-left transition-colors border-t border-border first:border-t-0 ${
                       isSelected
                         ? "bg-teal-500/10 border-l-2 border-l-teal-500"
                         : "hover:bg-muted/20 border-l-2 border-l-transparent"
@@ -2085,13 +2085,13 @@ export function EventManagementModal({
           No {entityLabel.toLowerCase()}s added yet
         </div>
       ) : (
-        <div className="divide-y divide-border w-full">
+        <div className="w-full">
           {event.teams.map((team, index) => {
             const isSelected = editingTeam?._id === team._id;
             return (
               <div
                 key={team._id}
-                className={`w-full px-4 py-3 text-left transition-colors relative group ${
+                className={`w-full px-4 py-3 text-left transition-colors relative group border-t border-border first:border-t-0 ${
                   isSelected
                     ? "bg-teal-500/10 border-l-2 border-l-teal-500"
                     : "hover:bg-muted/20 border-l-2 border-l-transparent"

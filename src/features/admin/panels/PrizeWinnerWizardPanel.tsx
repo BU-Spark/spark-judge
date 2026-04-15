@@ -334,7 +334,7 @@ export function PrizeWinnerWizardPanel({
                     </select>
                   </div>
                 </div>
-                <div className="max-h-[55vh] overflow-y-auto divide-y divide-border">
+                <div className="max-h-[55vh] overflow-y-auto">
                   {visiblePrizes.length === 0 && (
                     <div className="p-4 text-sm text-muted-foreground">
                       No prizes match this sponsor filter.
@@ -349,7 +349,7 @@ export function PrizeWinnerWizardPanel({
                         key={prizeId}
                         type="button"
                         onClick={() => setCurrentPrizeIndex(index)}
-                        className={`w-full px-4 py-3 text-left transition-colors ${isSelected
+                        className={`w-full px-4 py-3 text-left transition-colors border-t border-border first:border-t-0 ${isSelected
                           ? "bg-primary/10 border-l-2 border-l-primary"
                           : "hover:bg-muted/20 border-l-2 border-l-transparent"
                           }`}

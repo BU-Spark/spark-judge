@@ -10,7 +10,13 @@ export const getEventInternal = internalQuery({
     v.object({
       _id: v.id("events"),
       name: v.string(),
-      mode: v.optional(v.union(v.literal("hackathon"), v.literal("demo_day"))),
+      mode: v.optional(
+        v.union(
+          v.literal("hackathon"),
+          v.literal("demo_day"),
+          v.literal("code_and_tell")
+        )
+      ),
     })
   ),
   handler: async (ctx, args) => {

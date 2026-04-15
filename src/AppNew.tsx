@@ -14,6 +14,7 @@ import { AdminEventRoute } from "./features/admin/routes/AdminEventRoute";
 import { useState, useEffect } from "react";
 import { Id } from "../convex/_generated/dataModel";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { BrandLogo } from "./components/ui/BrandLogo";
 import {
   BrowserRouter,
   Routes,
@@ -134,9 +135,10 @@ function Layout() {
             <Link
               to="/"
               onClick={closeMobileMenu}
-              className="text-xl font-logo logo-color hover:text-primary dark:hover:text-primary/80 transition-colors"
+              aria-label="HackJudge home"
+              className="group inline-flex items-center rounded-md transition-opacity hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
             >
-              HackJudge
+              <BrandLogo />
             </Link>
             <div className="flex items-center gap-3">
               <ThemeToggle />

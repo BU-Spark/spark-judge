@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { isDemoDayMode } from "./eventModes";
 import QRCode from "qrcode";
 import JSZip from "jszip";
 
@@ -11,7 +12,7 @@ import JSZip from "jszip";
 type EventResult = {
   _id: Id<"events">;
   name: string;
-  mode?: "hackathon" | "demo_day";
+  mode?: "hackathon" | "demo_day" | "code_and_tell";
 } | null;
 
 type TeamResult = {
@@ -772,7 +773,7 @@ export const generateTeamQrCode = action({
       return { success: false, error: "Event not found" };
     }
 
-    if (event.mode !== "demo_day") {
+    if (!isDemoDayMode(event.mode)) {
       return { success: false, error: "Event is not in Demo Day mode" };
     }
 
@@ -854,7 +855,7 @@ export const generateQrCodeZip = action({
       return { success: false, error: "Event not found" };
     }
 
-    if (event.mode !== "demo_day") {
+    if (!isDemoDayMode(event.mode)) {
       return { success: false, error: "Event is not in Demo Day mode" };
     }
 

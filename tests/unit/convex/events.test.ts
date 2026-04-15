@@ -23,28 +23,53 @@ describe('events business logic', () => {
   describe('judge code validation', () => {
     it('should require judge code when event is active and has judgeCode', () => {
       const event = {
+        mode: 'hackathon' as const,
         status: 'active' as const,
         judgeCode: 'TEST123',
       };
-      const requiresJudgeCode = event.status === 'active' && !!event.judgeCode;
+      const requiresJudgeCode =
+        event.mode === 'hackathon' &&
+        event.status === 'active' &&
+        !!event.judgeCode;
       expect(requiresJudgeCode).toBe(true);
     });
 
     it('should not require judge code when event is not active', () => {
       const event = {
+        mode: 'hackathon' as const,
         status: 'upcoming' as const,
         judgeCode: 'TEST123',
       };
-      const requiresJudgeCode = event.status === 'active' && !!event.judgeCode;
+      const requiresJudgeCode =
+        event.mode === 'hackathon' &&
+        event.status === 'active' &&
+        !!event.judgeCode;
       expect(requiresJudgeCode).toBe(false);
     });
 
     it('should not require judge code when event has no judgeCode', () => {
       const event = {
+        mode: 'hackathon' as const,
         status: 'active' as const,
         judgeCode: undefined,
       };
-      const requiresJudgeCode = event.status === 'active' && !!event.judgeCode;
+      const requiresJudgeCode =
+        event.mode === 'hackathon' &&
+        event.status === 'active' &&
+        !!event.judgeCode;
+      expect(requiresJudgeCode).toBe(false);
+    });
+
+    it('should not require judge code for Code & Tell events', () => {
+      const event = {
+        mode: 'code_and_tell' as const,
+        status: 'active' as const,
+        judgeCode: 'TEST123',
+      };
+      const requiresJudgeCode =
+        event.mode === 'hackathon' &&
+        event.status === 'active' &&
+        !!event.judgeCode;
       expect(requiresJudgeCode).toBe(false);
     });
   });
@@ -59,6 +84,11 @@ describe('events business logic', () => {
     it('should use demo_day mode when set', () => {
       const event = { mode: 'demo_day' as const };
       expect(event.mode).toBe('demo_day');
+    });
+
+    it('should use code_and_tell mode when set', () => {
+      const event = { mode: 'code_and_tell' as const };
+      expect(event.mode).toBe('code_and_tell');
     });
   });
 
@@ -325,6 +355,21 @@ describe('events business logic', () => {
     });
   });
 
+  describe('createEvent description handling', () => {
+    it('should allow description to be omitted and normalize it to empty string', () => {
+      const args: { name: string; description?: string } = {
+        name: 'New Event',
+      };
+
+      const payload = {
+        ...args,
+        description: args.description ?? '',
+      };
+
+      expect(payload.description).toBe('');
+    });
+  });
+
   describe('event duplication logic', () => {
     it('should generate copy name correctly', () => {
       const baseName = 'Hackathon 2024';
@@ -353,4 +398,3 @@ describe('events business logic', () => {
     });
   });
 });
-

@@ -3,6 +3,18 @@ import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { isAdmin, requireAdmin, computeEventStatus } from "./helpers";
 import { Id } from "./_generated/dataModel";
+import {
+  getEventMode,
+  isDemoDayMode,
+  isCodeAndTellMode,
+  isHackathonMode,
+} from "./eventModes";
+
+const EVENT_MODE_VALIDATOR = v.union(
+  v.literal("hackathon"),
+  v.literal("demo_day"),
+  v.literal("code_and_tell")
+);
 
 export const listEvents = query({
   args: {},
@@ -18,8 +30,10 @@ export const listEvents = query({
 
     let judgesByEventId = new Map<Id<"events">, Id<"judges">>();
     let participantEventIds = new Set<Id<"events">>();
+    let rankedVoteEventIds = new Set<Id<"events">>();
     if (userId) {
-      const [allMyJudgeRows, allMyParticipantRows] = await Promise.all([
+      const [allMyJudgeRows, allMyParticipantRows, allMyRankedVotes] =
+        await Promise.all([
         ctx.db
           .query("judges")
           .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -28,12 +42,19 @@ export const listEvents = query({
           .query("participants")
           .withIndex("by_user", (q) => q.eq("userId", userId))
           .collect(),
+        ctx.db
+          .query("rankedVotes")
+          .withIndex("by_voter", (q) => q.eq("voterUserId", userId))
+          .collect(),
       ]);
       judgesByEventId = new Map(
         allMyJudgeRows.map((judge) => [judge.eventId, judge._id])
       );
       participantEventIds = new Set(
         allMyParticipantRows.map((participant) => participant.eventId)
+      );
+      rankedVoteEventIds = new Set(
+        allMyRankedVotes.map((vote) => vote.eventId)
       );
     }
 
@@ -55,7 +76,7 @@ export const listEvents = query({
         } | null = null;
         if (userId) {
           const judgeId = judgesByEventId.get(event._id);
-          if (judgeId) {
+          if (judgeId && isHackathonMode(event.mode)) {
             userRole = { role: "judge" as const, isAdmin: userIsAdmin };
             const judgeScores = await ctx.db
               .query("scores")
@@ -71,13 +92,17 @@ export const listEvents = query({
           }
         }
 
+        const mode = getEventMode(event.mode);
         return {
           ...event,
           status, // Use computed status
           teamCount: teams.length,
+          mode,
           userRole,
           judgeProgress,
-          requiresJudgeCode: status === "active" && !!event.judgeCode,
+          hasRankedVote: rankedVoteEventIds.has(event._id),
+          requiresJudgeCode:
+            mode === "hackathon" && status === "active" && !!event.judgeCode,
         };
       })
     );
@@ -105,7 +130,7 @@ export const getEvent = query({
     // Compute status based on dates
     const status = computeEventStatus(event);
 
-    return { ...event, status, teams };
+    return { ...event, status, teams, mode: getEventMode(event.mode) };
   },
 });
 
@@ -115,6 +140,12 @@ export const joinAsJudge = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event) throw new Error("Event not found");
+    if (!isHackathonMode(event.mode)) {
+      throw new Error("Judge registration is only available for hackathon events");
+    }
 
     // Check if already a participant
     const participant = await ctx.db
@@ -158,6 +189,9 @@ export const verifyJudgeCodeAndStartJudging = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
+    if (!isHackathonMode(event.mode)) {
+      throw new Error("Judging access is only available for hackathon events");
+    }
 
     // Verify event is active (computed from dates)
     const status = computeEventStatus(event);
@@ -193,6 +227,9 @@ export const getJudgeStatus = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
 
+    const event = await ctx.db.get(args.eventId);
+    if (!event || !isHackathonMode(event.mode)) return null;
+
     const judge = await ctx.db
       .query("judges")
       .withIndex("by_user_and_event", (q) =>
@@ -207,7 +244,7 @@ export const getJudgeStatus = query({
 export const createEvent = mutation({
   args: {
     name: v.string(),
-    description: v.string(),
+    description: v.optional(v.string()),
     status: v.union(
       v.literal("upcoming"),
       v.literal("active"),
@@ -225,7 +262,7 @@ export const createEvent = mutation({
     tracks: v.optional(v.array(v.string())),
     judgeCode: v.optional(v.string()),
     enableCohorts: v.optional(v.boolean()),
-    mode: v.optional(v.union(v.literal("hackathon"), v.literal("demo_day"))),
+    mode: v.optional(EVENT_MODE_VALIDATOR),
     courseCodes: v.optional(v.array(v.string())),
   },
   returns: v.id("events"),
@@ -243,8 +280,10 @@ export const createEvent = mutation({
 
     const eventId = await ctx.db.insert("events", {
       ...args,
+      description: args.description ?? "",
       status: computedStatus,
       resultsReleased: false,
+      mode: getEventMode(args.mode),
     });
 
     return eventId;
@@ -314,7 +353,16 @@ export const removeEvent = mutation({
       throw new Error("Event not found");
     }
 
-    const [scores, teams, judges, participants, prizes, prizeSubmissions, prizeWinners] =
+    const [
+      scores,
+      teams,
+      judges,
+      participants,
+      prizes,
+      prizeSubmissions,
+      prizeWinners,
+      rankedVotes,
+    ] =
       await Promise.all([
         ctx.db
           .query("scores")
@@ -344,6 +392,10 @@ export const removeEvent = mutation({
           .query("prizeWinners")
           .withIndex("by_event", (q) => q.eq("eventId", eventId))
           .collect(),
+        ctx.db
+          .query("rankedVotes")
+          .withIndex("by_event", (q) => q.eq("eventId", eventId))
+          .collect(),
       ]);
 
     await Promise.all(scores.map((score) => ctx.db.delete(score._id)));
@@ -361,6 +413,7 @@ export const removeEvent = mutation({
     );
     await Promise.all(prizeSubmissions.map((submission) => ctx.db.delete(submission._id)));
     await Promise.all(prizeWinners.map((winner) => ctx.db.delete(winner._id)));
+    await Promise.all(rankedVotes.map((vote) => ctx.db.delete(vote._id)));
     await Promise.all(prizes.map((prize) => ctx.db.delete(prize._id)));
 
     await ctx.db.delete(eventId);
@@ -401,14 +454,14 @@ export const duplicateEvent = mutation({
       tracks: event.tracks,
       resultsReleased: false,
       judgeCode: undefined,
-      mode: event.mode,
+      mode: getEventMode(event.mode),
       courseCodes: event.courseCodes,
       scoringLockedAt: undefined,
       scoringLockedBy: undefined,
       scoringLockReason: undefined,
     });
 
-    if (event.mode !== "demo_day") {
+    if (isHackathonMode(event.mode)) {
       const eventPrizes = await ctx.db
         .query("prizes")
         .withIndex("by_event", (q) => q.eq("eventId", eventId))
@@ -475,12 +528,76 @@ export const updateEventCohorts = mutation({
 export const updateEventMode = mutation({
   args: {
     eventId: v.id("events"),
-    mode: v.union(v.literal("hackathon"), v.literal("demo_day")),
+    mode: EVENT_MODE_VALIDATOR,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    await ctx.db.patch(args.eventId, { mode: args.mode });
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event) {
+      throw new Error("Event not found");
+    }
+
+    const currentMode = getEventMode(event.mode);
+    const nextMode = getEventMode(args.mode);
+    if (currentMode === nextMode) {
+      return null;
+    }
+
+    if (isCodeAndTellMode(currentMode) || isCodeAndTellMode(nextMode)) {
+      const [teams, rankedVotes] = await Promise.all([
+        ctx.db
+          .query("teams")
+          .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+          .collect(),
+        ctx.db
+          .query("rankedVotes")
+          .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+          .collect(),
+      ]);
+
+      if (teams.length > 0 || rankedVotes.length > 0) {
+        throw new Error(
+          "Code & Tell mode cannot be switched once projects or ballots exist for the event"
+        );
+      }
+    }
+
+    const updates: {
+      mode: typeof nextMode;
+      categories?: typeof event.categories;
+      tracks?: string[];
+      judgeCode?: string;
+      enableCohorts?: boolean;
+      courseCodes?: string[];
+      categoryWinners?: typeof event.categoryWinners;
+      resultsReleased?: boolean;
+    } = { mode: nextMode };
+
+    if (isCodeAndTellMode(nextMode)) {
+      const prizes = await ctx.db
+        .query("prizes")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+        .collect();
+      await Promise.all(prizes.map((prize) => ctx.db.delete(prize._id)));
+
+      updates.categories = [];
+      updates.tracks = [];
+      updates.judgeCode = "";
+      updates.enableCohorts = false;
+      updates.courseCodes = [];
+      updates.categoryWinners = [];
+      updates.resultsReleased = false;
+    } else if (isDemoDayMode(nextMode)) {
+      updates.judgeCode = "";
+      updates.enableCohorts = false;
+      updates.tracks = [];
+    } else {
+      updates.courseCodes = [];
+    }
+
+    await ctx.db.patch(args.eventId, updates);
     return null;
   },
 });
@@ -495,10 +612,16 @@ export const updateEventDetails = mutation({
     judgeCode: v.optional(v.union(v.string(), v.null())),
     appreciationBudgetPerAttendee: v.optional(v.number()),
     tracks: v.optional(v.array(v.string())),
+    codeAndTellMaxBallots: v.optional(v.union(v.number(), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event) {
+      throw new Error("Event not found");
+    }
 
     const updates: {
       name?: string;
@@ -508,6 +631,7 @@ export const updateEventDetails = mutation({
       judgeCode?: string;
       appreciationBudgetPerAttendee?: number;
       tracks?: string[];
+      codeAndTellMaxBallots?: number | undefined;
     } = {};
     if (args.name !== undefined) updates.name = args.name;
     if (args.description !== undefined) updates.description = args.description;
@@ -523,6 +647,26 @@ export const updateEventDetails = mutation({
         0,
         args.appreciationBudgetPerAttendee
       );
+    }
+
+    if (args.codeAndTellMaxBallots !== undefined) {
+      if (!isCodeAndTellMode(event.mode)) {
+        throw new Error("Ballot cap only applies to Code & Tell events");
+      }
+      if (computeEventStatus(event) === "past") {
+        throw new Error(
+          "Ballot cap cannot be changed after the event has ended"
+        );
+      }
+      if (args.codeAndTellMaxBallots === null) {
+        updates.codeAndTellMaxBallots = undefined;
+      } else {
+        const n = Math.floor(args.codeAndTellMaxBallots);
+        if (!Number.isFinite(n) || n < 1) {
+          throw new Error("Ballot cap must be a whole number of at least 1");
+        }
+        updates.codeAndTellMaxBallots = n;
+      }
     }
 
     if (Object.keys(updates).length > 0) {
@@ -545,7 +689,7 @@ export const setScoringLock = mutation({
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
 
-    if (event.mode === "demo_day") {
+    if (!isHackathonMode(event.mode)) {
       throw new Error("Scoring lock is only available for hackathon events");
     }
 

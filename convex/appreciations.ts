@@ -3,6 +3,7 @@ import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { computeEventStatus } from "./helpers";
 import { requireAdmin } from "./helpers";
+import { isDemoDayMode } from "./eventModes";
 
 // Constants for rate limiting
 const MAX_TAPS_PER_PROJECT_PER_ATTENDEE = 3;
@@ -291,7 +292,7 @@ export const createAppreciationInternal = internalMutation({
         remainingTotal: 0,
       };
     }
-    if (event.mode !== "demo_day") {
+    if (!isDemoDayMode(event.mode)) {
       return {
         success: false,
         error: "Event is not in Demo Day mode",
@@ -444,7 +445,7 @@ export const createAppreciation = mutation({
         remainingTotal: 0,
       };
     }
-    if (event.mode !== "demo_day") {
+    if (!isDemoDayMode(event.mode)) {
       return {
         success: false,
         error: "Event is not in Demo Day mode",

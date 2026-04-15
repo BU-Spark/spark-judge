@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useMemo,
+  useRef,
   Dispatch,
   SetStateAction,
   type ComponentProps,
@@ -12,6 +13,7 @@ import { toast } from "sonner";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { LoadingState } from "../../../components/ui/LoadingState";
 import { ErrorState } from "../../../components/ui/ErrorState";
+import { DateTimePicker } from "../../../components/ui/DateTimePicker";
 import {
   BarChartIcon,
   LightbulbIcon,
@@ -19,6 +21,11 @@ import {
   TrophyIcon,
 } from "../../../components/ui/AppIcons";
 import { DEFAULT_DEMO_DAY_COURSES } from "../../../lib/constants";
+import {
+  formatDateTimeInput,
+  getAutoAdjustedEndDateTime,
+} from "../../../lib/dateTimeInput";
+import { formatCodeAndTellDefaultTitle } from "../../../lib/eventTitles";
 import { formatDateTime } from "../../../lib/utils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { DetailsTab } from "../tabs/DetailsTab";
@@ -29,8 +36,13 @@ import { WinnersSummaryTab } from "../tabs/WinnersSummaryTab";
 import { EventsList as WorkspaceEventsList } from "../components/EventsList";
 import { ScoringDashboard as WorkspaceScoringDashboard } from "../components/ScoringDashboard";
 import { AddTeamPanel } from "../panels/AddTeamPanel";
+import { CodeAndTellWinnerPanel } from "../panels/CodeAndTellWinnerPanel";
 import { DemoDayWinnersPanel } from "../panels/DemoDayWinnersPanel";
 import { PrizeWinnerWizardPanel } from "../panels/PrizeWinnerWizardPanel";
+import {
+  getEventDisplayLabel,
+  getEventMode,
+} from "../../../lib/eventModes";
 
 import type { EventManagementTab, ScoresView as ScoresSubview } from "../types";
 
@@ -65,7 +77,7 @@ const PRIZE_SCORE_LABELS: Record<PrizeScoreBasis, string> = {
 
 function createPrizeDraft(
   sortOrder: number,
-  overrides?: Partial<PrizeDraft>
+  overrides?: Partial<PrizeDraft>,
 ): PrizeDraft {
   return {
     name: "",
@@ -101,14 +113,6 @@ function normalizePrizeDraftsForSave(prizes: PrizeDraft[]) {
     .filter((prize) => prize.name.length > 0);
 }
 
-function formatDateTimeInput(timestamp: number) {
-  const date = new Date(timestamp);
-  // Convert to local time for datetime-local input
-  const offset = date.getTimezoneOffset();
-  const local = new Date(timestamp - offset * 60 * 1000);
-  return local.toISOString().slice(0, 16);
-}
-
 function StyledCheckbox({
   checked,
   onCheckedChange,
@@ -126,8 +130,9 @@ function StyledCheckbox({
 }) {
   return (
     <label
-      className={`inline-flex items-center gap-2 ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-        } ${className}`}
+      className={`inline-flex items-center gap-2 ${
+        disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+      } ${className}`}
     >
       <input
         type="checkbox"
@@ -137,17 +142,24 @@ function StyledCheckbox({
         className="peer sr-only"
       />
       <span
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background ${checked ? "border-primary bg-primary" : "border-border bg-background"
-          }`}
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background ${
+          checked ? "border-primary bg-primary" : "border-border bg-background"
+        }`}
       >
         <svg
-          className={`h-3 w-3 text-white transition-opacity ${checked ? "opacity-100" : "opacity-0"
-            }`}
+          className={`h-3 w-3 text-white transition-opacity ${
+            checked ? "opacity-100" : "opacity-0"
+          }`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={3}
+            d="M5 13l4 4L19 7"
+          />
         </svg>
       </span>
       {label ? <span className={labelClassName}>{label}</span> : null}
@@ -159,7 +171,7 @@ function clampSteppedValue(
   rawValue: number,
   min: number | undefined,
   max: number | undefined,
-  step: number
+  step: number,
 ) {
   const safeStep = step > 0 ? step : 1;
   const minValue = typeof min === "number" ? min : Number.NEGATIVE_INFINITY;
@@ -222,8 +234,18 @@ function StyledNumberInput({
           aria-label="Increase value"
           disabled={disabled || atMax}
         >
-          <svg className="mx-auto h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+          <svg
+            className="mx-auto h-3 w-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M5 15l7-7 7 7"
+            />
           </svg>
         </button>
         <button
@@ -233,8 +255,18 @@ function StyledNumberInput({
           aria-label="Decrease value"
           disabled={disabled || atMin}
         >
-          <svg className="mx-auto h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+          <svg
+            className="mx-auto h-3 w-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </button>
       </div>
@@ -271,10 +303,14 @@ function PrizeCatalogEditor({
   const activePrizeCount = prizes.filter((prize) => prize.isActive).length;
 
   const typeBadgeClass: Record<PrizeType, string> = {
-    general: "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
-    track: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30",
-    sponsor: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
-    track_sponsor: "bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-500/30",
+    general:
+      "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
+    track:
+      "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30",
+    sponsor:
+      "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+    track_sponsor:
+      "bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-500/30",
   };
 
   const prizeDescriptor = (prize: PrizeDraft) => {
@@ -287,11 +323,14 @@ function PrizeCatalogEditor({
     return "All teams";
   };
 
-  const updatePrize = (index: number, updater: (item: PrizeDraft) => PrizeDraft) => {
+  const updatePrize = (
+    index: number,
+    updater: (item: PrizeDraft) => PrizeDraft,
+  ) => {
     setPrizes((prev) =>
       prev.map((prize, prizeIndex) =>
-        prizeIndex === index ? updater(prize) : prize
-      )
+        prizeIndex === index ? updater(prize) : prize,
+      ),
     );
   };
 
@@ -307,7 +346,7 @@ function PrizeCatalogEditor({
     setPrizes((prev) =>
       prev
         .filter((_, prizeIndex) => prizeIndex !== index)
-        .map((prize, prizeIndex) => ({ ...prize, sortOrder: prizeIndex }))
+        .map((prize, prizeIndex) => ({ ...prize, sortOrder: prizeIndex })),
     );
     setSelectedPrizeIndex((current) => {
       if (current === index) return Math.max(0, current - 1);
@@ -373,7 +412,9 @@ function PrizeCatalogEditor({
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(24rem,28rem)_1fr] gap-4">
           <div className="rounded-lg border border-border bg-card overflow-hidden">
             <div className="px-4 py-3 border-b border-border bg-muted/20">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Prize List</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Prize List
+              </p>
             </div>
             <div className="max-h-[30rem] overflow-y-auto divide-y divide-border">
               {prizes.map((prize, index) => {
@@ -383,15 +424,17 @@ function PrizeCatalogEditor({
                     key={`${prize.prizeId || "new"}-${index}`}
                     type="button"
                     onClick={() => setSelectedPrizeIndex(index)}
-                    className={`w-full px-4 py-3 text-left transition-colors ${isSelected
-                      ? "bg-teal-500/10 border-l-2 border-l-teal-500"
-                      : "hover:bg-muted/20 border-l-2 border-l-transparent"
-                      }`}
+                    className={`w-full px-4 py-3 text-left transition-colors ${
+                      isSelected
+                        ? "bg-teal-500/10 border-l-2 border-l-teal-500"
+                        : "hover:bg-muted/20 border-l-2 border-l-transparent"
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-medium text-foreground truncate">
-                          {index + 1}. {prize.name.trim() || `Untitled Prize ${index + 1}`}
+                          {index + 1}.{" "}
+                          {prize.name.trim() || `Untitled Prize ${index + 1}`}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5 truncate">
                           {prizeDescriptor(prize)}
@@ -404,7 +447,9 @@ function PrizeCatalogEditor({
                           {PRIZE_TYPE_LABELS[prize.type]}
                         </span>
                         {!prize.isActive && (
-                          <span className="text-[11px] text-muted-foreground">Inactive</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            Inactive
+                          </span>
                         )}
                       </div>
                     </div>
@@ -424,7 +469,8 @@ function PrizeCatalogEditor({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-foreground">
-                      {selectedPrize.name.trim() || `Prize ${selectedPrizeIndex + 1}`}
+                      {selectedPrize.name.trim() ||
+                        `Prize ${selectedPrizeIndex + 1}`}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Order #{selectedPrize.sortOrder + 1}
@@ -433,7 +479,9 @@ function PrizeCatalogEditor({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => movePrize(selectedPrizeIndex, selectedPrizeIndex - 1)}
+                      onClick={() =>
+                        movePrize(selectedPrizeIndex, selectedPrizeIndex - 1)
+                      }
                       disabled={disabled || selectedPrizeIndex === 0}
                       className="btn-ghost text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -441,8 +489,12 @@ function PrizeCatalogEditor({
                     </button>
                     <button
                       type="button"
-                      onClick={() => movePrize(selectedPrizeIndex, selectedPrizeIndex + 1)}
-                      disabled={disabled || selectedPrizeIndex === prizes.length - 1}
+                      onClick={() =>
+                        movePrize(selectedPrizeIndex, selectedPrizeIndex + 1)
+                      }
+                      disabled={
+                        disabled || selectedPrizeIndex === prizes.length - 1
+                      }
                       className="btn-ghost text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Down
@@ -460,7 +512,9 @@ function PrizeCatalogEditor({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">Name</label>
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Name
+                    </label>
                     <input
                       type="text"
                       value={selectedPrize.name}
@@ -476,7 +530,9 @@ function PrizeCatalogEditor({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">Type</label>
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Type
+                    </label>
                     <select
                       value={selectedPrize.type}
                       onChange={(e) =>
@@ -488,17 +544,22 @@ function PrizeCatalogEditor({
                       className="input"
                       disabled={disabled}
                     >
-                      {(Object.keys(PRIZE_TYPE_LABELS) as PrizeType[]).map((type) => (
-                        <option key={type} value={type}>
-                          {PRIZE_TYPE_LABELS[type]}
-                        </option>
-                      ))}
+                      {(Object.keys(PRIZE_TYPE_LABELS) as PrizeType[]).map(
+                        (type) => (
+                          <option key={type} value={type}>
+                            {PRIZE_TYPE_LABELS[type]}
+                          </option>
+                        ),
+                      )}
                     </select>
                   </div>
 
-                  {(selectedPrize.type === "track" || selectedPrize.type === "track_sponsor") && (
+                  {(selectedPrize.type === "track" ||
+                    selectedPrize.type === "track_sponsor") && (
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Track</label>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Track
+                      </label>
                       <select
                         value={selectedPrize.track}
                         onChange={(e) =>
@@ -520,9 +581,12 @@ function PrizeCatalogEditor({
                     </div>
                   )}
 
-                  {(selectedPrize.type === "sponsor" || selectedPrize.type === "track_sponsor") && (
+                  {(selectedPrize.type === "sponsor" ||
+                    selectedPrize.type === "track_sponsor") && (
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Sponsor</label>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Sponsor
+                      </label>
                       <input
                         type="text"
                         value={selectedPrize.sponsorName}
@@ -540,7 +604,9 @@ function PrizeCatalogEditor({
                   )}
 
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">Score Hint</label>
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Score Hint
+                    </label>
                     <select
                       value={selectedPrize.scoreBasis}
                       onChange={(e) =>
@@ -548,13 +614,17 @@ function PrizeCatalogEditor({
                           ...item,
                           scoreBasis: e.target.value as PrizeScoreBasis,
                           scoreCategoryNames:
-                            e.target.value === "categories" ? item.scoreCategoryNames : [],
+                            e.target.value === "categories"
+                              ? item.scoreCategoryNames
+                              : [],
                         }))
                       }
                       className="input"
                       disabled={disabled}
                     >
-                      {(Object.keys(PRIZE_SCORE_LABELS) as PrizeScoreBasis[]).map((basis) => (
+                      {(
+                        Object.keys(PRIZE_SCORE_LABELS) as PrizeScoreBasis[]
+                      ).map((basis) => (
                         <option key={basis} value={basis}>
                           {PRIZE_SCORE_LABELS[basis]}
                         </option>
@@ -570,7 +640,8 @@ function PrizeCatalogEditor({
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                       {categories.map((category) => {
-                        const checked = selectedPrize.scoreCategoryNames.includes(category);
+                        const checked =
+                          selectedPrize.scoreCategoryNames.includes(category);
                         return (
                           <StyledCheckbox
                             key={`${selectedPrize.prizeId || selectedPrizeIndex}-${category}`}
@@ -579,7 +650,9 @@ function PrizeCatalogEditor({
                               updatePrize(selectedPrizeIndex, (item) => {
                                 const next = isChecked
                                   ? [...item.scoreCategoryNames, category]
-                                  : item.scoreCategoryNames.filter((name) => name !== category);
+                                  : item.scoreCategoryNames.filter(
+                                      (name) => name !== category,
+                                    );
                                 return { ...item, scoreCategoryNames: next };
                               });
                             }}
@@ -595,7 +668,9 @@ function PrizeCatalogEditor({
                 )}
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Description</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Description
+                  </label>
                   <textarea
                     value={selectedPrize.description}
                     onChange={(e) =>
@@ -632,7 +707,11 @@ function PrizeCatalogEditor({
   );
 }
 
-export function AdminDashboard({ onBackToLanding }: { onBackToLanding: () => void }) {
+export function AdminDashboard({
+  onBackToLanding,
+}: {
+  onBackToLanding: () => void;
+}) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const isAdmin = useQuery(api.events.isUserAdmin);
   const navigate = useNavigate();
@@ -663,13 +742,25 @@ export function AdminDashboard({ onBackToLanding }: { onBackToLanding: () => voi
             onClick={() => setIsCreateOpen(false)}
             className="flex items-center gap-2 btn-ghost"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             Back to Dashboard
           </button>
           <div>
-            <h1 className="text-3xl font-heading font-bold text-foreground">Create Event</h1>
+            <h1 className="text-3xl font-heading font-bold text-foreground">
+              Create Event
+            </h1>
           </div>
 
           <CreateEventWorkspace onClose={() => setIsCreateOpen(false)} />
@@ -680,23 +771,47 @@ export function AdminDashboard({ onBackToLanding }: { onBackToLanding: () => voi
             onClick={onBackToLanding}
             className="flex items-center gap-2 btn-ghost mb-6 fade-in"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
             </svg>
             Back to Events
           </button>
 
           <div className="flex justify-between items-center mb-8 fade-in">
             <div>
-              <h1 className="text-3xl font-heading font-bold text-foreground mb-2">Admin Dashboard</h1>
-              <p className="text-muted-foreground">Manage your hackathon events and teams</p>
+              <h1 className="text-3xl font-heading font-bold text-foreground mb-2">
+                Admin Dashboard
+              </h1>
+              <p className="text-muted-foreground">
+                Manage your hackathon events and teams
+              </p>
             </div>
             <button
               onClick={() => setIsCreateOpen(true)}
               className="btn-primary flex items-center gap-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
               </svg>
               Create Event
             </button>
@@ -724,7 +839,9 @@ export function AdminEventDetailsPage({
   const isAdmin = useQuery(api.events.isUserAdmin);
   const initialTabParam = searchParams.get("tab");
   const initialTab: EventManagementTab | undefined =
-    initialTabParam === "details" || initialTabParam === "teams" || initialTabParam === "scores"
+    initialTabParam === "details" ||
+    initialTabParam === "teams" ||
+    initialTabParam === "scores"
       ? initialTabParam
       : undefined;
 
@@ -762,11 +879,20 @@ export function AdminPrizeWinnersPage({
 }) {
   const isAdmin = useQuery(api.events.isUserAdmin);
   const event = useQuery(api.events.getEvent, { eventId });
-  const prizeDeliberationData = useQuery(api.prizes.getPrizeDeliberationData, { eventId });
+  const codeAndTellSummary = useQuery(
+    api.codeAndTell.getAdminSummary,
+    event?.mode === "code_and_tell" ? { eventId } : "skip",
+  );
+  const prizeDeliberationData = useQuery(api.prizes.getPrizeDeliberationData, {
+    eventId,
+  });
   const prizeWinners = useQuery(api.prizes.listPrizeWinners, { eventId });
-  const detailedScores = useQuery(api.scores.getDetailedEventScores, { eventId });
+  const detailedScores = useQuery(api.scores.getDetailedEventScores, {
+    eventId,
+  });
   const setPrizeWinners = useMutation(api.prizes.setPrizeWinners);
   const setWinners = useMutation(api.scores.setWinners);
+  const setCodeAndTellWinner = useMutation(api.codeAndTell.setWinner);
 
   if (isAdmin === undefined || event === undefined) {
     return <LoadingState label="Loading winner wizard..." />;
@@ -794,7 +920,9 @@ export function AdminPrizeWinnersPage({
     );
   }
 
-  const isDemoDayMode = event.mode === "demo_day";
+  const eventMode = getEventMode(event.mode);
+  const isDemoDayMode = eventMode === "demo_day";
+  const isCodeAndTellMode = eventMode === "code_and_tell";
 
   return (
     <div className="mx-auto w-full h-[calc(100dvh-5rem)] md:h-[calc(100dvh-4.5rem)] min-h-0 overflow-hidden px-4 sm:px-6 lg:px-8 pt-2 pb-2 fade-in flex flex-col gap-2">
@@ -803,8 +931,18 @@ export function AdminPrizeWinnersPage({
         onClick={onBackToEvent}
         className="flex items-center gap-2 btn-ghost shrink-0"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
         </svg>
         Back to Event Scores
       </button>
@@ -824,7 +962,23 @@ export function AdminPrizeWinnersPage({
               Add teams first, then select winners.
             </div>
           )
-        ) : prizeWinners === undefined || detailedScores === undefined || prizeDeliberationData === undefined ? (
+        ) : isCodeAndTellMode ? (
+          codeAndTellSummary === undefined ? (
+            <LoadingState label="Preparing ranked-vote summary..." />
+          ) : (
+            <CodeAndTellWinnerPanel
+              eventId={eventId}
+              standings={codeAndTellSummary?.standings || []}
+              defaultWinnerId={codeAndTellSummary?.defaultWinnerId}
+              selectedWinnerId={codeAndTellSummary?.selectedWinnerId}
+              totalBallots={codeAndTellSummary?.totalBallots || 0}
+              onClose={onBackToEvent}
+              onSubmit={setCodeAndTellWinner}
+            />
+          )
+        ) : prizeWinners === undefined ||
+          detailedScores === undefined ||
+          prizeDeliberationData === undefined ? (
           <LoadingState label="Preparing winner wizard..." />
         ) : (
           <PrizeWinnerWizardPanel
@@ -841,7 +995,11 @@ export function AdminPrizeWinnersPage({
   );
 }
 
-export function EventsList({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) => void }) {
+export function EventsList({
+  onSelectEvent,
+}: {
+  onSelectEvent: (eventId: Id<"events">) => void;
+}) {
   return <WorkspaceEventsList onSelectEvent={onSelectEvent} />;
 }
 
@@ -864,7 +1022,9 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
       scoreBasis: "overall",
     }),
   ]);
-  const [courseCodes, setCourseCodes] = useState<string[]>([...DEFAULT_DEMO_DAY_COURSES]);
+  const [courseCodes, setCourseCodes] = useState<string[]>([
+    ...DEFAULT_DEMO_DAY_COURSES,
+  ]);
   const [newCourseCode, setNewCourseCode] = useState("");
   const [formData, setFormData] = useState({
     name: "",
@@ -874,9 +1034,12 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
     tracks: "AI/ML,Web Development,Hardware,Mobile,Other",
     judgeCode: "",
     enableCohorts: false,
-    mode: "hackathon" as "hackathon" | "demo_day",
+    mode: "hackathon" as "hackathon" | "demo_day" | "code_and_tell",
   });
-  const [activeTab, setActiveTab] = useState<"details" | "teams" | "prizes" | "scores">("details");
+  const [activeTab, setActiveTab] = useState<
+    "details" | "teams" | "prizes" | "scores"
+  >("details");
+  const codeTellTitleTouchedRef = useRef(false);
 
   const getTimestamp = (value: string) => {
     const ts = new Date(value).getTime();
@@ -885,12 +1048,12 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
 
   const startTimestamp = useMemo(
     () => getTimestamp(formData.startDate),
-    [formData.startDate]
+    [formData.startDate],
   );
 
   const endTimestamp = useMemo(
     () => getTimestamp(formData.endDate),
-    [formData.endDate]
+    [formData.endDate],
   );
 
   const derivedStatus = useMemo(() => {
@@ -907,7 +1070,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
       startTimestamp !== null &&
       endTimestamp !== null &&
       startTimestamp >= endTimestamp,
-    [startTimestamp, endTimestamp]
+    [startTimestamp, endTimestamp],
   );
 
   const statusBadgeClass = useMemo(() => {
@@ -931,11 +1094,8 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
   }, [derivedStatus]);
 
   const derivedCategoryNames = useMemo(
-    () =>
-      categories
-        .map((category) => category.name.trim())
-        .filter(Boolean),
-    [categories]
+    () => categories.map((category) => category.name.trim()).filter(Boolean),
+    [categories],
   );
 
   const derivedTracks = useMemo(() => {
@@ -945,6 +1105,25 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
       .map((track) => track.trim())
       .filter(Boolean);
   }, [useTracksAsAwards, derivedCategoryNames, formData.tracks]);
+
+  const handleStartDateChange = (nextStartDate: string) => {
+    setFormData((current) => {
+      const next = {
+        ...current,
+        startDate: nextStartDate,
+        endDate: getAutoAdjustedEndDateTime(nextStartDate, current.endDate),
+      };
+      if (
+        current.mode === "code_and_tell" &&
+        !codeTellTitleTouchedRef.current
+      ) {
+        const ts = getTimestamp(nextStartDate);
+        next.name =
+          ts !== null ? formatCodeAndTellDefaultTitle(ts) : "Code & Tell";
+      }
+      return next;
+    });
+  };
 
   const handleAddCourseCode = () => {
     const code = newCourseCode.trim().toUpperCase();
@@ -959,7 +1138,10 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
   };
 
   const setCategoryWeight = (index: number, value: number) => {
-    const clamped = Math.max(0, Math.min(2, Number.isFinite(value) ? value : 0));
+    const clamped = Math.max(
+      0,
+      Math.min(2, Number.isFinite(value) ? value : 0),
+    );
     const rounded = Math.round(clamped * 10) / 10;
     const newCats = [...categories];
     newCats[index].weight = rounded;
@@ -978,11 +1160,6 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
     }
 
     const trimmedDescription = formData.description.trim();
-    if (!trimmedDescription) {
-      toast.error("Description is required.");
-      setSubmitting(false);
-      return;
-    }
 
     const startMs = startTimestamp ?? getTimestamp(formData.startDate);
     const endMs = endTimestamp ?? getTimestamp(formData.endDate);
@@ -1007,7 +1184,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
       }))
       .filter((cat) => cat.name.length > 0);
 
-    if (cleanedCategories.length === 0) {
+    if (formData.mode !== "code_and_tell" && cleanedCategories.length === 0) {
       toast.error("Add at least one judging category with a name.");
       setSubmitting(false);
       return;
@@ -1018,16 +1195,18 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
       .map((track) => track.trim())
       .filter(Boolean);
 
-    if (formData.mode === "hackathon" && !useTracksAsAwards && parsedTracks.length === 0) {
+    if (
+      formData.mode === "hackathon" &&
+      !useTracksAsAwards &&
+      parsedTracks.length === 0
+    ) {
       toast.error("Add at least one track or use award categories as tracks.");
       setSubmitting(false);
       return;
     }
 
     const preparedPrizes =
-      formData.mode === "hackathon"
-        ? normalizePrizeDraftsForSave(prizes)
-        : [];
+      formData.mode === "hackathon" ? normalizePrizeDraftsForSave(prizes) : [];
 
     if (formData.mode === "hackathon" && preparedPrizes.length === 0) {
       toast.error("Add at least one prize for hackathon events.");
@@ -1038,18 +1217,30 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
     const computedStatus = derivedStatus ?? "upcoming";
 
     try {
-      const tracks = useTracksAsAwards ? undefined : parsedTracks;
+      const tracks =
+        formData.mode === "hackathon"
+          ? useTracksAsAwards
+            ? undefined
+            : parsedTracks
+          : [];
 
       const eventId = await createEvent({
         name: trimmedName,
-        description: trimmedDescription,
+        description: trimmedDescription || undefined,
         status: computedStatus,
         startDate: startMs,
         endDate: endMs,
-        categories: cleanedCategories,
+        categories:
+          formData.mode === "code_and_tell" ? [] : cleanedCategories,
         tracks,
-        judgeCode: formData.judgeCode || undefined,
-        enableCohorts: formData.enableCohorts || undefined,
+        judgeCode:
+          formData.mode === "hackathon"
+            ? formData.judgeCode || undefined
+            : undefined,
+        enableCohorts:
+          formData.mode === "hackathon"
+            ? formData.enableCohorts || undefined
+            : undefined,
         mode: formData.mode,
         courseCodes: formData.mode === "demo_day" ? courseCodes : undefined,
       });
@@ -1063,7 +1254,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
         } catch (error: any) {
           toast.error(
             error?.message ||
-            "Event created, but saving prizes failed. Re-open the event to configure prizes."
+              "Event created, but saving prizes failed. Re-open the event to configure prizes.",
           );
           onClose();
           return;
@@ -1079,7 +1270,16 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const isHackathonMode = formData.mode === "hackathon";
+  const eventMode = getEventMode(formData.mode);
+  const isHackathonMode = eventMode === "hackathon";
+  const isDemoDayMode = eventMode === "demo_day";
+  const isCodeAndTellMode = eventMode === "code_and_tell";
+
+  useEffect(() => {
+    if (isCodeAndTellMode && activeTab === "prizes") {
+      setActiveTab("details");
+    }
+  }, [activeTab, isCodeAndTellMode]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 fade-in">
@@ -1088,40 +1288,46 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={() => setActiveTab("details")}
-            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeTab === "details"
-              ? "bg-background text-foreground border-t border-x border-border"
-              : "text-muted-foreground hover:text-foreground"
-              }`}
+            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+              activeTab === "details"
+                ? "bg-background text-foreground border-t border-x border-border"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             Details
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("teams")}
-            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeTab === "teams"
-              ? "bg-background text-foreground border-t border-x border-border"
-              : "text-muted-foreground hover:text-foreground"
-              }`}
+            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+              activeTab === "teams"
+                ? "bg-background text-foreground border-t border-x border-border"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             Teams
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("prizes")}
-            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeTab === "prizes"
-              ? "bg-background text-foreground border-t border-x border-border"
-              : "text-muted-foreground hover:text-foreground"
+          {!isCodeAndTellMode && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("prizes")}
+              className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+                activeTab === "prizes"
+                  ? "bg-background text-foreground border-t border-x border-border"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
-          >
-            Prizes
-          </button>
+            >
+              Prizes
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setActiveTab("scores")}
-            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeTab === "scores"
-              ? "bg-background text-foreground border-t border-x border-border"
-              : "text-muted-foreground hover:text-foreground"
-              }`}
+            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+              activeTab === "scores"
+                ? "bg-background text-foreground border-t border-x border-border"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             Scores
           </button>
@@ -1131,61 +1337,120 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
           {activeTab === "details" && (
             <>
               <section className="rounded-lg border border-border bg-background p-5 space-y-4">
-                <h2 className="text-lg font-heading font-semibold text-foreground">Event Mode</h2>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <h2 className="text-lg font-heading font-semibold text-foreground">
+                  Event Mode
+                </h2>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, mode: "hackathon" })}
-                    className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${isHackathonMode
-                      ? "bg-primary text-white"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                      }`}
+                    onClick={() => {
+                      codeTellTitleTouchedRef.current = false;
+                      setFormData({ ...formData, mode: "hackathon" });
+                    }}
+                    className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                      isHackathonMode
+                        ? "bg-primary text-white"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
                   >
                     <TrophyIcon className="h-4 w-4" />
                     Hackathon
                   </button>
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, mode: "demo_day" })}
-                    className={`px-4 py-2.5 rounded-lg font-medium transition-all ${!isHackathonMode
-                      ? "bg-pink-500 text-white"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                      }`}
+                    onClick={() => {
+                      codeTellTitleTouchedRef.current = false;
+                      setFormData({ ...formData, mode: "demo_day" });
+                    }}
+                    className={`px-4 py-2.5 rounded-lg font-medium transition-all ${
+                      isDemoDayMode
+                        ? "bg-pink-500 text-white"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
                   >
                     ❤️ Demo Day
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      codeTellTitleTouchedRef.current = false;
+                      setFormData((current) => {
+                        const ts = getTimestamp(current.startDate);
+                        return {
+                          ...current,
+                          mode: "code_and_tell",
+                          name:
+                            ts !== null
+                              ? formatCodeAndTellDefaultTitle(ts)
+                              : "Code & Tell",
+                        };
+                      });
+                    }}
+                    className={`px-4 py-2.5 rounded-lg font-medium transition-all ${
+                      isCodeAndTellMode
+                        ? "bg-amber-500 text-white"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    Code &amp; Tell
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {isHackathonMode
                     ? "Judges score teams by category. Configure tracks in Teams and scoring in Scores."
-                    : "Attendees vote with hearts. Configure team course codes in Teams."}
+                    : isDemoDayMode
+                      ? "Attendees vote with hearts. Configure team course codes in Teams."
+                      : "Signed-in users rank projects. Admins manage all projects and release one final winner."}
                 </p>
               </section>
 
               <section className="rounded-lg border border-border bg-background p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">Event Basics</h2>
-                  {statusBadgeLabel && <span className={`badge ${statusBadgeClass}`}>{statusBadgeLabel}</span>}
+                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                    Event Basics
+                  </h2>
+                  {statusBadgeLabel && (
+                    <span className={`badge ${statusBadgeClass}`}>
+                      {statusBadgeLabel}
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-foreground">Event Name</label>
+                  <label className="block text-sm font-medium text-foreground">
+                    Event Name
+                  </label>
                   <input
                     type="text"
                     required
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => {
+                      if (formData.mode === "code_and_tell") {
+                        codeTellTitleTouchedRef.current = true;
+                      }
+                      setFormData({ ...formData, name: e.target.value });
+                    }}
                     className="input"
-                    placeholder="HackBU Fall 2024"
+                    placeholder={
+                      isCodeAndTellMode
+                        ? "Code & Tell (April 14, 2026)"
+                        : "HackBU Fall 2024"
+                    }
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-foreground">Description</label>
+                  <label className="block text-sm font-medium text-foreground">
+                    Description{" "}
+                    <span className="text-muted-foreground text-xs">
+                      (optional)
+                    </span>
+                  </label>
                   <textarea
-                    required
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     rows={4}
                     className="input h-auto resize-y"
                     placeholder="Boston University's premier 24-hour hackathon..."
@@ -1194,30 +1459,36 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
 
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-foreground">Start Date &amp; Time</label>
-                    <input
-                      type="datetime-local"
-                      required
-                      step="900"
+                    <label className="block text-sm font-medium text-foreground">
+                      Start Date &amp; Time
+                    </label>
+                    <DateTimePicker
+                      label="Start date and time"
                       value={formData.startDate}
-                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                      className="input"
+                      onChange={handleStartDateChange}
+                      placeholder="Select a start date"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-foreground">End Date &amp; Time</label>
-                    <input
-                      type="datetime-local"
-                      required
-                      step="900"
+                    <label className="block text-sm font-medium text-foreground">
+                      End Date &amp; Time
+                    </label>
+                    <DateTimePicker
+                      label="End date and time"
                       value={formData.endDate}
-                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                      className="input"
+                      onChange={(value) =>
+                        setFormData({ ...formData, endDate: value })
+                      }
+                      placeholder="Select an end date"
                     />
                   </div>
                 </div>
 
-                {hasInvalidRange && <p className="text-xs text-red-500">End time must be after the start time.</p>}
+                {hasInvalidRange && (
+                  <p className="text-xs text-red-500">
+                    End time must be after the start time.
+                  </p>
+                )}
               </section>
             </>
           )}
@@ -1226,7 +1497,9 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
             <>
               {isHackathonMode ? (
                 <section className="rounded-lg border border-border bg-background p-5 space-y-4">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">Track Configuration</h2>
+                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                    Track Configuration
+                  </h2>
                   <StyledCheckbox
                     checked={useTracksAsAwards}
                     onCheckedChange={setUseTracksAsAwards}
@@ -1235,24 +1508,33 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                   />
                   {!useTracksAsAwards && (
                     <div className="space-y-2">
-                      <label className="block text-sm font-medium text-foreground">Custom Tracks</label>
+                      <label className="block text-sm font-medium text-foreground">
+                        Custom Tracks
+                      </label>
                       <input
                         type="text"
                         required
                         value={formData.tracks}
-                        onChange={(e) => setFormData({ ...formData, tracks: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, tracks: e.target.value })
+                        }
                         className="input"
                         placeholder="AI/ML, Web Development, Hardware..."
                       />
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Current tracks: {derivedTracks.length > 0 ? derivedTracks.join(", ") : "No tracks configured yet."}
+                    Current tracks:{" "}
+                    {derivedTracks.length > 0
+                      ? derivedTracks.join(", ")
+                      : "No tracks configured yet."}
                   </p>
                 </section>
-              ) : (
+              ) : isDemoDayMode ? (
                 <section className="rounded-lg border border-border bg-background p-5 space-y-4">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">Demo Day Course Codes</h2>
+                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                    Demo Day Course Codes
+                  </h2>
                   <div className="flex flex-wrap gap-2">
                     {courseCodes.map((code) => (
                       <span
@@ -1265,14 +1547,26 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                           onClick={() => handleRemoveCourseCode(code)}
                           className="transition-colors hover:text-pink-800 dark:hover:text-pink-200"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
                           </svg>
                         </button>
                       </span>
                     ))}
                     {courseCodes.length === 0 && (
-                      <span className="text-sm italic text-muted-foreground">No course codes added yet.</span>
+                      <span className="text-sm italic text-muted-foreground">
+                        No course codes added yet.
+                      </span>
                     )}
                   </div>
 
@@ -1299,11 +1593,21 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                     </button>
                   </div>
                 </section>
+              ) : (
+                <section className="rounded-lg border border-border bg-background p-5 space-y-4">
+                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                    Code &amp; Tell Projects
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Projects are managed after event creation. Voters will see a ranked-ballot experience, and admins will select a single final winner from the Borda standings once the event is past.
+                  </p>
+                </section>
               )}
 
               <section className="rounded-lg border border-dashed border-border bg-muted/20 p-4">
                 <p className="text-sm text-muted-foreground">
-                  Team roster management happens after event creation in the event details page.
+                  Team roster management happens after event creation in the
+                  event details page.
                 </p>
               </section>
             </>
@@ -1314,21 +1618,33 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
               {isHackathonMode ? (
                 <>
                   <section className="rounded-lg border border-border bg-background p-5 space-y-4">
-                    <h2 className="text-lg font-heading font-semibold text-foreground">Judge Access</h2>
+                    <h2 className="text-lg font-heading font-semibold text-foreground">
+                      Judge Access
+                    </h2>
                     <StyledCheckbox
                       checked={formData.enableCohorts}
-                      onCheckedChange={(checked) => setFormData({ ...formData, enableCohorts: checked })}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, enableCohorts: checked })
+                      }
                       label="Enable multiple judging cohorts"
                       labelClassName="text-sm text-foreground"
                     />
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-foreground">
-                        Judge Code <span className="text-muted-foreground text-xs">(optional)</span>
+                        Judge Code{" "}
+                        <span className="text-muted-foreground text-xs">
+                          (optional)
+                        </span>
                       </label>
                       <input
                         type="text"
                         value={formData.judgeCode}
-                        onChange={(e) => setFormData({ ...formData, judgeCode: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            judgeCode: e.target.value,
+                          })
+                        }
                         className="input"
                         placeholder="Judge code (optional)"
                       />
@@ -1337,8 +1653,12 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
 
                   <section className="rounded-lg border border-border bg-background p-5 space-y-4">
                     <div className="flex items-center justify-between gap-2">
-                      <h2 className="text-lg font-heading font-semibold text-foreground">Judging Categories</h2>
-                      <span className="text-xs text-muted-foreground">Weight range: 0-2</span>
+                      <h2 className="text-lg font-heading font-semibold text-foreground">
+                        Judging Categories
+                      </h2>
+                      <span className="text-xs text-muted-foreground">
+                        Weight range: 0-2
+                      </span>
                     </div>
 
                     <div className="rounded-lg border border-border overflow-hidden">
@@ -1352,7 +1672,10 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                           </div>
                           <div className="space-y-2 p-3">
                             {categories.map((cat, index) => (
-                              <div key={index} className="grid grid-cols-[1fr,110px,110px,40px] items-center gap-2">
+                              <div
+                                key={index}
+                                className="grid grid-cols-[1fr,110px,110px,40px] items-center gap-2"
+                              >
                                 <input
                                   type="text"
                                   required
@@ -1367,7 +1690,9 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                                 />
                                 <StyledNumberInput
                                   value={cat.weight}
-                                  onValueChange={(nextValue) => setCategoryWeight(index, nextValue)}
+                                  onValueChange={(nextValue) =>
+                                    setCategoryWeight(index, nextValue)
+                                  }
                                   min={0}
                                   max={2}
                                   step={0.1}
@@ -1384,12 +1709,26 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                                 />
                                 <button
                                   type="button"
-                                  onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                                  onClick={() =>
+                                    setCategories(
+                                      categories.filter((_, i) => i !== index),
+                                    )
+                                  }
                                   className="rounded-lg p-2.5 text-red-500 transition-colors hover:bg-red-500/10"
                                   aria-label={`Remove ${cat.name || "category"}`}
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M6 18L18 6M6 6l12 12"
+                                    />
                                   </svg>
                                 </button>
                               </div>
@@ -1401,30 +1740,49 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
 
                     <button
                       type="button"
-                      onClick={() => setCategories([...categories, { name: "", weight: 1, optOutAllowed: false }])}
+                      onClick={() =>
+                        setCategories([
+                          ...categories,
+                          { name: "", weight: 1, optOutAllowed: false },
+                        ])
+                      }
                       className="btn-ghost text-sm"
                     >
                       + Add Category
                     </button>
                   </section>
                 </>
+              ) : isDemoDayMode ? (
+                <section className="rounded-lg border border-border bg-background p-6 space-y-2">
+                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                    Scoring (Demo Day)
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Demo Day events use attendee appreciations (hearts) instead
+                    of judge score categories. No additional score setup is
+                    required at creation time.
+                  </p>
+                </section>
               ) : (
                 <section className="rounded-lg border border-border bg-background p-6 space-y-2">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">Scoring (Demo Day)</h2>
+                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                    Ranked Voting
+                  </h2>
                   <p className="text-sm text-muted-foreground">
-                    Demo Day events use attendee appreciations (hearts) instead of judge score categories. No
-                    additional score setup is required at creation time.
+                    Code &amp; Tell uses ranked ballots instead of judge scoring. No cohorts, judge code, or category setup is required.
                   </p>
                 </section>
               )}
             </>
           )}
 
-          {activeTab === "prizes" && (
+          {activeTab === "prizes" && !isCodeAndTellMode && (
             <>
               {isHackathonMode ? (
                 <section className="rounded-lg border border-border bg-background p-5 space-y-3">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">Prize Catalog</h2>
+                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                    Prize Catalog
+                  </h2>
                   <PrizeCatalogEditor
                     prizes={prizes}
                     setPrizes={setPrizes}
@@ -1435,9 +1793,12 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                 </section>
               ) : (
                 <section className="rounded-lg border border-border bg-background p-6 space-y-2">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">Prizes (Demo Day)</h2>
+                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                    Prizes (Demo Day)
+                  </h2>
                   <p className="text-sm text-muted-foreground">
-                    Demo Day events use attendee appreciations (hearts) instead of judged prizes.
+                    Demo Day events use attendee appreciations (hearts) instead
+                    of judged prizes.
                   </p>
                 </section>
               )}
@@ -1496,10 +1857,21 @@ export function EventManagementModal({
   const navigate = useNavigate();
   const event = useQuery(api.events.getEvent, { eventId });
   const eventScores = useQuery(api.scores.getEventScores, { eventId });
-  const detailedScores = useQuery(api.scores.getDetailedEventScores, { eventId });
-  const appreciationSummary = useQuery(api.appreciations.getEventAppreciationSummary, { eventId });
+  const detailedScores = useQuery(api.scores.getDetailedEventScores, {
+    eventId,
+  });
+  const appreciationSummary = useQuery(
+    api.appreciations.getEventAppreciationSummary,
+    { eventId },
+  );
+  const codeAndTellSummary = useQuery(
+    api.codeAndTell.getAdminSummary,
+    event?.mode === "code_and_tell" ? { eventId } : "skip",
+  );
   const eventPrizes = useQuery(api.prizes.listEventPrizes, { eventId });
-  const prizeDeliberationData = useQuery(api.prizes.getPrizeDeliberationData, { eventId });
+  const prizeDeliberationData = useQuery(api.prizes.getPrizeDeliberationData, {
+    eventId,
+  });
   const prizeWinners = useQuery(api.prizes.listPrizeWinners, { eventId });
   const updateEventDetails = useMutation(api.events.updateEventDetails);
   const updateEventCategories = useMutation(api.events.updateEventCategories);
@@ -1511,9 +1883,11 @@ export function EventManagementModal({
   const createTeam = useMutation(api.teams.createTeam);
   const updateTeamAdmin = useMutation(api.teams.updateTeamAdmin);
   const setWinners = useMutation(api.scores.setWinners);
+  const setCodeAndTellWinner = useMutation(api.codeAndTell.setWinner);
   const saveEventPrizes = useMutation(api.prizes.saveEventPrizes);
   const setPrizeWinners = useMutation(api.prizes.setPrizeWinners);
   const releaseResults = useMutation(api.scores.releaseResults);
+  const releaseCodeAndTellResults = useMutation(api.codeAndTell.releaseResults);
   const setScoringLock = useMutation(api.events.setScoringLock);
   const hideTeam = useMutation(api.teams.hideTeam);
   const removeTeam = useMutation(api.teams.removeTeam);
@@ -1524,8 +1898,9 @@ export function EventManagementModal({
   const [editingTeam, setEditingTeam] = useState<any | null>(null);
   const [teamMenuOpen, setTeamMenuOpen] = useState<Id<"teams"> | null>(null);
   const [activeTab, setActiveTab] = useState<EventManagementTab>(initialTab);
-  const [localScoresView, setLocalScoresView] = useState<ScoresSubview>(scoresView);
-  const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
+  const [localScoresView, setLocalScoresView] =
+    useState<ScoresSubview>(scoresView);
+  const [viewMode, setViewMode] = useState<"table" | "chart">("table");
   const [isRemovingEvent, setIsRemovingEvent] = useState(false);
   const [isDuplicatingEvent, setIsDuplicatingEvent] = useState(false);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
@@ -1534,7 +1909,9 @@ export function EventManagementModal({
   const [eventDescription, setEventDescription] = useState("");
   const [eventStart, setEventStart] = useState("");
   const [eventEnd, setEventEnd] = useState("");
-  const [categoriesEdit, setCategoriesEdit] = useState<Array<{ name: string; weight: number; optOutAllowed?: boolean }>>([]);
+  const [categoriesEdit, setCategoriesEdit] = useState<
+    Array<{ name: string; weight: number; optOutAllowed?: boolean }>
+  >([]);
   const [enableCohorts, setEnableCohorts] = useState(false);
   const [judgeCodeEdit, setJudgeCodeEdit] = useState("");
   const [savingJudgeSettings, setSavingJudgeSettings] = useState(false);
@@ -1543,7 +1920,16 @@ export function EventManagementModal({
   const [lockingScores, setLockingScores] = useState(false);
   const [appreciationBudget, setAppreciationBudget] = useState<number>(100);
   const [tracksEdit, setTracksEdit] = useState("");
-  const [savingAppreciationSettings, setSavingAppreciationSettings] = useState(false);
+  const [codeAndTellMaxBallotsInput, setCodeAndTellMaxBallotsInput] =
+    useState("");
+  const [savingAppreciationSettings, setSavingAppreciationSettings] =
+    useState(false);
+  const handleEventStartChange = (nextStartDate: string) => {
+    setEventStart(nextStartDate);
+    setEventEnd((currentEnd) =>
+      getAutoAdjustedEndDateTime(nextStartDate, currentEnd),
+    );
+  };
 
   const updateTab = (tab: EventManagementTab) => {
     setActiveTab(tab);
@@ -1577,18 +1963,24 @@ export function EventManagementModal({
       setCategoriesEdit(
         (event.categories || []).map((cat: any) => ({
           name: typeof cat === "string" ? cat : cat.name,
-          weight: typeof cat === "string" ? 1 : cat.weight ?? 1,
-          optOutAllowed: typeof cat === "string" ? false : cat.optOutAllowed ?? false,
-        }))
+          weight: typeof cat === "string" ? 1 : (cat.weight ?? 1),
+          optOutAllowed:
+            typeof cat === "string" ? false : (cat.optOutAllowed ?? false),
+        })),
       );
       setEnableCohorts(!!event.enableCohorts);
       setJudgeCodeEdit(event.judgeCode || "");
       setAppreciationBudget(
         typeof event.appreciationBudgetPerAttendee === "number"
           ? event.appreciationBudgetPerAttendee
-          : 100
+          : 100,
       );
       setTracksEdit(event.tracks?.join(", ") || "");
+      const cap = (event as { codeAndTellMaxBallots?: number })
+        .codeAndTellMaxBallots;
+      setCodeAndTellMaxBallotsInput(
+        typeof cap === "number" ? String(cap) : "",
+      );
     }
   }, [event]);
 
@@ -1607,14 +1999,15 @@ export function EventManagementModal({
           scoreCategoryNames: prize.scoreCategoryNames || [],
           isActive: prize.isActive !== false,
           sortOrder: prize.sortOrder ?? index,
-        })
-      )
+        }),
+      ),
     );
   }, [eventPrizes]);
 
   const categoriesForPrizeEditor = useMemo(
-    () => categoriesEdit.map((category) => category.name.trim()).filter(Boolean),
-    [categoriesEdit]
+    () =>
+      categoriesEdit.map((category) => category.name.trim()).filter(Boolean),
+    [categoriesEdit],
   );
   const tracksForPrizeEditor = useMemo(() => {
     if (tracksEdit.trim()) {
@@ -1647,11 +2040,21 @@ export function EventManagementModal({
     return prizeSelections;
   }, [prizeDeliberationData]);
 
+  const eventMode = getEventMode(event?.mode);
+  const isHackathonMode = eventMode === "hackathon";
+  const isDemoDayMode = eventMode === "demo_day";
+  const isCodeAndTellMode = eventMode === "code_and_tell";
+  const entityLabel = isCodeAndTellMode ? "Project" : "Team";
+
+  useEffect(() => {
+    if (event && isCodeAndTellMode && activeTab === "prizes") {
+      updateTab("details");
+    }
+  }, [activeTab, event, isCodeAndTellMode]);
+
   if (!event) {
     return null;
   }
-
-  const isDemoDayMode = event.mode === "demo_day";
 
   const derivedStatus = (() => {
     const now = Date.now();
@@ -1666,7 +2069,7 @@ export function EventManagementModal({
     eventScores?.some(
       (teamScore) =>
         (teamScore as any)?.judgeCount > 0 ||
-        ((teamScore as any)?.scores?.length || 0) > 0
+        ((teamScore as any)?.scores?.length || 0) > 0,
     ) ?? false;
   const scoringLocked = !!event.scoringLockedAt;
   const scoringLockedLabel = event.scoringLockedAt
@@ -1678,7 +2081,9 @@ export function EventManagementModal({
   const teamListContent = (
     <>
       {event.teams.length === 0 ? (
-        <div className="p-4 text-sm text-muted-foreground">No teams added yet</div>
+        <div className="p-4 text-sm text-muted-foreground">
+          No {entityLabel.toLowerCase()}s added yet
+        </div>
       ) : (
         <div className="divide-y divide-border w-full">
           {event.teams.map((team, index) => {
@@ -1686,15 +2091,18 @@ export function EventManagementModal({
             return (
               <div
                 key={team._id}
-                className={`w-full px-4 py-3 text-left transition-colors relative group ${isSelected
-                  ? "bg-teal-500/10 border-l-2 border-l-teal-500"
-                  : "hover:bg-muted/20 border-l-2 border-l-transparent"
-                  } ${(team as any).hidden ? "opacity-50" : ""}`}
+                className={`w-full px-4 py-3 text-left transition-colors relative group ${
+                  isSelected
+                    ? "bg-teal-500/10 border-l-2 border-l-teal-500"
+                    : "hover:bg-muted/20 border-l-2 border-l-transparent"
+                } ${(team as any).hidden ? "opacity-50" : ""}`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-foreground">{team.name}</h4>
+                      <h4 className="font-semibold text-foreground">
+                        {team.name}
+                      </h4>
                       {(team as any).hidden && (
                         <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-xs rounded-full">
                           Hidden
@@ -1711,17 +2119,29 @@ export function EventManagementModal({
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground">{team.members.join(", ")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {isCodeAndTellMode
+                        ? ((team as any).entrantEmails || []).length > 0
+                          ? (team as any).entrantEmails.join(", ")
+                          : team.members.join(", ")
+                        : team.members.join(", ")}
+                    </p>
                   </div>
                   <div className="relative ml-2 opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setTeamMenuOpen(teamMenuOpen === team._id ? null : team._id);
+                        setTeamMenuOpen(
+                          teamMenuOpen === team._id ? null : team._id,
+                        );
                       }}
                       className="p-1 rounded-md hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
                         <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                       </svg>
                     </button>
@@ -1740,13 +2160,20 @@ export function EventManagementModal({
                             }}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors"
                           >
-                            Edit Team
+                            Edit {entityLabel}
                           </button>
                           <button
                             onClick={async () => {
                               try {
-                                await hideTeam({ teamId: team._id, hidden: !(team as any).hidden });
-                                toast.success((team as any).hidden ? "Team unhidden" : "Team hidden");
+                                await hideTeam({
+                                  teamId: team._id,
+                                  hidden: !(team as any).hidden,
+                                });
+                                toast.success(
+                                  (team as any).hidden
+                                    ? `${entityLabel} unhidden`
+                                    : `${entityLabel} hidden`,
+                                );
                                 setTeamMenuOpen(null);
                               } catch (error: any) {
                                 toast.error(error.message);
@@ -1758,10 +2185,14 @@ export function EventManagementModal({
                           </button>
                           <button
                             onClick={async () => {
-                              if (confirm(`Are you sure you want to permanently delete "${team.name}"? This will also delete all scores for this team.`)) {
+                              if (
+                                confirm(
+                                  `Are you sure you want to permanently delete "${team.name}"? This will also delete all scores or ballots associated with this ${entityLabel.toLowerCase()}.`,
+                                )
+                              ) {
                                 try {
                                   await removeTeam({ teamId: team._id });
-                                  toast.success("Team removed");
+                                  toast.success(`${entityLabel} removed`);
                                   setTeamMenuOpen(null);
                                 } catch (error: any) {
                                   toast.error(error.message);
@@ -1770,7 +2201,7 @@ export function EventManagementModal({
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           >
-                            Remove Team
+                            Remove {entityLabel}
                           </button>
                         </div>
                       </>
@@ -1785,10 +2216,15 @@ export function EventManagementModal({
     </>
   );
 
-  const handleModeChange = async (mode: "hackathon" | "demo_day") => {
+  const handleModeChange = async (
+    mode: "hackathon" | "demo_day" | "code_and_tell",
+  ) => {
     try {
       await updateEventMode({ eventId, mode });
-      toast.success(`Event mode changed to ${mode === "demo_day" ? "Demo Day" : "Hackathon"}!`);
+      toast.success(`Event mode changed to ${getEventDisplayLabel(mode)}!`);
+      if (mode === "code_and_tell" && activeTab === "prizes") {
+        updateTab("details");
+      }
     } catch (error) {
       toast.error("Failed to update mode");
     }
@@ -1797,8 +2233,13 @@ export function EventManagementModal({
   const handleExportAppreciationsCsv = () => {
     if (!appreciationSummary) return;
 
-    const headers = ["Team Name", "Course Code", "Total Appreciations", "Unique Attendees"];
-    const rows = appreciationSummary.teams.map(team => [
+    const headers = [
+      "Team Name",
+      "Course Code",
+      "Total Appreciations",
+      "Unique Attendees",
+    ];
+    const rows = appreciationSummary.teams.map((team) => [
       team.teamName,
       team.courseCode || "",
       team.rawScore.toString(),
@@ -1808,14 +2249,17 @@ export function EventManagementModal({
 
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `${event?.name || "event"}_appreciations.csv`);
+    link.setAttribute(
+      "download",
+      `${event?.name || "event"}_appreciations.csv`,
+    );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -1892,6 +2336,19 @@ export function EventManagementModal({
       return;
     }
 
+    if (isCodeAndTellMode) {
+      const rawCap = codeAndTellMaxBallotsInput.trim();
+      if (rawCap !== "") {
+        const cap = parseInt(rawCap, 10);
+        if (!Number.isFinite(cap) || cap < 1) {
+          toast.error(
+            "Max ballots must be a whole number of at least 1, or leave blank for no limit.",
+          );
+          return;
+        }
+      }
+    }
+
     setSavingDetails(true);
     try {
       await updateEventDetails({
@@ -1900,7 +2357,20 @@ export function EventManagementModal({
         description: eventDescription.trim(),
         startDate: startMs,
         endDate: endMs,
-        tracks: tracksEdit.split(",").map(t => t.trim()).filter(Boolean),
+        tracks: isHackathonMode
+          ? tracksEdit
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
+        ...(isCodeAndTellMode
+          ? {
+              codeAndTellMaxBallots:
+                codeAndTellMaxBallotsInput.trim() === ""
+                  ? null
+                  : parseInt(codeAndTellMaxBallotsInput.trim(), 10),
+            }
+          : {}),
       });
       toast.success("Event details saved");
     } catch (error) {
@@ -1911,13 +2381,17 @@ export function EventManagementModal({
   };
 
   const handleSaveJudgeSettings = async () => {
+    if (!isHackathonMode) return;
+
     if (!scoresLoaded) {
       toast.error("Scores are still loading. Please try again.");
       return;
     }
 
     if (!canEditJudgeSettings) {
-      toast.error("Judging settings are locked while scoring is in progress or locked.");
+      toast.error(
+        "Judging settings are locked while scoring is in progress or locked.",
+      );
       return;
     }
 
@@ -1953,7 +2427,7 @@ export function EventManagementModal({
   };
 
   const handleSavePrizes = async () => {
-    if (isDemoDayMode) return;
+    if (!isHackathonMode) return;
 
     const normalizedPrizes = normalizePrizeDraftsForSave(prizesEdit);
     if (normalizedPrizes.length === 0) {
@@ -1976,7 +2450,7 @@ export function EventManagementModal({
   };
 
   const handleSetScoringLock = async (locked: boolean) => {
-    if (isDemoDayMode) return;
+    if (!isHackathonMode) return;
     setLockingScores(true);
     try {
       const reason = locked
@@ -2013,7 +2487,7 @@ export function EventManagementModal({
 
   const handleRemoveEvent = async () => {
     const confirmed = window.confirm(
-      `Remove "${event.name}"? This will delete teams, scores, and access for this event.`
+      `Remove "${event.name}"? This will delete teams, scores, and access for this event.`,
     );
     if (!confirmed) return;
 
@@ -2054,7 +2528,11 @@ export function EventManagementModal({
 
   const handleReleaseResults = async () => {
     try {
-      await releaseResults({ eventId });
+      if (isCodeAndTellMode) {
+        await releaseCodeAndTellResults({ eventId });
+      } else {
+        await releaseResults({ eventId });
+      }
       toast.success("Results released!");
     } catch (error: any) {
       toast.error(error?.message || "Failed to release results");
@@ -2084,33 +2562,64 @@ export function EventManagementModal({
                 className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground mb-3 transition-colors"
                 aria-label="Back to Admin Dashboard"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
                 </svg>
                 Back to Admin Dashboard
               </button>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-3xl font-heading font-bold text-foreground">{event.name}</h1>
-                {isDemoDayMode && (
-                  <span className="badge bg-pink-500/20 text-pink-500 border-pink-500/30">
-                    Demo Day
+                <h1 className="text-3xl font-heading font-bold text-foreground">
+                  {event.name}
+                </h1>
+                {!isHackathonMode && (
+                  <span
+                    className={`badge ${
+                      isDemoDayMode
+                        ? "bg-pink-500/20 text-pink-500 border-pink-500/30"
+                        : "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                    }`}
+                  >
+                    {getEventDisplayLabel(eventMode)}
                   </span>
                 )}
               </div>
-              <p className="text-muted-foreground">Manage event settings and teams</p>
+              <p className="text-muted-foreground">
+                Manage event settings and teams
+              </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={handleDuplicateEvent}
                 disabled={isDuplicatingEvent}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${isDuplicatingEvent
-                  ? "border-blue-300 text-blue-300 cursor-not-allowed"
-                  : "border-blue-500/40 text-blue-500 hover:bg-blue-500/10"
-                  }`}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  isDuplicatingEvent
+                    ? "border-blue-300 text-blue-300 cursor-not-allowed"
+                    : "border-blue-500/40 text-blue-500 hover:bg-blue-500/10"
+                }`}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h6a2 2 0 002-2v-8a2 2 0 00-2-2h-6a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h6a2 2 0 002-2v-8a2 2 0 00-2-2h-6a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
                 </svg>
                 {isDuplicatingEvent ? "Duplicating..." : "Duplicate"}
               </button>
@@ -2118,13 +2627,24 @@ export function EventManagementModal({
                 type="button"
                 onClick={handleRemoveEvent}
                 disabled={isRemovingEvent}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${isRemovingEvent
-                  ? "border-red-400 text-red-400 cursor-not-allowed"
-                  : "border-red-500/40 text-red-500 hover:bg-red-500/10"
-                  }`}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  isRemovingEvent
+                    ? "border-red-400 text-red-400 cursor-not-allowed"
+                    : "border-red-500/40 text-red-500 hover:bg-red-500/10"
+                }`}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
                 {isRemovingEvent ? "Removing..." : "Remove"}
               </button>
@@ -2133,10 +2653,11 @@ export function EventManagementModal({
         </>
       )}
       <div
-        className={`relative w-full ${isPageLayout
-          ? "min-h-0 flex flex-col"
-          : "bg-background rounded-2xl shadow-2xl max-w-4xl border border-border slide-up max-h-[90vh] overflow-auto"
-          }`}
+        className={`relative w-full ${
+          isPageLayout
+            ? "min-h-0 flex flex-col"
+            : "bg-background rounded-2xl shadow-2xl max-w-4xl border border-border slide-up max-h-[90vh] overflow-auto"
+        }`}
       >
         <div
           className={
@@ -2151,34 +2672,65 @@ export function EventManagementModal({
                 onClick={onClose}
                 className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors z-20"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between pr-12">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-3xl font-heading font-bold text-foreground">{event.name}</h2>
-                    {isDemoDayMode && (
-                      <span className="badge bg-pink-500/20 text-pink-500 border-pink-500/30">
-                        Demo Day
+                    <h2 className="text-3xl font-heading font-bold text-foreground">
+                      {event.name}
+                    </h2>
+                    {!isHackathonMode && (
+                      <span
+                        className={`badge ${
+                          isDemoDayMode
+                            ? "bg-pink-500/20 text-pink-500 border-pink-500/30"
+                            : "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                        }`}
+                      >
+                        {getEventDisplayLabel(eventMode)}
                       </span>
                     )}
                   </div>
-                  <p className="text-muted-foreground">Manage event settings and teams</p>
+                  <p className="text-muted-foreground">
+                    Manage event settings and teams
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 flex-nowrap">
                   <button
                     type="button"
                     onClick={handleDuplicateEvent}
                     disabled={isDuplicatingEvent}
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${isDuplicatingEvent
-                      ? "border-blue-300 text-blue-300 cursor-not-allowed"
-                      : "border-blue-500/40 text-blue-500 hover:bg-blue-500/10"
-                      }`}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                      isDuplicatingEvent
+                        ? "border-blue-300 text-blue-300 cursor-not-allowed"
+                        : "border-blue-500/40 text-blue-500 hover:bg-blue-500/10"
+                    }`}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h6a2 2 0 002-2v-8a2 2 0 00-2-2h-6a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h6a2 2 0 002-2v-8a2 2 0 00-2-2h-6a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
                     </svg>
                     {isDuplicatingEvent ? "Duplicating..." : "Duplicate"}
                   </button>
@@ -2186,13 +2738,24 @@ export function EventManagementModal({
                     type="button"
                     onClick={handleRemoveEvent}
                     disabled={isRemovingEvent}
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${isRemovingEvent
-                      ? "border-red-400 text-red-400 cursor-not-allowed"
-                      : "border-red-500/40 text-red-500 hover:bg-red-500/10"
-                      }`}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                      isRemovingEvent
+                        ? "border-red-400 text-red-400 cursor-not-allowed"
+                        : "border-red-500/40 text-red-500 hover:bg-red-500/10"
+                    }`}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
                     </svg>
                     {isRemovingEvent ? "Removing..." : "Remove"}
                   </button>
@@ -2211,66 +2774,73 @@ export function EventManagementModal({
           >
             <button
               onClick={() => updateTab("details")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${isPageLayout
-                ? activeTab === "details"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                : activeTab === "details"
-                  ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
-                  : "text-muted-foreground hover:text-foreground"
-                }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                isPageLayout
+                  ? activeTab === "details"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  : activeTab === "details"
+                    ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
+                    : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               Details
             </button>
             <button
               onClick={() => updateTab("teams")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${isPageLayout
-                ? activeTab === "teams"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                : activeTab === "teams"
-                  ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
-                  : "text-muted-foreground hover:text-foreground"
-                }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                isPageLayout
+                  ? activeTab === "teams"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  : activeTab === "teams"
+                    ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
+                    : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               Teams
             </button>
-            <button
-              onClick={() => updateTab("prizes")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${isPageLayout
-                ? activeTab === "prizes"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                : activeTab === "prizes"
-                  ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
-                  : "text-muted-foreground hover:text-foreground"
+            {!isCodeAndTellMode && (
+              <button
+                onClick={() => updateTab("prizes")}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  isPageLayout
+                    ? activeTab === "prizes"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    : activeTab === "prizes"
+                      ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
+                      : "text-muted-foreground hover:text-foreground"
                 }`}
-            >
-              Prizes
-            </button>
+              >
+                Prizes
+              </button>
+            )}
             <button
               onClick={() => updateTab("scores")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${isPageLayout
-                ? activeTab === "scores"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                : activeTab === "scores"
-                  ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
-                  : "text-muted-foreground hover:text-foreground"
-                }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                isPageLayout
+                  ? activeTab === "scores"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  : activeTab === "scores"
+                    ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
+                    : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               Scores
             </button>
             <button
               onClick={() => updateTab("winners")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${isPageLayout
-                ? activeTab === "winners"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                : activeTab === "winners"
-                  ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
-                  : "text-muted-foreground hover:text-foreground"
-                }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                isPageLayout
+                  ? activeTab === "winners"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  : activeTab === "winners"
+                    ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
+                    : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               Winners
             </button>
@@ -2284,7 +2854,13 @@ export function EventManagementModal({
               : "p-6 space-y-6"
           }
         >
-          <div className={isPageLayout ? "h-full overflow-y-auto pr-1 space-y-5" : "space-y-6"}>
+          <div
+            className={
+              isPageLayout
+                ? "h-full overflow-y-auto pr-1 space-y-5"
+                : "space-y-6"
+            }
+          >
             {activeTab === "details" && (
               <DetailsTab
                 derivedStatus={derivedStatus}
@@ -2293,12 +2869,12 @@ export function EventManagementModal({
                 eventDescription={eventDescription}
                 setEventDescription={setEventDescription}
                 eventStart={eventStart}
-                setEventStart={setEventStart}
+                setEventStart={handleEventStartChange}
                 eventEnd={eventEnd}
                 setEventEnd={setEventEnd}
                 handleSaveDetails={handleSaveDetails}
                 savingDetails={savingDetails}
-                isDemoDayMode={isDemoDayMode}
+                eventMode={eventMode}
                 handleModeChange={handleModeChange}
                 canEditJudgeSettings={canEditJudgeSettings}
                 scoringLocked={scoringLocked}
@@ -2312,12 +2888,6 @@ export function EventManagementModal({
                 setCategoriesEdit={setCategoriesEdit}
                 handleSaveJudgeSettings={handleSaveJudgeSettings}
                 savingJudgeSettings={savingJudgeSettings}
-                handleSavePrizes={handleSavePrizes}
-                savingPrizes={savingPrizes}
-                prizesEdit={prizesEdit}
-                setPrizesEdit={setPrizesEdit}
-                categoriesForPrizeEditor={categoriesForPrizeEditor}
-                tracksForPrizeEditor={tracksForPrizeEditor}
                 tracksEdit={tracksEdit}
                 setTracksEdit={setTracksEdit}
                 appreciationBudget={appreciationBudget}
@@ -2326,17 +2896,26 @@ export function EventManagementModal({
                 savingAppreciationSettings={savingAppreciationSettings}
                 StyledCheckbox={StyledCheckbox}
                 StyledNumberInput={StyledNumberInput}
-                PrizeCatalogEditor={PrizeCatalogEditor}
                 TrophyIcon={TrophyIcon}
+                codeAndTellMaxBallotsInput={codeAndTellMaxBallotsInput}
+                setCodeAndTellMaxBallotsInput={setCodeAndTellMaxBallotsInput}
+                codeAndTellRankedVoteRowCount={
+                  codeAndTellSummary?.rankedVoteRowCount
+                }
               />
             )}
 
             {activeTab === "teams" && (
               <TeamsTab
                 teamCount={event.teams.length}
+                entityLabel={entityLabel}
                 isPageLayout={isPageLayout}
                 showAddTeam={showAddTeam}
                 onOpenCreateTeam={() => {
+                  setEditingTeam(null);
+                  setShowAddTeam(true);
+                }}
+                onOpenBulkImport={() => {
                   setEditingTeam(null);
                   setShowAddTeam(true);
                 }}
@@ -2362,9 +2941,9 @@ export function EventManagementModal({
               />
             )}
 
-            {activeTab === "prizes" && (
+            {activeTab === "prizes" && !isCodeAndTellMode && (
               <PrizesTab
-                isDemoDayMode={isDemoDayMode}
+                eventMode={eventMode}
                 savingPrizes={savingPrizes}
                 handleSavePrizes={handleSavePrizes}
                 prizesEdit={prizesEdit}
@@ -2378,7 +2957,7 @@ export function EventManagementModal({
 
             {activeTab === "scores" && (
               <ScoresTab
-                isDemoDayMode={isDemoDayMode}
+                eventMode={eventMode}
                 eventStatus={event.status as "upcoming" | "active" | "past"}
                 resultsReleased={event.resultsReleased}
                 eventScores={eventScores || undefined}
@@ -2387,7 +2966,9 @@ export function EventManagementModal({
                 hasConfiguredPrizes={hasConfiguredPrizes}
                 prizeDeliberationReady={!!prizeDeliberationData}
                 onFinishEvent={() => void handleStatusChange("past")}
-                onToggleScoringLock={() => void handleSetScoringLock(!scoringLocked)}
+                onToggleScoringLock={() =>
+                  void handleSetScoringLock(!scoringLocked)
+                }
                 onOpenWinners={() => updateScoresView("winners")}
                 onReleaseResults={handleReleaseResults}
                 isPageLayout={isPageLayout}
@@ -2407,6 +2988,24 @@ export function EventManagementModal({
                       <div className="card-static p-6 bg-card text-muted-foreground">
                         Add teams first, then select winners.
                       </div>
+                    )
+                  ) : isCodeAndTellMode ? (
+                    codeAndTellSummary === undefined ? (
+                      <LoadingState label="Preparing ranked-vote summary..." />
+                    ) : (
+                      <CodeAndTellWinnerPanel
+                        eventId={eventId}
+                        standings={codeAndTellSummary?.standings || []}
+                        defaultWinnerId={codeAndTellSummary?.defaultWinnerId}
+                        selectedWinnerId={codeAndTellSummary?.selectedWinnerId}
+                        totalBallots={codeAndTellSummary?.totalBallots || 0}
+                        onClose={() => updateScoresView("overview")}
+                        onSubmit={async ({ eventId, winnerTeamId }) => {
+                          await setCodeAndTellWinner({ eventId, winnerTeamId });
+                          updateScoresView("overview");
+                          updateTab("winners");
+                        }}
+                      />
                     )
                   ) : prizeWinners === undefined ||
                     detailedScores === undefined ||
@@ -2432,6 +3031,7 @@ export function EventManagementModal({
                 onDownloadQrCodes={() => void handleDownloadQrCodes()}
                 isGeneratingQr={isGeneratingQr}
                 detailedScores={detailedScores}
+                codeAndTellSummary={codeAndTellSummary}
                 viewMode={viewMode}
                 setViewMode={setViewMode}
                 ScoringDashboard={ScoringDashboard}
@@ -2442,9 +3042,20 @@ export function EventManagementModal({
             )}
             {activeTab === "winners" && (
               <WinnersSummaryTab
+                eventMode={eventMode}
                 eventPrizes={eventPrizes || []}
                 eventTeams={event?.teams || []}
                 prizeWinners={prizeWinners || []}
+                overallWinnerId={
+                  event.overallWinner ? String(event.overallWinner) : null
+                }
+                categoryWinners={
+                  event.categoryWinners?.map((winner: any) => ({
+                    category: winner.category,
+                    teamId: String(winner.teamId),
+                  })) || []
+                }
+                codeAndTellSummary={codeAndTellSummary}
               />
             )}
           </div>
@@ -2454,7 +3065,9 @@ export function EventManagementModal({
   );
 }
 
-type PrizeWinnerWizardPanelProps = ComponentProps<typeof PrizeWinnerWizardPanel>;
+type PrizeWinnerWizardPanelProps = ComponentProps<
+  typeof PrizeWinnerWizardPanel
+>;
 
 export function PrizeWinnersWizardModal({
   layout: _layout,
@@ -2465,7 +3078,9 @@ export function PrizeWinnersWizardModal({
   return <PrizeWinnerWizardPanel {...props} />;
 }
 
-type WorkspaceScoringDashboardProps = ComponentProps<typeof WorkspaceScoringDashboard>;
+type WorkspaceScoringDashboardProps = ComponentProps<
+  typeof WorkspaceScoringDashboard
+>;
 
 export function ScoringDashboard(props: WorkspaceScoringDashboardProps) {
   return <WorkspaceScoringDashboard {...props} />;

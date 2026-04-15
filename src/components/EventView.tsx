@@ -6,7 +6,9 @@ import { ScoringWizard } from "./ScoringWizard";
 import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
 import { MedalIcon, TrophyIcon } from "./ui/AppIcons";
+import { CodeAndTellVoteView } from "./code-and-tell/CodeAndTellVoteView";
 import { DemoDayBrowse } from "./demo-day";
+import { getEventMode } from "../lib/eventModes";
 import { formatDateTime } from "../lib/utils";
 import { toast } from "sonner";
 
@@ -230,9 +232,17 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     );
   }
 
+  const eventMode = getEventMode(event.mode);
+
   // Demo Day Mode - render the browse experience (no judge auth required)
-  if (event.mode === "demo_day") {
+  if (eventMode === "demo_day") {
     return <DemoDayBrowse eventId={eventId} event={event} onBack={onBack} />;
+  }
+
+  if (eventMode === "code_and_tell") {
+    return (
+      <CodeAndTellVoteView eventId={eventId} event={event} onBack={onBack} />
+    );
   }
 
   // Hackathon Mode - requires judge authentication

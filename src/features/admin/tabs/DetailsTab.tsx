@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
 
+import { DateTimePicker } from "../../../components/ui/DateTimePicker";
+import {
+  getEventDisplayLabel,
+  getEventMode,
+} from "../../../lib/eventModes";
+
 type CategoryDraft = {
   name: string;
   weight: number;
@@ -18,7 +24,7 @@ export function DetailsTab({
   setEventEnd,
   handleSaveDetails,
   savingDetails,
-  isDemoDayMode,
+  eventMode,
   handleModeChange,
   canEditJudgeSettings,
   scoringLocked,
@@ -32,12 +38,6 @@ export function DetailsTab({
   setCategoriesEdit,
   handleSaveJudgeSettings,
   savingJudgeSettings,
-  handleSavePrizes,
-  savingPrizes,
-  prizesEdit,
-  setPrizesEdit,
-  categoriesForPrizeEditor,
-  tracksForPrizeEditor,
   tracksEdit,
   setTracksEdit,
   appreciationBudget,
@@ -46,8 +46,10 @@ export function DetailsTab({
   savingAppreciationSettings,
   StyledCheckbox,
   StyledNumberInput,
-  PrizeCatalogEditor,
   TrophyIcon,
+  codeAndTellMaxBallotsInput,
+  setCodeAndTellMaxBallotsInput,
+  codeAndTellRankedVoteRowCount,
 }: {
   derivedStatus: "active" | "upcoming" | "past";
   eventName: string;
@@ -60,8 +62,8 @@ export function DetailsTab({
   setEventEnd: (value: string) => void;
   handleSaveDetails: () => void;
   savingDetails: boolean;
-  isDemoDayMode: boolean;
-  handleModeChange: (mode: "hackathon" | "demo_day") => void;
+  eventMode?: "hackathon" | "demo_day" | "code_and_tell";
+  handleModeChange: (mode: "hackathon" | "demo_day" | "code_and_tell") => void;
   canEditJudgeSettings: boolean;
   scoringLocked: boolean;
   scoringLockedLabel: string | null;
@@ -74,12 +76,6 @@ export function DetailsTab({
   setCategoriesEdit: (value: CategoryDraft[]) => void;
   handleSaveJudgeSettings: () => void;
   savingJudgeSettings: boolean;
-  handleSavePrizes: () => void;
-  savingPrizes: boolean;
-  prizesEdit: any[];
-  setPrizesEdit: (value: any[]) => void;
-  categoriesForPrizeEditor: string[];
-  tracksForPrizeEditor: string[];
   tracksEdit: string;
   setTracksEdit: (value: string) => void;
   appreciationBudget: number;
@@ -88,9 +84,16 @@ export function DetailsTab({
   savingAppreciationSettings: boolean;
   StyledCheckbox: (props: any) => ReactNode;
   StyledNumberInput: (props: any) => ReactNode;
-  PrizeCatalogEditor: (props: any) => ReactNode;
   TrophyIcon: (props: any) => ReactNode;
+  codeAndTellMaxBallotsInput?: string;
+  setCodeAndTellMaxBallotsInput?: (value: string) => void;
+  codeAndTellRankedVoteRowCount?: number;
 }) {
+  const mode = getEventMode(eventMode);
+  const isHackathon = mode === "hackathon";
+  const isDemoDay = mode === "demo_day";
+  const isCodeAndTell = mode === "code_and_tell";
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(22rem,28rem)_1fr] xl:grid-cols-[minmax(24rem,32rem)_1fr] gap-6 items-start w-full">
       <div className="space-y-6 min-w-0">
@@ -129,7 +132,7 @@ export function DetailsTab({
                 value={eventName}
                 onChange={(e) => setEventName(e.target.value)}
                 className="input"
-                placeholder="Demo Day Fall 2025"
+                placeholder="Code & Tell Spring 2026"
               />
             </div>
             <div className="space-y-2">
@@ -148,25 +151,25 @@ export function DetailsTab({
               <label className="text-sm font-medium text-foreground">
                 Start Date &amp; Time <span className="text-red-500">*</span>
               </label>
-              <input
-                type="datetime-local"
+              <DateTimePicker
+                label="Start date and time"
                 value={eventStart}
-                onChange={(e) => setEventStart(e.target.value)}
-                className="input"
+                onChange={setEventStart}
+                placeholder="Select a start date"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
                 End Date &amp; Time <span className="text-red-500">*</span>
               </label>
-              <input
-                type="datetime-local"
+              <DateTimePicker
+                label="End date and time"
                 value={eventEnd}
-                onChange={(e) => setEventEnd(e.target.value)}
-                className="input"
+                onChange={setEventEnd}
+                placeholder="Select an end date"
               />
             </div>
-            {!isDemoDayMode && (
+            {isHackathon && (
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-medium text-foreground">
                   Event Tracks <span className="text-muted-foreground text-xs">(comma-separated)</span>
@@ -183,6 +186,45 @@ export function DetailsTab({
                 </p>
               </div>
             )}
+            {isCodeAndTell &&
+              codeAndTellMaxBallotsInput !== undefined &&
+              setCodeAndTellMaxBallotsInput && (
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Max ballot records (new voters)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={codeAndTellMaxBallotsInput}
+                    onChange={(e) =>
+                      setCodeAndTellMaxBallotsInput(
+                        e.target.value.replace(/\D/g, ""),
+                      )
+                    }
+                    className="input max-w-xs"
+                    placeholder="No limit"
+                    disabled={derivedStatus === "past"}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Optional cap on how many distinct voters can save a ballot
+                    (one row per voter). Leave empty for unlimited. Existing voters
+                    can still update their ballot after the cap is reached.{" "}
+                    {typeof codeAndTellRankedVoteRowCount === "number" ? (
+                      <>
+                        Current records:{" "}
+                        <span className="font-medium text-foreground">
+                          {codeAndTellRankedVoteRowCount}
+                        </span>
+                        .
+                      </>
+                    ) : null}{" "}
+                    {derivedStatus === "past"
+                      ? "Cap cannot be changed after the event has ended."
+                      : "You can change this while the event is upcoming or active."}
+                  </p>
+                </div>
+              )}
           </div>
 
           <div className="flex justify-end">
@@ -213,7 +255,7 @@ export function DetailsTab({
           <div className="flex gap-3 flex-wrap">
             <button
               onClick={() => handleModeChange("hackathon")}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${!isDemoDayMode
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${isHackathon
                 ? "bg-primary text-white shadow-md"
                 : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
@@ -223,24 +265,35 @@ export function DetailsTab({
             </button>
             <button
               onClick={() => handleModeChange("demo_day")}
-              className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${isDemoDayMode
+              className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${isDemoDay
                 ? "bg-pink-500 text-white shadow-md"
                 : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
             >
               ❤️ Demo Day
             </button>
+            <button
+              onClick={() => handleModeChange("code_and_tell")}
+              className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${isCodeAndTell
+                ? "bg-amber-500 text-white shadow-md"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+            >
+              Code &amp; Tell
+            </button>
           </div>
           <p className="text-xs text-muted-foreground mt-3">
-            {isDemoDayMode
-              ? "Public appreciation voting - attendees can give hearts to projects without signing in"
-              : "Traditional judging with scores and categories - requires judge registration"}
+            {mode === "hackathon"
+              ? "Traditional judging with scores, tracks, prizes, and judge registration."
+              : mode === "demo_day"
+                ? "Public appreciation voting with hearts, optimized for walk-up browsing."
+                : "Admin-managed projects with signed-in ranked ballots and one final winner."}
           </p>
         </div>
       </div>
 
       <div className="space-y-6 min-w-0">
-        {!isDemoDayMode && (
+        {isHackathon && (
           <div className="card-static p-6 bg-card space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
@@ -256,7 +309,7 @@ export function DetailsTab({
               )}
             </div>
 
-            {!isDemoDayMode && scoringLocked && scoringLockedLabel && (
+            {scoringLocked && scoringLockedLabel && (
               <p className="text-xs text-amber-700 dark:text-amber-300">Scores locked at {scoringLockedLabel}</p>
             )}
 
@@ -387,15 +440,15 @@ export function DetailsTab({
           </div>
         )}
 
-        {!isDemoDayMode && (
+        {isHackathon && (
           <div className="card-static p-6 bg-card space-y-4">
             <p className="text-sm text-muted-foreground">
-              Configure prizes in the Prizes tab.
+              Prize configuration lives in the Prizes tab once the event is saved.
             </p>
           </div>
         )}
 
-        {isDemoDayMode && (
+        {isDemoDay && (
           <div className="card-static p-6 bg-card space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
@@ -441,6 +494,26 @@ export function DetailsTab({
                   "Save Appreciation Settings"
                 )}
               </button>
+            </div>
+          </div>
+        )}
+
+        {isCodeAndTell && (
+          <div className="card-static p-6 bg-card space-y-4">
+            <div>
+              <h3 className="text-lg font-heading font-semibold text-foreground">
+                {getEventDisplayLabel(mode)} Voting
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Projects are managed by admins. Signed-in users submit one ranked
+                top-5 ballot, and any project linked to their email is excluded
+                from their ranking options.
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground space-y-2">
+              <p>Ballots stay editable while the event is active.</p>
+              <p>Admins pick the final winner after the event ends, using Borda standings as the default.</p>
+              <p>Tracks, cohorts, prizes, and appreciation settings are not used in this mode.</p>
             </div>
           </div>
         )}

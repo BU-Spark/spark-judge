@@ -6,9 +6,10 @@ import { ErrorState } from "../../../components/ui/ErrorState";
 import { CalendarIcon } from "../../../components/ui/AppIcons";
 import { LoadingState } from "../../../components/ui/LoadingState";
 import { formatDateTime } from "../../../lib/utils";
+import { getEventDisplayLabel } from "../../../lib/eventModes";
 import { useState } from "react";
 
-type SortField = "name" | "status" | "teamCount" | "startDate";
+type SortField = "name" | "status" | "type" | "teamCount" | "startDate";
 type SortDirection = "asc" | "desc";
 type SortConfig = { field: SortField; direction: SortDirection };
 
@@ -29,6 +30,9 @@ function compareEvents(a: any, b: any, sortConfig: SortConfig) {
       comparison =
         STATUS_SORT_ORDER[a.status as "active" | "upcoming" | "past"] -
         STATUS_SORT_ORDER[b.status as "active" | "upcoming" | "past"];
+      break;
+    case "type":
+      comparison = getEventDisplayLabel(a.mode).localeCompare(getEventDisplayLabel(b.mode));
       break;
     case "teamCount":
       comparison = (a.teamCount ?? 0) - (b.teamCount ?? 0);
@@ -196,6 +200,9 @@ export function EventsList({
                 <SortButton field="status" label="Status" sortConfig={sortConfig} onSort={setSortConfig} />
               </th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <SortButton field="type" label="Event Type" sortConfig={sortConfig} onSort={setSortConfig} />
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 <SortButton field="teamCount" label="Teams" sortConfig={sortConfig} onSort={setSortConfig} />
               </th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -221,6 +228,11 @@ export function EventsList({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`badge ${statusStyles[event.status as "upcoming" | "active" | "past"]}`}>
                     {event.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm text-muted-foreground">
+                    {getEventDisplayLabel(event.mode)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

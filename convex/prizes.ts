@@ -3,6 +3,7 @@ import { mutation, query, MutationCtx, QueryCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { computeEventStatus, isAdmin, requireAdmin } from "./helpers";
 import { Doc, Id } from "./_generated/dataModel";
+import { isHackathonMode } from "./eventModes";
 
 const PRIZE_TYPE = v.union(
   v.literal("general"),
@@ -36,7 +37,7 @@ async function getHackathonEvent(
 ): Promise<Doc<"events">> {
   const event = await ctx.db.get(eventId);
   if (!event) throw new Error("Event not found");
-  if (event.mode === "demo_day") {
+  if (!isHackathonMode(event.mode)) {
     throw new Error("Prize workflows are only supported for hackathon events");
   }
   return event;
@@ -114,7 +115,7 @@ export const listEventPrizes = query({
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
-    if (!event || event.mode === "demo_day") return [];
+    if (!event || !isHackathonMode(event.mode)) return [];
 
     const prizes = await ctx.db
       .query("prizes")
@@ -221,7 +222,7 @@ export const getMyTeamPrizeSubmissions = query({
     if (!userId) return [];
 
     const event = await ctx.db.get(args.eventId);
-    if (!event || event.mode === "demo_day") return [];
+    if (!event || !isHackathonMode(event.mode)) return [];
 
     const team = await ctx.db
       .query("teams")
@@ -389,7 +390,7 @@ export const getPrizeDeliberationData = query({
     if (!userIsAdmin) return null;
 
     const event = await ctx.db.get(args.eventId);
-    if (!event || event.mode === "demo_day") return null;
+    if (!event || !isHackathonMode(event.mode)) return null;
 
     const [prizes, teams, submissions, scores] = await Promise.all([
       ctx.db
@@ -555,7 +556,7 @@ export const listPrizeWinners = query({
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
-    if (!event || event.mode === "demo_day") return [];
+    if (!event || !isHackathonMode(event.mode)) return [];
 
     const [winners, prizes, teams] = await Promise.all([
       ctx.db

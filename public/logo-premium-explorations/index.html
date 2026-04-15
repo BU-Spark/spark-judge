@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HackJudge Premium Brand Explorations</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+      :root {
+        color-scheme: light;
+        --bg: #eef1ee;
+        --panel: rgba(255, 255, 255, 0.74);
+        --panel-border: rgba(22, 35, 34, 0.08);
+        --text: #10211f;
+        --muted: #5f6e69;
+        --accent: #0f766e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 32%),
+          radial-gradient(circle at bottom right, rgba(180, 146, 71, 0.12), transparent 28%),
+          linear-gradient(180deg, #f7f8f6 0%, #e8ece8 100%);
+        color: var(--text);
+        font-family: "Inter", system-ui, sans-serif;
+      }
+
+      main {
+        max-width: 1360px;
+        margin: 0 auto;
+        padding: 40px 24px 64px;
+      }
+
+      .header {
+        margin-bottom: 28px;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        line-height: 0.95;
+        letter-spacing: -0.06em;
+      }
+
+      .subhead {
+        max-width: 760px;
+        margin: 14px 0 0;
+        font-size: 18px;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+
+      .card {
+        backdrop-filter: blur(18px);
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 24px;
+        padding: 18px;
+        box-shadow: 0 24px 60px rgba(16, 33, 31, 0.08);
+      }
+
+      .card h2 {
+        margin: 0 0 8px;
+        font-size: 20px;
+        letter-spacing: -0.04em;
+      }
+
+      .card p {
+        margin: 0 0 12px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 18px;
+        border: 1px solid rgba(16, 33, 31, 0.08);
+        background: white;
+      }
+
+      .link-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      a {
+        color: var(--text);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 10px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(16, 33, 31, 0.08);
+      }
+
+      a:hover {
+        border-color: rgba(15, 118, 110, 0.28);
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="header">
+        <p class="eyebrow">HackJudge Brand Lab</p>
+        <h1>Premium Logo And Font Explorations</h1>
+        <p class="subhead">
+          Four subagent-generated directions built from the same score-grid foundation, each pushing the brand toward a different tone: editorial, product, event-grade, and technical.
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>Bodoni Moda + Inter</h2>
+          <p>Editorial luxury. The most ceremonial and institution-like direction.</p>
+          <img src="./hackjudge-premium-bodoni.svg" alt="HackJudge editorial premium concept using Bodoni Moda" />
+          <div class="link-row">
+            <a href="./hackjudge-premium-bodoni.svg">Open SVG</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Manrope + Inter</h2>
+          <p>Premium product systems. The most balanced and easiest to fit into the current app.</p>
+          <img src="./hackjudge-premium-manrope.svg" alt="HackJudge premium product concept using Manrope" />
+          <div class="link-row">
+            <a href="./hackjudge-premium-manrope.svg">Open SVG</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Sora + Inter</h2>
+          <p>Event-grade authority. Stronger competition and review-panel energy.</p>
+          <img src="./hackjudge-premium-sora.svg" alt="HackJudge event-grade premium concept using Sora" />
+          <div class="link-row">
+            <a href="./hackjudge-premium-sora.svg">Open SVG</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Space Grotesk + Inter</h2>
+          <p>Technical and authored. The most devtools-native while still feeling premium.</p>
+          <img src="./hackjudge-premium-spacegrotesk.svg" alt="HackJudge technical premium concept using Space Grotesk" />
+          <div class="link-row">
+            <a href="./hackjudge-premium-spacegrotesk.svg">Open SVG</a>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

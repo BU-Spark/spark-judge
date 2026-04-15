@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { isHackathonMode } from "./eventModes";
 
 export const addTeamToAssignment = mutation({
   args: {
@@ -30,7 +31,10 @@ export const addTeamToAssignment = mutation({
     if (!event) {
       throw new Error("Event not found");
     }
-    if (event.mode !== "demo_day" && event.scoringLockedAt) {
+    if (!isHackathonMode(event.mode)) {
+      throw new Error("Judge assignments are only available for hackathon events");
+    }
+    if (event.scoringLockedAt) {
       throw new Error("Scoring is locked for this event");
     }
 
@@ -78,7 +82,10 @@ export const addMultipleTeamsToAssignment = mutation({
     if (!event) {
       throw new Error("Event not found");
     }
-    if (event.mode !== "demo_day" && event.scoringLockedAt) {
+    if (!isHackathonMode(event.mode)) {
+      throw new Error("Judge assignments are only available for hackathon events");
+    }
+    if (event.scoringLockedAt) {
       throw new Error("Scoring is locked for this event");
     }
 
@@ -142,7 +149,10 @@ export const removeTeamFromAssignment = mutation({
     if (!event) {
       throw new Error("Event not found");
     }
-    if (event.mode !== "demo_day" && event.scoringLockedAt) {
+    if (!isHackathonMode(event.mode)) {
+      throw new Error("Judge assignments are only available for hackathon events");
+    }
+    if (event.scoringLockedAt) {
       throw new Error("Scoring is locked for this event");
     }
 
@@ -178,6 +188,9 @@ export const getMyAssignments = query({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event || !isHackathonMode(event.mode)) return [];
 
     const judge = await ctx.db
       .query("judges")

@@ -2,10 +2,63 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { requireAdmin, computeEventStatus } from "./helpers";
+import {
+  getEventMode,
+  isCodeAndTellMode,
+  isDemoDayMode,
+  isHackathonMode,
+} from "./eventModes";
 
 function normalizeOptionalString(value?: string) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function normalizeEntrantEmails(values?: string[]) {
+  if (!values) return undefined;
+  const deduped = Array.from(
+    new Set(
+      values
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
+  return deduped.length > 0 ? deduped : undefined;
+}
+
+function validateEntrantEmails(values?: string[]) {
+  const entrantEmails = normalizeEntrantEmails(values);
+  if (!entrantEmails) return undefined;
+
+  for (const email of entrantEmails) {
+    if (!EMAIL_PATTERN.test(email)) {
+      throw new Error(`Invalid entrant email: ${email}`);
+    }
+  }
+
+  return entrantEmails;
+}
+
+function validateProjectUrl(projectUrl: string | undefined, requireGithub: boolean) {
+  const normalized = normalizeOptionalString(projectUrl);
+  if (!normalized) return undefined;
+  if (!normalized.startsWith("https://")) {
+    throw new Error("Project URL must start with https://");
+  }
+  if (requireGithub && !normalized.startsWith("https://github.com/")) {
+    throw new Error("Project URL must start with https://github.com/");
+  }
+  return normalized;
+}
+
+function buildProjectUrlFields(projectUrl: string | undefined) {
+  const normalized = normalizeOptionalString(projectUrl) || "";
+  return {
+    projectUrl: normalized,
+    githubUrl: normalized.startsWith("https://github.com/") ? normalized : "",
+  };
 }
 
 export const createTeam = mutation({
@@ -18,6 +71,7 @@ export const createTeam = mutation({
     devpostUrl: v.optional(v.string()),
     track: v.optional(v.string()),
     courseCode: v.optional(v.string()),
+    entrantEmails: v.optional(v.array(v.string())),
     logoStorageId: v.optional(v.id("_storage")),
   },
   returns: v.id("teams"),
@@ -28,16 +82,17 @@ export const createTeam = mutation({
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
 
-    const isDemoDay = event.mode === "demo_day";
+    const mode = getEventMode(event.mode);
+    const entrantEmails = validateEntrantEmails(args.entrantEmails);
 
     // Validate mode-specific fields.
-    if (isDemoDay && args.courseCode) {
+    if (isDemoDayMode(mode) && args.courseCode) {
       if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
         throw new Error("Invalid course code");
       }
     }
 
-    if (!isDemoDay) {
+    if (isHackathonMode(mode)) {
       if (!args.track) {
         throw new Error("Track is required");
       }
@@ -49,16 +104,23 @@ export const createTeam = mutation({
       }
     }
 
+    if (isCodeAndTellMode(mode) && (!entrantEmails || entrantEmails.length === 0)) {
+      throw new Error("At least one entrant email is required");
+    }
+
+    const projectUrl = validateProjectUrl(args.projectUrl, isHackathonMode(mode));
+
     // Admin team creation - need to provide required new fields with defaults
     return await ctx.db.insert("teams", {
       eventId: args.eventId,
       name: args.name,
       description: args.description,
       members: args.members,
-      githubUrl: args.projectUrl || "",
+      ...buildProjectUrlFields(projectUrl),
       devpostUrl: args.devpostUrl || "",
-      track: isDemoDay ? "" : args.track || "",
-      courseCode: args.courseCode,
+      track: isHackathonMode(mode) ? args.track || "" : "",
+      courseCode: isDemoDayMode(mode) ? args.courseCode : undefined,
+      entrantEmails,
       logoStorageId: args.logoStorageId,
       submittedBy: userId,
       submittedAt: Date.now(),
@@ -76,6 +138,7 @@ export const updateTeamAdmin = mutation({
     devpostUrl: v.optional(v.string()),
     track: v.optional(v.string()),
     courseCode: v.optional(v.string()),
+    entrantEmails: v.optional(v.array(v.string())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -87,16 +150,17 @@ export const updateTeamAdmin = mutation({
     const event = await ctx.db.get(team.eventId);
     if (!event) throw new Error("Event not found");
 
-    const isDemoDay = event.mode === "demo_day";
+    const mode = getEventMode(event.mode);
+    const entrantEmails = validateEntrantEmails(args.entrantEmails);
 
     // Validate mode-specific fields.
-    if (isDemoDay && args.courseCode) {
+    if (isDemoDayMode(mode) && args.courseCode) {
       if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
         throw new Error("Invalid course code");
       }
     }
 
-    if (!isDemoDay) {
+    if (isHackathonMode(mode)) {
       if (!args.track) {
         throw new Error("Track is required");
       }
@@ -108,12 +172,11 @@ export const updateTeamAdmin = mutation({
       }
     }
 
-    // Basic GitHub URL validation for hackathon projects
-    if (!isDemoDay && args.projectUrl) {
-      if (!args.projectUrl.startsWith("https://github.com/")) {
-        throw new Error("Project URL must start with https://github.com/");
-      }
+    if (isCodeAndTellMode(mode) && (!entrantEmails || entrantEmails.length === 0)) {
+      throw new Error("At least one entrant email is required");
     }
+
+    const projectUrl = validateProjectUrl(args.projectUrl, isHackathonMode(mode));
 
     if (args.devpostUrl && !args.devpostUrl.startsWith("https://")) {
       throw new Error("Devpost URL must start with https://");
@@ -123,11 +186,16 @@ export const updateTeamAdmin = mutation({
       name: args.name,
       description: args.description,
       members: args.members,
-      githubUrl: args.projectUrl || "",
+      ...buildProjectUrlFields(projectUrl),
       ...(args.devpostUrl !== undefined
         ? { devpostUrl: args.devpostUrl || "" }
         : {}),
-      ...(isDemoDay ? { courseCode: args.courseCode } : { track: args.track || "" }),
+      ...(isDemoDayMode(mode)
+        ? { courseCode: args.courseCode, track: "" }
+        : isHackathonMode(mode)
+          ? { track: args.track || "", courseCode: undefined }
+          : { track: "", courseCode: undefined }),
+      entrantEmails,
     });
 
     return null;
@@ -154,13 +222,16 @@ export const submitTeam = mutation({
     // Verify event is active (computed from dates)
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
+    if (isCodeAndTellMode(event.mode)) {
+      throw new Error("Project submission is admin-only for Code & Tell events");
+    }
 
     const status = computeEventStatus(event);
     if (status !== "active") {
       throw new Error("Can only submit teams to active events");
     }
 
-    const isDemoDay = event.mode === "demo_day";
+    const isDemoDay = isDemoDayMode(event.mode);
 
     // Verify not a judge
     const judge = await ctx.db
@@ -265,7 +336,7 @@ export const submitTeam = mutation({
       name: args.name,
       description: args.description,
       members: args.members,
-      githubUrl: args.githubUrl || "",
+      ...buildProjectUrlFields(args.githubUrl),
       devpostUrl: args.devpostUrl || "",
       track: args.track || "",
       courseCode: args.courseCode,
@@ -327,8 +398,11 @@ export const updateTeam = mutation({
 
     const event = await ctx.db.get(team.eventId);
     if (!event) throw new Error("Event not found");
+    if (isCodeAndTellMode(event.mode)) {
+      throw new Error("Entrants cannot edit Code & Tell projects");
+    }
 
-    const isDemoDay = event.mode === "demo_day";
+    const isDemoDay = isDemoDayMode(event.mode);
 
     // Validate track if provided (hackathon mode)
     if (args.track && !isDemoDay) {
@@ -348,9 +422,7 @@ export const updateTeam = mutation({
     }
 
     // Validate GitHub URL if provided
-    if (args.githubUrl && !args.githubUrl.startsWith("https://github.com/")) {
-      throw new Error("GitHub URL must start with https://github.com/");
-    }
+    const projectUrl = validateProjectUrl(args.githubUrl, !isDemoDay);
     if (args.devpostUrl && !args.devpostUrl.startsWith("https://")) {
       throw new Error("Devpost URL must start with https://");
     }
@@ -358,7 +430,9 @@ export const updateTeam = mutation({
     const updates: any = {};
     if (args.description !== undefined) updates.description = args.description;
     if (args.members !== undefined) updates.members = args.members;
-    if (args.githubUrl !== undefined) updates.githubUrl = args.githubUrl;
+    if (args.githubUrl !== undefined) {
+      Object.assign(updates, buildProjectUrlFields(projectUrl));
+    }
     if (args.devpostUrl !== undefined) updates.devpostUrl = args.devpostUrl;
     if (args.track !== undefined) updates.track = args.track;
     if (args.courseCode !== undefined) updates.courseCode = args.courseCode;
@@ -438,8 +512,38 @@ export const removeTeam = mutation({
       await ctx.db.delete(score._id);
     }
 
+    const rankedVotes = await ctx.db
+      .query("rankedVotes")
+      .withIndex("by_event", (q) => q.eq("eventId", team.eventId))
+      .collect();
+
+    for (const vote of rankedVotes) {
+      if (!vote.rankedTeamIds.includes(args.teamId)) continue;
+
+      const nextRankedTeamIds = vote.rankedTeamIds.filter(
+        (teamId) => teamId !== args.teamId
+      );
+
+      if (nextRankedTeamIds.length === 0) {
+        await ctx.db.delete(vote._id);
+      } else {
+        await ctx.db.patch(vote._id, {
+          rankedTeamIds: nextRankedTeamIds,
+          updatedAt: Date.now(),
+        });
+      }
+    }
+
     // Delete the team
     await ctx.db.delete(args.teamId);
+
+    const event = await ctx.db.get(team.eventId);
+    if (event?.overallWinner === args.teamId) {
+      await ctx.db.patch(team.eventId, {
+        overallWinner: undefined,
+        resultsReleased: false,
+      });
+    }
     return null;
   },
 });
@@ -473,6 +577,7 @@ export const getTeamById = query({
       description: v.string(),
       members: v.array(v.string()),
       githubUrl: v.optional(v.string()),
+      projectUrl: v.optional(v.string()),
       courseCode: v.optional(v.string()),
       hidden: v.optional(v.boolean()),
       logoUrl: v.union(v.null(), v.string()),
@@ -480,7 +585,11 @@ export const getTeamById = query({
         _id: v.id("events"),
         name: v.string(),
         mode: v.optional(
-          v.union(v.literal("hackathon"), v.literal("demo_day"))
+          v.union(
+            v.literal("hackathon"),
+            v.literal("demo_day"),
+            v.literal("code_and_tell")
+          )
         ),
       }),
     })
@@ -505,6 +614,7 @@ export const getTeamById = query({
       description: team.description,
       members: team.members,
       githubUrl: team.githubUrl,
+      projectUrl: team.projectUrl,
       courseCode: team.courseCode,
       hidden: team.hidden,
       logoUrl,

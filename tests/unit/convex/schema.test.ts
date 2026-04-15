@@ -3,17 +3,22 @@ import { describe, it, expect } from "vitest";
 describe("schema validation logic", () => {
   describe("event mode values", () => {
     it("should accept 'hackathon' as valid mode", () => {
-      const validModes = ["hackathon", "demo_day"] as const;
+      const validModes = ["hackathon", "demo_day", "code_and_tell"] as const;
       expect(validModes.includes("hackathon")).toBe(true);
     });
 
     it("should accept 'demo_day' as valid mode", () => {
-      const validModes = ["hackathon", "demo_day"] as const;
+      const validModes = ["hackathon", "demo_day", "code_and_tell"] as const;
       expect(validModes.includes("demo_day")).toBe(true);
     });
 
+    it("should accept 'code_and_tell' as valid mode", () => {
+      const validModes = ["hackathon", "demo_day", "code_and_tell"] as const;
+      expect(validModes.includes("code_and_tell")).toBe(true);
+    });
+
     it("should reject invalid mode values", () => {
-      const validModes = ["hackathon", "demo_day"] as const;
+      const validModes = ["hackathon", "demo_day", "code_and_tell"] as const;
       // @ts-expect-error - testing invalid value
       expect(validModes.includes("invalid")).toBe(false);
     });
@@ -96,6 +101,20 @@ describe("schema validation logic", () => {
       expect(teamWithCourse.courseCode).toBe("DS519");
       expect((teamWithoutCourse as any).courseCode).toBeUndefined();
     });
+
+    it("should allow optional entrantEmails for Code & Tell projects", () => {
+      const teamWithEntrants = {
+        name: "Live Compiler",
+        entrantEmails: ["alpha@example.com", "beta@example.com"],
+      };
+      const teamWithoutEntrants = { name: "Legacy Team" };
+
+      expect(teamWithEntrants.entrantEmails).toEqual([
+        "alpha@example.com",
+        "beta@example.com",
+      ]);
+      expect((teamWithoutEntrants as any).entrantEmails).toBeUndefined();
+    });
   });
 
   describe("index requirements", () => {
@@ -126,6 +145,20 @@ describe("schema validation logic", () => {
         "timestamp",
       ]);
     });
+
+    it("should define ranked vote indexes for event and voter lookups", () => {
+      const rankedVoteIndexes = {
+        by_event: ["eventId"],
+        by_voter: ["voterUserId"],
+        by_event_and_voter: ["eventId", "voterUserId"],
+      };
+
+      expect(rankedVoteIndexes.by_event).toEqual(["eventId"]);
+      expect(rankedVoteIndexes.by_voter).toEqual(["voterUserId"]);
+      expect(rankedVoteIndexes.by_event_and_voter).toEqual([
+        "eventId",
+        "voterUserId",
+      ]);
+    });
   });
 });
-

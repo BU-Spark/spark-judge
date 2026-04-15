@@ -11,6 +11,7 @@ import { seedJudgeScoresHandler } from "./seeds/core/seedJudgeScores";
 import { seedCohortJudgingDemoHandler } from "./seeds/demos/cohortJudging";
 import { seedDemoDayEventHandler } from "./seeds/demos/demoDay";
 import { seedRegularJudgingDemoHandler } from "./seeds/demos/regularJudging";
+import { seedCodeAndTellDemoHandler } from "./seeds/demos/codeAndTell";
 import {
   seedPrizeJudgingFlowDemoHandler,
   seedPrizeJudgingFlowLockedDemoHandler,
@@ -140,4 +141,16 @@ export const seedPrizeJudgingFlowCohortsDemo = mutation({
     winnersCreated: v.number(),
   }),
   handler: seedPrizeJudgingFlowCohortsDemoHandler,
+});
+
+export const seedCodeAndTellDemo = mutation({
+  args: {},
+  returns: v.object({
+    message: v.string(),
+    withTeamsEventId: v.id("events"),
+    emptyEventId: v.id("events"),
+    teamsCreated: v.number(),
+    ballotsInserted: v.number(),
+  }),
+  handler: seedCodeAndTellDemoHandler,
 });

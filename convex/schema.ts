@@ -2,6 +2,12 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 
+const EVENT_MODE_VALIDATOR = v.union(
+  v.literal("hackathon"),
+  v.literal("demo_day"),
+  v.literal("code_and_tell")
+);
+
 // Extend auth tables to add isAdmin field to users
 const customAuthTables = {
   ...authTables,
@@ -46,12 +52,14 @@ const applicationTables = {
       )
     ),
     // Demo Day mode support
-    mode: v.optional(v.union(v.literal("hackathon"), v.literal("demo_day"))), // undefined = "hackathon" for backwards compatibility
+    mode: v.optional(EVENT_MODE_VALIDATOR), // undefined = "hackathon" for backwards compatibility
     courseCodes: v.optional(v.array(v.string())), // Available course codes for Demo Day mode
     // Hackathon scoring lock - when set, judges can no longer modify scores
     scoringLockedAt: v.optional(v.number()),
     scoringLockedBy: v.optional(v.id("users")),
     scoringLockReason: v.optional(v.string()),
+    // Code & Tell: optional cap on distinct ballots (rankedVotes rows); unset = unlimited
+    codeAndTellMaxBallots: v.optional(v.number()),
   }).index("by_status", ["status"]),
 
   teams: defineTable({
@@ -67,6 +75,7 @@ const applicationTables = {
     projectUrl: v.optional(v.string()),
     devpostUrl: v.optional(v.string()),
     hidden: v.optional(v.boolean()),
+    entrantEmails: v.optional(v.array(v.string())),
     // Demo Day appreciation scores (optional, can be computed from appreciations table)
     rawScore: v.optional(v.number()), // Total appreciations count
     cleanScore: v.optional(v.number()), // Cleaned/validated appreciation count
@@ -79,6 +88,17 @@ const applicationTables = {
     .index("by_event", ["eventId"])
     .index("by_submitter", ["submittedBy"])
     .index("by_event_and_submitter", ["eventId", "submittedBy"]),
+
+  rankedVotes: defineTable({
+    eventId: v.id("events"),
+    voterUserId: v.id("users"),
+    rankedTeamIds: v.array(v.id("teams")),
+    submittedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_voter", ["voterUserId"])
+    .index("by_event_and_voter", ["eventId", "voterUserId"]),
 
   participants: defineTable({
     userId: v.id("users"),

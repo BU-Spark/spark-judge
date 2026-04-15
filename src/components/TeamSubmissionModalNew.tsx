@@ -10,7 +10,7 @@ interface TeamSubmissionModalProps {
   eventId: Id<"events">;
   tracks: string[];
   courseCodes?: string[];
-  eventMode?: "hackathon" | "demo_day";
+  eventMode?: "hackathon" | "demo_day" | "code_and_tell";
   existingTeam?: any;
 }
 
@@ -34,6 +34,7 @@ export function TeamSubmissionModal({
   );
   const existingTeam = existingTeamProp || myTeam;
   const isDemoDay = eventMode === "demo_day";
+  const isCodeAndTell = eventMode === "code_and_tell";
   const [name, setName] = useState(existingTeam?.name || "");
   const [description, setDescription] = useState(existingTeam?.description || "");
   const [members, setMembers] = useState<string[]>(existingTeam?.members || [""]);
@@ -260,6 +261,33 @@ export function TeamSubmissionModal({
   };
 
   if (!isOpen) return null;
+
+  if (isCodeAndTell) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={handleClose}
+        />
+        <div className="relative bg-background rounded-2xl p-8 max-w-lg w-full shadow-2xl slide-up border border-border my-8">
+          <button
+            onClick={handleClose}
+            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <h2 className="text-2xl font-heading font-bold mb-4 text-foreground">
+            Code &amp; Tell Projects
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Code &amp; Tell projects are managed by admins from the event workspace. Participant self-submission is disabled for this mode.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">

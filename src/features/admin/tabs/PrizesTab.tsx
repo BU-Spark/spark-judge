@@ -1,7 +1,8 @@
+import { getEventMode } from "../../../lib/eventModes";
 import type { ReactNode } from "react";
 
 export function PrizesTab({
-    isDemoDayMode,
+    eventMode,
     savingPrizes,
     handleSavePrizes,
     prizesEdit,
@@ -11,7 +12,7 @@ export function PrizesTab({
     scoringLocked,
     PrizeCatalogEditor,
 }: {
-    isDemoDayMode: boolean;
+    eventMode?: "hackathon" | "demo_day" | "code_and_tell";
     savingPrizes: boolean;
     handleSavePrizes: () => void;
     prizesEdit: any[];
@@ -21,12 +22,16 @@ export function PrizesTab({
     scoringLocked: boolean;
     PrizeCatalogEditor: (props: any) => ReactNode;
 }) {
-    if (isDemoDayMode) {
+    const mode = getEventMode(eventMode);
+
+    if (mode !== "hackathon") {
         return (
             <div className="card-static p-6 bg-card space-y-4">
                 <h3 className="text-lg font-heading font-semibold text-foreground">Prize Catalog</h3>
                 <p className="text-sm text-muted-foreground">
-                    Demo Day events use public appreciations instead of judged prizes.
+                    {mode === "demo_day"
+                      ? "Demo Day events use public appreciations instead of judged prizes."
+                      : "Code & Tell events use one ranked-vote winner and do not use prizes."}
                 </p>
             </div>
         );

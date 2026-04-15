@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { isAdmin, requireAdmin } from "./helpers";
+import { isDemoDayMode, isHackathonMode } from "./eventModes";
 
 function computeTotalScore(
   categoryScores: Array<{
@@ -70,7 +71,10 @@ export const submitScore = mutation({
     // Fetch event to get category weights
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
-    if (event.mode !== "demo_day" && event.scoringLockedAt) {
+    if (!isHackathonMode(event.mode)) {
+      throw new Error("Scoring is only available for hackathon events");
+    }
+    if (event.scoringLockedAt) {
       throw new Error("Scoring is locked for this event");
     }
 
@@ -152,7 +156,10 @@ export const submitBatchScores = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
-    if (event.mode !== "demo_day" && event.scoringLockedAt) {
+    if (!isHackathonMode(event.mode)) {
+      throw new Error("Scoring is only available for hackathon events");
+    }
+    if (event.scoringLockedAt) {
       throw new Error("Scoring is locked for this event");
     }
 
@@ -219,6 +226,9 @@ export const getMyScores = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
 
+    const event = await ctx.db.get(args.eventId);
+    if (!event || !isHackathonMode(event.mode)) return [];
+
     const judge = await ctx.db
       .query("judges")
       .withIndex("by_user_and_event", (q) =>
@@ -245,6 +255,9 @@ export const getTeamScore = query({
     const team = await ctx.db.get(args.teamId);
     if (!team) return null;
 
+    const event = await ctx.db.get(team.eventId);
+    if (!event || !isHackathonMode(event.mode)) return null;
+
     const judge = await ctx.db
       .query("judges")
       .withIndex("by_user_and_event", (q) =>
@@ -268,6 +281,9 @@ export const getEventScores = query({
   handler: async (ctx, args) => {
     const userIsAdmin = await isAdmin(ctx);
     if (!userIsAdmin) return null;
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event || !isHackathonMode(event.mode)) return null;
 
     const scores = await ctx.db
       .query("scores")
@@ -315,8 +331,8 @@ export const setWinners = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
-    if (event.mode !== "demo_day" && !event.scoringLockedAt) {
-      throw new Error("Lock scoring before selecting winners");
+    if (!isDemoDayMode(event.mode)) {
+      throw new Error("Winner selection is only available for Demo Day events");
     }
 
     const eventTeamIds = new Set(
@@ -354,8 +370,11 @@ export const releaseResults = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
-    if (event.mode !== "demo_day" && !event.scoringLockedAt) {
+    if (isHackathonMode(event.mode) && !event.scoringLockedAt) {
       throw new Error("Lock scoring before releasing results");
+    }
+    if (!isHackathonMode(event.mode) && !isDemoDayMode(event.mode)) {
+      throw new Error("Release results from the mode-specific workflow");
     }
 
     await ctx.db.patch(args.eventId, { resultsReleased: true });
@@ -379,6 +398,7 @@ export const getDetailedEventScores = query({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) return null;
+    if (!isHackathonMode(event.mode)) return null;
 
     const scores = await ctx.db
       .query("scores")

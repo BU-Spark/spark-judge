@@ -774,87 +774,17 @@ export function CodeAndTellVoteView({
                 );
 
                 return (
-                  <div
+                  <ProjectListItem
                     key={project._id}
-                    className={`card p-4 transition-colors ${
-                      project.isOwned
-                        ? "border-amber-500/20 bg-amber-500/5"
-                        : selectedIndex >= 0
-                          ? "border-teal-500/25 bg-teal-500/5"
-                          : "hover:border-amber-500/20"
-                    }`}
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-semibold text-foreground">
-                            {project.name}
-                          </h3>
-                          {project.isOwned && (
-                            <span className="badge bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                              Your project
-                            </span>
-                          )}
-                          {selectedIndex >= 0 && (
-                            <span className="badge bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
-                              Ranked #{selectedIndex + 1}
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                          {project.description || "No description"}
-                        </p>
-                        {project.members.length > 0 && (
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            {project.members.join(" • ")}
-                          </p>
-                        )}
-                        {project.projectUrl && project.projectUrl.trim() !== "" && (
-                          <a
-                            href={project.projectUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                          >
-                            View project
-                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7m0 0v7m0-7L10 14" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5v14h14" />
-                            </svg>
-                          </a>
-                        )}
-                      </div>
-
-                      <div className="flex shrink-0 items-center mt-2 sm:mt-0">
-                        {project.isOwned ? (
-                          <div className="badge bg-muted text-muted-foreground border border-border">
-                            Ineligible
-                          </div>
-                        ) : selectedIndex >= 0 ? (
-                          <button
-                            type="button"
-                            onClick={() => removeProjectFromBallot(project._id)}
-                            className="btn-ghost text-xs px-3 py-1.5"
-                          >
-                            Remove
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => addProjectToBallot(project._id)}
-                            disabled={
-                              votingClosedToNewVoters ||
-                              rankedProjectSet.has(String(project._id)) ||
-                              rankedTeamIds.length >= requiredRankCount
-                            }
-                            className="btn-secondary text-xs px-3 py-1.5"
-                          >
-                            Add to ballot
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    project={project}
+                    selectedIndex={selectedIndex}
+                    votingClosedToNewVoters={votingClosedToNewVoters}
+                    rankedProjectSet={rankedProjectSet}
+                    rankedTeamIdsLength={rankedTeamIds.length}
+                    requiredRankCount={requiredRankCount}
+                    removeProjectFromBallot={removeProjectFromBallot}
+                    addProjectToBallot={addProjectToBallot}
+                  />
                 );
               })}
             </div>
@@ -916,6 +846,131 @@ export function CodeAndTellVoteView({
           <div className="flex-1 overflow-y-auto custom-scrollbar -mx-4 px-4 pb-4">
             {renderBallot()}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProjectListItem({
+  project,
+  selectedIndex,
+  votingClosedToNewVoters,
+  rankedProjectSet,
+  rankedTeamIdsLength,
+  requiredRankCount,
+  removeProjectFromBallot,
+  addProjectToBallot,
+}: {
+  project: any;
+  selectedIndex: number;
+  votingClosedToNewVoters: boolean;
+  rankedProjectSet: Set<string>;
+  rankedTeamIdsLength: number;
+  requiredRankCount: number;
+  removeProjectFromBallot: (id: Id<"teams">) => void;
+  addProjectToBallot: (id: Id<"teams">) => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div
+      className={`card p-4 transition-colors ${
+        project.isOwned
+          ? "border-amber-500/20 bg-amber-500/5"
+          : selectedIndex >= 0
+            ? "border-teal-500/25 bg-teal-500/5"
+            : "hover:border-amber-500/20"
+      }`}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <div 
+            className="flex justify-between items-start cursor-pointer sm:cursor-auto"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            <div className="flex flex-wrap items-center gap-2 pr-4 sm:pr-0">
+              <h3 className="text-base font-semibold text-foreground">
+                {project.name}
+              </h3>
+              {project.isOwned && (
+                <span className="badge bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                  Your project
+                </span>
+              )}
+              {selectedIndex >= 0 && (
+                <span className="badge bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
+                  Ranked #{selectedIndex + 1}
+                </span>
+              )}
+            </div>
+            {/* Mobile expand icon */}
+            <button className="sm:hidden text-muted-foreground p-1 shrink-0">
+              <svg 
+                className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className={`${isExpanded ? "block" : "hidden sm:block"}`}>
+            <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+              {project.description || "No description"}
+            </p>
+            {project.members.length > 0 && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {project.members.join(" • ")}
+              </p>
+            )}
+            {project.projectUrl && project.projectUrl.trim() !== "" && (
+              <a
+                href={project.projectUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                View project
+                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7m0 0v7m0-7L10 14" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5v14h14" />
+                </svg>
+              </a>
+            )}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center mt-2 sm:mt-0">
+          {project.isOwned ? (
+            <div className="badge bg-muted text-muted-foreground border border-border">
+              Ineligible
+            </div>
+          ) : selectedIndex >= 0 ? (
+            <button
+              type="button"
+              onClick={() => removeProjectFromBallot(project._id)}
+              className="btn-ghost text-xs px-3 py-1.5"
+            >
+              Remove
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => addProjectToBallot(project._id)}
+              disabled={
+                votingClosedToNewVoters ||
+                rankedProjectSet.has(String(project._id)) ||
+                rankedTeamIdsLength >= requiredRankCount
+              }
+              className="btn-secondary text-xs px-3 py-1.5"
+            >
+              Add to ballot
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "convex/react";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, useRef } from "react";
 import { Reorder } from "framer-motion";
 import { toast } from "sonner";
 
@@ -287,11 +287,22 @@ export function CodeAndTellVoteView({
     [votingContext?.currentBallotTeamIds],
   );
 
+  const prevSignatureRef = useRef<string | null>(null);
+  const prevUserIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (votingContext) {
-      setRankedTeamIds(votingContext.currentBallotTeamIds || []);
+      const currentUserId = loggedInUser ? String(loggedInUser._id) : null;
+      if (
+        prevUserIdRef.current !== currentUserId ||
+        prevSignatureRef.current !== ballotSignature
+      ) {
+        setRankedTeamIds(votingContext.currentBallotTeamIds || []);
+        prevUserIdRef.current = currentUserId;
+        prevSignatureRef.current = ballotSignature;
+      }
     }
-  }, [ballotSignature, votingContext]);
+  }, [votingContext, ballotSignature, loggedInUser?._id]);
 
   const projectById = useMemo(() => {
     return new Map(

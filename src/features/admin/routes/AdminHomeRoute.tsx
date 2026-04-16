@@ -13,7 +13,14 @@ export function AdminHomeRoute() {
             Manage events, teams, scoring, and winner selection.
           </p>
         </div>
-        <div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void navigate("/admin/insights")}
+            className="btn-secondary"
+          >
+            View Insights
+          </button>
           <button
             type="button"
             onClick={() => void navigate("/admin/events/new")}

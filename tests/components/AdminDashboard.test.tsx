@@ -6,9 +6,11 @@ import { AdminShell } from "@/features/admin/shell/AdminShell";
 import { AdminHomeRoute } from "@/features/admin/routes/AdminHomeRoute";
 import { AdminCreateEventRoute } from "@/features/admin/routes/AdminCreateEventRoute";
 import { AdminEventRoute } from "@/features/admin/routes/AdminEventRoute";
+import { AdminInsightsRoute } from "@/features/admin/routes/AdminInsightsRoute";
 
 const mockLoggedInUser = vi.hoisted(() => ({ _name: "loggedInUser" }));
 const mockIsUserAdmin = vi.hoisted(() => ({ _name: "isUserAdmin" }));
+const mockGetAdminInsights = vi.hoisted(() => ({ _name: "getAdminInsights" }));
 
 const queryResults = vi.hoisted(() => new Map<string, unknown>());
 
@@ -31,6 +33,7 @@ vi.mock("../../convex/_generated/api", () => ({
     },
     events: {
       isUserAdmin: mockIsUserAdmin,
+      getAdminInsights: mockGetAdminInsights,
     },
   },
 }));
@@ -42,6 +45,7 @@ vi.mock("../../../../convex/_generated/api", () => ({
     },
     events: {
       isUserAdmin: mockIsUserAdmin,
+      getAdminInsights: mockGetAdminInsights,
     },
   },
 }));
@@ -61,12 +65,17 @@ vi.mock("@/features/admin/components/EventsList", () => ({
   ),
 }));
 
+vi.mock("@/features/admin/routes/AdminInsightsRoute", () => ({
+  AdminInsightsRoute: () => <div>Mock Insights Route</div>,
+}));
+
 function renderAdmin(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/admin" element={<AdminShell />}>
           <Route index element={<AdminHomeRoute />} />
+          <Route path="insights" element={<AdminInsightsRoute />} />
           <Route path="events/new" element={<AdminCreateEventRoute />} />
           <Route path="events/:eventId" element={<AdminEventRoute />} />
         </Route>
@@ -127,5 +136,16 @@ describe("Unified Admin Workspace Routing", () => {
     fireEvent.click(screen.getByText("Mock Events List"));
 
     expect(screen.getByText("Mock Event Workspace:details:overview")).toBeInTheDocument();
+  });
+
+  it("navigates to insights route from admin home", () => {
+    queryResults.set("loggedInUser", { _id: "user123" });
+    queryResults.set("isUserAdmin", true);
+
+    renderAdmin("/admin");
+
+    fireEvent.click(screen.getByText("View Insights"));
+
+    expect(screen.getByText("Mock Insights Route")).toBeInTheDocument();
   });
 });

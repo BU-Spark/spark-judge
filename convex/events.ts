@@ -721,3 +721,67 @@ export const isUserAdmin = query({
     return user?.isAdmin === true;
   },
 });
+
+export const getAdminInsights = query({
+  args: {},
+  returns: v.union(
+    v.null(),
+    v.object({
+      totalEvents: v.number(),
+      upcomingEvents: v.number(),
+      activeEvents: v.number(),
+      pastEvents: v.number(),
+      judgeRegistrations: v.number(),
+      judgesWhoSubmittedScores: v.number(),
+      totalScoreSubmissions: v.number(),
+      totalBallotsSubmitted: v.number(),
+      uniqueVoters: v.number(),
+      totalAppreciations: v.number(),
+      uniqueAppreciators: v.number(),
+    })
+  ),
+  handler: async (ctx) => {
+    const userIsAdmin = await isAdmin(ctx);
+    if (!userIsAdmin) {
+      return null;
+    }
+
+    const [events, judges, scores, rankedVotes, appreciations] = await Promise.all([
+      ctx.db.query("events").collect(),
+      ctx.db.query("judges").collect(),
+      ctx.db.query("scores").collect(),
+      ctx.db.query("rankedVotes").collect(),
+      ctx.db.query("appreciations").collect(),
+    ]);
+
+    let upcomingEvents = 0;
+    let activeEvents = 0;
+    let pastEvents = 0;
+    for (const event of events) {
+      const computedStatus = computeEventStatus(event);
+      if (computedStatus === "upcoming") upcomingEvents += 1;
+      if (computedStatus === "active") activeEvents += 1;
+      if (computedStatus === "past") pastEvents += 1;
+    }
+
+    const judgesWhoSubmittedScores = new Set(scores.map((score) => score.judgeId)).size;
+    const uniqueVoters = new Set(rankedVotes.map((vote) => vote.voterUserId)).size;
+    const uniqueAppreciators = new Set(
+      appreciations.map((appreciation) => appreciation.attendeeId)
+    ).size;
+
+    return {
+      totalEvents: events.length,
+      upcomingEvents,
+      activeEvents,
+      pastEvents,
+      judgeRegistrations: judges.length,
+      judgesWhoSubmittedScores,
+      totalScoreSubmissions: scores.length,
+      totalBallotsSubmitted: rankedVotes.length,
+      uniqueVoters,
+      totalAppreciations: appreciations.length,
+      uniqueAppreciators,
+    };
+  },
+});

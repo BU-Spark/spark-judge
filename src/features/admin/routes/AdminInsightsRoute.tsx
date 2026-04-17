@@ -1,5 +1,5 @@
 import { useQuery } from "convex/react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { api } from "../../../../convex/_generated/api";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { LoadingState } from "../../../components/ui/LoadingState";
@@ -13,9 +13,9 @@ type InsightCardProps = {
 function InsightCard({ label, value, subtitle }: InsightCardProps) {
   return (
     <article className="card-static p-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
-      </p>
+      </h2>
       <p className="mt-2 text-3xl font-heading font-bold text-foreground">
         {value.toLocaleString()}
       </p>
@@ -27,41 +27,48 @@ function InsightCard({ label, value, subtitle }: InsightCardProps) {
 }
 
 export function AdminInsightsRoute() {
-  const navigate = useNavigate();
-  const insights = useQuery(api.events.getAdminInsights);
+  const latestEvent = useQuery(api.events.getDefaultEventForInsights);
+  const insights = useQuery(
+    api.events.getAdminInsights,
+    latestEvent
+      ? {
+          eventId: latestEvent.eventId,
+          paginationOpts: { numItems: 256, cursor: null },
+        }
+      : "skip"
+  );
 
-  if (insights === undefined) {
+  if (latestEvent === undefined || (latestEvent && insights === undefined)) {
     return <LoadingState label="Loading platform insights..." />;
   }
 
-  if (!insights) {
+  if (!latestEvent || !insights) {
     return (
       <ErrorState
-        title="Unable to load insights"
-        description="Only admins can view platform insights."
+        title="Insights unavailable"
+        description="Insights are unavailable right now."
       />
     );
   }
 
   return (
     <div className="h-full min-h-[24rem] flex flex-col p-4 sm:p-6 gap-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <button
-          type="button"
-          onClick={() => void navigate("/admin")}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-heading font-bold text-foreground">
+            Platform Insights
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Snapshot for {latestEvent.eventName}.
+          </p>
+        </div>
+        <Link
+          to="/admin"
+          aria-label="Back to Workspace"
           className="btn-ghost px-2 sm:px-3"
         >
-          Back to Admin Workspace
-        </button>
-      </div>
-
-      <div className="space-y-1">
-        <h1 className="text-2xl font-heading font-bold text-foreground">
-          Platform Insights
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Snapshot of event activity and participation across the platform.
-        </p>
+          Back to Workspace
+        </Link>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -73,7 +80,7 @@ export function AdminInsightsRoute() {
         <InsightCard
           label="Judge Registrations"
           value={insights.judgeRegistrations}
-          subtitle={`${insights.judgesWhoSubmittedScores} have submitted scores`}
+          subtitle={`${insights.judgeRegistrationsWithScores} registrations have submitted scores`}
         />
         <InsightCard
           label="Score Submissions"

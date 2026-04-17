@@ -3,6 +3,7 @@ import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { isAdmin, requireAdmin, computeEventStatus } from "./helpers";
 import { Id } from "./_generated/dataModel";
+import { paginationOptsValidator } from "convex/server";
 import {
   getEventMode,
   isDemoDayMode,
@@ -723,7 +724,10 @@ export const isUserAdmin = query({
 });
 
 export const getAdminInsights = query({
-  args: {},
+  args: {
+    eventId: v.optional(v.id("events")),
+    paginationOpts: paginationOptsValidator,
+  },
   returns: v.union(
     v.null(),
     v.object({
@@ -732,7 +736,7 @@ export const getAdminInsights = query({
       activeEvents: v.number(),
       pastEvents: v.number(),
       judgeRegistrations: v.number(),
-      judgesWhoSubmittedScores: v.number(),
+      judgeRegistrationsWithScores: v.number(),
       totalScoreSubmissions: v.number(),
       totalBallotsSubmitted: v.number(),
       uniqueVoters: v.number(),
@@ -740,48 +744,110 @@ export const getAdminInsights = query({
       uniqueAppreciators: v.number(),
     })
   ),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     const userIsAdmin = await isAdmin(ctx);
     if (!userIsAdmin) {
       return null;
     }
 
-    const [events, judges, scores, rankedVotes, appreciations] = await Promise.all([
-      ctx.db.query("events").collect(),
-      ctx.db.query("judges").collect(),
-      ctx.db.query("scores").collect(),
-      ctx.db.query("rankedVotes").collect(),
-      ctx.db.query("appreciations").collect(),
-    ]);
+    let event = args.eventId ? await ctx.db.get(args.eventId) : null;
+    if (!event) {
+      const statusPriority: Array<"active" | "upcoming" | "past"> = [
+        "active",
+        "upcoming",
+        "past",
+      ];
 
-    let upcomingEvents = 0;
-    let activeEvents = 0;
-    let pastEvents = 0;
-    for (const event of events) {
-      const computedStatus = computeEventStatus(event);
-      if (computedStatus === "upcoming") upcomingEvents += 1;
-      if (computedStatus === "active") activeEvents += 1;
-      if (computedStatus === "past") pastEvents += 1;
+      for (const status of statusPriority) {
+        const candidate = await ctx.db
+          .query("events")
+          .withIndex("by_status", (q) => q.eq("status", status))
+          .first();
+        if (candidate) {
+          event = candidate;
+          break;
+        }
+      }
     }
 
-    const judgesWhoSubmittedScores = new Set(scores.map((score) => score.judgeId)).size;
-    const uniqueVoters = new Set(rankedVotes.map((vote) => vote.voterUserId)).size;
-    const uniqueAppreciators = new Set(
-      appreciations.map((appreciation) => appreciation.attendeeId)
-    ).size;
+    if (!event) {
+      return null;
+    }
+
+    const pageSize = Math.max(1, args.paginationOpts.numItems);
+    const eventStatus = computeEventStatus(event);
+    const targetEventId = event._id;
+
+    let judgeRegistrations = 0;
+    let totalScoreSubmissions = 0;
+    let totalBallotsSubmitted = 0;
+    let totalAppreciations = 0;
+
+    const uniqueJudgesWithScores = new Set<Id<"judges">>();
+    const uniqueVoterIds = new Set<Id<"users">>();
+    const uniqueAppreciatorIds = new Set<string>();
+
+    let judgesCursor: string | null = null;
+    do {
+      const page = await ctx.db
+        .query("judges")
+        .withIndex("by_event", (q) => q.eq("eventId", targetEventId))
+        .paginate({ numItems: pageSize, cursor: judgesCursor });
+      judgeRegistrations += page.page.length;
+      judgesCursor = page.isDone ? null : page.continueCursor;
+    } while (judgesCursor !== null);
+
+    let scoresCursor: string | null = null;
+    do {
+      const page = await ctx.db
+        .query("scores")
+        .withIndex("by_event", (q) => q.eq("eventId", targetEventId))
+        .paginate({ numItems: pageSize, cursor: scoresCursor });
+      totalScoreSubmissions += page.page.length;
+      for (const score of page.page) {
+        uniqueJudgesWithScores.add(score.judgeId);
+      }
+      scoresCursor = page.isDone ? null : page.continueCursor;
+    } while (scoresCursor !== null);
+
+    let rankedVotesCursor: string | null = null;
+    do {
+      const page = await ctx.db
+        .query("rankedVotes")
+        .withIndex("by_event", (q) => q.eq("eventId", targetEventId))
+        .paginate({ numItems: pageSize, cursor: rankedVotesCursor });
+      totalBallotsSubmitted += page.page.length;
+      for (const vote of page.page) {
+        uniqueVoterIds.add(vote.voterUserId);
+      }
+      rankedVotesCursor = page.isDone ? null : page.continueCursor;
+    } while (rankedVotesCursor !== null);
+
+    let appreciationsCursor: string | null = null;
+    do {
+      const page = await ctx.db
+        .query("appreciations")
+        .withIndex("by_event", (q) => q.eq("eventId", targetEventId))
+        .paginate({ numItems: pageSize, cursor: appreciationsCursor });
+      totalAppreciations += page.page.length;
+      for (const appreciation of page.page) {
+        uniqueAppreciatorIds.add(appreciation.attendeeId);
+      }
+      appreciationsCursor = page.isDone ? null : page.continueCursor;
+    } while (appreciationsCursor !== null);
 
     return {
-      totalEvents: events.length,
-      upcomingEvents,
-      activeEvents,
-      pastEvents,
-      judgeRegistrations: judges.length,
-      judgesWhoSubmittedScores,
-      totalScoreSubmissions: scores.length,
-      totalBallotsSubmitted: rankedVotes.length,
-      uniqueVoters,
-      totalAppreciations: appreciations.length,
-      uniqueAppreciators,
+      totalEvents: 1,
+      upcomingEvents: eventStatus === "upcoming" ? 1 : 0,
+      activeEvents: eventStatus === "active" ? 1 : 0,
+      pastEvents: eventStatus === "past" ? 1 : 0,
+      judgeRegistrations,
+      judgeRegistrationsWithScores: uniqueJudgesWithScores.size,
+      totalScoreSubmissions,
+      totalBallotsSubmitted,
+      uniqueVoters: uniqueVoterIds.size,
+      totalAppreciations,
+      uniqueAppreciators: uniqueAppreciatorIds.size,
     };
   },
 });

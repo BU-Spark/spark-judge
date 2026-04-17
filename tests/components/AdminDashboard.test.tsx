@@ -65,10 +65,6 @@ vi.mock("@/features/admin/components/EventsList", () => ({
   ),
 }));
 
-vi.mock("@/features/admin/routes/AdminInsightsRoute", () => ({
-  AdminInsightsRoute: () => <div>Mock Insights Route</div>,
-}));
-
 function renderAdmin(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -85,6 +81,20 @@ function renderAdmin(path: string) {
 }
 
 describe("Unified Admin Workspace Routing", () => {
+  const mockInsights = {
+    totalEvents: 5,
+    upcomingEvents: 2,
+    activeEvents: 1,
+    pastEvents: 2,
+    judgeRegistrations: 8,
+    judgesWhoSubmittedScores: 6,
+    totalScoreSubmissions: 42,
+    totalBallotsSubmitted: 12,
+    uniqueVoters: 11,
+    totalAppreciations: 99,
+    uniqueAppreciators: 47,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     queryResults.clear();
@@ -141,11 +151,24 @@ describe("Unified Admin Workspace Routing", () => {
   it("navigates to insights route from admin home", () => {
     queryResults.set("loggedInUser", { _id: "user123" });
     queryResults.set("isUserAdmin", true);
+    queryResults.set("getAdminInsights", mockInsights);
 
     renderAdmin("/admin");
 
     fireEvent.click(screen.getByText("View Insights"));
 
-    expect(screen.getByText("Mock Insights Route")).toBeInTheDocument();
+    expect(screen.getByText("Platform Insights")).toBeInTheDocument();
+  });
+
+  it("navigates back to admin home from insights page", () => {
+    queryResults.set("loggedInUser", { _id: "user123" });
+    queryResults.set("isUserAdmin", true);
+    queryResults.set("getAdminInsights", mockInsights);
+
+    renderAdmin("/admin/insights");
+
+    fireEvent.click(screen.getByText("Back to Admin Workspace"));
+
+    expect(screen.getByText("Admin Workspace")).toBeInTheDocument();
   });
 });

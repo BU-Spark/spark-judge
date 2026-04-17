@@ -1,4 +1,5 @@
 import { useQuery } from "convex/react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../../../convex/_generated/api";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { LoadingState } from "../../../components/ui/LoadingState";
@@ -26,6 +27,7 @@ function InsightCard({ label, value, subtitle }: InsightCardProps) {
 }
 
 export function AdminInsightsRoute() {
+  const navigate = useNavigate();
   const insights = useQuery(api.events.getAdminInsights);
 
   if (insights === undefined) {
@@ -42,7 +44,17 @@ export function AdminInsightsRoute() {
   }
 
   return (
-    <div className="h-full min-h-[24rem] flex flex-col p-6 gap-6">
+    <div className="h-full min-h-[24rem] flex flex-col p-4 sm:p-6 gap-6">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={() => void navigate("/admin")}
+          className="btn-ghost px-2 sm:px-3"
+        >
+          Back to Admin Workspace
+        </button>
+      </div>
+
       <div className="space-y-1">
         <h1 className="text-2xl font-heading font-bold text-foreground">
           Platform Insights

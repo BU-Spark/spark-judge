@@ -144,6 +144,24 @@ export const getEvent = query({
   },
 });
 
+export const getEventForTeamPage = query({
+  args: {
+    eventId: v.id("events"),
+    teamId: v.id("teams"),
+  },
+  returns: v.union(v.null(), v.any()),
+  handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!event) return null;
+
+    const team = await ctx.db.get(args.teamId);
+    if (!team || team.eventId !== args.eventId || team.hidden) return null;
+
+    const status = computeEventStatus(event);
+    return { ...event, status, mode: getEventMode(event.mode) };
+  },
+});
+
 export const joinAsJudge = mutation({
   args: { eventId: v.id("events") },
   returns: v.id("judges"),

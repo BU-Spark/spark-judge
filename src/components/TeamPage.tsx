@@ -19,7 +19,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
   const { attendeeId, isLoading: identityLoading } = useAttendeeIdentity();
 
   // Fetch event status to gate appreciations
-  const event = useQuery(api.events.getEvent, { eventId });
+  const event = useQuery(api.events.getEventForTeamPage, { eventId, teamId });
 
   // Fetch team data
   const team = useQuery(api.teams.getTeamById, { teamId });

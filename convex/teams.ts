@@ -583,9 +583,7 @@ export const getTeamEventId = query({
   returns: v.union(v.null(), v.id("events")),
   handler: async (ctx, args) => {
     const team = await ctx.db.get(args.teamId);
-    if (!team) return null;
-    const event = await ctx.db.get(team.eventId);
-    if (!(await canAccessEvent(ctx, event))) return null;
+    if (!team || team.hidden) return null;
     return team.eventId;
   },
 });
@@ -624,11 +622,10 @@ export const getTeamById = query({
   ),
   handler: async (ctx, args) => {
     const team = await ctx.db.get(args.teamId);
-    if (!team) return null;
+    if (!team || team.hidden) return null;
 
     const event = await ctx.db.get(team.eventId);
     if (!event) return null;
-    if (!(await canAccessEvent(ctx, event))) return null;
 
     // Get logo URL if exists
     let logoUrl = null;

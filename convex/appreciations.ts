@@ -147,9 +147,12 @@ export const getSingleTeamAppreciation = query({
     if (!event) {
       throw new Error("Event not found");
     }
-    if (!(await canAccessEvent(ctx, event))) {
-      throw new Error("Event not found");
+
+    const team = await ctx.db.get(args.teamId);
+    if (!team || team.eventId !== args.eventId || team.hidden) {
+      throw new Error("Team not found");
     }
+
     const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
 
     // Get all appreciations for this team

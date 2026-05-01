@@ -11,6 +11,7 @@ import { AdminShell } from "./features/admin/shell/AdminShell";
 import { AdminHomeRoute } from "./features/admin/routes/AdminHomeRoute";
 import { AdminCreateEventRoute } from "./features/admin/routes/AdminCreateEventRoute";
 import { AdminEventRoute } from "./features/admin/routes/AdminEventRoute";
+import { AdminInsightsRoute } from "./features/admin/routes/AdminInsightsRoute";
 import { useState, useEffect } from "react";
 import { Id } from "../convex/_generated/dataModel";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/event/:eventId/team/:teamId" element={<TeamPageWrapper />} />
           <Route path="/admin" element={<AdminShell />}>
             <Route index element={<AdminHomeRoute />} />
+            <Route path="insights" element={<AdminInsightsRoute />} />
             <Route path="events/new" element={<AdminCreateEventRoute />} />
             <Route path="events/:eventId" element={<AdminEventRoute />} />
           </Route>

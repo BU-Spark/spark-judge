@@ -6,9 +6,14 @@ import { AdminShell } from "@/features/admin/shell/AdminShell";
 import { AdminHomeRoute } from "@/features/admin/routes/AdminHomeRoute";
 import { AdminCreateEventRoute } from "@/features/admin/routes/AdminCreateEventRoute";
 import { AdminEventRoute } from "@/features/admin/routes/AdminEventRoute";
+import { AdminInsightsRoute } from "@/features/admin/routes/AdminInsightsRoute";
 
 const mockLoggedInUser = vi.hoisted(() => ({ _name: "loggedInUser" }));
 const mockIsUserAdmin = vi.hoisted(() => ({ _name: "isUserAdmin" }));
+const mockGetDefaultEventForInsights = vi.hoisted(() => ({
+  _name: "getDefaultEventForInsights",
+}));
+const mockGetAdminInsights = vi.hoisted(() => ({ _name: "getAdminInsights" }));
 
 const queryResults = vi.hoisted(() => new Map<string, unknown>());
 
@@ -31,6 +36,8 @@ vi.mock("../../convex/_generated/api", () => ({
     },
     events: {
       isUserAdmin: mockIsUserAdmin,
+      getDefaultEventForInsights: mockGetDefaultEventForInsights,
+      getAdminInsights: mockGetAdminInsights,
     },
   },
 }));
@@ -42,6 +49,8 @@ vi.mock("../../../../convex/_generated/api", () => ({
     },
     events: {
       isUserAdmin: mockIsUserAdmin,
+      getDefaultEventForInsights: mockGetDefaultEventForInsights,
+      getAdminInsights: mockGetAdminInsights,
     },
   },
 }));
@@ -67,6 +76,7 @@ function renderAdmin(path: string) {
       <Routes>
         <Route path="/admin" element={<AdminShell />}>
           <Route index element={<AdminHomeRoute />} />
+          <Route path="insights" element={<AdminInsightsRoute />} />
           <Route path="events/new" element={<AdminCreateEventRoute />} />
           <Route path="events/:eventId" element={<AdminEventRoute />} />
         </Route>
@@ -76,6 +86,20 @@ function renderAdmin(path: string) {
 }
 
 describe("Unified Admin Workspace Routing", () => {
+  const mockInsights = {
+    totalEvents: 5,
+    upcomingEvents: 2,
+    activeEvents: 1,
+    pastEvents: 2,
+    judgeRegistrations: 8,
+    judgeRegistrationsWithScores: 6,
+    totalScoreSubmissions: 42,
+    totalBallotsSubmitted: 12,
+    uniqueVoters: 11,
+    totalAppreciations: 99,
+    uniqueAppreciators: 47,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     queryResults.clear();
@@ -127,5 +151,82 @@ describe("Unified Admin Workspace Routing", () => {
     fireEvent.click(screen.getByText("Mock Events List"));
 
     expect(screen.getByText("Mock Event Workspace:details:overview")).toBeInTheDocument();
+  });
+
+  it("navigates to insights route from admin home", () => {
+    queryResults.set("loggedInUser", { _id: "user123" });
+    queryResults.set("isUserAdmin", true);
+    queryResults.set("getDefaultEventForInsights", {
+      eventId: "event123",
+      eventName: "Spring Showcase",
+    });
+    queryResults.set("getAdminInsights", mockInsights);
+
+    renderAdmin("/admin");
+
+    fireEvent.click(screen.getByText("View Insights"));
+
+    expect(screen.getByText("Platform Insights")).toBeInTheDocument();
+  });
+
+  it("navigates back to admin home from insights page", () => {
+    queryResults.set("loggedInUser", { _id: "user123" });
+    queryResults.set("isUserAdmin", true);
+    queryResults.set("getDefaultEventForInsights", {
+      eventId: "event123",
+      eventName: "Spring Showcase",
+    });
+    queryResults.set("getAdminInsights", mockInsights);
+
+    renderAdmin("/admin/insights");
+
+    fireEvent.click(screen.getByText("Back to Workspace"));
+
+    expect(screen.getByText("Admin Workspace")).toBeInTheDocument();
+  });
+
+  it("renders admin insights loading state", () => {
+    queryResults.set("loggedInUser", { _id: "user123" });
+    queryResults.set("isUserAdmin", true);
+    queryResults.set("getDefaultEventForInsights", undefined);
+
+    renderAdmin("/admin/insights");
+
+    expect(screen.getByText("Loading platform insights...")).toBeInTheDocument();
+  });
+
+  it("renders neutral unavailable message when insights are null", () => {
+    queryResults.set("loggedInUser", { _id: "user123" });
+    queryResults.set("isUserAdmin", true);
+    queryResults.set("getDefaultEventForInsights", {
+      eventId: "event123",
+      eventName: "Spring Showcase",
+    });
+    queryResults.set("getAdminInsights", null);
+
+    renderAdmin("/admin/insights");
+
+    expect(screen.getByText("Insights unavailable")).toBeInTheDocument();
+    expect(
+      screen.getByText("Insights are unavailable right now.")
+    ).toBeInTheDocument();
+  });
+
+  it("renders admin insights success state with real component", () => {
+    queryResults.set("loggedInUser", { _id: "user123" });
+    queryResults.set("isUserAdmin", true);
+    queryResults.set("getDefaultEventForInsights", {
+      eventId: "event123",
+      eventName: "Spring Showcase",
+    });
+    queryResults.set("getAdminInsights", mockInsights);
+
+    renderAdmin("/admin/insights");
+
+    expect(screen.getByText("Platform Insights")).toBeInTheDocument();
+    expect(screen.getByText("Snapshot for Spring Showcase.")).toBeInTheDocument();
+    expect(
+      screen.getByText("6 registrations have submitted scores")
+    ).toBeInTheDocument();
   });
 });

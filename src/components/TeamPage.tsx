@@ -157,7 +157,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
           )}
 
           {/* GitHub Link */}
-          {team.githubUrl && (
+          {team.githubUrl && team.githubUrl.trim() !== "" && (
             <div>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 Project Link

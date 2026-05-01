@@ -560,7 +560,7 @@ export function PrizeWinnerWizardPanel({
                                     )}
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap">
-                                    {candidate.githubUrl ? (
+                                    {candidate.githubUrl && candidate.githubUrl.trim() !== "" ? (
                                       <a
                                         href={candidate.githubUrl}
                                         target="_blank"

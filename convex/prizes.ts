@@ -1,7 +1,12 @@
 import { v } from "convex/values";
 import { mutation, query, MutationCtx, QueryCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { computeEventStatus, isAdmin, requireAdmin } from "./helpers";
+import {
+  canAccessEvent,
+  computeEventStatus,
+  isAdmin,
+  requireAdmin,
+} from "./helpers";
 import { Doc, Id } from "./_generated/dataModel";
 import { isHackathonMode } from "./eventModes";
 
@@ -37,6 +42,9 @@ async function getHackathonEvent(
 ): Promise<Doc<"events">> {
   const event = await ctx.db.get(eventId);
   if (!event) throw new Error("Event not found");
+  if (!(await canAccessEvent(ctx, event))) {
+    throw new Error("Event not found");
+  }
   if (!isHackathonMode(event.mode)) {
     throw new Error("Prize workflows are only supported for hackathon events");
   }
@@ -116,6 +124,7 @@ export const listEventPrizes = query({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event || !isHackathonMode(event.mode)) return [];
+    if (!(await canAccessEvent(ctx, event))) return [];
 
     const prizes = await ctx.db
       .query("prizes")
@@ -223,6 +232,7 @@ export const getMyTeamPrizeSubmissions = query({
 
     const event = await ctx.db.get(args.eventId);
     if (!event || !isHackathonMode(event.mode)) return [];
+    if (!(await canAccessEvent(ctx, event))) return [];
 
     const team = await ctx.db
       .query("teams")

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { isHackathonMode } from "./eventModes";
+import { canAccessEvent } from "./helpers";
 
 export const addTeamToAssignment = mutation({
   args: {
@@ -29,6 +30,9 @@ export const addTeamToAssignment = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) {
+      throw new Error("Event not found");
+    }
+    if (!(await canAccessEvent(ctx, event))) {
       throw new Error("Event not found");
     }
     if (!isHackathonMode(event.mode)) {
@@ -80,6 +84,9 @@ export const addMultipleTeamsToAssignment = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) {
+      throw new Error("Event not found");
+    }
+    if (!(await canAccessEvent(ctx, event))) {
       throw new Error("Event not found");
     }
     if (!isHackathonMode(event.mode)) {
@@ -149,6 +156,9 @@ export const removeTeamFromAssignment = mutation({
     if (!event) {
       throw new Error("Event not found");
     }
+    if (!(await canAccessEvent(ctx, event))) {
+      throw new Error("Event not found");
+    }
     if (!isHackathonMode(event.mode)) {
       throw new Error("Judge assignments are only available for hackathon events");
     }
@@ -191,6 +201,7 @@ export const getMyAssignments = query({
 
     const event = await ctx.db.get(args.eventId);
     if (!event || !isHackathonMode(event.mode)) return [];
+    if (!(await canAccessEvent(ctx, event))) return [];
 
     const judge = await ctx.db
       .query("judges")

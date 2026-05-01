@@ -162,12 +162,12 @@ export function EventsList({
   const handleDuplicateEvent = async (eventId: Id<"events">, name: string) => {
     try {
       setDuplicatingEventId(eventId);
-      const newEventId = await duplicateEvent({ eventId });
-      toast.success(`Duplicated "${name}"`);
+      const newEventId = await duplicateEvent({ eventId, hidden: true });
+      toast.success(`Created hidden testing clone of "${name}"`);
       onSelectEvent(newEventId);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to duplicate event");
+      toast.error("Failed to clone event");
     } finally {
       setDuplicatingEventId(null);
     }
@@ -225,6 +225,11 @@ export function EventsList({
                     <span className="text-sm font-medium text-foreground break-words">
                       {event.name}
                     </span>
+                    {event.hidden && (
+                      <span className="shrink-0 px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/15 text-xs font-medium text-amber-600 dark:text-amber-400">
+                        Admin only
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
@@ -300,9 +305,9 @@ export function EventsList({
                       className={`inline-flex items-center justify-center p-2 rounded-md transition-colors text-blue-500 hover:bg-blue-500/10 ${
                         duplicatingEventId === event._id ? "opacity-60 cursor-not-allowed" : ""
                       }`}
-                      title="Duplicate event"
+                      title="Clone for testing"
                     >
-                      <span className="sr-only">Duplicate event</span>
+                      <span className="sr-only">Clone event for testing</span>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                           strokeLinecap="round"

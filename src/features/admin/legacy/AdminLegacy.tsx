@@ -2011,6 +2011,7 @@ export function EventManagementModal({
   const [eventDescription, setEventDescription] = useState("");
   const [eventStart, setEventStart] = useState("");
   const [eventEnd, setEventEnd] = useState("");
+  const [eventHidden, setEventHidden] = useState(false);
   const [categoriesEdit, setCategoriesEdit] = useState<CategoryDraft[]>([]);
   const [enableCohorts, setEnableCohorts] = useState(false);
   const [judgeCodeEdit, setJudgeCodeEdit] = useState("");
@@ -2062,6 +2063,7 @@ export function EventManagementModal({
       setEventDescription(event.description || "");
       setEventStart(formatDateTimeInput(event.startDate));
       setEventEnd(formatDateTimeInput(event.endDate));
+      setEventHidden(Boolean((event as any).hidden));
       setCategoriesEdit(
         getRubricPercentages(
           (event.categories || []).map((cat: any) => ({
@@ -2477,6 +2479,7 @@ export function EventManagementModal({
         description: eventDescription.trim(),
         startDate: startMs,
         endDate: endMs,
+        hidden: eventHidden,
         tracks: isHackathonMode
           ? tracksEdit
               .split(",")
@@ -2649,11 +2652,12 @@ export function EventManagementModal({
   const handleDuplicateEvent = async () => {
     try {
       setIsDuplicatingEvent(true);
-      await duplicateEvent({ eventId });
-      toast.success("Event duplicated");
+      const newEventId = await duplicateEvent({ eventId, hidden: true });
+      toast.success("Testing clone created and hidden from non-admins");
+      void navigate(`/admin/events/${newEventId}?tab=details`);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to duplicate event");
+      toast.error("Failed to clone event");
     } finally {
       setIsDuplicatingEvent(false);
     }
@@ -2734,6 +2738,11 @@ export function EventManagementModal({
                     {getEventDisplayLabel(eventMode)}
                   </span>
                 )}
+                {(event as any).hidden && (
+                  <span className="badge bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                    Admin only
+                  </span>
+                )}
               </div>
               <p className="text-muted-foreground">
                 Manage event settings and teams
@@ -2763,7 +2772,7 @@ export function EventManagementModal({
                     d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h6a2 2 0 002-2v-8a2 2 0 00-2-2h-6a2 2 0 00-2 2v8a2 2 0 002 2z"
                   />
                 </svg>
-                {isDuplicatingEvent ? "Duplicating..." : "Duplicate"}
+                {isDuplicatingEvent ? "Cloning..." : "Clone for testing"}
               </button>
               <button
                 type="button"
@@ -2845,6 +2854,11 @@ export function EventManagementModal({
                         {getEventDisplayLabel(eventMode)}
                       </span>
                     )}
+                    {(event as any).hidden && (
+                      <span className="badge bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                        Admin only
+                      </span>
+                    )}
                   </div>
                   <p className="text-muted-foreground">
                     Manage event settings and teams
@@ -2874,7 +2888,7 @@ export function EventManagementModal({
                         d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h6a2 2 0 002-2v-8a2 2 0 00-2-2h-6a2 2 0 00-2 2v8a2 2 0 002 2z"
                       />
                     </svg>
-                    {isDuplicatingEvent ? "Duplicating..." : "Duplicate"}
+                    {isDuplicatingEvent ? "Cloning..." : "Clone for testing"}
                   </button>
                   <button
                     type="button"
@@ -3039,6 +3053,8 @@ export function EventManagementModal({
                 setEventStart={handleEventStartChange}
                 eventEnd={eventEnd}
                 setEventEnd={setEventEnd}
+                eventHidden={eventHidden}
+                setEventHidden={setEventHidden}
                 handleSaveDetails={handleSaveDetails}
                 savingDetails={savingDetails}
                 eventMode={eventMode}

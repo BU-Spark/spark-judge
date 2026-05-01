@@ -1,7 +1,12 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { isAdmin, requireAdmin, computeEventStatus } from "./helpers";
+import {
+  canAccessEvent,
+  isAdmin,
+  requireAdmin,
+  computeEventStatus,
+} from "./helpers";
 import { Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import {
@@ -27,7 +32,10 @@ export const listEvents = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     const userIsAdmin = await isAdmin(ctx);
-    const events = await ctx.db.query("events").collect();
+    const allEvents = await ctx.db.query("events").collect();
+    const events = userIsAdmin
+      ? allEvents
+      : allEvents.filter((event) => !event.hidden);
 
     let judgesByEventId = new Map<Id<"events">, Id<"judges">>();
     let participantEventIds = new Set<Id<"events">>();
@@ -122,6 +130,7 @@ export const getEvent = query({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event) return null;
+    if (!(await canAccessEvent(ctx, event))) return null;
 
     const teams = await ctx.db
       .query("teams")
@@ -144,6 +153,7 @@ export const joinAsJudge = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
+    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
     if (!isHackathonMode(event.mode)) {
       throw new Error(
         "Judge registration is only available for hackathon events",
@@ -192,6 +202,7 @@ export const verifyJudgeCodeAndStartJudging = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
+    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
     if (!isHackathonMode(event.mode)) {
       throw new Error("Judging access is only available for hackathon events");
     }
@@ -232,6 +243,7 @@ export const getJudgeStatus = query({
 
     const event = await ctx.db.get(args.eventId);
     if (!event || !isHackathonMode(event.mode)) return null;
+    if (!(await canAccessEvent(ctx, event))) return null;
 
     const judge = await ctx.db
       .query("judges")
@@ -365,6 +377,7 @@ export const removeEvent = mutation({
       prizeSubmissions,
       prizeWinners,
       rankedVotes,
+      appreciations,
     ] = await Promise.all([
       ctx.db
         .query("scores")
@@ -398,9 +411,16 @@ export const removeEvent = mutation({
         .query("rankedVotes")
         .withIndex("by_event", (q) => q.eq("eventId", eventId))
         .collect(),
+      ctx.db
+        .query("appreciations")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
     ]);
 
     await Promise.all(scores.map((score) => ctx.db.delete(score._id)));
+    await Promise.all(
+      appreciations.map((appreciation) => ctx.db.delete(appreciation._id)),
+    );
 
     for (const team of teams) {
       if (team.logoStorageId) {
@@ -426,10 +446,13 @@ export const removeEvent = mutation({
 });
 
 export const duplicateEvent = mutation({
-  args: { eventId: v.id("events") },
+  args: {
+    eventId: v.id("events"),
+    hidden: v.optional(v.boolean()),
+  },
   returns: v.id("events"),
-  handler: async (ctx, { eventId }) => {
-    const userId = await requireAdmin(ctx);
+  handler: async (ctx, { eventId, hidden }) => {
+    await requireAdmin(ctx);
 
     const event = await ctx.db.get(eventId);
     if (!event) {
@@ -448,51 +471,268 @@ export const duplicateEvent = mutation({
       newName = `${baseName} (Copy ${copyIndex + 1})`;
     }
 
+    const [
+      teams,
+      judges,
+      participants,
+      scores,
+      judgeAssignments,
+      prizes,
+      teamPrizeSubmissions,
+      prizeWinners,
+      rankedVotes,
+      appreciations,
+    ] = await Promise.all([
+      ctx.db
+        .query("teams")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("judges")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("participants")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("scores")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("judgeAssignments")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("prizes")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("teamPrizeSubmissions")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("prizeWinners")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("rankedVotes")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("appreciations")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+    ]);
+
     const newEventId = await ctx.db.insert("events", {
       name: newName,
       description: event.description,
-      status: "upcoming",
+      status: event.status,
       startDate: event.startDate,
       endDate: event.endDate,
       categories: event.categories,
       tracks: event.tracks,
-      resultsReleased: false,
+      resultsReleased: event.resultsReleased,
       appreciationBudgetPerAttendee: event.appreciationBudgetPerAttendee,
       appreciationMaxPerTeam: event.appreciationMaxPerTeam,
-      judgeCode: undefined,
+      judgeCode: event.judgeCode,
+      enableCohorts: event.enableCohorts,
       mode: getEventMode(event.mode),
       courseCodes: event.courseCodes,
-      scoringLockedAt: undefined,
-      scoringLockedBy: undefined,
-      scoringLockReason: undefined,
+      scoringLockedAt: event.scoringLockedAt,
+      scoringLockedBy: event.scoringLockedBy,
+      scoringLockReason: event.scoringLockReason,
+      codeAndTellMaxBallots: event.codeAndTellMaxBallots,
+      hidden: hidden ?? true,
     });
 
-    if (isHackathonMode(event.mode)) {
-      const eventPrizes = await ctx.db
-        .query("prizes")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect();
+    const teamIdMap = new Map<Id<"teams">, Id<"teams">>();
+    const judgeIdMap = new Map<Id<"judges">, Id<"judges">>();
+    const prizeIdMap = new Map<Id<"prizes">, Id<"prizes">>();
 
-      const now = Date.now();
-      await Promise.all(
-        eventPrizes.map((prize) =>
-          ctx.db.insert("prizes", {
-            eventId: newEventId,
-            name: prize.name,
-            description: prize.description,
-            type: prize.type,
-            track: prize.track,
-            sponsorName: prize.sponsorName,
-            scoreBasis: prize.scoreBasis,
-            scoreCategoryNames: prize.scoreCategoryNames,
-            isActive: prize.isActive,
-            sortOrder: prize.sortOrder,
-            createdAt: now,
-            updatedAt: now,
-            createdBy: userId,
-          }),
-        ),
-      );
+    for (const team of teams) {
+      const newTeamId = await ctx.db.insert("teams", {
+        eventId: newEventId,
+        name: team.name,
+        description: team.description,
+        members: team.members,
+        // logoStorageId is intentionally omitted so deleting a clone cannot delete original logos.
+        githubUrl: team.githubUrl,
+        track: team.track,
+        submittedBy: team.submittedBy,
+        submittedAt: team.submittedAt,
+        projectUrl: team.projectUrl,
+        devpostUrl: team.devpostUrl,
+        hidden: team.hidden,
+        entrantEmails: team.entrantEmails,
+        rawScore: team.rawScore,
+        cleanScore: team.cleanScore,
+        flagged: team.flagged,
+        courseCode: team.courseCode,
+        demoDayRound: team.demoDayRound,
+        demoDayBoardNumber: team.demoDayBoardNumber,
+        demoDayProjectInstance: team.demoDayProjectInstance,
+        airtableProjectRecordId: team.airtableProjectRecordId,
+        airtableProjectInstanceRecordId: team.airtableProjectInstanceRecordId,
+        demoDaySignName: team.demoDaySignName,
+        demoDayFullSignName: team.demoDayFullSignName,
+        demoDayBoardTime: team.demoDayBoardTime,
+        demoDayCourseName: team.demoDayCourseName,
+      });
+      teamIdMap.set(team._id, newTeamId);
+    }
+
+    for (const judge of judges) {
+      const newJudgeId = await ctx.db.insert("judges", {
+        userId: judge.userId,
+        eventId: newEventId,
+      });
+      judgeIdMap.set(judge._id, newJudgeId);
+    }
+
+    for (const participant of participants) {
+      await ctx.db.insert("participants", {
+        userId: participant.userId,
+        eventId: newEventId,
+        createdAt: participant.createdAt,
+      });
+    }
+
+    for (const prize of prizes) {
+      const newPrizeId = await ctx.db.insert("prizes", {
+        eventId: newEventId,
+        name: prize.name,
+        description: prize.description,
+        type: prize.type,
+        track: prize.track,
+        sponsorName: prize.sponsorName,
+        scoreBasis: prize.scoreBasis,
+        scoreCategoryNames: prize.scoreCategoryNames,
+        isActive: prize.isActive,
+        sortOrder: prize.sortOrder,
+        createdAt: prize.createdAt,
+        updatedAt: prize.updatedAt,
+        createdBy: prize.createdBy,
+      });
+      prizeIdMap.set(prize._id, newPrizeId);
+    }
+
+    for (const assignment of judgeAssignments) {
+      const newJudgeId = judgeIdMap.get(assignment.judgeId);
+      const newTeamId = teamIdMap.get(assignment.teamId);
+      if (!newJudgeId || !newTeamId) continue;
+
+      await ctx.db.insert("judgeAssignments", {
+        judgeId: newJudgeId,
+        eventId: newEventId,
+        teamId: newTeamId,
+        addedAt: assignment.addedAt,
+      });
+    }
+
+    for (const score of scores) {
+      const newJudgeId = judgeIdMap.get(score.judgeId);
+      const newTeamId = teamIdMap.get(score.teamId);
+      if (!newJudgeId || !newTeamId) continue;
+
+      await ctx.db.insert("scores", {
+        judgeId: newJudgeId,
+        teamId: newTeamId,
+        eventId: newEventId,
+        categoryScores: score.categoryScores,
+        totalScore: score.totalScore,
+        submittedAt: score.submittedAt,
+      });
+    }
+
+    for (const submission of teamPrizeSubmissions) {
+      const newTeamId = teamIdMap.get(submission.teamId);
+      const newPrizeId = prizeIdMap.get(submission.prizeId);
+      if (!newTeamId || !newPrizeId) continue;
+
+      await ctx.db.insert("teamPrizeSubmissions", {
+        eventId: newEventId,
+        teamId: newTeamId,
+        prizeId: newPrizeId,
+        submittedAt: submission.submittedAt,
+        submittedBy: submission.submittedBy,
+      });
+    }
+
+    for (const winner of prizeWinners) {
+      const newTeamId = teamIdMap.get(winner.teamId);
+      const newPrizeId = prizeIdMap.get(winner.prizeId);
+      if (!newTeamId || !newPrizeId) continue;
+
+      await ctx.db.insert("prizeWinners", {
+        eventId: newEventId,
+        prizeId: newPrizeId,
+        teamId: newTeamId,
+        placement: winner.placement,
+        notes: winner.notes,
+        selectedAt: winner.selectedAt,
+        selectedBy: winner.selectedBy,
+      });
+    }
+
+    for (const vote of rankedVotes) {
+      const rankedTeamIds = vote.rankedTeamIds
+        .map((teamId) => teamIdMap.get(teamId))
+        .filter((teamId): teamId is Id<"teams"> => !!teamId);
+
+      await ctx.db.insert("rankedVotes", {
+        eventId: newEventId,
+        voterUserId: vote.voterUserId,
+        rankedTeamIds,
+        submittedAt: vote.submittedAt,
+        updatedAt: vote.updatedAt,
+      });
+    }
+
+    for (const appreciation of appreciations) {
+      const newTeamId = teamIdMap.get(appreciation.teamId);
+      if (!newTeamId) continue;
+
+      await ctx.db.insert("appreciations", {
+        eventId: newEventId,
+        teamId: newTeamId,
+        attendeeId: appreciation.attendeeId,
+        fingerprintKey: appreciation.fingerprintKey,
+        ipAddress: appreciation.ipAddress,
+        userAgent: appreciation.userAgent,
+        timestamp: appreciation.timestamp,
+      });
+    }
+
+    const winnerUpdates: {
+      overallWinner?: Id<"teams">;
+      categoryWinners?: Array<{ category: string; teamId: Id<"teams"> }>;
+    } = {};
+
+    if (event.overallWinner) {
+      const newOverallWinner = teamIdMap.get(event.overallWinner);
+      if (newOverallWinner) {
+        winnerUpdates.overallWinner = newOverallWinner;
+      }
+    }
+
+    if (event.categoryWinners) {
+      winnerUpdates.categoryWinners = event.categoryWinners
+        .map((winner) => {
+          const newTeamId = teamIdMap.get(winner.teamId);
+          return newTeamId
+            ? { category: winner.category, teamId: newTeamId }
+            : null;
+        })
+        .filter(
+          (winner): winner is { category: string; teamId: Id<"teams"> } =>
+            winner !== null,
+        );
+    }
+
+    if (Object.keys(winnerUpdates).length > 0) {
+      await ctx.db.patch(newEventId, winnerUpdates);
     }
 
     return newEventId;
@@ -648,6 +888,7 @@ export const updateEventDetails = mutation({
     appreciationMaxPerTeam: v.optional(v.number()),
     tracks: v.optional(v.array(v.string())),
     codeAndTellMaxBallots: v.optional(v.union(v.number(), v.null())),
+    hidden: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -668,12 +909,14 @@ export const updateEventDetails = mutation({
       appreciationMaxPerTeam?: number;
       tracks?: string[];
       codeAndTellMaxBallots?: number | undefined;
+      hidden?: boolean;
     } = {};
     if (args.name !== undefined) updates.name = args.name;
     if (args.description !== undefined) updates.description = args.description;
     if (args.startDate !== undefined) updates.startDate = args.startDate;
     if (args.endDate !== undefined) updates.endDate = args.endDate;
     if (args.tracks !== undefined) updates.tracks = args.tracks;
+    if (args.hidden !== undefined) updates.hidden = args.hidden;
     if (args.judgeCode !== undefined) {
       // Treat null as a request to clear the judge code.
       updates.judgeCode = args.judgeCode ?? "";

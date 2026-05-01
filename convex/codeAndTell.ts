@@ -2,7 +2,12 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { computeEventStatus, isAdmin, requireAdmin } from "./helpers";
+import {
+  canAccessEvent,
+  computeEventStatus,
+  isAdmin,
+  requireAdmin,
+} from "./helpers";
 import { isCodeAndTellMode } from "./eventModes";
 
 export const MAX_RANKED_CHOICES = 5;
@@ -89,6 +94,9 @@ async function getEventAndVisibleTeams(
 ) {
   const event = await ctx.db.get(eventId);
   if (!event) {
+    throw new Error("Event not found");
+  }
+  if (!(await canAccessEvent(ctx, event))) {
     throw new Error("Event not found");
   }
   if (!isCodeAndTellMode(event.mode)) {
@@ -306,6 +314,7 @@ export const getMyBallot = query({
 
     const event = await ctx.db.get(args.eventId);
     if (!event || !isCodeAndTellMode(event.mode)) return [];
+    if (!(await canAccessEvent(ctx, event))) return [];
 
     const vote = await ctx.db
       .query("rankedVotes")
@@ -524,6 +533,7 @@ export const getPublicResults = query({
     if (!event || !isCodeAndTellMode(event.mode) || !event.resultsReleased) {
       return null;
     }
+    if (!(await canAccessEvent(ctx, event))) return null;
 
     const summary = await buildStandings(ctx, args.eventId);
     return {

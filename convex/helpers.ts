@@ -46,6 +46,15 @@ export async function requireAdmin(
   return userId;
 }
 
+export async function canAccessEvent(
+  ctx: QueryCtx | MutationCtx,
+  event: { hidden?: boolean } | null,
+): Promise<boolean> {
+  if (!event) return false;
+  if (!event.hidden) return true;
+  return await isAdmin(ctx);
+}
+
 /**
  * Compute event status based on current time and start/end dates
  * - If now < startDate → "upcoming"

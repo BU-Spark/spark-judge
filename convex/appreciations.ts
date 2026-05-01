@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import {
+  canAccessEvent,
   computeEventStatus,
   DEMO_DAY_CONSTANTS,
   requireAdmin,
@@ -50,6 +51,9 @@ export const getTeamAppreciations = query({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event) {
+      throw new Error("Event not found");
+    }
+    if (!(await canAccessEvent(ctx, event))) {
       throw new Error("Event not found");
     }
     const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
@@ -143,6 +147,9 @@ export const getSingleTeamAppreciation = query({
     if (!event) {
       throw new Error("Event not found");
     }
+    if (!(await canAccessEvent(ctx, event))) {
+      throw new Error("Event not found");
+    }
     const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
 
     // Get all appreciations for this team
@@ -215,6 +222,9 @@ export const getEventAppreciationSummary = query({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event) {
+      throw new Error("Event not found");
+    }
+    if (!(await canAccessEvent(ctx, event))) {
       throw new Error("Event not found");
     }
 
@@ -456,6 +466,14 @@ export const createAppreciation = mutation({
         remainingTotal: 0,
       };
     }
+    if (!(await canAccessEvent(ctx, event))) {
+      return {
+        success: false,
+        error: "Event not found",
+        remainingForTeam: 0,
+        remainingTotal: 0,
+      };
+    }
     if (!isDemoDayMode(event.mode)) {
       return {
         success: false,
@@ -580,6 +598,9 @@ export const getAppreciationsCsvData = query({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event) {
+      throw new Error("Event not found");
+    }
+    if (!(await canAccessEvent(ctx, event))) {
       throw new Error("Event not found");
     }
 

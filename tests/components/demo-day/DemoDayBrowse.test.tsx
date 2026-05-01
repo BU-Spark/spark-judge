@@ -93,7 +93,7 @@ describe("DemoDayBrowse", () => {
       attendeeTotalCount: 1,
       attendeeRemainingBudget: 14,
       maxPerAttendee: 15,
-      maxPerTeam: 3,
+      maxPerTeam: 10,
     });
   });
 
@@ -105,7 +105,7 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getAllByText("Demo Day Fall 2024")).toHaveLength(2);
@@ -120,7 +120,7 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByLabelText(/back to events/i)).toBeInTheDocument();
@@ -134,7 +134,7 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const backButton = screen.getByText("Back to Events");
@@ -151,7 +151,7 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText("Team Alpha")).toBeInTheDocument();
@@ -167,12 +167,10 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    expect(
-      screen.getByText("An awesome project about AI")
-    ).toBeInTheDocument();
+    expect(screen.getByText("An awesome project about AI")).toBeInTheDocument();
     expect(screen.getByText("Web development project")).toBeInTheDocument();
   });
 
@@ -184,7 +182,7 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     // Course codes appear in both filter chips and team cards
@@ -202,7 +200,7 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     // Should show remaining budget
@@ -218,11 +216,11 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const searchInput = screen.getByPlaceholderText(
-      "Search projects by name or description..."
+      "Search projects by name or description...",
     );
     expect(searchInput).toBeInTheDocument();
   });
@@ -235,11 +233,11 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const searchInput = screen.getByPlaceholderText(
-      "Search projects by name or description..."
+      "Search projects by name or description...",
     );
     fireEvent.change(searchInput, { target: { value: "Alpha" } });
 
@@ -255,11 +253,11 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const searchInput = screen.getByPlaceholderText(
-      "Search projects by name or description..."
+      "Search projects by name or description...",
     );
     fireEvent.change(searchInput, { target: { value: "AI" } });
 
@@ -275,7 +273,7 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText("All Courses")).toBeInTheDocument();
@@ -300,7 +298,7 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText("Initializing...")).toBeInTheDocument();
@@ -314,7 +312,7 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const appreciateButtons = screen.getAllByText("+1");
@@ -329,12 +327,12 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    // Should show "X/3" for each team
-    expect(screen.getByText("1/3")).toBeInTheDocument();
-    expect(screen.getByText("0/3")).toBeInTheDocument();
+    // Should show "X/10" for each team by default
+    expect(screen.getByText("1/10")).toBeInTheDocument();
+    expect(screen.getByText("0/10")).toBeInTheDocument();
   });
 
   it("should show empty state when no teams match filter", () => {
@@ -345,17 +343,17 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const searchInput = screen.getByPlaceholderText(
-      "Search projects by name or description..."
+      "Search projects by name or description...",
     );
     fireEvent.change(searchInput, { target: { value: "nonexistent" } });
 
     expect(screen.getByText("No Projects Found")).toBeInTheDocument();
     expect(
-      screen.getByText("Try adjusting your search terms")
+      screen.getByText("Try adjusting your search terms"),
     ).toBeInTheDocument();
   });
 
@@ -367,7 +365,7 @@ describe("DemoDayBrowse", () => {
           event={mockEvent}
           onBack={mockOnBack}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     // Should show "Showing X projects"
@@ -405,7 +403,9 @@ describe("DemoDayBrowse - Team Card interactions", () => {
     });
 
     mockUseQuery.mockReturnValue({
-      teams: [{ teamId: "team1" as Id<"teams">, totalCount: 5, attendeeCount: 2 }],
+      teams: [
+        { teamId: "team1" as Id<"teams">, totalCount: 5, attendeeCount: 2 },
+      ],
       attendeeTotalCount: 2,
       attendeeRemainingBudget: 13,
     });
@@ -427,7 +427,7 @@ describe("DemoDayBrowse - Team Card interactions", () => {
           event={mockEvent}
           onBack={vi.fn()}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const appreciateButton = screen.getByText("+1");
@@ -440,9 +440,12 @@ describe("DemoDayBrowse - Team Card interactions", () => {
 
   it("should disable button when max appreciations reached for team", () => {
     mockUseQuery.mockReturnValue({
-      teams: [{ teamId: "team1" as Id<"teams">, totalCount: 10, attendeeCount: 3 }],
-      attendeeTotalCount: 3,
+      teams: [
+        { teamId: "team1" as Id<"teams">, totalCount: 10, attendeeCount: 10 },
+      ],
+      attendeeTotalCount: 10,
       attendeeRemainingBudget: 12,
+      maxPerTeam: 10,
     });
 
     mockUseAppreciation.mockReturnValue({
@@ -459,7 +462,7 @@ describe("DemoDayBrowse - Team Card interactions", () => {
           event={mockEvent}
           onBack={vi.fn()}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const maxGivenButton = screen.getByText("Max");
@@ -469,7 +472,9 @@ describe("DemoDayBrowse - Team Card interactions", () => {
 
   it("should disable button when no budget remaining", () => {
     mockUseQuery.mockReturnValue({
-      teams: [{ teamId: "team1" as Id<"teams">, totalCount: 10, attendeeCount: 1 }],
+      teams: [
+        { teamId: "team1" as Id<"teams">, totalCount: 10, attendeeCount: 1 },
+      ],
       attendeeTotalCount: 15,
       attendeeRemainingBudget: 0,
     });
@@ -488,7 +493,7 @@ describe("DemoDayBrowse - Team Card interactions", () => {
           event={mockEvent}
           onBack={vi.fn()}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     const noBudgetButton = screen.getByText("None Left");
@@ -511,7 +516,7 @@ describe("DemoDayBrowse - Team Card interactions", () => {
           event={mockEvent}
           onBack={vi.fn()}
         />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     // Should show spinner

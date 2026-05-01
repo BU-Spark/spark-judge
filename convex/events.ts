@@ -456,6 +456,8 @@ export const duplicateEvent = mutation({
       categories: event.categories,
       tracks: event.tracks,
       resultsReleased: false,
+      appreciationBudgetPerAttendee: event.appreciationBudgetPerAttendee,
+      appreciationMaxPerTeam: event.appreciationMaxPerTeam,
       judgeCode: undefined,
       mode: getEventMode(event.mode),
       courseCodes: event.courseCodes,
@@ -642,6 +644,7 @@ export const updateEventDetails = mutation({
     endDate: v.optional(v.number()),
     judgeCode: v.optional(v.union(v.string(), v.null())),
     appreciationBudgetPerAttendee: v.optional(v.number()),
+    appreciationMaxPerTeam: v.optional(v.number()),
     tracks: v.optional(v.array(v.string())),
     codeAndTellMaxBallots: v.optional(v.union(v.number(), v.null())),
   },
@@ -661,6 +664,7 @@ export const updateEventDetails = mutation({
       endDate?: number;
       judgeCode?: string;
       appreciationBudgetPerAttendee?: number;
+      appreciationMaxPerTeam?: number;
       tracks?: string[];
       codeAndTellMaxBallots?: number | undefined;
     } = {};
@@ -677,6 +681,12 @@ export const updateEventDetails = mutation({
       updates.appreciationBudgetPerAttendee = Math.max(
         0,
         args.appreciationBudgetPerAttendee,
+      );
+    }
+    if (args.appreciationMaxPerTeam !== undefined) {
+      updates.appreciationMaxPerTeam = Math.max(
+        0,
+        Math.floor(args.appreciationMaxPerTeam),
       );
     }
 

@@ -46,6 +46,8 @@ export function DetailsTab({
   setTracksEdit,
   appreciationBudget,
   setAppreciationBudget,
+  appreciationMaxPerTeam,
+  setAppreciationMaxPerTeam,
   handleSaveAppreciationSettings,
   savingAppreciationSettings,
   StyledCheckbox,
@@ -84,6 +86,8 @@ export function DetailsTab({
   setTracksEdit: (value: string) => void;
   appreciationBudget: number;
   setAppreciationBudget: (value: number) => void;
+  appreciationMaxPerTeam: number;
+  setAppreciationMaxPerTeam: (value: number) => void;
   handleSaveAppreciationSettings: () => void;
   savingAppreciationSettings: boolean;
   StyledCheckbox: (props: any) => ReactNode;
@@ -601,14 +605,19 @@ export function DetailsTab({
                 <label className="text-sm font-medium text-foreground">
                   Max per team
                 </label>
-                <input
-                  type="text"
-                  value="3"
-                  readOnly
-                  className="input bg-muted cursor-not-allowed"
+                <StyledNumberInput
+                  value={appreciationMaxPerTeam}
+                  onValueChange={(nextValue: number) =>
+                    setAppreciationMaxPerTeam(
+                      Math.max(0, Math.round(nextValue)),
+                    )
+                  }
+                  min={0}
+                  step={1}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Per-team cap remains 3 to encourage distribution.
+                  Limit of hearts each attendee can give to a single team.
+                  Defaults to 10.
                 </p>
               </div>
             </div>

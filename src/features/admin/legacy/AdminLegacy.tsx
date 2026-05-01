@@ -2019,6 +2019,8 @@ export function EventManagementModal({
   const [savingPrizes, setSavingPrizes] = useState(false);
   const [lockingScores, setLockingScores] = useState(false);
   const [appreciationBudget, setAppreciationBudget] = useState<number>(100);
+  const [appreciationMaxPerTeam, setAppreciationMaxPerTeam] =
+    useState<number>(10);
   const [tracksEdit, setTracksEdit] = useState("");
   const [codeAndTellMaxBallotsInput, setCodeAndTellMaxBallotsInput] =
     useState("");
@@ -2085,6 +2087,11 @@ export function EventManagementModal({
         typeof event.appreciationBudgetPerAttendee === "number"
           ? event.appreciationBudgetPerAttendee
           : 100,
+      );
+      setAppreciationMaxPerTeam(
+        typeof event.appreciationMaxPerTeam === "number"
+          ? event.appreciationMaxPerTeam
+          : 10,
       );
       setTracksEdit(event.tracks?.join(", ") || "");
       const cap = (event as { codeAndTellMaxBallots?: number })
@@ -2601,11 +2608,16 @@ export function EventManagementModal({
   const handleSaveAppreciationSettings = async () => {
     const parsed = Number(appreciationBudget);
     const budgetValue = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+    const parsedMaxPerTeam = Number(appreciationMaxPerTeam);
+    const maxPerTeamValue = Number.isFinite(parsedMaxPerTeam)
+      ? Math.max(0, Math.round(parsedMaxPerTeam))
+      : 0;
     setSavingAppreciationSettings(true);
     try {
       await updateEventDetails({
         eventId,
         appreciationBudgetPerAttendee: budgetValue,
+        appreciationMaxPerTeam: maxPerTeamValue,
       });
       toast.success("Appreciation settings saved");
     } catch (error) {
@@ -3047,6 +3059,8 @@ export function EventManagementModal({
                 setTracksEdit={setTracksEdit}
                 appreciationBudget={appreciationBudget}
                 setAppreciationBudget={setAppreciationBudget}
+                appreciationMaxPerTeam={appreciationMaxPerTeam}
+                setAppreciationMaxPerTeam={setAppreciationMaxPerTeam}
                 handleSaveAppreciationSettings={handleSaveAppreciationSettings}
                 savingAppreciationSettings={savingAppreciationSettings}
                 StyledCheckbox={StyledCheckbox}

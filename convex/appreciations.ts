@@ -1,15 +1,20 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import { computeEventStatus } from "./helpers";
-import { requireAdmin } from "./helpers";
+import {
+  computeEventStatus,
+  DEMO_DAY_CONSTANTS,
+  requireAdmin,
+} from "./helpers";
 import { isDemoDayMode } from "./eventModes";
 
 // Constants for rate limiting
-const MAX_TAPS_PER_PROJECT_PER_ATTENDEE = 3;
-const MAX_TAPS_PER_ATTENDEE = 100;
-const IP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
-const IP_RATE_LIMIT_MAX = 100; // Max appreciations from same IP in window
+const {
+  MAX_TAPS_PER_PROJECT_PER_ATTENDEE,
+  MAX_TAPS_PER_ATTENDEE,
+  IP_RATE_LIMIT_WINDOW_MS,
+  IP_RATE_LIMIT_MAX,
+} = DEMO_DAY_CONSTANTS;
 
 function getEventLimits(event: any) {
   return {
@@ -483,7 +488,7 @@ export const createAppreciation = mutation({
       };
     }
 
-    // 3. Check per-team limit (max 3 per team per attendee)
+    // 3. Check per-team limit
     const attendeeTeamAppreciations = await ctx.db
       .query("appreciations")
       .withIndex("by_event_and_team_and_attendee", (q) =>

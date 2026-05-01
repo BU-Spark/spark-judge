@@ -10,7 +10,7 @@ describe("appreciations business logic", () => {
     it("should have correct max taps per project per attendee", async () => {
       // Import the constants
       const { DEMO_DAY_CONSTANTS } = await import("../../../convex/helpers");
-      expect(DEMO_DAY_CONSTANTS.MAX_TAPS_PER_PROJECT_PER_ATTENDEE).toBe(3);
+      expect(DEMO_DAY_CONSTANTS.MAX_TAPS_PER_PROJECT_PER_ATTENDEE).toBe(10);
     });
 
     it("should have correct max taps per attendee", async () => {
@@ -36,15 +36,15 @@ describe("appreciations business logic", () => {
     });
 
     it("should validate per-team limit", () => {
-      const MAX_TAPS_PER_PROJECT = 3;
+      const MAX_TAPS_PER_PROJECT = 10;
       const attendeeTeamAppreciations = [
-        { _id: "1" },
-        { _id: "2" },
-        { _id: "3" },
+        ...Array.from({ length: MAX_TAPS_PER_PROJECT }, (_, index) => ({
+          _id: String(index + 1),
+        })),
       ];
       expect(attendeeTeamAppreciations.length).toBe(MAX_TAPS_PER_PROJECT);
       expect(attendeeTeamAppreciations.length >= MAX_TAPS_PER_PROJECT).toBe(
-        true
+        true,
       );
     });
 
@@ -65,10 +65,10 @@ describe("appreciations business logic", () => {
     });
 
     it("should calculate remaining per-team correctly", () => {
-      const MAX_TAPS_PER_PROJECT = 3;
+      const MAX_TAPS_PER_PROJECT = 10;
       const used = 1;
       const remaining = MAX_TAPS_PER_PROJECT - used;
-      expect(remaining).toBe(2);
+      expect(remaining).toBe(9);
     });
   });
 

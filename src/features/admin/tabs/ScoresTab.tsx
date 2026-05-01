@@ -300,7 +300,7 @@ export function ScoresTab({
                 },
                 {
                   label: "Per-project cap",
-                  value: `${appreciationSummary.appreciationMaxPerTeam ?? 3} hearts`,
+                  value: `${appreciationSummary.appreciationMaxPerTeam ?? 10} hearts`,
                 },
                 { label: "Ranking field", value: "Total appreciations" },
               ]}

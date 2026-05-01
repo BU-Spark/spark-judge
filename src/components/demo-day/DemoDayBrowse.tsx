@@ -48,10 +48,10 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
   // Get appreciation data
   const appreciationData = useQuery(
     api.appreciations.getTeamAppreciations,
-    attendeeId ? { eventId, attendeeId } : "skip"
+    attendeeId ? { eventId, attendeeId } : "skip",
   );
   const maxPerAttendee = appreciationData?.maxPerAttendee ?? 100;
-  const maxPerTeam = appreciationData?.maxPerTeam ?? 3;
+  const maxPerTeam = appreciationData?.maxPerTeam ?? 10;
   const remainingBudget =
     appreciationData?.attendeeRemainingBudget ?? maxPerAttendee;
 
@@ -98,7 +98,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
     }
 
     const grouped = new Map<string, typeof filteredTeams>();
-    
+
     // Add teams with course codes
     filteredTeams.forEach((team) => {
       const course = team.courseCode || "Other";
@@ -217,7 +217,10 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
               <p className="text-muted-foreground">{event.description}</p>
             </div>
             <div>
-              <BudgetIndicator remaining={remainingBudget} total={maxPerAttendee} />
+              <BudgetIndicator
+                remaining={remainingBudget}
+                total={maxPerAttendee}
+              />
             </div>
           </div>
         </div>
@@ -277,8 +280,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
                   <button
                     key={code}
                     onClick={() => {
-                      const next =
-                        selectedCourse === code ? null : code;
+                      const next = selectedCourse === code ? null : code;
                       setSelectedCourse(next);
                       scrollToCourse(code);
                     }}
@@ -495,7 +497,10 @@ function TeamCard({
 
   const attendeeCount = optimisticCount ?? appreciationData?.attendeeCount ?? 0;
   const canAppreciate =
-    isEventLive && attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
+    isEventLive &&
+    attendeeId &&
+    attendeeCount < maxPerTeam &&
+    remainingBudget > 0;
 
   const handleAppreciate = async () => {
     if (!attendeeId || !canAppreciate) return;
@@ -513,7 +518,7 @@ function TeamCard({
         // Revert optimistic update
         setOptimisticCount(null);
         toast.error(error);
-      }
+      },
     );
 
     // If successful, the query will refresh and we can clear optimistic state
@@ -526,9 +531,7 @@ function TeamCard({
   return (
     <div
       className={`card fade-in p-5 bg-card hover:shadow-lg transition-all duration-200 ${
-        layout === "carousel"
-          ? "min-w-[80%] sm:min-w-[60%] md:min-w-0"
-          : ""
+        layout === "carousel" ? "min-w-[80%] sm:min-w-[60%] md:min-w-0" : ""
       }`}
       style={{ animationDelay: `${index * 0.05}s` }}
     >
@@ -620,9 +623,11 @@ function TeamCard({
 }
 
 interface QuickViewSheetProps {
-  team: (TeamCardProps["team"] & {
-    appreciationData?: { totalCount: number; attendeeCount: number };
-  }) | null;
+  team:
+    | (TeamCardProps["team"] & {
+        appreciationData?: { totalCount: number; attendeeCount: number };
+      })
+    | null;
   onClose: () => void;
   eventId: Id<"events">;
   attendeeId: string | null;
@@ -669,7 +674,10 @@ function QuickViewSheet({
   const attendeeCount =
     optimisticCount ?? team.appreciationData?.attendeeCount ?? 0;
   const canAppreciate =
-    isEventLive && attendeeId && attendeeCount < maxPerTeam && remainingBudget > 0;
+    isEventLive &&
+    attendeeId &&
+    attendeeCount < maxPerTeam &&
+    remainingBudget > 0;
 
   const handleAppreciate = async () => {
     if (!attendeeId || !canAppreciate) return;
@@ -684,7 +692,7 @@ function QuickViewSheet({
       (error) => {
         setOptimisticCount(null);
         toast.error(error);
-      }
+      },
     );
 
     if (result.success) {
@@ -760,7 +768,8 @@ function QuickViewSheet({
         )}
         <div className="flex items-center justify-between border-t border-border pt-3 gap-3">
           <span className="text-xs text-muted-foreground">
-            {attendeeCount}/{maxPerTeam} you’ve given • {remainingBudget}/{maxPerAttendee} left
+            {attendeeCount}/{maxPerTeam} you’ve given • {remainingBudget}/
+            {maxPerAttendee} left
           </span>
           <button
             onClick={() => {

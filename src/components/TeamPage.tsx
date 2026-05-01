@@ -18,23 +18,31 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
   // Get attendee identity
   const { attendeeId, isLoading: identityLoading } = useAttendeeIdentity();
 
-  // Fetch event status to gate appreciations
-  const event = useQuery(api.events.getEventForTeamPage, { eventId, teamId });
-
   // Fetch team data
   const team = useQuery(api.teams.getTeamById, { teamId });
+
+  const resolvedEventId = team && team !== null ? team.eventId : null;
+
+  // Fetch event status to gate appreciations, using the team-owned event ID.
+  const event = useQuery(
+    api.events.getEventForTeamPage,
+    resolvedEventId ? { eventId: resolvedEventId, teamId } : "skip",
+  );
 
   // Fetch appreciation data
   const appreciationData = useQuery(
     api.appreciations.getSingleTeamAppreciation,
-    attendeeId ? { eventId, teamId, attendeeId } : { eventId, teamId },
+    resolvedEventId
+      ? attendeeId
+        ? { eventId: resolvedEventId, teamId, attendeeId }
+        : { eventId: resolvedEventId, teamId }
+      : "skip",
   );
 
   if (
     identityLoading ||
     team === undefined ||
-    appreciationData === undefined ||
-    event === undefined
+    (team !== null && (appreciationData === undefined || event === undefined))
   ) {
     return <LoadingState label="Loading project..." />;
   }
@@ -56,7 +64,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
         title="Project Unavailable"
         description="This project is currently not available for viewing."
         actionLabel="Browse All Projects"
-        onAction={() => (window.location.href = `/event/${eventId}`)}
+        onAction={() => (window.location.href = `/event/${team.eventId}`)}
       />
     );
   }
@@ -67,7 +75,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
         title="Event Not Found"
         description="The event for this project is unavailable."
         actionLabel="Browse All Projects"
-        onAction={() => (window.location.href = `/event/${eventId}`)}
+        onAction={() => (window.location.href = `/event/${team.eventId}`)}
       />
     );
   }
@@ -80,7 +88,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Back Link */}
       <Link
-        to={`/event/${eventId}`}
+        to={`/event/${team.eventId}`}
         className="inline-flex items-center gap-2 btn-ghost mb-6 text-sm"
       >
         <svg

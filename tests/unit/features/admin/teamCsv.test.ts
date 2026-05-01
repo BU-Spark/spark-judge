@@ -8,8 +8,8 @@ import {
 describe("teamCsv", () => {
   it("parses hackathon CSV rows with quoted cells", () => {
     const csv = [
-      "name,description,members,track,projectUrl,prizes",
-      '"Code Crusaders","Builds, ships, and demos","Alice Smith; Bob Jones",AI,https://github.com/team/project,"Best Overall; Audience Choice"',
+      "name,description,members,track,projectUrl,githubUrl,prizes",
+      '"Code Crusaders","Builds, ships, and demos","Alice Smith; Bob Jones",AI,https://example.com/project,https://github.com/team/project,"Best Overall; Audience Choice"',
     ].join("\n");
 
     expect(parseTeamCsv(csv, "hackathon")).toEqual([
@@ -21,7 +21,8 @@ describe("teamCsv", () => {
         entrantEmails: [],
         track: "AI",
         courseCode: undefined,
-        projectUrl: "https://github.com/team/project",
+        projectUrl: "https://example.com/project",
+        githubUrl: "https://github.com/team/project",
         prizeNames: ["Best Overall", "Audience Choice"],
       },
     ]);
@@ -43,6 +44,7 @@ describe("teamCsv", () => {
         track: undefined,
         courseCode: "DS519",
         projectUrl: undefined,
+        githubUrl: undefined,
         prizeNames: [],
       },
     ]);
@@ -50,8 +52,8 @@ describe("teamCsv", () => {
 
   it("parses Code & Tell CSV rows with entrant emails", () => {
     const csv = [
-      "name,description,entrantEmails,members,projectUrl",
-      '"Compiler Circus","Live coding showcase","alpha@example.com; beta@example.com","Alice; Bob",https://example.com/demo',
+      "name,description,entrantEmails,members,projectUrl,githubUrl",
+      '"Compiler Circus","Live coding showcase","alpha@example.com; beta@example.com","Alice; Bob",https://example.com/demo,https://github.com/team/demo',
     ].join("\n");
 
     expect(parseTeamCsv(csv, "code_and_tell")).toEqual([
@@ -64,6 +66,29 @@ describe("teamCsv", () => {
         track: undefined,
         courseCode: undefined,
         projectUrl: "https://example.com/demo",
+        githubUrl: "https://github.com/team/demo",
+        prizeNames: [],
+      },
+    ]);
+  });
+
+  it("parses hackathon CSV rows without members", () => {
+    const csv = [
+      "name,description,track,projectUrl,githubUrl",
+      "Solo Showcase,No member list yet,AI,https://example.com/solo,https://github.com/team/solo",
+    ].join("\n");
+
+    expect(parseTeamCsv(csv, "hackathon")).toEqual([
+      {
+        rowNumber: 2,
+        name: "Solo Showcase",
+        description: "No member list yet",
+        members: [],
+        entrantEmails: [],
+        track: "AI",
+        courseCode: undefined,
+        projectUrl: "https://example.com/solo",
+        githubUrl: "https://github.com/team/solo",
         prizeNames: [],
       },
     ]);
@@ -76,18 +101,29 @@ describe("teamCsv", () => {
     ].join("\n");
 
     expect(() => parseTeamCsv(csv, "hackathon")).toThrow(
-      "CSV must include `name`, `members` (or `member1`, `member2`, ...), and `track` columns.",
+      "CSV must include `name` and `track` columns.",
     );
   });
 
   it("rejects invalid project URLs", () => {
     const csv = [
       "name,members,track,projectUrl",
+      "Code Crusaders,Alice Smith; Bob Jones,AI,http://example.com/team/project",
+    ].join("\n");
+
+    expect(() => parseTeamCsv(csv, "hackathon")).toThrow(
+      "Row 2: project URL must start with https://",
+    );
+  });
+
+  it("rejects invalid GitHub URLs", () => {
+    const csv = [
+      "name,members,track,githubUrl",
       "Code Crusaders,Alice Smith; Bob Jones,AI,https://gitlab.com/team/project",
     ].join("\n");
 
     expect(() => parseTeamCsv(csv, "hackathon")).toThrow(
-      "Row 2: project URL must start with https://github.com/",
+      "Row 2: GitHub URL must start with https://github.com/",
     );
   });
 
@@ -98,6 +134,7 @@ describe("teamCsv", () => {
   it("creates a Code & Tell template with entrant emails", () => {
     const template = createTeamCsvTemplate("code_and_tell");
     expect(template).toContain("entrantEmails");
+    expect(template).toContain("githubUrl");
     expect(template).not.toContain("track");
     expect(template).not.toContain("members");
     expect(template).not.toContain("prizes");

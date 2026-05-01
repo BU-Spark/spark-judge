@@ -10,18 +10,18 @@ function computeTotalScore(
     score: number | null;
     optedOut?: boolean;
   }>,
-  eventCategories: Array<{ name: string; weight?: number }>
+  eventCategories: Array<{ name: string; weight?: number }>,
 ) {
   const totalConfiguredWeight =
     eventCategories.reduce(
       (sum, category) => sum + (category.weight ?? 1),
-      0
+      0,
     ) ||
     eventCategories.length ||
     1;
 
   const categoryWeights = new Map(
-    eventCategories.map((c) => [c.name, c.weight ?? 1])
+    eventCategories.map((c) => [c.name, c.weight ?? 1]),
   );
 
   let weightedSum = 0;
@@ -52,7 +52,7 @@ export const submitScore = mutation({
         category: v.string(),
         score: v.union(v.number(), v.null()),
         optedOut: v.optional(v.boolean()),
-      })
+      }),
     ),
   },
   handler: async (ctx, args) => {
@@ -62,7 +62,7 @@ export const submitScore = mutation({
     const judge = await ctx.db
       .query("judges")
       .withIndex("by_user_and_event", (q) =>
-        q.eq("userId", userId).eq("eventId", args.eventId)
+        q.eq("userId", userId).eq("eventId", args.eventId),
       )
       .first();
 
@@ -95,13 +95,13 @@ export const submitScore = mutation({
 
     const totalScore = computeTotalScore(
       sanitizedCategoryScores,
-      event.categories
+      event.categories,
     );
 
     const existing = await ctx.db
       .query("scores")
       .withIndex("by_judge_and_team", (q) =>
-        q.eq("judgeId", judge._id).eq("teamId", args.teamId)
+        q.eq("judgeId", judge._id).eq("teamId", args.teamId),
       )
       .first();
 
@@ -136,9 +136,9 @@ export const submitBatchScores = mutation({
             category: v.string(),
             score: v.union(v.number(), v.null()),
             optedOut: v.optional(v.boolean()),
-          })
+          }),
         ),
-      })
+      }),
     ),
   },
   handler: async (ctx, args) => {
@@ -148,7 +148,7 @@ export const submitBatchScores = mutation({
     const judge = await ctx.db
       .query("judges")
       .withIndex("by_user_and_event", (q) =>
-        q.eq("userId", userId).eq("eventId", args.eventId)
+        q.eq("userId", userId).eq("eventId", args.eventId),
       )
       .first();
 
@@ -189,13 +189,13 @@ export const submitBatchScores = mutation({
 
         const totalScore = computeTotalScore(
           sanitizedCategoryScores,
-          event.categories
+          event.categories,
         );
 
         const existing = await ctx.db
           .query("scores")
           .withIndex("by_judge_and_team", (q) =>
-            q.eq("judgeId", judge._id).eq("teamId", entry.teamId)
+            q.eq("judgeId", judge._id).eq("teamId", entry.teamId),
           )
           .first();
 
@@ -215,7 +215,7 @@ export const submitBatchScores = mutation({
             submittedAt: Date.now(),
           });
         }
-      })
+      }),
     );
   },
 });
@@ -232,7 +232,7 @@ export const getMyScores = query({
     const judge = await ctx.db
       .query("judges")
       .withIndex("by_user_and_event", (q) =>
-        q.eq("userId", userId).eq("eventId", args.eventId)
+        q.eq("userId", userId).eq("eventId", args.eventId),
       )
       .first();
 
@@ -261,7 +261,7 @@ export const getTeamScore = query({
     const judge = await ctx.db
       .query("judges")
       .withIndex("by_user_and_event", (q) =>
-        q.eq("userId", userId).eq("eventId", team.eventId)
+        q.eq("userId", userId).eq("eventId", team.eventId),
       )
       .first();
 
@@ -270,7 +270,7 @@ export const getTeamScore = query({
     return await ctx.db
       .query("scores")
       .withIndex("by_judge_and_team", (q) =>
-        q.eq("judgeId", judge._id).eq("teamId", args.teamId)
+        q.eq("judgeId", judge._id).eq("teamId", args.teamId),
       )
       .first();
   },
@@ -323,7 +323,7 @@ export const setWinners = mutation({
       v.object({
         category: v.string(),
         teamId: v.id("teams"),
-      })
+      }),
     ),
   },
   handler: async (ctx, args) => {
@@ -341,7 +341,7 @@ export const setWinners = mutation({
           .query("teams")
           .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
           .collect()
-      ).map((team) => team._id)
+      ).map((team) => team._id),
     );
 
     if (!eventTeamIds.has(args.overallWinner)) {
@@ -351,7 +351,7 @@ export const setWinners = mutation({
     for (const winner of args.categoryWinners) {
       if (!eventTeamIds.has(winner.teamId)) {
         throw new Error(
-          `Category winner for ${winner.category} must be a team in this event`
+          `Category winner for ${winner.category} must be a team in this event`,
         );
       }
     }
@@ -390,7 +390,15 @@ export const getDetailedEventScores = query({
       categoryRankings: v.any(),
       judgeBreakdown: v.array(v.any()),
       categories: v.array(v.string()),
-    })
+      categoryRubric: v.array(
+        v.object({
+          name: v.string(),
+          weight: v.number(),
+          percent: v.number(),
+          maxPoints: v.number(),
+        }),
+      ),
+    }),
   ),
   handler: async (ctx, args) => {
     const userIsAdmin = await isAdmin(ctx);
@@ -414,6 +422,24 @@ export const getDetailedEventScores = query({
       .query("judges")
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
+
+    const totalConfiguredWeight =
+      event.categories.reduce(
+        (sum, category) => sum + (category.weight ?? 1),
+        0,
+      ) ||
+      event.categories.length ||
+      1;
+
+    const categoryRubric = event.categories.map((category) => {
+      const weight = category.weight ?? 1;
+      return {
+        name: category.name,
+        weight,
+        percent: Math.round((weight / totalConfiguredWeight) * 1000) / 10,
+        maxPoints: Math.round(weight * 5 * 100) / 100,
+      };
+    });
 
     // Get judge names and admin status
     const judgeMap = new Map<string, { name: string; isAdmin: boolean }>();
@@ -441,14 +467,14 @@ export const getDetailedEventScores = query({
       event.categories.forEach((catObj) => {
         const categoryScores = teamScoresList
           .map((s) =>
-            s.categoryScores.find((cs) => cs.category === catObj.name)
+            s.categoryScores.find((cs) => cs.category === catObj.name),
           )
           .filter(
             (cs) =>
               cs &&
               !cs.optedOut &&
               cs.score !== null &&
-              typeof cs.score === "number"
+              typeof cs.score === "number",
           )
           .map((cs) => cs!.score as number);
 
@@ -506,6 +532,7 @@ export const getDetailedEventScores = query({
       categoryRankings,
       judgeBreakdown,
       categories: event.categories.map((c) => c.name),
+      categoryRubric,
     };
   },
 });

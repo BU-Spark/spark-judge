@@ -14,10 +14,10 @@ export const getEventInternal = internalQuery({
         v.union(
           v.literal("hackathon"),
           v.literal("demo_day"),
-          v.literal("code_and_tell")
-        )
+          v.literal("code_and_tell"),
+        ),
       ),
-    })
+    }),
   ),
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
@@ -40,7 +40,8 @@ export const getTeamInternal = internalQuery({
       name: v.string(),
       courseCode: v.optional(v.string()),
       hidden: v.optional(v.boolean()),
-    })
+      demoDaySignName: v.optional(v.string()),
+    }),
   ),
   handler: async (ctx, args) => {
     const team = await ctx.db.get(args.teamId);
@@ -51,6 +52,7 @@ export const getTeamInternal = internalQuery({
       name: team.name,
       courseCode: team.courseCode,
       hidden: team.hidden,
+      demoDaySignName: team.demoDaySignName,
     };
   },
 });
@@ -66,7 +68,14 @@ export const getTeamsInternal = internalQuery({
       hidden: v.optional(v.boolean()),
       demoDayRound: v.optional(v.number()),
       demoDayBoardNumber: v.optional(v.string()),
-    })
+      demoDayProjectInstance: v.optional(v.string()),
+      airtableProjectRecordId: v.optional(v.string()),
+      airtableProjectInstanceRecordId: v.optional(v.string()),
+      demoDaySignName: v.optional(v.string()),
+      demoDayFullSignName: v.optional(v.string()),
+      demoDayBoardTime: v.optional(v.string()),
+      demoDayCourseName: v.optional(v.string()),
+    }),
   ),
   handler: async (ctx, args) => {
     const teams = await ctx.db
@@ -81,6 +90,13 @@ export const getTeamsInternal = internalQuery({
       hidden: team.hidden,
       demoDayRound: team.demoDayRound,
       demoDayBoardNumber: team.demoDayBoardNumber,
+      demoDayProjectInstance: team.demoDayProjectInstance,
+      airtableProjectRecordId: team.airtableProjectRecordId,
+      airtableProjectInstanceRecordId: team.airtableProjectInstanceRecordId,
+      demoDaySignName: team.demoDaySignName,
+      demoDayFullSignName: team.demoDayFullSignName,
+      demoDayBoardTime: team.demoDayBoardTime,
+      demoDayCourseName: team.demoDayCourseName,
     }));
   },
 });

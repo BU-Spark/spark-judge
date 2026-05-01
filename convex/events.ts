@@ -13,7 +13,7 @@ import {
 const EVENT_MODE_VALIDATOR = v.union(
   v.literal("hackathon"),
   v.literal("demo_day"),
-  v.literal("code_and_tell")
+  v.literal("code_and_tell"),
 );
 
 export const listEvents = query({
@@ -34,27 +34,27 @@ export const listEvents = query({
     if (userId) {
       const [allMyJudgeRows, allMyParticipantRows, allMyRankedVotes] =
         await Promise.all([
-        ctx.db
-          .query("judges")
-          .withIndex("by_user", (q) => q.eq("userId", userId))
-          .collect(),
-        ctx.db
-          .query("participants")
-          .withIndex("by_user", (q) => q.eq("userId", userId))
-          .collect(),
-        ctx.db
-          .query("rankedVotes")
-          .withIndex("by_voter", (q) => q.eq("voterUserId", userId))
-          .collect(),
-      ]);
+          ctx.db
+            .query("judges")
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .collect(),
+          ctx.db
+            .query("participants")
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .collect(),
+          ctx.db
+            .query("rankedVotes")
+            .withIndex("by_voter", (q) => q.eq("voterUserId", userId))
+            .collect(),
+        ]);
       judgesByEventId = new Map(
-        allMyJudgeRows.map((judge) => [judge.eventId, judge._id])
+        allMyJudgeRows.map((judge) => [judge.eventId, judge._id]),
       );
       participantEventIds = new Set(
-        allMyParticipantRows.map((participant) => participant.eventId)
+        allMyParticipantRows.map((participant) => participant.eventId),
       );
       rankedVoteEventIds = new Set(
-        allMyRankedVotes.map((vote) => vote.eventId)
+        allMyRankedVotes.map((vote) => vote.eventId),
       );
     }
 
@@ -104,7 +104,7 @@ export const listEvents = query({
           requiresJudgeCode:
             mode === "hackathon" && status === "active" && !!event.judgeCode,
         };
-      })
+      }),
     );
 
     return {
@@ -144,14 +144,16 @@ export const joinAsJudge = mutation({
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
     if (!isHackathonMode(event.mode)) {
-      throw new Error("Judge registration is only available for hackathon events");
+      throw new Error(
+        "Judge registration is only available for hackathon events",
+      );
     }
 
     // Check if already a participant
     const participant = await ctx.db
       .query("participants")
       .withIndex("by_user_and_event", (q) =>
-        q.eq("userId", userId).eq("eventId", args.eventId)
+        q.eq("userId", userId).eq("eventId", args.eventId),
       )
       .first();
 
@@ -162,7 +164,7 @@ export const joinAsJudge = mutation({
     const existing = await ctx.db
       .query("judges")
       .withIndex("by_user_and_event", (q) =>
-        q.eq("userId", userId).eq("eventId", args.eventId)
+        q.eq("userId", userId).eq("eventId", args.eventId),
       )
       .first();
 
@@ -203,7 +205,7 @@ export const verifyJudgeCodeAndStartJudging = mutation({
     const judge = await ctx.db
       .query("judges")
       .withIndex("by_user_and_event", (q) =>
-        q.eq("userId", userId).eq("eventId", args.eventId)
+        q.eq("userId", userId).eq("eventId", args.eventId),
       )
       .first();
 
@@ -233,7 +235,7 @@ export const getJudgeStatus = query({
     const judge = await ctx.db
       .query("judges")
       .withIndex("by_user_and_event", (q) =>
-        q.eq("userId", userId).eq("eventId", args.eventId)
+        q.eq("userId", userId).eq("eventId", args.eventId),
       )
       .first();
 
@@ -248,7 +250,7 @@ export const createEvent = mutation({
     status: v.union(
       v.literal("upcoming"),
       v.literal("active"),
-      v.literal("past")
+      v.literal("past"),
     ),
     startDate: v.number(),
     endDate: v.number(),
@@ -257,7 +259,7 @@ export const createEvent = mutation({
         name: v.string(),
         weight: v.number(),
         optOutAllowed: v.optional(v.boolean()),
-      })
+      }),
     ),
     tracks: v.optional(v.array(v.string())),
     judgeCode: v.optional(v.string()),
@@ -296,7 +298,7 @@ export const updateEventStatus = mutation({
     status: v.union(
       v.literal("upcoming"),
       v.literal("active"),
-      v.literal("past")
+      v.literal("past"),
     ),
   },
   returns: v.null(),
@@ -362,41 +364,40 @@ export const removeEvent = mutation({
       prizeSubmissions,
       prizeWinners,
       rankedVotes,
-    ] =
-      await Promise.all([
-        ctx.db
-          .query("scores")
-          .withIndex("by_event", (q) => q.eq("eventId", eventId))
-          .collect(),
-        ctx.db
-          .query("teams")
-          .withIndex("by_event", (q) => q.eq("eventId", eventId))
-          .collect(),
-        ctx.db
-          .query("judges")
-          .withIndex("by_event", (q) => q.eq("eventId", eventId))
-          .collect(),
-        ctx.db
-          .query("participants")
-          .withIndex("by_event", (q) => q.eq("eventId", eventId))
-          .collect(),
-        ctx.db
-          .query("prizes")
-          .withIndex("by_event", (q) => q.eq("eventId", eventId))
-          .collect(),
-        ctx.db
-          .query("teamPrizeSubmissions")
-          .withIndex("by_event", (q) => q.eq("eventId", eventId))
-          .collect(),
-        ctx.db
-          .query("prizeWinners")
-          .withIndex("by_event", (q) => q.eq("eventId", eventId))
-          .collect(),
-        ctx.db
-          .query("rankedVotes")
-          .withIndex("by_event", (q) => q.eq("eventId", eventId))
-          .collect(),
-      ]);
+    ] = await Promise.all([
+      ctx.db
+        .query("scores")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("teams")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("judges")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("participants")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("prizes")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("teamPrizeSubmissions")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("prizeWinners")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("rankedVotes")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
+    ]);
 
     await Promise.all(scores.map((score) => ctx.db.delete(score._id)));
 
@@ -409,9 +410,11 @@ export const removeEvent = mutation({
 
     await Promise.all(judges.map((judge) => ctx.db.delete(judge._id)));
     await Promise.all(
-      participants.map((participant) => ctx.db.delete(participant._id))
+      participants.map((participant) => ctx.db.delete(participant._id)),
     );
-    await Promise.all(prizeSubmissions.map((submission) => ctx.db.delete(submission._id)));
+    await Promise.all(
+      prizeSubmissions.map((submission) => ctx.db.delete(submission._id)),
+    );
     await Promise.all(prizeWinners.map((winner) => ctx.db.delete(winner._id)));
     await Promise.all(rankedVotes.map((vote) => ctx.db.delete(vote._id)));
     await Promise.all(prizes.map((prize) => ctx.db.delete(prize._id)));
@@ -484,8 +487,8 @@ export const duplicateEvent = mutation({
             createdAt: now,
             updatedAt: now,
             createdBy: userId,
-          })
-        )
+          }),
+        ),
       );
     }
 
@@ -501,13 +504,41 @@ export const updateEventCategories = mutation({
         name: v.string(),
         weight: v.number(),
         optOutAllowed: v.optional(v.boolean()),
-      })
+      }),
     ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     await ctx.db.patch(args.eventId, { categories: args.categories });
+    return null;
+  },
+});
+
+export const updateEventCourseCodes = mutation({
+  args: {
+    eventId: v.id("events"),
+    courseCodes: v.array(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event) throw new Error("Event not found");
+    if (!isDemoDayMode(event.mode)) {
+      throw new Error("Course codes are only available for Demo Day events");
+    }
+
+    const courseCodes = Array.from(
+      new Set(
+        args.courseCodes
+          .map((code) => code.trim().toUpperCase().replace(/\s+/g, ""))
+          .filter(Boolean),
+      ),
+    );
+
+    await ctx.db.patch(args.eventId, { courseCodes });
     return null;
   },
 });
@@ -559,7 +590,7 @@ export const updateEventMode = mutation({
 
       if (teams.length > 0 || rankedVotes.length > 0) {
         throw new Error(
-          "Code & Tell mode cannot be switched once projects or ballots exist for the event"
+          "Code & Tell mode cannot be switched once projects or ballots exist for the event",
         );
       }
     }
@@ -645,7 +676,7 @@ export const updateEventDetails = mutation({
     if (args.appreciationBudgetPerAttendee !== undefined) {
       updates.appreciationBudgetPerAttendee = Math.max(
         0,
-        args.appreciationBudgetPerAttendee
+        args.appreciationBudgetPerAttendee,
       );
     }
 
@@ -655,7 +686,7 @@ export const updateEventDetails = mutation({
       }
       if (computeEventStatus(event) === "past") {
         throw new Error(
-          "Ballot cap cannot be changed after the event has ended"
+          "Ballot cap cannot be changed after the event has ended",
         );
       }
       if (args.codeAndTellMaxBallots === null) {

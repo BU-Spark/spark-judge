@@ -4,6 +4,10 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import clsx from "clsx";
+import {
+  formatRubricPercent,
+  getRubricPercentages,
+} from "../lib/scoringWeights";
 
 type Team = {
   _id: Id<"teams">;
@@ -23,6 +27,7 @@ type ExistingScore = {
 
 type Category = {
   name: string;
+  weight?: number;
   optOutAllowed?: boolean;
 };
 
@@ -72,23 +77,25 @@ export function ScoringWizard({
 
   const sortedTeams = useMemo(
     () => [...teams].sort((a, b) => a.name.localeCompare(b.name)),
-    [teams]
+    [teams],
   );
 
   const [draftScores, setDraftScores] = useState<
     Record<string, Record<string, CategoryScoreValue>>
   >({});
   const [completedTeams, setCompletedTeams] = useState<Set<string>>(
-    () => new Set()
+    () => new Set(),
   );
   const [skippedTeams, setSkippedTeams] = useState<Set<string>>(
-    () => new Set()
+    () => new Set(),
   );
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   const [isReviewing, setIsReviewing] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<ReviewStatus, boolean>>({
+  const [expandedSections, setExpandedSections] = useState<
+    Record<ReviewStatus, boolean>
+  >({
     completed: true,
     skipped: true,
     pending: true,
@@ -96,6 +103,16 @@ export function ScoringWizard({
   const [navHistory, setNavHistory] = useState<number[]>([]);
 
   const totalTeams = sortedTeams.length;
+  const rubricPercentByCategory = useMemo(
+    () =>
+      new Map(
+        getRubricPercentages(categories).map((category) => [
+          category.name,
+          category.percent,
+        ]),
+      ),
+    [categories],
+  );
   const completedCount = completedTeams.size;
   const progressPercent =
     totalTeams === 0 ? 0 : Math.round((completedCount / totalTeams) * 100);
@@ -114,7 +131,7 @@ export function ScoringWizard({
         const current = existing[name];
         if (current) {
           filled[name] = {
-            score: current.optedOut ? null : current.score ?? DEFAULT_SCORE,
+            score: current.optedOut ? null : (current.score ?? DEFAULT_SCORE),
             optedOut: current.optedOut ?? current.score === null,
           };
           return;
@@ -123,7 +140,7 @@ export function ScoringWizard({
       });
       return filled;
     },
-    [categories, draftScores]
+    [categories, draftScores],
   );
 
   useEffect(() => {
@@ -134,16 +151,15 @@ export function ScoringWizard({
       const next: Record<string, Record<string, CategoryScoreValue>> = {};
       existingScores.forEach((score) => {
         const key = score.teamId as string;
-        next[key] = score.categoryScores.reduce<Record<string, CategoryScoreValue>>(
-          (acc, cs) => {
-            acc[cs.category] = {
-              score: cs.optedOut ? null : cs.score ?? DEFAULT_SCORE,
-              optedOut: cs.optedOut ?? cs.score === null,
-            };
-            return acc;
-          },
-          {}
-        );
+        next[key] = score.categoryScores.reduce<
+          Record<string, CategoryScoreValue>
+        >((acc, cs) => {
+          acc[cs.category] = {
+            score: cs.optedOut ? null : (cs.score ?? DEFAULT_SCORE),
+            optedOut: cs.optedOut ?? cs.score === null,
+          };
+          return acc;
+        }, {});
       });
       return next;
     });
@@ -162,26 +178,41 @@ export function ScoringWizard({
       const raw = window.localStorage.getItem(storageKey);
       if (raw) {
         const parsed = JSON.parse(raw) as DraftStoragePayload;
-        const normalizedScores: Record<string, Record<string, CategoryScoreValue>> = {};
+        const normalizedScores: Record<
+          string,
+          Record<string, CategoryScoreValue>
+        > = {};
         Object.entries(parsed.scores ?? {}).forEach(([teamId, categories]) => {
           const normalizedCategories: Record<string, CategoryScoreValue> = {};
-          Object.entries(categories as Record<string, any>).forEach(([categoryName, value]) => {
-            if (value && typeof value === "object" && "score" in (value as any)) {
-              const obj = value as any;
-              normalizedCategories[categoryName] = {
-                score: obj.optedOut ? null : obj.score ?? DEFAULT_SCORE,
-                optedOut: obj.optedOut ?? obj.score === null,
-              };
-            } else if (typeof value === "number") {
-              normalizedCategories[categoryName] = { score: value, optedOut: false };
-            }
-          });
+          Object.entries(categories as Record<string, any>).forEach(
+            ([categoryName, value]) => {
+              if (
+                value &&
+                typeof value === "object" &&
+                "score" in (value as any)
+              ) {
+                const obj = value as any;
+                normalizedCategories[categoryName] = {
+                  score: obj.optedOut ? null : (obj.score ?? DEFAULT_SCORE),
+                  optedOut: obj.optedOut ?? obj.score === null,
+                };
+              } else if (typeof value === "number") {
+                normalizedCategories[categoryName] = {
+                  score: value,
+                  optedOut: false,
+                };
+              }
+            },
+          );
           normalizedScores[teamId] = normalizedCategories;
         });
         setDraftScores(normalizedScores);
         setCompletedTeams(new Set(parsed.completed ?? []));
         setSkippedTeams(new Set(parsed.skipped ?? []));
-        if (parsed.currentIndex >= 0 && parsed.currentIndex < sortedTeams.length) {
+        if (
+          parsed.currentIndex >= 0 &&
+          parsed.currentIndex < sortedTeams.length
+        ) {
           setCurrentTeamIndex(parsed.currentIndex);
         }
       }
@@ -229,7 +260,7 @@ export function ScoringWizard({
         return next;
       });
     },
-    [currentTeamId]
+    [currentTeamId],
   );
 
   const handleOptOut = useCallback(
@@ -247,7 +278,7 @@ export function ScoringWizard({
         return next;
       });
     },
-    [currentTeamId]
+    [currentTeamId],
   );
 
   const markTeamCompleted = useCallback(
@@ -267,7 +298,7 @@ export function ScoringWizard({
         return next;
       });
     },
-    [filledScoresForTeam]
+    [filledScoresForTeam],
   );
 
   const markTeamSkipped = useCallback((teamId: string) => {
@@ -286,14 +317,18 @@ export function ScoringWizard({
   const computeNextIndex = useCallback(
     (completedSet: Set<string>, skippedSet: Set<string>) => {
       const firstIncomplete = sortedTeams.findIndex(
-        (t) => !completedSet.has(t._id as string) && !skippedSet.has(t._id as string)
+        (t) =>
+          !completedSet.has(t._id as string) &&
+          !skippedSet.has(t._id as string),
       );
       if (firstIncomplete !== -1) return firstIncomplete;
-      const firstSkipped = sortedTeams.findIndex((t) => skippedSet.has(t._id as string));
+      const firstSkipped = sortedTeams.findIndex((t) =>
+        skippedSet.has(t._id as string),
+      );
       if (firstSkipped !== -1) return firstSkipped;
       return -1;
     },
-    [sortedTeams]
+    [sortedTeams],
   );
 
   const handleAdvance = useCallback(() => {
@@ -307,7 +342,10 @@ export function ScoringWizard({
     nextSkipped.delete(currentTeamId);
 
     // Persist completion + default scores
-    setDraftScores((prev) => ({ ...prev, [currentTeamId]: filledScoresForTeam(currentTeamId) }));
+    setDraftScores((prev) => ({
+      ...prev,
+      [currentTeamId]: filledScoresForTeam(currentTeamId),
+    }));
     setCompletedTeams(nextCompleted);
     setSkippedTeams(nextSkipped);
 
@@ -349,7 +387,13 @@ export function ScoringWizard({
     const nextIdx = computeNextIndex(nextCompleted, nextSkipped);
     if (nextIdx === -1) setIsReviewing(true);
     else setCurrentTeamIndex(nextIdx);
-  }, [completedTeams, computeNextIndex, currentTeamId, currentTeamIndex, skippedTeams]);
+  }, [
+    completedTeams,
+    computeNextIndex,
+    currentTeamId,
+    currentTeamIndex,
+    skippedTeams,
+  ]);
 
   // Ensure current position is always the first incomplete; then skipped; else summary
   useEffect(() => {
@@ -361,20 +405,19 @@ export function ScoringWizard({
     const nextIdx = computeNextIndex(completedTeams, skippedTeams);
     if (nextIdx === -1) setIsReviewing(true);
     else setCurrentTeamIndex(nextIdx);
-  }, [
-    hasTeams,
-    currentTeamId,
-    completedTeams,
-    skippedTeams,
-    computeNextIndex,
-  ]);
+  }, [hasTeams, currentTeamId, completedTeams, skippedTeams, computeNextIndex]);
 
-  const handleGoToTeam = useCallback((index: number) => {
-    if (index < 0 || index >= totalTeams) return;
-    setNavHistory((prev) => (currentTeamIndex >= 0 ? [...prev, currentTeamIndex] : prev));
-    setCurrentTeamIndex(index);
-    setIsReviewing(false);
-  }, [currentTeamIndex, totalTeams]);
+  const handleGoToTeam = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= totalTeams) return;
+      setNavHistory((prev) =>
+        currentTeamIndex >= 0 ? [...prev, currentTeamIndex] : prev,
+      );
+      setCurrentTeamIndex(index);
+      setIsReviewing(false);
+    },
+    [currentTeamIndex, totalTeams],
+  );
 
   const handleSubmitAll = useCallback(async () => {
     if (completedCount === 0) {
@@ -385,7 +428,7 @@ export function ScoringWizard({
     const incompleteCount = totalTeams - completedCount;
     if (incompleteCount > 0) {
       const confirmed = window.confirm(
-        `You have ${incompleteCount} incomplete team${incompleteCount === 1 ? '' : 's'}. These teams will not be scored. Submit anyway?`
+        `You have ${incompleteCount} incomplete team${incompleteCount === 1 ? "" : "s"}. These teams will not be scored. Submit anyway?`,
       );
       if (!confirmed) return;
     }
@@ -405,7 +448,7 @@ export function ScoringWizard({
               const scoreValue =
                 optedOut || entry?.score === null
                   ? null
-                  : entry?.score ?? DEFAULT_SCORE;
+                  : (entry?.score ?? DEFAULT_SCORE);
               return {
                 category: name,
                 score: scoreValue,
@@ -461,7 +504,7 @@ export function ScoringWizard({
           scores: filledScoresForTeam(id),
         };
       }),
-    [sortedTeams, completedTeams, skippedTeams, filledScoresForTeam]
+    [sortedTeams, completedTeams, skippedTeams, filledScoresForTeam],
   );
 
   const toggleSection = useCallback((status: ReviewStatus) => {
@@ -509,24 +552,15 @@ export function ScoringWizard({
         </div>
         <div className="flex items-center gap-2">
           {isReviewing ? (
-            <button
-              onClick={() => setIsReviewing(false)}
-              className="btn-ghost"
-            >
+            <button onClick={() => setIsReviewing(false)} className="btn-ghost">
               Back to Scoring
             </button>
           ) : (
-            <button
-              onClick={() => setIsReviewing(true)}
-              className="btn-ghost"
-            >
+            <button onClick={() => setIsReviewing(true)} className="btn-ghost">
               View Summary
             </button>
           )}
-          <button
-            onClick={onClose}
-            className="btn-secondary"
-          >
+          <button onClick={onClose} className="btn-secondary">
             Exit
           </button>
         </div>
@@ -535,6 +569,7 @@ export function ScoringWizard({
       {isReviewing ? (
         <ReviewPanel
           entries={summaryEntries}
+          rubricPercentByCategory={rubricPercentByCategory}
           onBack={() => setIsReviewing(false)}
           onEdit={handleGoToTeam}
           onSubmit={handleSubmitAll}
@@ -563,16 +598,19 @@ export function ScoringWizard({
                   const selected =
                     isOptedOut || selection?.score === null
                       ? null
-                      : selection?.score ?? DEFAULT_SCORE;
+                      : (selection?.score ?? DEFAULT_SCORE);
                   return (
-                    <div
-                      key={name}
-                      className="space-y-2 w-full max-w-xl"
-                    >
+                    <div key={name} className="space-y-2 w-full max-w-xl">
                       <div className="text-center">
                         <label className="text-lg font-semibold text-foreground">
                           {name}
                         </label>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatRubricPercent(
+                            rubricPercentByCategory.get(name) ?? 0,
+                          )}{" "}
+                          of rubric
+                        </p>
                       </div>
                       <div className="flex gap-2 flex-wrap justify-center">
                         {[1, 2, 3, 4, 5].map((value) => (
@@ -584,7 +622,7 @@ export function ScoringWizard({
                               selected === value && !isOptedOut
                                 ? "bg-primary text-white scale-110 shadow-lg shadow-primary/30"
                                 : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105",
-                              isOptedOut && "opacity-50"
+                              isOptedOut && "opacity-50",
                             )}
                           >
                             {value}
@@ -599,10 +637,12 @@ export function ScoringWizard({
                               "px-4 py-2 rounded-lg text-sm font-medium border transition-colors",
                               isOptedOut
                                 ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                                : "text-muted-foreground border-border hover:border-amber-500/50 hover:text-amber-600"
+                                : "text-muted-foreground border-border hover:border-amber-500/50 hover:text-amber-600",
                             )}
                           >
-                            {isOptedOut ? "Marked as N/A" : "I'm not comfortable judging this category"}
+                            {isOptedOut
+                              ? "Marked as N/A"
+                              : "I'm not comfortable judging this category"}
                           </button>
                           <p className="text-xs text-muted-foreground">
                             Marks this category as neutral and skips scoring it.
@@ -653,6 +693,7 @@ function ReviewPanel({
   onBack,
   onEdit,
   onSubmit,
+  rubricPercentByCategory,
   submitting,
   skippedCount,
   completedCount,
@@ -661,6 +702,7 @@ function ReviewPanel({
   onToggleSection,
 }: {
   entries: ReviewEntry[];
+  rubricPercentByCategory: Map<string, number>;
   onBack: () => void;
   onEdit: (index: number) => void;
   onSubmit: () => void;
@@ -722,7 +764,7 @@ function ReviewPanel({
                   <svg
                     className={clsx(
                       "w-4 h-4 text-muted-foreground transition-transform",
-                      isOpen ? "rotate-180" : ""
+                      isOpen ? "rotate-180" : "",
                     )}
                     viewBox="0 0 24 24"
                     fill="none"
@@ -742,7 +784,7 @@ function ReviewPanel({
                         className={clsx(
                           "px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 hover:bg-muted/30 transition-colors",
                           status === "completed" && "bg-emerald-500/5",
-                          status === "skipped" && "bg-amber-500/5"
+                          status === "skipped" && "bg-amber-500/5",
                         )}
                       >
                         {/* Team name and status */}
@@ -752,7 +794,7 @@ function ReviewPanel({
                               "w-2 h-2 rounded-full flex-shrink-0",
                               status === "completed" && "bg-emerald-500",
                               status === "skipped" && "bg-amber-500",
-                              status === "pending" && "bg-muted-foreground"
+                              status === "pending" && "bg-muted-foreground",
                             )}
                           />
                           <span className="font-medium text-foreground truncate">
@@ -764,27 +806,44 @@ function ReviewPanel({
                         <div className="flex-1 min-w-0">
                           {status !== "pending" ? (
                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                              {Object.entries(scores).map(([category, scoreValue]) => {
-                                const isOptedOut = scoreValue.optedOut;
-                                const displayScore =
-                                  isOptedOut || scoreValue.score === null
-                                    ? "N/A"
-                                    : scoreValue.score;
-                                return (
-                                  <span key={category} className="text-muted-foreground whitespace-nowrap">
-                                    <span className="hidden sm:inline">{category}: </span>
-                                    <span className="sm:hidden">{category.slice(0, 3)}: </span>
+                              {Object.entries(scores).map(
+                                ([category, scoreValue]) => {
+                                  const isOptedOut = scoreValue.optedOut;
+                                  const displayScore =
+                                    isOptedOut || scoreValue.score === null
+                                      ? "N/A"
+                                      : scoreValue.score;
+                                  return (
                                     <span
-                                      className={clsx(
-                                        "font-semibold",
-                                        isOptedOut ? "text-amber-600 dark:text-amber-400" : "text-foreground"
-                                      )}
+                                      key={category}
+                                      className="text-muted-foreground whitespace-nowrap"
                                     >
-                                      {displayScore}
+                                      <span className="hidden sm:inline">
+                                        {category} (
+                                        {formatRubricPercent(
+                                          rubricPercentByCategory.get(
+                                            category,
+                                          ) ?? 0,
+                                        )}
+                                        ):{" "}
+                                      </span>
+                                      <span className="sm:hidden">
+                                        {category.slice(0, 3)}:{" "}
+                                      </span>
+                                      <span
+                                        className={clsx(
+                                          "font-semibold",
+                                          isOptedOut
+                                            ? "text-amber-600 dark:text-amber-400"
+                                            : "text-foreground",
+                                        )}
+                                      >
+                                        {displayScore}
+                                      </span>
                                     </span>
-                                  </span>
-                                );
-                              })}
+                                  );
+                                },
+                              )}
                             </div>
                           ) : (
                             <span className="text-sm text-muted-foreground italic">

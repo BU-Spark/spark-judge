@@ -21,6 +21,7 @@ type TeamResult = {
   name: string;
   courseCode?: string;
   hidden?: boolean;
+  demoDaySignName?: string;
 } | null;
 
 type TeamsResult = Array<{
@@ -31,6 +32,13 @@ type TeamsResult = Array<{
   hidden?: boolean;
   demoDayRound?: number;
   demoDayBoardNumber?: string;
+  demoDayProjectInstance?: string;
+  airtableProjectRecordId?: string;
+  airtableProjectInstanceRecordId?: string;
+  demoDaySignName?: string;
+  demoDayFullSignName?: string;
+  demoDayBoardTime?: string;
+  demoDayCourseName?: string;
 }>;
 
 /**
@@ -50,7 +58,7 @@ async function generateLabeledQrSvg(
   url: string,
   teamName: string,
   courseCode: string | undefined,
-  eventName: string
+  eventName: string,
 ): Promise<string> {
   // Generate QR code as SVG string
   const qrSvg = await QRCode.toString(url, {
@@ -169,7 +177,7 @@ function generatePrintableHtml(
     courseCode?: string;
     svg: string;
     url: string;
-  }>
+  }>,
 ): string {
   // Group QR codes by course
   const courseGroups = new Map<string, typeof qrCodes>();
@@ -193,7 +201,7 @@ function generatePrintableHtml(
           (qr) => `
         <div class="qr-card">
           ${qr.svg}
-        </div>`
+        </div>`,
         )
         .join("\n");
 
@@ -424,7 +432,7 @@ function generateBoardGroupedHtml(
     url: string;
     demoDayRound?: number;
     demoDayBoardNumber?: string;
-  }>
+  }>,
 ): string {
   // Group QR codes by board number
   const boardGroups = new Map<string, Array<(typeof qrCodes)[0]>>();
@@ -485,7 +493,7 @@ function generateBoardGroupedHtml(
         .sort((a, b) => (a.demoDayRound || 0) - (b.demoDayRound || 0))
         .map(
           (t) =>
-            `R${t.demoDayRound || "?"}: ${t.teamName.slice(0, 30)}${t.teamName.length > 30 ? "..." : ""}`
+            `R${t.demoDayRound || "?"}: ${t.teamName.slice(0, 30)}${t.teamName.length > 30 ? "..." : ""}`,
         )
         .join(", ");
       return `<li><strong>Board ${escapeXml(board)}</strong> (${count} teams)<br><small>${escapeXml(teams)}</small></li>`;
@@ -753,7 +761,7 @@ export const generateTeamQrCode = action({
   }),
   handler: async (
     ctx,
-    args
+    args,
   ): Promise<{
     success: boolean;
     error?: string;
@@ -766,7 +774,7 @@ export const generateTeamQrCode = action({
       internal.qrCodesQueries.getEventInternal,
       {
         eventId: args.eventId,
-      }
+      },
     );
 
     if (!event) {
@@ -781,7 +789,7 @@ export const generateTeamQrCode = action({
       internal.qrCodesQueries.getTeamInternal,
       {
         teamId: args.teamId,
-      }
+      },
     );
 
     if (!team || team.eventId !== args.eventId) {
@@ -795,9 +803,9 @@ export const generateTeamQrCode = action({
       // Generate labeled SVG QR code
       const svg = await generateLabeledQrSvg(
         appreciationUrl,
-        team.name,
+        team.demoDaySignName || team.name,
         team.courseCode,
-        event.name
+        event.name,
       );
 
       // Convert SVG to base64 data URL
@@ -806,7 +814,7 @@ export const generateTeamQrCode = action({
       return {
         success: true,
         qrCodeBase64,
-        teamName: team.name,
+        teamName: team.demoDaySignName || team.name,
         courseCode: team.courseCode || undefined,
       };
     } catch (error) {
@@ -836,7 +844,7 @@ export const generateQrCodeZip = action({
   }),
   handler: async (
     ctx,
-    args
+    args,
   ): Promise<{
     success: boolean;
     error?: string;
@@ -848,7 +856,7 @@ export const generateQrCodeZip = action({
       internal.qrCodesQueries.getEventInternal,
       {
         eventId: args.eventId,
-      }
+      },
     );
 
     if (!event) {
@@ -864,7 +872,7 @@ export const generateQrCodeZip = action({
       internal.qrCodesQueries.getTeamsInternal,
       {
         eventId: args.eventId,
-      }
+      },
     );
 
     if (teams.length === 0) {
@@ -883,6 +891,13 @@ export const generateQrCodeZip = action({
           "courseCode",
           "teamName",
           "slug",
+          "projectInstance",
+          "round",
+          "boardNumber",
+          "boardTime",
+          "courseName",
+          "signName",
+          "fullSignName",
           "qrFilename",
           "appreciationUrl",
         ],
@@ -902,7 +917,8 @@ export const generateQrCodeZip = action({
         if (team.hidden) continue;
 
         // Create a slug from the team name for filename
-        const teamSlug = createSlug(team.name);
+        const displayTeamName = team.demoDaySignName || team.name;
+        const teamSlug = createSlug(displayTeamName);
 
         // Build filename (now SVG)
         const coursePrefix: string = team.courseCode || "general";
@@ -914,9 +930,9 @@ export const generateQrCodeZip = action({
         // Generate labeled SVG QR code
         const svg = await generateLabeledQrSvg(
           appreciationUrl,
-          team.name,
+          displayTeamName,
           team.courseCode,
-          event.name
+          event.name,
         );
         const plainSvg = await generatePlainQrSvg(appreciationUrl);
 
@@ -925,7 +941,7 @@ export const generateQrCodeZip = action({
 
         // Collect for HTML
         qrCodesForHtml.push({
-          teamName: team.name,
+          teamName: displayTeamName,
           courseCode: team.courseCode,
           svg,
           plainSvg,
@@ -940,6 +956,13 @@ export const generateQrCodeZip = action({
           team.courseCode || "",
           team.name,
           teamSlug,
+          team.demoDayProjectInstance || "",
+          team.demoDayRound ? String(team.demoDayRound) : "",
+          team.demoDayBoardNumber || "",
+          team.demoDayBoardTime || "",
+          team.demoDayCourseName || "",
+          team.demoDaySignName || "",
+          team.demoDayFullSignName || "",
           qrFilename,
           appreciationUrl,
         ]);
@@ -948,7 +971,7 @@ export const generateQrCodeZip = action({
       // Create CSV content
       const csvContent: string = csvRows
         .map((row) =>
-          row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")
+          row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","),
         )
         .join("\n");
       zip.file("projects.csv", csvContent);
@@ -960,7 +983,7 @@ export const generateQrCodeZip = action({
       // Create board-grouped HTML file (3 teams per page, sorted by round)
       const boardGroupedHtml = generateBoardGroupedHtml(
         event.name,
-        qrCodesForHtml
+        qrCodesForHtml,
       );
       zip.file("print-by-board.html", boardGroupedHtml);
 

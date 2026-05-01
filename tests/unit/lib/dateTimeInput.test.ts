@@ -24,15 +24,21 @@ describe("dateTimeInput helpers", () => {
     );
   });
 
-  it("moves the end time one hour later when the new start passes it", () => {
+  it("sets the end time two hours later when the start changes", () => {
     expect(
       getAutoAdjustedEndDateTime("2026-04-13T18:00", "2026-04-13T17:00")
-    ).toBe("2026-04-13T19:00");
+    ).toBe("2026-04-13T20:00");
   });
 
-  it("leaves the end time alone when the new start is still before it", () => {
+  it("replaces an existing valid end time when the start changes", () => {
     expect(
       getAutoAdjustedEndDateTime("2026-04-13T16:00", "2026-04-13T17:00")
-    ).toBe("2026-04-13T17:00");
+    ).toBe("2026-04-13T18:00");
+  });
+
+  it("populates the end time from an empty end value", () => {
+    expect(getAutoAdjustedEndDateTime("2026-04-13T16:00", "")).toBe(
+      "2026-04-13T18:00"
+    );
   });
 });

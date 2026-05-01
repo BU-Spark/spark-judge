@@ -5,6 +5,7 @@ import {
   CODE_AND_TELL_RANK_HEADERS,
   CodeAndTellScoringExplainer,
 } from "../codeAndTell/CodeAndTellScoringExplainer";
+import { CODE_AND_TELL_MAX_RANKS } from "../../../lib/codeAndTellConstants";
 
 type CodeAndTellSummary = {
   totalBallots: number;
@@ -89,9 +90,12 @@ export function ScoresTab({
   const isCodeAndTell = mode === "code_and_tell";
   const canOpenWinners =
     isDemoDay ||
-    (isCodeAndTell ? eventStatus === "past" : scoringLocked && hasConfiguredPrizes && prizeDeliberationReady);
+    (isCodeAndTell
+      ? eventStatus === "past"
+      : scoringLocked && hasConfiguredPrizes && prizeDeliberationReady);
   const canReleaseResults =
-    !resultsReleased && (isDemoDay || isCodeAndTell ? eventStatus === "past" : scoringLocked);
+    !resultsReleased &&
+    (isDemoDay || isCodeAndTell ? eventStatus === "past" : scoringLocked);
 
   return (
     <>
@@ -168,8 +172,18 @@ export function ScoresTab({
               disabled={lockingScores}
               className="px-4 py-1.5 text-sm font-medium bg-foreground text-background hover:bg-foreground/90 rounded-md transition-colors disabled:opacity-50 shadow-sm flex items-center gap-2"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c1.105 0 2-.895 2-2V7a2 2 0 10-4 0v2c0 1.105.895 2 2 2zm-6 2a2 2 0 012-2h8a2 2 0 012 2v6H6v-6z" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 11c1.105 0 2-.895 2-2V7a2 2 0 10-4 0v2c0 1.105.895 2 2 2zm-6 2a2 2 0 012-2h8a2 2 0 012 2v6H6v-6z"
+                />
               </svg>
               {lockingScores ? "Locking..." : "Lock Scores"}
             </button>
@@ -181,10 +195,24 @@ export function ScoresTab({
               disabled={!canOpenWinners}
               className="px-4 py-1.5 text-sm font-medium border border-border bg-card text-foreground hover:bg-muted/50 rounded-md transition-colors disabled:opacity-50 shadow-sm flex items-center gap-2"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                />
               </svg>
-              {isDemoDay ? "Select Winners" : isCodeAndTell ? "Select Final Winner" : "Winner Wizard"}
+              {isDemoDay
+                ? "Select Winners"
+                : isCodeAndTell
+                  ? "Select Final Winner"
+                  : "Winner Wizard"}
             </button>
           )}
 
@@ -194,8 +222,18 @@ export function ScoresTab({
               disabled={!canReleaseResults}
               className="px-4 py-1.5 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50 shadow-sm flex items-center gap-2"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               Release Results
             </button>
@@ -203,8 +241,18 @@ export function ScoresTab({
 
           {resultsReleased && (
             <span className="px-4 py-1.5 text-sm font-medium border border-border bg-muted/30 text-muted-foreground rounded-md flex items-center gap-2">
-              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-4 h-4 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
               Results Released
             </span>
@@ -213,33 +261,68 @@ export function ScoresTab({
       </div>
 
       {isPageLayout && scoresView === "winners" ? (
-        <WinnersSection>
-          {winnersContent}
-        </WinnersSection>
+        <WinnersSection>{winnersContent}</WinnersSection>
       ) : isDemoDay ? (
         appreciationSummary ? (
           <div className="space-y-6">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm bg-muted/30 px-4 py-3 rounded-lg border border-border">
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Total Appreciations:</span>
-                <span className="font-semibold text-pink-500">{appreciationSummary.totalAppreciations}</span>
+                <span className="text-muted-foreground">
+                  Total Appreciations:
+                </span>
+                <span className="font-semibold text-pink-500">
+                  {appreciationSummary.totalAppreciations}
+                </span>
               </div>
               <div className="w-px h-4 bg-border hidden sm:block"></div>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Unique Attendees:</span>
-                <span className="font-semibold text-foreground">{appreciationSummary.uniqueAttendees}</span>
+                <span className="font-semibold text-foreground">
+                  {appreciationSummary.uniqueAttendees}
+                </span>
               </div>
               <div className="w-px h-4 bg-border hidden sm:block"></div>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Projects:</span>
-                <span className="font-semibold text-foreground">{appreciationSummary.teams.length}</span>
+                <span className="font-semibold text-foreground">
+                  {appreciationSummary.teams.length}
+                </span>
               </div>
             </div>
 
+            <ScoringBasisPanel
+              title="Scoring basis"
+              description="Demo Day rankings use attendee appreciations. Each heart has equal weight, with per-attendee and per-project caps controlling distribution."
+              items={[
+                {
+                  label: "Attendee budget",
+                  value: `${appreciationSummary.appreciationBudgetPerAttendee ?? 100} hearts`,
+                },
+                {
+                  label: "Per-project cap",
+                  value: `${appreciationSummary.appreciationMaxPerTeam ?? 3} hearts`,
+                },
+                { label: "Ranking field", value: "Total appreciations" },
+              ]}
+            />
+
             <div className="flex justify-end gap-3">
-              <button onClick={onExportAppreciationsCsv} className="btn-secondary flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              <button
+                onClick={onExportAppreciationsCsv}
+                className="btn-secondary flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
                 </svg>
                 Export CSV
               </button>
@@ -253,31 +336,54 @@ export function ScoresTab({
             </div>
 
             <div className="card-static p-6 bg-card">
-              <h4 className="text-xl font-heading font-bold text-foreground mb-4">Project Rankings</h4>
+              <h4 className="text-xl font-heading font-bold text-foreground mb-4">
+                Project Rankings
+              </h4>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left">
                   <thead className="bg-muted/20 border-b border-border">
                     <tr>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Rank</th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Project</th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Course</th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Appreciations</th>
+                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                        Rank
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                        Project
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                        Course
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                        Appreciations
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {appreciationSummary.teams.map((team: any, index: number) => (
-                      <tr key={team.teamId} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-4 py-3 text-sm font-bold text-foreground">
-                          <span className="flex items-center gap-2">
-                            #{index + 1}
-                            {index === 0 && <MedalIcon className="h-5 w-5 text-amber-500" />}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-foreground">{team.teamName}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{team.courseCode || "-"}</td>
-                        <td className="px-4 py-3 text-sm text-foreground">{team.rawScore}</td>
-                      </tr>
-                    ))}
+                    {appreciationSummary.teams.map(
+                      (team: any, index: number) => (
+                        <tr
+                          key={team.teamId}
+                          className="hover:bg-muted/20 transition-colors"
+                        >
+                          <td className="px-4 py-3 text-sm font-bold text-foreground">
+                            <span className="flex items-center gap-2">
+                              #{index + 1}
+                              {index === 0 && (
+                                <MedalIcon className="h-5 w-5 text-amber-500" />
+                              )}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-foreground">
+                            {team.teamName}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                            {team.courseCode || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-foreground">
+                            {team.rawScore}
+                          </td>
+                        </tr>
+                      ),
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -295,13 +401,19 @@ export function ScoresTab({
           <div className="space-y-6">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm bg-muted/30 px-4 py-3 rounded-lg border border-border">
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Valid ballots (scoring):</span>
-                <span className="font-semibold text-amber-500">{codeAndTellSummary.totalBallots}</span>
+                <span className="text-muted-foreground">
+                  Valid ballots (scoring):
+                </span>
+                <span className="font-semibold text-amber-500">
+                  {codeAndTellSummary.totalBallots}
+                </span>
               </div>
               <div className="w-px h-4 bg-border hidden sm:block"></div>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Visible projects:</span>
-                <span className="font-semibold text-foreground">{codeAndTellSummary.standings.length}</span>
+                <span className="font-semibold text-foreground">
+                  {codeAndTellSummary.standings.length}
+                </span>
               </div>
               <div className="w-px h-4 bg-border hidden sm:block"></div>
               <div className="flex items-center gap-2">
@@ -309,12 +421,22 @@ export function ScoresTab({
                 <span className="font-semibold text-foreground">
                   {codeAndTellSummary.selectedWinnerId
                     ? `Selected: ${codeAndTellSummary.standings.find((s) => s.teamId === codeAndTellSummary.selectedWinnerId)?.name || "Unknown"}`
-                    : codeAndTellSummary.totalBallots > 0 && codeAndTellSummary.defaultWinnerId
+                    : codeAndTellSummary.totalBallots > 0 &&
+                        codeAndTellSummary.defaultWinnerId
                       ? `Leading: ${codeAndTellSummary.standings.find((s) => s.teamId === codeAndTellSummary.defaultWinnerId)?.name || "Unknown"}`
                       : "Pending"}
                 </span>
               </div>
             </div>
+
+            <ScoringBasisPanel
+              title="Scoring basis"
+              description="Code & Tell uses Borda-style ranked voting. Higher ranks contribute more points, and rank counts are shown for tie review."
+              items={CODE_AND_TELL_RANK_HEADERS.map((label, index) => ({
+                label,
+                value: `${CODE_AND_TELL_MAX_RANKS - index} pts`,
+              }))}
+            />
 
             {typeof codeAndTellSummary.rankedVoteRowCount === "number" && (
               <p className="text-xs text-muted-foreground">
@@ -328,23 +450,34 @@ export function ScoresTab({
                         : ""
                     }`
                   : ""}
-                . Valid ballot count can differ if a row has no ranks counted toward scoring.
+                . Valid ballot count can differ if a row has no ranks counted
+                toward scoring.
               </p>
             )}
 
             <div className="card-static p-6 bg-card">
               <div className="flex items-center gap-3 mb-4">
-                <h4 className="text-xl font-heading font-bold text-foreground">Standings</h4>
+                <h4 className="text-xl font-heading font-bold text-foreground">
+                  Standings
+                </h4>
                 <CodeAndTellScoringExplainer />
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-[48rem] w-full text-left text-sm">
                   <thead className="bg-muted/20 border-b border-border">
                     <tr>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Rank</th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Project</th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Points</th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Ballots</th>
+                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                        Rank
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                        Project
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                        Points
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                        Ballots
+                      </th>
                       {CODE_AND_TELL_RANK_HEADERS.map((label) => (
                         <th
                           key={label}
@@ -357,11 +490,22 @@ export function ScoresTab({
                   </thead>
                   <tbody className="divide-y divide-border">
                     {codeAndTellSummary.standings.map((row, index) => (
-                      <tr key={row.teamId} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-4 py-3 text-sm font-bold text-foreground">#{index + 1}</td>
-                        <td className="px-4 py-3 text-sm font-semibold text-foreground">{row.name}</td>
-                        <td className="px-4 py-3 text-sm text-foreground">{row.points}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{row.ballotsCount}</td>
+                      <tr
+                        key={row.teamId}
+                        className="hover:bg-muted/20 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-sm font-bold text-foreground">
+                          #{index + 1}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-foreground">
+                          {row.name}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-foreground">
+                          {row.points}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          {row.ballotsCount}
+                        </td>
                         {CODE_AND_TELL_RANK_HEADERS.map((_, rankIndex) => (
                           <td
                             key={rankIndex}
@@ -385,13 +529,19 @@ export function ScoresTab({
           />
         )
       ) : detailedScores ? (
-        <ScoringDashboard scores={detailedScores} viewMode={viewMode} setViewMode={setViewMode} />
+        <ScoringDashboard
+          scores={detailedScores}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+        />
       ) : (
         <div className="card-static p-12 bg-card text-center">
           <div className="mb-4 flex justify-center">
             <BarChartIcon className="h-14 w-14 text-muted-foreground" />
           </div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-2">No Scores Yet</h3>
+          <h3 className="text-2xl font-heading font-bold text-foreground mb-2">
+            No Scores Yet
+          </h3>
           <p className="text-muted-foreground mb-6">
             Judges haven't submitted any scores for this event yet.
           </p>
@@ -424,8 +574,42 @@ function EmptyState({
   return (
     <div className="card-static p-12 bg-card text-center">
       <div className="text-6xl mb-4">{icon}</div>
-      <h3 className="text-2xl font-heading font-bold text-foreground mb-2">{title}</h3>
+      <h3 className="text-2xl font-heading font-bold text-foreground mb-2">
+        {title}
+      </h3>
       <p className="text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function ScoringBasisPanel({
+  title,
+  description,
+  items,
+}: {
+  title: string;
+  description: string;
+  items: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-4">
+      <div className="mb-3">
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        {items.map((item) => (
+          <div
+            key={`${item.label}-${item.value}`}
+            className="rounded-md border border-border bg-background px-3 py-2"
+          >
+            <p className="text-xs text-muted-foreground">{item.label}</p>
+            <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+              {item.value}
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

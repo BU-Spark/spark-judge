@@ -2,7 +2,14 @@ import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { EventManagementTab, ScoresView } from "../types";
 
-const VALID_TABS: readonly EventManagementTab[] = ["details", "teams", "prizes", "scores", "winners"];
+const VALID_TABS: readonly EventManagementTab[] = [
+  "setup",
+  "details",
+  "teams",
+  "prizes",
+  "scores",
+  "winners",
+];
 const VALID_SCORES_VIEWS: readonly ScoresView[] = ["overview", "winners"];
 
 function normalizeTab(raw: string | null): EventManagementTab {
@@ -24,12 +31,12 @@ export function useEventWorkspaceState() {
 
   const tab = useMemo(
     () => normalizeTab(searchParams.get("tab")),
-    [searchParams]
+    [searchParams],
   );
 
   const scoresView = useMemo(
     () => normalizeScoresView(searchParams.get("scoresView")),
-    [searchParams]
+    [searchParams],
   );
 
   const setTab = useCallback(
@@ -43,7 +50,7 @@ export function useEventWorkspaceState() {
         return next;
       });
     },
-    [setSearchParams]
+    [setSearchParams],
   );
 
   const setScoresView = useCallback(
@@ -59,7 +66,7 @@ export function useEventWorkspaceState() {
         return next;
       });
     },
-    [setSearchParams]
+    [setSearchParams],
   );
 
   return {

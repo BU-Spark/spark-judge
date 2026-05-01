@@ -42,12 +42,11 @@ export function formatDateTimeInput(value: number | Date) {
 export function getAutoAdjustedEndDateTime(
   startValue: string,
   endValue: string,
-  durationMinutes = 60
+  durationMinutes = 120
 ) {
   const startDate = parseDateTimeInput(startValue);
-  const endDate = parseDateTimeInput(endValue);
 
-  if (!startDate || !endDate || startDate.getTime() <= endDate.getTime()) {
+  if (!startDate) {
     return endValue;
   }
 

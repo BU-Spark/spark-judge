@@ -27,6 +27,14 @@ import {
 } from "../../../lib/dateTimeInput";
 import { formatCodeAndTellDefaultTitle } from "../../../lib/eventTitles";
 import { formatDateTime } from "../../../lib/utils";
+import {
+  formatRubricPercent,
+  getRubricPercentages,
+  getRubricPercentTotal,
+  isRubricPercentTotalValid,
+  roundRubricPercent,
+  rubricPercentToWeight,
+} from "../../../lib/scoringWeights";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { DetailsTab } from "../tabs/DetailsTab";
 import { TeamsTab } from "../tabs/TeamsTab";
@@ -37,18 +45,24 @@ import { EventsList as WorkspaceEventsList } from "../components/EventsList";
 import { ScoringDashboard as WorkspaceScoringDashboard } from "../components/ScoringDashboard";
 import { AddTeamPanel } from "../panels/AddTeamPanel";
 import { CodeAndTellWinnerPanel } from "../panels/CodeAndTellWinnerPanel";
+import { DemoDaySetupPanel } from "../panels/DemoDaySetupPanel";
 import { DemoDayWinnersPanel } from "../panels/DemoDayWinnersPanel";
 import { PrizeWinnerWizardPanel } from "../panels/PrizeWinnerWizardPanel";
-import {
-  getEventDisplayLabel,
-  getEventMode,
-} from "../../../lib/eventModes";
+import { CODE_AND_TELL_RANK_HEADERS } from "../codeAndTell/CodeAndTellScoringExplainer";
+import { getEventDisplayLabel, getEventMode } from "../../../lib/eventModes";
+import { CODE_AND_TELL_MAX_RANKS } from "../../../lib/codeAndTellConstants";
 
 import type { EventManagementTab, ScoresView as ScoresSubview } from "../types";
 
 export type { EventManagementTab, ScoresSubview };
 type PrizeType = "general" | "track" | "sponsor" | "track_sponsor";
 type PrizeScoreBasis = "overall" | "categories" | "none";
+type CategoryDraft = {
+  name: string;
+  weight: number;
+  rubricPercent: number;
+  optOutAllowed?: boolean;
+};
 type PrizeDraft = {
   prizeId?: Id<"prizes">;
   name: string;
@@ -1008,12 +1022,22 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
   const saveEventPrizes = useMutation(api.prizes.saveEventPrizes);
   const [submitting, setSubmitting] = useState(false);
   const [useTracksAsAwards, setUseTracksAsAwards] = useState(true);
-  const [categories, setCategories] = useState([
-    { name: "Innovation", weight: 1, optOutAllowed: false },
-    { name: "Technical Complexity", weight: 1, optOutAllowed: false },
-    { name: "Design", weight: 1, optOutAllowed: false },
-    { name: "Presentation", weight: 1, optOutAllowed: false },
-    { name: "Impact", weight: 1, optOutAllowed: false },
+  const [categories, setCategories] = useState<CategoryDraft[]>([
+    { name: "Innovation", weight: 1, rubricPercent: 20, optOutAllowed: false },
+    {
+      name: "Technical Complexity",
+      weight: 1,
+      rubricPercent: 20,
+      optOutAllowed: false,
+    },
+    { name: "Design", weight: 1, rubricPercent: 20, optOutAllowed: false },
+    {
+      name: "Presentation",
+      weight: 1,
+      rubricPercent: 20,
+      optOutAllowed: false,
+    },
+    { name: "Impact", weight: 1, rubricPercent: 20, optOutAllowed: false },
   ]);
   const [prizes, setPrizes] = useState<PrizeDraft[]>([
     createPrizeDraft(0, {
@@ -1137,14 +1161,22 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
     setCourseCodes(courseCodes.filter((c) => c !== code));
   };
 
-  const setCategoryWeight = (index: number, value: number) => {
+  const categoryRubricTotal = useMemo(
+    () => getRubricPercentTotal(categories),
+    [categories],
+  );
+
+  const categoryRubricTotalValid =
+    isRubricPercentTotalValid(categoryRubricTotal);
+
+  const setCategoryRubricPercent = (index: number, value: number) => {
     const clamped = Math.max(
       0,
-      Math.min(2, Number.isFinite(value) ? value : 0),
+      Math.min(100, Number.isFinite(value) ? value : 0),
     );
-    const rounded = Math.round(clamped * 10) / 10;
+    const rounded = roundRubricPercent(clamped);
     const newCats = [...categories];
-    newCats[index].weight = rounded;
+    newCats[index].rubricPercent = rounded;
     setCategories(newCats);
   };
 
@@ -1176,19 +1208,43 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    const cleanedCategories = categories
+    const cleanedCategoryDrafts = categories
       .map((cat) => ({
         name: cat.name.trim(),
-        weight: Math.min(2, Math.max(0, Number(cat.weight) || 0)),
+        rubricPercent: Math.max(0, Number(cat.rubricPercent) || 0),
         optOutAllowed: cat.optOutAllowed ?? false,
       }))
       .filter((cat) => cat.name.length > 0);
 
-    if (formData.mode !== "code_and_tell" && cleanedCategories.length === 0) {
+    if (
+      formData.mode !== "code_and_tell" &&
+      cleanedCategoryDrafts.length === 0
+    ) {
       toast.error("Add at least one judging category with a name.");
       setSubmitting(false);
       return;
     }
+
+    const cleanedRubricTotal = getRubricPercentTotal(cleanedCategoryDrafts);
+    if (
+      formData.mode === "hackathon" &&
+      !isRubricPercentTotalValid(cleanedRubricTotal)
+    ) {
+      toast.error(
+        `Rubric percentages must add up to 100%. Current total: ${formatRubricPercent(cleanedRubricTotal)}.`,
+      );
+      setSubmitting(false);
+      return;
+    }
+
+    const cleanedCategories = cleanedCategoryDrafts.map((cat) => ({
+      name: cat.name,
+      weight: rubricPercentToWeight(
+        cat.rubricPercent,
+        cleanedCategoryDrafts.length,
+      ),
+      optOutAllowed: cat.optOutAllowed,
+    }));
 
     const parsedTracks = formData.tracks
       .split(",")
@@ -1230,8 +1286,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
         status: computedStatus,
         startDate: startMs,
         endDate: endMs,
-        categories:
-          formData.mode === "code_and_tell" ? [] : cleanedCategories,
+        categories: formData.mode === "code_and_tell" ? [] : cleanedCategories,
         tracks,
         judgeCode:
           formData.mode === "hackathon"
@@ -1276,10 +1331,10 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
   const isCodeAndTellMode = eventMode === "code_and_tell";
 
   useEffect(() => {
-    if (isCodeAndTellMode && activeTab === "prizes") {
+    if (!isHackathonMode && activeTab === "prizes") {
       setActiveTab("details");
     }
-  }, [activeTab, isCodeAndTellMode]);
+  }, [activeTab, isHackathonMode]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 fade-in">
@@ -1307,7 +1362,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
           >
             Teams
           </button>
-          {!isCodeAndTellMode && (
+          {isHackathonMode && (
             <button
               type="button"
               onClick={() => setActiveTab("prizes")}
@@ -1599,7 +1654,10 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                     Code &amp; Tell Projects
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Projects are managed after event creation. Voters will see a ranked-ballot experience, and admins will select a single final winner from the Borda standings once the event is past.
+                    Projects are managed after event creation. Voters will see a
+                    ranked-ballot experience, and admins will select a single
+                    final winner from the Borda standings once the event is
+                    past.
                   </p>
                 </section>
               )}
@@ -1656,17 +1714,28 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                       <h2 className="text-lg font-heading font-semibold text-foreground">
                         Judging Categories
                       </h2>
-                      <span className="text-xs text-muted-foreground">
-                        Weight range: 0-2
+                      <span
+                        className={`text-xs font-medium ${
+                          categoryRubricTotalValid
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-amber-600 dark:text-amber-400"
+                        }`}
+                      >
+                        {formatRubricPercent(categoryRubricTotal)} allocated
                       </span>
                     </div>
+                    <p className="text-sm text-muted-foreground">
+                      Enter the rubric percentages exactly as judges receive
+                      them. HackJudge converts these to internal weights when
+                      the event is saved.
+                    </p>
 
                     <div className="rounded-lg border border-border overflow-hidden">
                       <div className="overflow-x-auto">
                         <div className="min-w-[42rem]">
                           <div className="grid grid-cols-[1fr,110px,110px,40px] gap-2 border-b border-border bg-muted/20 px-3 py-2 text-xs uppercase tracking-wide text-muted-foreground">
                             <span>Category</span>
-                            <span>Weight</span>
+                            <span>Rubric %</span>
                             <span className="text-center">Opt-out allowed</span>
                             <span className="text-right" aria-hidden />
                           </div>
@@ -1689,14 +1758,14 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                                   placeholder="e.g., Innovation"
                                 />
                                 <StyledNumberInput
-                                  value={cat.weight}
+                                  value={cat.rubricPercent}
                                   onValueChange={(nextValue) =>
-                                    setCategoryWeight(index, nextValue)
+                                    setCategoryRubricPercent(index, nextValue)
                                   }
                                   min={0}
-                                  max={2}
-                                  step={0.1}
-                                  placeholder="1.0"
+                                  max={100}
+                                  step={0.5}
+                                  placeholder="25"
                                 />
                                 <StyledCheckbox
                                   checked={cat.optOutAllowed ?? false}
@@ -1743,7 +1812,12 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                       onClick={() =>
                         setCategories([
                           ...categories,
-                          { name: "", weight: 1, optOutAllowed: false },
+                          {
+                            name: "",
+                            weight: 0,
+                            rubricPercent: 0,
+                            optOutAllowed: false,
+                          },
                         ])
                       }
                       className="btn-ghost text-sm"
@@ -1753,7 +1827,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                   </section>
                 </>
               ) : isDemoDayMode ? (
-                <section className="rounded-lg border border-border bg-background p-6 space-y-2">
+                <section className="rounded-lg border border-border bg-background p-6 space-y-4">
                   <h2 className="text-lg font-heading font-semibold text-foreground">
                     Scoring (Demo Day)
                   </h2>
@@ -1762,47 +1836,72 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                     of judge score categories. No additional score setup is
                     required at creation time.
                   </p>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="rounded-md border border-border bg-muted/20 px-3 py-2">
+                      <p className="text-xs text-muted-foreground">Weighting</p>
+                      <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                        1 heart = 1 vote
+                      </p>
+                    </div>
+                    <div className="rounded-md border border-border bg-muted/20 px-3 py-2">
+                      <p className="text-xs text-muted-foreground">
+                        Attendee budget
+                      </p>
+                      <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                        100 hearts
+                      </p>
+                    </div>
+                    <div className="rounded-md border border-border bg-muted/20 px-3 py-2">
+                      <p className="text-xs text-muted-foreground">
+                        Per-project cap
+                      </p>
+                      <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                        3 hearts
+                      </p>
+                    </div>
+                  </div>
                 </section>
               ) : (
-                <section className="rounded-lg border border-border bg-background p-6 space-y-2">
+                <section className="rounded-lg border border-border bg-background p-6 space-y-4">
                   <h2 className="text-lg font-heading font-semibold text-foreground">
                     Ranked Voting
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Code &amp; Tell uses ranked ballots instead of judge scoring. No cohorts, judge code, or category setup is required.
+                    Code &amp; Tell uses ranked ballots instead of judge
+                    scoring. No cohorts, judge code, or category setup is
+                    required.
                   </p>
+                  <div className="grid gap-2 sm:grid-cols-5">
+                    {CODE_AND_TELL_RANK_HEADERS.map((label, index) => (
+                      <div
+                        key={label}
+                        className="rounded-md border border-border bg-muted/20 px-3 py-2"
+                      >
+                        <p className="text-xs text-muted-foreground">{label}</p>
+                        <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                          {CODE_AND_TELL_MAX_RANKS - index} pts
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </section>
               )}
             </>
           )}
 
-          {activeTab === "prizes" && !isCodeAndTellMode && (
-            <>
-              {isHackathonMode ? (
-                <section className="rounded-lg border border-border bg-background p-5 space-y-3">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">
-                    Prize Catalog
-                  </h2>
-                  <PrizeCatalogEditor
-                    prizes={prizes}
-                    setPrizes={setPrizes}
-                    categories={derivedCategoryNames}
-                    tracks={derivedTracks}
-                    disabled={submitting}
-                  />
-                </section>
-              ) : (
-                <section className="rounded-lg border border-border bg-background p-6 space-y-2">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">
-                    Prizes (Demo Day)
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Demo Day events use attendee appreciations (hearts) instead
-                    of judged prizes.
-                  </p>
-                </section>
-              )}
-            </>
+          {activeTab === "prizes" && isHackathonMode && (
+            <section className="rounded-lg border border-border bg-background p-5 space-y-3">
+              <h2 className="text-lg font-heading font-semibold text-foreground">
+                Prize Catalog
+              </h2>
+              <PrizeCatalogEditor
+                prizes={prizes}
+                setPrizes={setPrizes}
+                categories={derivedCategoryNames}
+                tracks={derivedTracks}
+                disabled={submitting}
+              />
+            </section>
           )}
         </div>
       </div>
@@ -1896,6 +1995,9 @@ export function EventManagementModal({
 
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [editingTeam, setEditingTeam] = useState<any | null>(null);
+  const [teamPanelMode, setTeamPanelMode] = useState<"manual" | "bulk">(
+    "manual",
+  );
   const [teamMenuOpen, setTeamMenuOpen] = useState<Id<"teams"> | null>(null);
   const [activeTab, setActiveTab] = useState<EventManagementTab>(initialTab);
   const [localScoresView, setLocalScoresView] =
@@ -1909,9 +2011,7 @@ export function EventManagementModal({
   const [eventDescription, setEventDescription] = useState("");
   const [eventStart, setEventStart] = useState("");
   const [eventEnd, setEventEnd] = useState("");
-  const [categoriesEdit, setCategoriesEdit] = useState<
-    Array<{ name: string; weight: number; optOutAllowed?: boolean }>
-  >([]);
+  const [categoriesEdit, setCategoriesEdit] = useState<CategoryDraft[]>([]);
   const [enableCohorts, setEnableCohorts] = useState(false);
   const [judgeCodeEdit, setJudgeCodeEdit] = useState("");
   const [savingJudgeSettings, setSavingJudgeSettings] = useState(false);
@@ -1961,12 +2061,23 @@ export function EventManagementModal({
       setEventStart(formatDateTimeInput(event.startDate));
       setEventEnd(formatDateTimeInput(event.endDate));
       setCategoriesEdit(
-        (event.categories || []).map((cat: any) => ({
-          name: typeof cat === "string" ? cat : cat.name,
-          weight: typeof cat === "string" ? 1 : (cat.weight ?? 1),
-          optOutAllowed:
-            typeof cat === "string" ? false : (cat.optOutAllowed ?? false),
-        })),
+        getRubricPercentages(
+          (event.categories || []).map((cat: any) => ({
+            name: typeof cat === "string" ? cat : cat.name,
+            weight: typeof cat === "string" ? 1 : (cat.weight ?? 1),
+          })),
+        ).map((category, index) => {
+          const source = (event.categories || [])[index] as any;
+          return {
+            name: category.name,
+            weight: category.weight,
+            rubricPercent: category.percent,
+            optOutAllowed:
+              typeof source === "string"
+                ? false
+                : (source?.optOutAllowed ?? false),
+          };
+        }),
       );
       setEnableCohorts(!!event.enableCohorts);
       setJudgeCodeEdit(event.judgeCode || "");
@@ -1978,9 +2089,7 @@ export function EventManagementModal({
       setTracksEdit(event.tracks?.join(", ") || "");
       const cap = (event as { codeAndTellMaxBallots?: number })
         .codeAndTellMaxBallots;
-      setCodeAndTellMaxBallotsInput(
-        typeof cap === "number" ? String(cap) : "",
-      );
+      setCodeAndTellMaxBallotsInput(typeof cap === "number" ? String(cap) : "");
     }
   }, [event]);
 
@@ -2047,10 +2156,13 @@ export function EventManagementModal({
   const entityLabel = isCodeAndTellMode ? "Project" : "Team";
 
   useEffect(() => {
-    if (event && isCodeAndTellMode && activeTab === "prizes") {
+    if (event && !isHackathonMode && activeTab === "prizes") {
       updateTab("details");
     }
-  }, [activeTab, event, isCodeAndTellMode]);
+    if (event && !isDemoDayMode && activeTab === "setup") {
+      updateTab("details");
+    }
+  }, [activeTab, event, isHackathonMode, isDemoDayMode]);
 
   if (!event) {
     return null;
@@ -2155,6 +2267,7 @@ export function EventManagementModal({
                           <button
                             onClick={() => {
                               setEditingTeam(team);
+                              setTeamPanelMode("manual");
                               setShowAddTeam(true);
                               setTeamMenuOpen(null);
                             }}
@@ -2222,7 +2335,7 @@ export function EventManagementModal({
     try {
       await updateEventMode({ eventId, mode });
       toast.success(`Event mode changed to ${getEventDisplayLabel(mode)}!`);
-      if (mode === "code_and_tell" && activeTab === "prizes") {
+      if (mode !== "hackathon" && activeTab === "prizes") {
         updateTab("details");
       }
     } catch (error) {
@@ -2395,18 +2508,35 @@ export function EventManagementModal({
       return;
     }
 
-    const cleanedCategories = categoriesEdit
+    const cleanedCategoryDrafts = categoriesEdit
       .map((cat) => ({
         name: cat.name.trim(),
-        weight: Math.min(2, Math.max(0, Number(cat.weight) || 0)),
+        rubricPercent: Math.max(0, Number(cat.rubricPercent) || 0),
         optOutAllowed: cat.optOutAllowed ?? false,
       }))
       .filter((cat) => cat.name.length > 0);
 
-    if (cleanedCategories.length === 0) {
+    if (cleanedCategoryDrafts.length === 0) {
       toast.error("Add at least one category with a name.");
       return;
     }
+
+    const cleanedRubricTotal = getRubricPercentTotal(cleanedCategoryDrafts);
+    if (!isRubricPercentTotalValid(cleanedRubricTotal)) {
+      toast.error(
+        `Rubric percentages must add up to 100%. Current total: ${formatRubricPercent(cleanedRubricTotal)}.`,
+      );
+      return;
+    }
+
+    const cleanedCategories = cleanedCategoryDrafts.map((cat) => ({
+      name: cat.name,
+      weight: rubricPercentToWeight(
+        cat.rubricPercent,
+        cleanedCategoryDrafts.length,
+      ),
+      optOutAllowed: cat.optOutAllowed,
+    }));
 
     setSavingJudgeSettings(true);
     try {
@@ -2772,6 +2902,22 @@ export function EventManagementModal({
                 : "flex gap-1 px-6 mt-4"
             }
           >
+            {isDemoDayMode && (
+              <button
+                onClick={() => updateTab("setup")}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  isPageLayout
+                    ? activeTab === "setup"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    : activeTab === "setup"
+                      ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
+                      : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Setup
+              </button>
+            )}
             <button
               onClick={() => updateTab("details")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -2800,7 +2946,7 @@ export function EventManagementModal({
             >
               Teams
             </button>
-            {!isCodeAndTellMode && (
+            {isHackathonMode && (
               <button
                 onClick={() => updateTab("prizes")}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -2861,6 +3007,15 @@ export function EventManagementModal({
                 : "space-y-6"
             }
           >
+            {activeTab === "setup" && isDemoDayMode && (
+              <DemoDaySetupPanel
+                eventId={eventId}
+                event={event}
+                onDownloadQrCodes={() => void handleDownloadQrCodes()}
+                isGeneratingQr={isGeneratingQr}
+              />
+            )}
+
             {activeTab === "details" && (
               <DetailsTab
                 derivedStatus={derivedStatus}
@@ -2913,10 +3068,12 @@ export function EventManagementModal({
                 showAddTeam={showAddTeam}
                 onOpenCreateTeam={() => {
                   setEditingTeam(null);
+                  setTeamPanelMode("manual");
                   setShowAddTeam(true);
                 }}
                 onOpenBulkImport={() => {
                   setEditingTeam(null);
+                  setTeamPanelMode("bulk");
                   setShowAddTeam(true);
                 }}
                 teamListContent={teamListContent}
@@ -2926,10 +3083,12 @@ export function EventManagementModal({
                     onClose={() => {
                       setShowAddTeam(false);
                       setEditingTeam(null);
+                      setTeamPanelMode("manual");
                     }}
                     onSubmit={createTeam}
                     onSubmitEdit={updateTeamAdmin}
                     editingTeam={editingTeam}
+                    panelMode={teamPanelMode}
                     eventMode={event.mode}
                     tracks={tracksForPrizeEditor}
                     eventPrizes={eventPrizes}
@@ -2941,7 +3100,7 @@ export function EventManagementModal({
               />
             )}
 
-            {activeTab === "prizes" && !isCodeAndTellMode && (
+            {activeTab === "prizes" && isHackathonMode && (
               <PrizesTab
                 eventMode={eventMode}
                 savingPrizes={savingPrizes}

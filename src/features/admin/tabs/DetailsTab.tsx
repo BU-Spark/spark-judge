@@ -1,14 +1,18 @@
 import type { ReactNode } from "react";
 
 import { DateTimePicker } from "../../../components/ui/DateTimePicker";
+import { getEventDisplayLabel, getEventMode } from "../../../lib/eventModes";
 import {
-  getEventDisplayLabel,
-  getEventMode,
-} from "../../../lib/eventModes";
+  formatRubricPercent,
+  getRubricPercentTotal,
+  isRubricPercentTotalValid,
+  roundRubricPercent,
+} from "../../../lib/scoringWeights";
 
 type CategoryDraft = {
   name: string;
   weight: number;
+  rubricPercent: number;
   optOutAllowed?: boolean;
 };
 
@@ -93,6 +97,8 @@ export function DetailsTab({
   const isHackathon = mode === "hackathon";
   const isDemoDay = mode === "demo_day";
   const isCodeAndTell = mode === "code_and_tell";
+  const rubricPercentTotal = getRubricPercentTotal(categoriesEdit);
+  const rubricPercentTotalValid = isRubricPercentTotalValid(rubricPercentTotal);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(22rem,28rem)_1fr] xl:grid-cols-[minmax(24rem,32rem)_1fr] gap-6 items-start w-full">
@@ -100,23 +106,36 @@ export function DetailsTab({
         <div className="card-static p-6 bg-card space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               <div>
-                <h3 className="text-lg font-heading font-semibold text-foreground">Event Details</h3>
+                <h3 className="text-lg font-heading font-semibold text-foreground">
+                  Event Details
+                </h3>
                 <p className="text-sm text-muted-foreground">
                   Status updates automatically from the schedule
                 </p>
               </div>
             </div>
             <span
-              className={`badge ${derivedStatus === "active"
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                : derivedStatus === "upcoming"
-                  ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20"
-                  : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20"
-                }`}
+              className={`badge ${
+                derivedStatus === "active"
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                  : derivedStatus === "upcoming"
+                    ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20"
+                    : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20"
+              }`}
             >
               {derivedStatus.charAt(0).toUpperCase() + derivedStatus.slice(1)}
             </span>
@@ -137,7 +156,10 @@ export function DetailsTab({
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
-                Description <span className="text-muted-foreground text-xs">(optional)</span>
+                Description{" "}
+                <span className="text-muted-foreground text-xs">
+                  (optional)
+                </span>
               </label>
               <input
                 type="text"
@@ -172,7 +194,10 @@ export function DetailsTab({
             {isHackathon && (
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-medium text-foreground">
-                  Event Tracks <span className="text-muted-foreground text-xs">(comma-separated)</span>
+                  Event Tracks{" "}
+                  <span className="text-muted-foreground text-xs">
+                    (comma-separated)
+                  </span>
                 </label>
                 <input
                   type="text"
@@ -182,7 +207,8 @@ export function DetailsTab({
                   placeholder="AI/ML, Web Development, Hardware..."
                 />
                 <p className="text-xs text-muted-foreground">
-                  Tracks are used for team registration. If left empty, judging categories will be used as tracks.
+                  Tracks are used for team registration. If left empty, judging
+                  categories will be used as tracks.
                 </p>
               </div>
             )}
@@ -208,8 +234,9 @@ export function DetailsTab({
                   />
                   <p className="text-xs text-muted-foreground">
                     Optional cap on how many distinct voters can save a ballot
-                    (one row per voter). Leave empty for unlimited. Existing voters
-                    can still update their ballot after the cap is reached.{" "}
+                    (one row per voter). Leave empty for unlimited. Existing
+                    voters can still update their ballot after the cap is
+                    reached.{" "}
                     {typeof codeAndTellRankedVoteRowCount === "number" ? (
                       <>
                         Current records:{" "}
@@ -247,37 +274,50 @@ export function DetailsTab({
 
         <div className="card-static p-6 bg-card">
           <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+              />
             </svg>
             Event Mode
           </h3>
           <div className="flex gap-3 flex-wrap">
             <button
               onClick={() => handleModeChange("hackathon")}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${isHackathon
-                ? "bg-primary text-white shadow-md"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+                isHackathon
+                  ? "bg-primary text-white shadow-md"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
             >
               <TrophyIcon className="h-4 w-4" />
               Hackathon
             </button>
             <button
               onClick={() => handleModeChange("demo_day")}
-              className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${isDemoDay
-                ? "bg-pink-500 text-white shadow-md"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+              className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+                isDemoDay
+                  ? "bg-pink-500 text-white shadow-md"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
             >
               ❤️ Demo Day
             </button>
             <button
               onClick={() => handleModeChange("code_and_tell")}
-              className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${isCodeAndTell
-                ? "bg-amber-500 text-white shadow-md"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+              className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+                isCodeAndTell
+                  ? "bg-amber-500 text-white shadow-md"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
             >
               Code &amp; Tell
             </button>
@@ -297,26 +337,43 @@ export function DetailsTab({
           <div className="card-static p-6 bg-card space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 Judging Settings
               </h3>
               {!canEditJudgeSettings && (
                 <span className="badge bg-amber-500/15 text-amber-600 border-amber-500/30">
-                  {scoringLocked ? "Locked (scoring locked)" : "Locked (judging started)"}
+                  {scoringLocked
+                    ? "Locked (scoring locked)"
+                    : "Locked (judging started)"}
                 </span>
               )}
             </div>
 
             {scoringLocked && scoringLockedLabel && (
-              <p className="text-xs text-amber-700 dark:text-amber-300">Scores locked at {scoringLockedLabel}</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Scores locked at {scoringLockedLabel}
+              </p>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Judge Code <span className="text-muted-foreground text-xs">(optional)</span>
+                  Judge Code{" "}
+                  <span className="text-muted-foreground text-xs">
+                    (optional)
+                  </span>
                 </label>
                 <input
                   type="text"
@@ -326,7 +383,9 @@ export function DetailsTab({
                   disabled={!canEditJudgeSettings}
                   placeholder="Enter code required for judges"
                 />
-                <p className="text-xs text-muted-foreground">Leave empty to allow judges without a code.</p>
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to allow judges without a code.
+                </p>
               </div>
               <div className="space-y-2">
                 <StyledCheckbox
@@ -336,25 +395,50 @@ export function DetailsTab({
                   label="Enable Multiple Judging Cohorts"
                   labelClassName="text-sm font-medium text-foreground"
                 />
-                <p className="text-xs text-muted-foreground">Judges pick their own teams (useful for large events).</p>
+                <p className="text-xs text-muted-foreground">
+                  Judges pick their own teams (useful for large events).
+                </p>
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-foreground">Judging Categories &amp; Weights (0-2)</label>
-                {!scoresLoaded && <span className="text-xs text-muted-foreground">Loading scores...</span>}
+                <label className="text-sm font-medium text-foreground">
+                  Judging Categories &amp; Rubric Percentages
+                </label>
+                {!scoresLoaded && (
+                  <span className="text-xs text-muted-foreground">
+                    Loading scores...
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/20 px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  Enter the percentages from the rubric. They must total 100%.
+                </p>
+                <span
+                  className={`text-xs font-medium ${
+                    rubricPercentTotalValid
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-amber-600 dark:text-amber-400"
+                  }`}
+                >
+                  {formatRubricPercent(rubricPercentTotal)} allocated
+                </span>
               </div>
               <div className="rounded-lg border border-border overflow-hidden bg-card">
                 <div className="grid grid-cols-[1fr,110px,110px,40px] gap-2 px-4 py-3 border-b border-border bg-muted/20 text-xs text-muted-foreground uppercase tracking-wide">
                   <span>Category</span>
-                  <span>Weight</span>
+                  <span>Rubric %</span>
                   <span className="text-center">Opt-out allowed</span>
                   <span className="text-right" aria-hidden />
                 </div>
                 <div className="divide-y divide-border">
                   {categoriesEdit.map((cat, index) => (
-                    <div key={index} className="grid grid-cols-[1fr,110px,110px,40px] gap-2 items-center px-4 py-3 hover:bg-muted/20 transition-colors">
+                    <div
+                      key={index}
+                      className="grid grid-cols-[1fr,110px,110px,40px] gap-2 items-center px-4 py-3 hover:bg-muted/20 transition-colors"
+                    >
                       <input
                         type="text"
                         required
@@ -369,16 +453,18 @@ export function DetailsTab({
                         disabled={!canEditJudgeSettings}
                       />
                       <StyledNumberInput
-                        value={cat.weight}
+                        value={cat.rubricPercent}
                         onValueChange={(nextValue: number) => {
                           const next = [...categoriesEdit];
-                          next[index].weight = nextValue;
+                          next[index].rubricPercent = roundRubricPercent(
+                            Math.max(0, Math.min(100, nextValue)),
+                          );
                           setCategoriesEdit(next);
                         }}
                         min={0}
-                        max={2}
-                        step={0.1}
-                        placeholder="1.0"
+                        max={100}
+                        step={0.5}
+                        placeholder="25"
                         disabled={!canEditJudgeSettings}
                       />
                       <StyledCheckbox
@@ -393,13 +479,27 @@ export function DetailsTab({
                       />
                       <button
                         type="button"
-                        onClick={() => setCategoriesEdit(categoriesEdit.filter((_, i) => i !== index))}
+                        onClick={() =>
+                          setCategoriesEdit(
+                            categoriesEdit.filter((_, i) => i !== index),
+                          )
+                        }
                         className="p-2.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label={`Remove ${cat.name || "category"}`}
                         disabled={!canEditJudgeSettings}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
                         </svg>
                       </button>
                     </div>
@@ -410,7 +510,15 @@ export function DetailsTab({
                 <button
                   type="button"
                   onClick={() =>
-                    setCategoriesEdit([...categoriesEdit, { name: "", weight: 1, optOutAllowed: false }])
+                    setCategoriesEdit([
+                      ...categoriesEdit,
+                      {
+                        name: "",
+                        weight: 0,
+                        rubricPercent: 0,
+                        optOutAllowed: false,
+                      },
+                    ])
                   }
                   className="btn-ghost text-sm"
                   disabled={!canEditJudgeSettings}
@@ -424,7 +532,9 @@ export function DetailsTab({
             <div className="flex justify-end">
               <button
                 onClick={handleSaveJudgeSettings}
-                disabled={savingJudgeSettings || !canEditJudgeSettings || !scoresLoaded}
+                disabled={
+                  savingJudgeSettings || !canEditJudgeSettings || !scoresLoaded
+                }
                 className="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {savingJudgeSettings ? (
@@ -443,7 +553,8 @@ export function DetailsTab({
         {isHackathon && (
           <div className="card-static p-6 bg-card space-y-4">
             <p className="text-sm text-muted-foreground">
-              Prize configuration lives in the Prizes tab once the event is saved.
+              Prize configuration lives in the Prizes tab once the event is
+              saved.
             </p>
           </div>
         )}
@@ -452,28 +563,50 @@ export function DetailsTab({
           <div className="card-static p-6 bg-card space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c1.657 0 3-1.343 3-3S13.657 2 12 2 9 3.343 9 5s1.343 3 3 3zm0 2c-2.667 0-8 1.334-8 4v2a2 2 0 002 2h12a2 2 0 002-2v-2c0-2.666-5.333-4-8-4z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c1.657 0 3-1.343 3-3S13.657 2 12 2 9 3.343 9 5s1.343 3 3 3zm0 2c-2.667 0-8 1.334-8 4v2a2 2 0 002 2h12a2 2 0 002-2v-2c0-2.666-5.333-4-8-4z"
+                  />
                 </svg>
                 Appreciation Settings (Demo Day)
               </h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Total appreciations per attendee</label>
+                <label className="text-sm font-medium text-foreground">
+                  Total appreciations per attendee
+                </label>
                 <StyledNumberInput
                   value={appreciationBudget}
-                  onValueChange={(nextValue: number) => setAppreciationBudget(Math.max(0, Math.round(nextValue)))}
+                  onValueChange={(nextValue: number) =>
+                    setAppreciationBudget(Math.max(0, Math.round(nextValue)))
+                  }
                   min={0}
                   step={1}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Limit of hearts each attendee can give across all teams. Defaults to 100.
+                  Limit of hearts each attendee can give across all teams.
+                  Defaults to 100.
                 </p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Max per team</label>
-                <input type="text" value="3" readOnly className="input bg-muted cursor-not-allowed" />
+                <label className="text-sm font-medium text-foreground">
+                  Max per team
+                </label>
+                <input
+                  type="text"
+                  value="3"
+                  readOnly
+                  className="input bg-muted cursor-not-allowed"
+                />
                 <p className="text-xs text-muted-foreground">
                   Per-team cap remains 3 to encourage distribution.
                 </p>
@@ -505,15 +638,21 @@ export function DetailsTab({
                 {getEventDisplayLabel(mode)} Voting
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Projects are managed by admins. Signed-in users submit one ranked
-                top-5 ballot, and any project linked to their email is excluded
-                from their ranking options.
+                Projects are managed by admins. Signed-in users submit one
+                ranked top-5 ballot, and any project linked to their email is
+                excluded from their ranking options.
               </p>
             </div>
             <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground space-y-2">
               <p>Ballots stay editable while the event is active.</p>
-              <p>Admins pick the final winner after the event ends, using Borda standings as the default.</p>
-              <p>Tracks, cohorts, prizes, and appreciation settings are not used in this mode.</p>
+              <p>
+                Admins pick the final winner after the event ends, using Borda
+                standings as the default.
+              </p>
+              <p>
+                Tracks, cohorts, prizes, and appreciation settings are not used
+                in this mode.
+              </p>
             </div>
           </div>
         )}

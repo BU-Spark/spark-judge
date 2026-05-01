@@ -35,7 +35,7 @@ export const getTeamAppreciations = query({
         teamId: v.id("teams"),
         totalCount: v.number(),
         attendeeCount: v.number(),
-      })
+      }),
     ),
     attendeeTotalCount: v.number(),
     attendeeRemainingBudget: v.number(),
@@ -67,7 +67,7 @@ export const getTeamAppreciations = query({
       attendeeAppreciations = await ctx.db
         .query("appreciations")
         .withIndex("by_event_and_attendee", (q) =>
-          q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId!)
+          q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId!),
         )
         .collect();
     }
@@ -76,7 +76,7 @@ export const getTeamAppreciations = query({
     for (const appreciation of allAppreciations) {
       totalByTeam.set(
         appreciation.teamId,
-        (totalByTeam.get(appreciation.teamId) ?? 0) + 1
+        (totalByTeam.get(appreciation.teamId) ?? 0) + 1,
       );
     }
 
@@ -84,7 +84,7 @@ export const getTeamAppreciations = query({
     for (const appreciation of attendeeAppreciations) {
       attendeeByTeam.set(
         appreciation.teamId,
-        (attendeeByTeam.get(appreciation.teamId) ?? 0) + 1
+        (attendeeByTeam.get(appreciation.teamId) ?? 0) + 1,
       );
     }
 
@@ -102,7 +102,7 @@ export const getTeamAppreciations = query({
     const attendeeTotalCount = attendeeAppreciations.length;
     const attendeeRemainingBudget = Math.max(
       0,
-      maxPerAttendee - attendeeTotalCount
+      maxPerAttendee - attendeeTotalCount,
     );
 
     return {
@@ -154,14 +154,14 @@ export const getSingleTeamAppreciation = query({
     if (args.attendeeId) {
       // Count for this specific team
       attendeeCount = teamAppreciations.filter(
-        (a) => a.attendeeId === args.attendeeId
+        (a) => a.attendeeId === args.attendeeId,
       ).length;
 
       // Count total across all teams for budget calculation
       const allAttendeeAppreciations = await ctx.db
         .query("appreciations")
         .withIndex("by_event_and_attendee", (q) =>
-          q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId!)
+          q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId!),
         )
         .collect();
       attendeeTotalCount = allAttendeeAppreciations.length;
@@ -169,7 +169,7 @@ export const getSingleTeamAppreciation = query({
 
     const attendeeRemainingBudget = Math.max(
       0,
-      maxPerAttendee - attendeeTotalCount
+      maxPerAttendee - attendeeTotalCount,
     );
 
     return {
@@ -194,6 +194,8 @@ export const getEventAppreciationSummary = query({
   returns: v.object({
     totalAppreciations: v.number(),
     uniqueAttendees: v.number(),
+    appreciationBudgetPerAttendee: v.number(),
+    appreciationMaxPerTeam: v.number(),
     teams: v.array(
       v.object({
         teamId: v.id("teams"),
@@ -202,7 +204,7 @@ export const getEventAppreciationSummary = query({
         rawScore: v.number(),
         cleanScore: v.number(),
         flagged: v.boolean(),
-      })
+      }),
     ),
   }),
   handler: async (ctx, args) => {
@@ -231,7 +233,7 @@ export const getEventAppreciationSummary = query({
     for (const appreciation of allAppreciations) {
       countsByTeam.set(
         appreciation.teamId,
-        (countsByTeam.get(appreciation.teamId) ?? 0) + 1
+        (countsByTeam.get(appreciation.teamId) ?? 0) + 1,
       );
     }
 
@@ -254,6 +256,10 @@ export const getEventAppreciationSummary = query({
     return {
       totalAppreciations: allAppreciations.length,
       uniqueAttendees,
+      appreciationBudgetPerAttendee:
+        event.appreciationBudgetPerAttendee ?? MAX_TAPS_PER_ATTENDEE,
+      appreciationMaxPerTeam:
+        event.appreciationMaxPerTeam ?? MAX_TAPS_PER_PROJECT_PER_ATTENDEE,
       teams: teamSummary,
     };
   },
@@ -331,7 +337,7 @@ export const createAppreciationInternal = internalMutation({
         q
           .eq("eventId", args.eventId)
           .eq("teamId", args.teamId)
-          .eq("attendeeId", args.attendeeId)
+          .eq("attendeeId", args.attendeeId),
       )
       .collect();
 
@@ -349,10 +355,10 @@ export const createAppreciationInternal = internalMutation({
                 .withIndex("by_event_and_attendee", (q) =>
                   q
                     .eq("eventId", args.eventId)
-                    .eq("attendeeId", args.attendeeId)
+                    .eq("attendeeId", args.attendeeId),
                 )
                 .collect()
-            ).length
+            ).length,
         ),
       };
     }
@@ -361,7 +367,7 @@ export const createAppreciationInternal = internalMutation({
     const attendeeAllAppreciations = await ctx.db
       .query("appreciations")
       .withIndex("by_event_and_attendee", (q) =>
-        q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId)
+        q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId),
       )
       .collect();
 
@@ -379,7 +385,7 @@ export const createAppreciationInternal = internalMutation({
     const recentIpAppreciations = await ctx.db
       .query("appreciations")
       .withIndex("by_ip_and_timestamp", (q) =>
-        q.eq("ipAddress", args.ipAddress).gte("timestamp", windowStart)
+        q.eq("ipAddress", args.ipAddress).gte("timestamp", windowStart),
       )
       .collect();
 
@@ -484,7 +490,7 @@ export const createAppreciation = mutation({
         q
           .eq("eventId", args.eventId)
           .eq("teamId", args.teamId)
-          .eq("attendeeId", args.attendeeId)
+          .eq("attendeeId", args.attendeeId),
       )
       .collect();
 
@@ -502,10 +508,10 @@ export const createAppreciation = mutation({
                 .withIndex("by_event_and_attendee", (q) =>
                   q
                     .eq("eventId", args.eventId)
-                    .eq("attendeeId", args.attendeeId)
+                    .eq("attendeeId", args.attendeeId),
                 )
                 .collect()
-            ).length
+            ).length,
         ),
       };
     }
@@ -514,7 +520,7 @@ export const createAppreciation = mutation({
     const attendeeAllAppreciations = await ctx.db
       .query("appreciations")
       .withIndex("by_event_and_attendee", (q) =>
-        q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId)
+        q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId),
       )
       .collect();
 
@@ -564,7 +570,7 @@ export const getAppreciationsCsvData = query({
       courseCode: v.string(),
       totalAppreciations: v.number(),
       uniqueAttendees: v.number(),
-    })
+    }),
   ),
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
@@ -589,7 +595,7 @@ export const getAppreciationsCsvData = query({
     for (const appreciation of allAppreciations) {
       totalByTeam.set(
         appreciation.teamId,
-        (totalByTeam.get(appreciation.teamId) ?? 0) + 1
+        (totalByTeam.get(appreciation.teamId) ?? 0) + 1,
       );
       const attendees =
         uniqueAttendeesByTeam.get(appreciation.teamId) ?? new Set<string>();

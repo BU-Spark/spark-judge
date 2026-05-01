@@ -9,6 +9,7 @@ export type ParsedTeamCsvRow = {
   track?: string;
   courseCode?: string;
   projectUrl?: string;
+  githubUrl?: string;
   prizeNames: string[];
 };
 
@@ -21,9 +22,21 @@ const HEADER_ALIASES = {
   courseCode: ["coursecode", "course", "classcode"],
   projectUrl: [
     "projecturl",
+    "project",
+    "projectlink",
+    "appurl",
+    "liveurl",
+    "website",
+    "websiteurl",
+    "submissionurl",
+  ],
+  githubUrl: [
     "githuburl",
     "github",
+    "githubrepo",
+    "githubrepository",
     "repository",
+    "repo",
     "repositoryurl",
     "repourl",
   ],
@@ -139,12 +152,12 @@ function getHeaderIndex(headers: string[], aliases: readonly string[]) {
 
 function formatMissingColumnMessage(mode: TeamImportMode) {
   if (mode === "demo_day") {
-    return "CSV must include `name`, `members` (or `member1`, `member2`, ...), and `courseCode` columns.";
+    return "CSV must include `name` and `courseCode` columns.";
   }
   if (mode === "code_and_tell") {
     return "CSV must include `name` and `entrantEmails` columns.";
   }
-  return "CSV must include `name`, `members` (or `member1`, `member2`, ...), and `track` columns.";
+  return "CSV must include `name` and `track` columns.";
 }
 
 export function parseTeamCsv(
@@ -187,6 +200,10 @@ export function parseTeamCsv(
     normalizedHeaders,
     HEADER_ALIASES.projectUrl,
   );
+  const githubUrlIndex = getHeaderIndex(
+    normalizedHeaders,
+    HEADER_ALIASES.githubUrl,
+  );
   const prizesIndex = getHeaderIndex(normalizedHeaders, HEADER_ALIASES.prizes);
   const memberColumnIndexes = normalizedHeaders.reduce<number[]>(
     (indexes, header, index) => {
@@ -200,9 +217,6 @@ export function parseTeamCsv(
 
   if (
     nameIndex === -1 ||
-    (mode !== "code_and_tell" &&
-      membersIndex === -1 &&
-      memberColumnIndexes.length === 0) ||
     (mode === "code_and_tell" && entrantEmailsIndex === -1) ||
     (mode === "hackathon" && trackIndex === -1) ||
     (mode === "demo_day" && courseCodeIndex === -1)
@@ -232,20 +246,18 @@ export function parseTeamCsv(
       description: getValue(descriptionIndex),
       members,
       entrantEmails: splitList(getValue(entrantEmailsIndex)).map((email) =>
-        email.toLowerCase()
+        email.toLowerCase(),
       ),
       track: getValue(trackIndex) || undefined,
       courseCode: getValue(courseCodeIndex) || undefined,
       projectUrl: getValue(projectUrlIndex) || undefined,
+      githubUrl: getValue(githubUrlIndex) || undefined,
       prizeNames: splitList(getValue(prizesIndex)),
     };
 
     const rowErrors: string[] = [];
     if (!row.name) {
       rowErrors.push("team name is required");
-    }
-    if (mode !== "code_and_tell" && row.members.length === 0) {
-      rowErrors.push("at least one member is required");
     }
     if (mode === "code_and_tell" && row.entrantEmails.length === 0) {
       rowErrors.push("at least one entrant email is required");
@@ -259,17 +271,13 @@ export function parseTeamCsv(
     if (row.projectUrl && !row.projectUrl.startsWith("https://")) {
       rowErrors.push("project URL must start with https://");
     }
-    if (
-      mode === "hackathon" &&
-      row.projectUrl &&
-      !row.projectUrl.startsWith("https://github.com/")
-    ) {
-      rowErrors.push("project URL must start with https://github.com/");
+    if (row.githubUrl && !row.githubUrl.startsWith("https://github.com/")) {
+      rowErrors.push("GitHub URL must start with https://github.com/");
     }
     if (
       mode === "code_and_tell" &&
       row.entrantEmails.some(
-        (email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(email)
+        (email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(email),
       )
     ) {
       rowErrors.push("entrant emails must be valid email addresses");
@@ -300,17 +308,25 @@ export function createTeamCsvTemplate(
 ) {
   const headers =
     mode === "demo_day"
-      ? ["name", "description", "members", "courseCode"]
-      : mode === "code_and_tell"
-        ? ["name", "description", "entrantEmails", "projectUrl"]
-      : [
+      ? [
           "name",
           "description",
           "members",
-          "track",
+          "courseCode",
           "projectUrl",
-          ...(includePrizes ? ["prizes"] : []),
-        ];
+          "githubUrl",
+        ]
+      : mode === "code_and_tell"
+        ? ["name", "description", "entrantEmails", "projectUrl", "githubUrl"]
+        : [
+            "name",
+            "description",
+            "members",
+            "track",
+            "projectUrl",
+            "githubUrl",
+            ...(includePrizes ? ["prizes"] : []),
+          ];
 
   const sampleRow =
     mode === "demo_day"
@@ -319,6 +335,8 @@ export function createTeamCsvTemplate(
           "AI-powered study assistant",
           "Alice Smith; Bob Johnson",
           "DS519",
+          "https://example.com/code-crusaders",
+          "https://github.com/team/project",
         ]
       : mode === "code_and_tell"
         ? [
@@ -326,15 +344,17 @@ export function createTeamCsvTemplate(
             "Live coding walkthrough and demo",
             "alice@example.com; bob@example.com",
             "https://example.com/campus-canvas",
+            "https://github.com/team/campus-canvas",
           ]
-      : [
-          "Code Crusaders",
-          "AI-powered study assistant",
-          "Alice Smith; Bob Johnson",
-          "AI",
-          "https://github.com/team/project",
-          ...(includePrizes ? ["Best Overall; Audience Choice"] : []),
-        ];
+        : [
+            "Code Crusaders",
+            "AI-powered study assistant",
+            "Alice Smith; Bob Johnson",
+            "AI",
+            "https://example.com/code-crusaders",
+            "https://github.com/team/project",
+            ...(includePrizes ? ["Best Overall; Audience Choice"] : []),
+          ];
 
   return [headers, sampleRow]
     .map((row) => row.map((cell) => escapeCsvCell(cell)).join(","))

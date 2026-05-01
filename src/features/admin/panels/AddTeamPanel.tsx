@@ -37,6 +37,7 @@ export function AddTeamPanel({
   teamPrizeIdsByTeamId,
   courseCodes,
   editingTeam,
+  panelMode = "manual",
 }: {
   eventId: Id<"events">;
   onClose: () => void;
@@ -49,11 +50,13 @@ export function AddTeamPanel({
   teamPrizeIdsByTeamId?: Map<string, string[]>;
   courseCodes?: string[];
   editingTeam?: any;
+  panelMode?: "manual" | "bulk";
 }) {
   const isDemoDay = eventMode === "demo_day";
   const isCodeAndTell = eventMode === "code_and_tell";
   const isHackathon = !isDemoDay && !isCodeAndTell;
   const entityLabel = isCodeAndTell ? "Project" : "Team";
+  const isBulkImportMode = panelMode === "bulk" && !editingTeam;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [importingCsv, setImportingCsv] = useState(false);
@@ -64,6 +67,7 @@ export function AddTeamPanel({
     entrantEmails: "",
     track: "",
     projectUrl: "",
+    githubUrl: "",
     courseCode: "",
   });
   const [selectedPrizeIds, setSelectedPrizeIds] = useState<string[]>([]);
@@ -129,7 +133,12 @@ export function AddTeamPanel({
         members: editingTeam.members?.join(", ") || "",
         entrantEmails: (editingTeam.entrantEmails || []).join(", "),
         track: editingTeam.track || "",
-        projectUrl: editingTeam.projectUrl || editingTeam.githubUrl || "",
+        projectUrl: editingTeam.projectUrl || "",
+        githubUrl:
+          editingTeam.githubUrl ||
+          (editingTeam.projectUrl?.startsWith("https://github.com/")
+            ? editingTeam.projectUrl
+            : ""),
         courseCode: editingTeam.courseCode || "",
       });
       setSelectedPrizeIds(
@@ -144,6 +153,7 @@ export function AddTeamPanel({
         entrantEmails: "",
         track: "",
         projectUrl: "",
+        githubUrl: "",
         courseCode: "",
       });
       setSelectedPrizeIds([]);
@@ -157,7 +167,7 @@ export function AddTeamPanel({
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, [editingTeam, eventId]);
+  }, [editingTeam, eventId, panelMode]);
 
   useEffect(() => {
     if (!editingTeam) return;
@@ -306,16 +316,15 @@ export function AddTeamPanel({
             description: row.description,
             members: row.members,
             entrantEmails: row.entrantEmails,
+            projectUrl: row.projectUrl || undefined,
+            githubUrl: row.githubUrl || undefined,
             ...(isDemoDay
               ? { courseCode: row.courseCode || undefined }
               : isHackathon
                 ? {
-                  track: row.track || undefined,
-                  projectUrl: row.projectUrl || undefined,
-                }
-                : {
-                    projectUrl: row.projectUrl || undefined,
-                  }),
+                    track: row.track || undefined,
+                  }
+                : {}),
           });
 
           if (isHackathon && row.prizeIds.length > 0) {
@@ -383,15 +392,11 @@ export function AddTeamPanel({
         .split(/[;,]/)
         .map((value) => value.trim().toLowerCase())
         .filter(Boolean);
+      const projectUrl = formData.projectUrl.trim();
+      const githubUrl = formData.githubUrl.trim();
 
       if (!name) {
         toast.error(`${entityLabel} name is required.`);
-        setSubmitting(false);
-        return;
-      }
-
-      if (!isCodeAndTell && members.length === 0) {
-        toast.error("At least one member is required.");
         setSubmitting(false);
         return;
       }
@@ -414,17 +419,13 @@ export function AddTeamPanel({
         return;
       }
 
-      if (
-        isHackathon &&
-        formData.projectUrl &&
-        !formData.projectUrl.startsWith("https://github.com/")
-      ) {
-        toast.error("Project URL must start with https://github.com/");
+      if (projectUrl && !projectUrl.startsWith("https://")) {
+        toast.error("Project URL must start with https://");
         setSubmitting(false);
         return;
       }
-      if (formData.projectUrl && !formData.projectUrl.startsWith("https://")) {
-        toast.error("Project URL must start with https://");
+      if (githubUrl && !githubUrl.startsWith("https://github.com/")) {
+        toast.error("GitHub URL must start with https://github.com/");
         setSubmitting(false);
         return;
       }
@@ -437,16 +438,15 @@ export function AddTeamPanel({
           description: formData.description.trim(),
           members,
           entrantEmails,
+          projectUrl: projectUrl || undefined,
+          githubUrl: githubUrl || undefined,
           ...(isDemoDay
             ? { courseCode: formData.courseCode || undefined }
             : isHackathon
               ? {
-                track: formData.track || undefined,
-                projectUrl: formData.projectUrl || undefined,
-              }
-              : {
-                  projectUrl: formData.projectUrl || undefined,
-                }),
+                  track: formData.track || undefined,
+                }
+              : {}),
         });
         teamId = editingTeam._id;
         if (isHackathon) {
@@ -464,16 +464,15 @@ export function AddTeamPanel({
           description: formData.description.trim(),
           members,
           entrantEmails,
+          projectUrl: projectUrl || undefined,
+          githubUrl: githubUrl || undefined,
           ...(isDemoDay
             ? { courseCode: formData.courseCode || undefined }
             : isHackathon
               ? {
-                track: formData.track || undefined,
-                projectUrl: formData.projectUrl || undefined,
-              }
-              : {
-                  projectUrl: formData.projectUrl || undefined,
-                }),
+                  track: formData.track || undefined,
+                }
+              : {}),
         });
         if (isHackathon) {
           await setTeamPrizeSubmissionsAdmin({
@@ -486,11 +485,48 @@ export function AddTeamPanel({
       }
       onClose();
     } catch (error: any) {
-      toast.error(error.message || `Failed to save ${entityLabel.toLowerCase()}`);
+      toast.error(
+        error.message || `Failed to save ${entityLabel.toLowerCase()}`,
+      );
     } finally {
       setSubmitting(false);
     }
   };
+
+  const renderUrlFields = () => (
+    <>
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-2">
+          Project URL{" "}
+          <span className="text-muted-foreground text-xs">(optional)</span>
+        </label>
+        <input
+          type="url"
+          value={formData.projectUrl}
+          onChange={(e) =>
+            setFormData({ ...formData, projectUrl: e.target.value })
+          }
+          className="input w-full"
+          placeholder="https://example.com/project"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-2">
+          GitHub URL{" "}
+          <span className="text-muted-foreground text-xs">(optional)</span>
+        </label>
+        <input
+          type="url"
+          value={formData.githubUrl}
+          onChange={(e) =>
+            setFormData({ ...formData, githubUrl: e.target.value })
+          }
+          className="input w-full"
+          placeholder="https://github.com/team/project"
+        />
+      </div>
+    </>
+  );
 
   return (
     <div className="w-full h-full">
@@ -515,17 +551,23 @@ export function AddTeamPanel({
             </svg>
           </button>
           <h3 className="text-xl font-heading font-bold text-foreground">
-            {editingTeam ? `Edit ${entityLabel}` : `Create ${entityLabel}`}
+            {editingTeam
+              ? `Edit ${entityLabel}`
+              : isBulkImportMode
+                ? `Bulk Import ${entityLabel}s`
+                : `Create ${entityLabel}`}
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
             {editingTeam
               ? `Editing existing ${entityLabel.toLowerCase()} details.`
-              : `Create one ${entityLabel.toLowerCase()} manually or import a CSV.`}
+              : isBulkImportMode
+                ? `Upload a CSV to create ${entityLabel.toLowerCase()}s in bulk.`
+                : `Create one ${entityLabel.toLowerCase()} manually.`}
           </p>
         </div>
         <div className="flex-1 overflow-y-auto">
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
-            {!editingTeam && (
+            {isBulkImportMode && (
               <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-3">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-1">
@@ -533,7 +575,8 @@ export function AddTeamPanel({
                       Bulk Import From CSV
                     </h4>
                     <p className="text-sm text-muted-foreground">
-                      Upload a spreadsheet instead of entering {entityLabel.toLowerCase()}s one at a time.
+                      Upload a spreadsheet instead of entering{" "}
+                      {entityLabel.toLowerCase()}s one at a time.
                     </p>
                   </div>
                   <button
@@ -564,10 +607,10 @@ export function AddTeamPanel({
                     {csvImportPlan
                       ? `${csvImportPlan.fileName} loaded with ${csvImportPlan.rows.length} ${entityLabel.toLowerCase()}${csvImportPlan.rows.length === 1 ? "" : "s"}.`
                       : isDemoDay
-                        ? "Required columns: name, members, courseCode. Optional: description."
+                        ? "Required columns: name, courseCode. Optional: description, members, projectUrl, githubUrl."
                         : isCodeAndTell
-                          ? "Required columns: name, entrantEmails. Optional: description, members, projectUrl."
-                          : "Required columns: name, members, track. Optional: description, projectUrl, prizes."}
+                          ? "Required columns: name, entrantEmails. Optional: description, members, projectUrl, githubUrl."
+                          : "Required columns: name, track. Optional: description, members, projectUrl, githubUrl, prizes."}
                   </div>
                   {csvImportPlan && (
                     <>
@@ -596,10 +639,10 @@ export function AddTeamPanel({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {isDemoDay
-                    ? "Use semicolons inside the `members` cell, or provide separate `member1`, `member2`, ... columns."
+                    ? "When provided, use semicolons inside the `members` cell, or provide separate `member1`, `member2`, ... columns."
                     : isCodeAndTell
                       ? "Use semicolons or commas inside the `entrantEmails` cell. `members` remains optional."
-                      : "Use semicolons inside the `members` and `prizes` cells, or provide separate `member1`, `member2`, ... columns. Prize names must match this event's prize names exactly."}
+                      : "When provided, use semicolons inside the `members` and `prizes` cells, or provide separate `member1`, `member2`, ... columns. Prize names must match this event's prize names exactly."}
                 </p>
                 {!!prizesLoading && isHackathon && (
                   <p className="text-xs text-muted-foreground">
@@ -646,299 +689,282 @@ export function AddTeamPanel({
                 )}
               </div>
             )}
-            {!editingTeam && (
-              <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Or add one manually
-                </span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                {entityLabel} Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                className="input w-full"
-                placeholder="Code Crusaders"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Description{" "}
-                <span className="text-muted-foreground text-xs">
-                  (optional)
-                </span>
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                rows={2}
-                className="input w-full min-h-[80px] py-2 resize-none"
-                placeholder="AI-powered study assistant"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Members (comma-separated){" "}
-                {!isCodeAndTell && <span className="text-red-500">*</span>}
-                {isCodeAndTell && (
-                  <span className="text-muted-foreground text-xs">
-                    (optional)
-                  </span>
-                )}
-              </label>
-              <input
-                type="text"
-                required={!isCodeAndTell}
-                value={formData.members}
-                onChange={(e) =>
-                  setFormData({ ...formData, members: e.target.value })
-                }
-                className="input w-full"
-                placeholder="Alice Smith, Bob Johnson, Carol Lee"
-              />
-            </div>
-            {isCodeAndTell && (
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Entrant Emails <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.entrantEmails}
-                  onChange={(e) =>
-                    setFormData({ ...formData, entrantEmails: e.target.value })
-                  }
-                  className="input w-full"
-                  placeholder="alice@example.com, bob@example.com"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Users tied to these emails can sign in and vote, but they
-                  cannot rank this project.
-                </p>
-              </div>
-            )}
-            {isDemoDay ? (
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Course <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={formData.courseCode}
-                  onChange={(e) =>
-                    setFormData({ ...formData, courseCode: e.target.value })
-                  }
-                  className="input w-full"
-                >
-                  <option value="">Select course...</option>
-                  {(courseCodes || []).map((code) => (
-                    <option key={code} value={code}>
-                      {code}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : isHackathon ? (
-              <div className="space-y-4">
+            {!isBulkImportMode ? (
+              <>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Track <span className="text-red-500">*</span>
+                    {entityLabel} Name <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
                     required
-                    value={formData.track}
+                    value={formData.name}
                     onChange={(e) =>
-                      setFormData({ ...formData, track: e.target.value })
+                      setFormData({ ...formData, name: e.target.value })
                     }
                     className="input w-full"
-                  >
-                    <option value="">Select track...</option>
-                    {(tracks || []).map((trackOption) => (
-                      <option key={trackOption} value={trackOption}>
-                        {trackOption}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Code Crusaders"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Project URL{" "}
+                    Description{" "}
+                    <span className="text-muted-foreground text-xs">
+                      (optional)
+                    </span>
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    rows={2}
+                    className="input w-full min-h-[80px] py-2 resize-none"
+                    placeholder="AI-powered study assistant"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Members (comma-separated){" "}
                     <span className="text-muted-foreground text-xs">
                       (optional)
                     </span>
                   </label>
                   <input
-                    type="url"
-                    value={formData.projectUrl}
+                    type="text"
+                    value={formData.members}
                     onChange={(e) =>
-                      setFormData({ ...formData, projectUrl: e.target.value })
+                      setFormData({ ...formData, members: e.target.value })
                     }
                     className="input w-full"
-                    placeholder="https://github.com/team/project"
+                    placeholder="Alice Smith, Bob Johnson, Carol Lee"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Prize Submissions
-                  </label>
-                  <div className="mb-2">
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                      Sponsor Filter
+                {isCodeAndTell && (
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Entrant Emails <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      value={sponsorFilter}
-                      onChange={(e) => setSponsorFilter(e.target.value)}
+                    <input
+                      type="text"
+                      required
+                      value={formData.entrantEmails}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          entrantEmails: e.target.value,
+                        })
+                      }
                       className="input w-full"
-                    >
-                      <option value="">All sponsors</option>
-                      {sponsorOptions.map((sponsorName) => (
-                        <option key={sponsorName} value={sponsorName}>
-                          {sponsorName}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="alice@example.com, bob@example.com"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Users tied to these emails can sign in and vote, but they
+                      cannot rank this project.
+                    </p>
                   </div>
-                  <div className="rounded-lg border border-border overflow-hidden bg-card max-h-56 overflow-y-auto">
-                    <div className="w-full">
-                      {prizesLoading && (
-                        <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
-                          Loading prizes...
-                        </div>
-                      )}
-                      {!prizesLoading && (eventPrizes?.length || 0) === 0 && (
-                        <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
-                          No prizes configured for this event.
-                        </div>
-                      )}
-                      {!prizesLoading &&
-                        (eventPrizes?.length || 0) > 0 &&
-                        eligiblePrizes.length === 0 && (
-                          <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
-                            Select a track to see track-specific prizes.
-                          </div>
-                        )}
-                      {!prizesLoading &&
-                        eligiblePrizes.length > 0 &&
-                        filteredPrizes.length === 0 && (
-                          <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
-                            No prizes match this sponsor filter.
-                          </div>
-                        )}
-                      {filteredPrizes.map((prize: any) => {
-                        const checked = selectedPrizeIds.includes(
-                          String(prize._id),
-                        );
-                        return (
-                          <label
-                            key={prize._id}
-                            className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors relative group border-t border-border first:border-t-0 ${
-                              checked
-                                ? "bg-teal-500/10 border-l-2 border-l-teal-500"
-                                : "hover:bg-muted/20 border-l-2 border-l-transparent"
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={(e) => {
-                                const id = String(prize._id);
-                                if (e.target.checked) {
-                                  setSelectedPrizeIds((prev) =>
-                                    prev.includes(id) ? prev : [...prev, id],
-                                  );
-                                } else {
-                                  setSelectedPrizeIds((prev) =>
-                                    prev.filter((value) => value !== id),
-                                  );
-                                }
-                              }}
-                              className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                            />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-foreground">
-                                {prize.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {prize.type === "general" && "General prize"}
-                                {prize.type === "track" &&
-                                  `Track prize${prize.track ? ` · ${prize.track}` : ""}`}
-                                {prize.type === "sponsor" &&
-                                  `Sponsor prize${prize.sponsorName ? ` · ${prize.sponsorName}` : ""}`}
-                                {prize.type === "track_sponsor" &&
-                                  `Track + Sponsor${prize.track ? ` · ${prize.track}` : ""}${
-                                    prize.sponsorName
-                                      ? ` · ${prize.sponsorName}`
-                                      : ""
-                                  }`}
-                              </p>
+                )}
+                {isDemoDay ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Course <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={formData.courseCode}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            courseCode: e.target.value,
+                          })
+                        }
+                        className="input w-full"
+                      >
+                        <option value="">Select course...</option>
+                        {(courseCodes || []).map((code) => (
+                          <option key={code} value={code}>
+                            {code}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {renderUrlFields()}
+                  </div>
+                ) : isHackathon ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Track <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={formData.track}
+                        onChange={(e) =>
+                          setFormData({ ...formData, track: e.target.value })
+                        }
+                        className="input w-full"
+                      >
+                        <option value="">Select track...</option>
+                        {(tracks || []).map((trackOption) => (
+                          <option key={trackOption} value={trackOption}>
+                            {trackOption}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {renderUrlFields()}
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Prize Submissions
+                      </label>
+                      <div className="mb-2">
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">
+                          Sponsor Filter
+                        </label>
+                        <select
+                          value={sponsorFilter}
+                          onChange={(e) => setSponsorFilter(e.target.value)}
+                          className="input w-full"
+                        >
+                          <option value="">All sponsors</option>
+                          {sponsorOptions.map((sponsorName) => (
+                            <option key={sponsorName} value={sponsorName}>
+                              {sponsorName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="rounded-lg border border-border overflow-hidden bg-card max-h-56 overflow-y-auto">
+                        <div className="w-full">
+                          {prizesLoading && (
+                            <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
+                              Loading prizes...
                             </div>
-                          </label>
-                        );
-                      })}
+                          )}
+                          {!prizesLoading &&
+                            (eventPrizes?.length || 0) === 0 && (
+                              <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
+                                No prizes configured for this event.
+                              </div>
+                            )}
+                          {!prizesLoading &&
+                            (eventPrizes?.length || 0) > 0 &&
+                            eligiblePrizes.length === 0 && (
+                              <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
+                                Select a track to see track-specific prizes.
+                              </div>
+                            )}
+                          {!prizesLoading &&
+                            eligiblePrizes.length > 0 &&
+                            filteredPrizes.length === 0 && (
+                              <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
+                                No prizes match this sponsor filter.
+                              </div>
+                            )}
+                          {filteredPrizes.map((prize: any) => {
+                            const checked = selectedPrizeIds.includes(
+                              String(prize._id),
+                            );
+                            return (
+                              <label
+                                key={prize._id}
+                                className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors relative group border-t border-border first:border-t-0 ${
+                                  checked
+                                    ? "bg-teal-500/10 border-l-2 border-l-teal-500"
+                                    : "hover:bg-muted/20 border-l-2 border-l-transparent"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const id = String(prize._id);
+                                    if (e.target.checked) {
+                                      setSelectedPrizeIds((prev) =>
+                                        prev.includes(id)
+                                          ? prev
+                                          : [...prev, id],
+                                      );
+                                    } else {
+                                      setSelectedPrizeIds((prev) =>
+                                        prev.filter((value) => value !== id),
+                                      );
+                                    }
+                                  }}
+                                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                                />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-foreground">
+                                    {prize.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {prize.type === "general" &&
+                                      "General prize"}
+                                    {prize.type === "track" &&
+                                      `Track prize${prize.track ? ` · ${prize.track}` : ""}`}
+                                    {prize.type === "sponsor" &&
+                                      `Sponsor prize${prize.sponsorName ? ` · ${prize.sponsorName}` : ""}`}
+                                    {prize.type === "track_sponsor" &&
+                                      `Track + Sponsor${prize.track ? ` · ${prize.track}` : ""}${
+                                        prize.sponsorName
+                                          ? ` · ${prize.sponsorName}`
+                                          : ""
+                                      }`}
+                                  </p>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Select every prize this team is applying for.
+                      </p>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Select every prize this team is applying for.
-                  </p>
+                ) : (
+                  <div className="space-y-4">{renderUrlFields()}</div>
+                )}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Saving...
+                      </span>
+                    ) : editingTeam ? (
+                      "Save Changes"
+                    ) : (
+                      `Create ${entityLabel}`
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={submitting}
+                    className="flex-1 btn-secondary"
+                  >
+                    Cancel
+                  </button>
                 </div>
-              </div>
+              </>
             ) : (
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Project URL{" "}
-                  <span className="text-muted-foreground text-xs">
-                    (optional)
-                  </span>
-                </label>
-                <input
-                  type="url"
-                  value={formData.projectUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, projectUrl: e.target.value })
-                  }
-                  className="input w-full"
-                  placeholder="https://example.com/project"
-                />
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={importingCsv}
+                  className="btn-secondary"
+                >
+                  Close
+                </button>
               </div>
             )}
-            <div className="flex gap-3 pt-2">
-              <button
-                type="submit"
-                disabled={submitting || importingCsv}
-                className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Saving...
-                  </span>
-                ) : editingTeam ? (
-                  "Save Changes"
-                ) : (
-                  `Create ${entityLabel}`
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={submitting || importingCsv}
-                className="flex-1 btn-secondary"
-              >
-                Cancel
-              </button>
-            </div>
           </form>
         </div>
       </div>

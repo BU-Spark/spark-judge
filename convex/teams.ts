@@ -41,23 +41,37 @@ function validateEntrantEmails(values?: string[]) {
   return entrantEmails;
 }
 
-function validateProjectUrl(projectUrl: string | undefined, requireGithub: boolean) {
+function validateProjectUrl(projectUrl: string | undefined) {
   const normalized = normalizeOptionalString(projectUrl);
   if (!normalized) return undefined;
   if (!normalized.startsWith("https://")) {
     throw new Error("Project URL must start with https://");
   }
-  if (requireGithub && !normalized.startsWith("https://github.com/")) {
-    throw new Error("Project URL must start with https://github.com/");
+  return normalized;
+}
+
+function validateGithubUrl(githubUrl: string | undefined) {
+  const normalized = normalizeOptionalString(githubUrl);
+  if (!normalized) return undefined;
+  if (!normalized.startsWith("https://github.com/")) {
+    throw new Error("GitHub URL must start with https://github.com/");
   }
   return normalized;
 }
 
-function buildProjectUrlFields(projectUrl: string | undefined) {
-  const normalized = normalizeOptionalString(projectUrl) || "";
+function buildProjectUrlFields(
+  projectUrl: string | undefined,
+  githubUrl?: string | undefined,
+) {
+  const normalizedProjectUrl = normalizeOptionalString(projectUrl) || "";
+  const normalizedGithubUrl =
+    normalizeOptionalString(githubUrl) ||
+    (normalizedProjectUrl.startsWith("https://github.com/")
+      ? normalizedProjectUrl
+      : "");
   return {
-    projectUrl: normalized,
-    githubUrl: normalized.startsWith("https://github.com/") ? normalized : "",
+    projectUrl: normalizedProjectUrl,
+    githubUrl: normalizedGithubUrl,
   };
 }
 
@@ -68,6 +82,7 @@ export const createTeam = mutation({
     description: v.string(),
     members: v.array(v.string()),
     projectUrl: v.optional(v.string()),
+    githubUrl: v.optional(v.string()),
     devpostUrl: v.optional(v.string()),
     track: v.optional(v.string()),
     courseCode: v.optional(v.string()),
@@ -108,7 +123,8 @@ export const createTeam = mutation({
       throw new Error("At least one entrant email is required");
     }
 
-    const projectUrl = validateProjectUrl(args.projectUrl, isHackathonMode(mode));
+    const projectUrl = validateProjectUrl(args.projectUrl);
+    const githubUrl = validateGithubUrl(args.githubUrl);
 
     // Admin team creation - need to provide required new fields with defaults
     return await ctx.db.insert("teams", {
@@ -116,7 +132,7 @@ export const createTeam = mutation({
       name: args.name,
       description: args.description,
       members: args.members,
-      ...buildProjectUrlFields(projectUrl),
+      ...buildProjectUrlFields(projectUrl, githubUrl),
       devpostUrl: args.devpostUrl || "",
       track: isHackathonMode(mode) ? args.track || "" : "",
       courseCode: isDemoDayMode(mode) ? args.courseCode : undefined,
@@ -135,6 +151,7 @@ export const updateTeamAdmin = mutation({
     description: v.string(),
     members: v.array(v.string()),
     projectUrl: v.optional(v.string()),
+    githubUrl: v.optional(v.string()),
     devpostUrl: v.optional(v.string()),
     track: v.optional(v.string()),
     courseCode: v.optional(v.string()),
@@ -176,7 +193,8 @@ export const updateTeamAdmin = mutation({
       throw new Error("At least one entrant email is required");
     }
 
-    const projectUrl = validateProjectUrl(args.projectUrl, isHackathonMode(mode));
+    const projectUrl = validateProjectUrl(args.projectUrl);
+    const githubUrl = validateGithubUrl(args.githubUrl);
 
     if (args.devpostUrl && !args.devpostUrl.startsWith("https://")) {
       throw new Error("Devpost URL must start with https://");
@@ -186,7 +204,7 @@ export const updateTeamAdmin = mutation({
       name: args.name,
       description: args.description,
       members: args.members,
-      ...buildProjectUrlFields(projectUrl),
+      ...buildProjectUrlFields(projectUrl, githubUrl),
       ...(args.devpostUrl !== undefined
         ? { devpostUrl: args.devpostUrl || "" }
         : {}),
@@ -422,7 +440,7 @@ export const updateTeam = mutation({
     }
 
     // Validate GitHub URL if provided
-    const projectUrl = validateProjectUrl(args.githubUrl, !isDemoDay);
+    const githubUrl = validateGithubUrl(args.githubUrl);
     if (args.devpostUrl && !args.devpostUrl.startsWith("https://")) {
       throw new Error("Devpost URL must start with https://");
     }
@@ -431,7 +449,7 @@ export const updateTeam = mutation({
     if (args.description !== undefined) updates.description = args.description;
     if (args.members !== undefined) updates.members = args.members;
     if (args.githubUrl !== undefined) {
-      Object.assign(updates, buildProjectUrlFields(projectUrl));
+      Object.assign(updates, buildProjectUrlFields(githubUrl));
     }
     if (args.devpostUrl !== undefined) updates.devpostUrl = args.devpostUrl;
     if (args.track !== undefined) updates.track = args.track;

@@ -5,7 +5,7 @@ import { authTables } from "@convex-dev/auth/server";
 const EVENT_MODE_VALIDATOR = v.union(
   v.literal("hackathon"),
   v.literal("demo_day"),
-  v.literal("code_and_tell")
+  v.literal("code_and_tell"),
 );
 
 // Extend auth tables to add isAdmin field to users
@@ -24,16 +24,16 @@ const applicationTables = {
     status: v.union(
       v.literal("upcoming"),
       v.literal("active"),
-      v.literal("past")
+      v.literal("past"),
     ),
     startDate: v.number(),
     endDate: v.number(),
     categories: v.array(
       v.object({
         name: v.string(),
-        weight: v.number(), // 0-2 multiplier
+        weight: v.number(), // Internal multiplier derived from rubric percentage
         optOutAllowed: v.optional(v.boolean()), // Judges can mark "not comfortable"
-      })
+      }),
     ), // Awards/categories for judging
     // Demo Day appreciation limits (optional; defaults applied in logic)
     appreciationBudgetPerAttendee: v.optional(v.number()), // Total hearts an attendee can give
@@ -48,8 +48,8 @@ const applicationTables = {
         v.object({
           category: v.string(),
           teamId: v.id("teams"),
-        })
-      )
+        }),
+      ),
     ),
     // Demo Day mode support
     mode: v.optional(EVENT_MODE_VALIDATOR), // undefined = "hackathon" for backwards compatibility
@@ -84,10 +84,21 @@ const applicationTables = {
     // Demo Day board assignments
     demoDayRound: v.optional(v.number()), // Round number (e.g., 4, 5, 6)
     demoDayBoardNumber: v.optional(v.string()), // Board letter (e.g., "A", "B", "C")
+    demoDayProjectInstance: v.optional(v.string()), // Stable source key from Airtable/CSV import
+    airtableProjectRecordId: v.optional(v.string()), // Airtable project record ID for traceability
+    airtableProjectInstanceRecordId: v.optional(v.string()), // Airtable project instance record ID for traceability
+    demoDaySignName: v.optional(v.string()), // Short display name from board assignment sheet
+    demoDayFullSignName: v.optional(v.string()), // Full printable sign label from board assignment sheet
+    demoDayBoardTime: v.optional(v.string()), // Board display time slot
+    demoDayCourseName: v.optional(v.string()), // Human-readable course name from board assignment sheet
   })
     .index("by_event", ["eventId"])
     .index("by_submitter", ["submittedBy"])
-    .index("by_event_and_submitter", ["eventId", "submittedBy"]),
+    .index("by_event_and_submitter", ["eventId", "submittedBy"])
+    .index("by_event_and_project_instance", [
+      "eventId",
+      "demoDayProjectInstance",
+    ]),
 
   rankedVotes: defineTable({
     eventId: v.id("events"),
@@ -137,7 +148,7 @@ const applicationTables = {
         category: v.string(),
         score: v.union(v.number(), v.null()),
         optedOut: v.optional(v.boolean()),
-      })
+      }),
     ),
     totalScore: v.number(),
     submittedAt: v.number(),
@@ -154,13 +165,13 @@ const applicationTables = {
       v.literal("general"),
       v.literal("track"),
       v.literal("sponsor"),
-      v.literal("track_sponsor")
+      v.literal("track_sponsor"),
     ),
     track: v.optional(v.string()),
     sponsorName: v.optional(v.string()),
     // How to surface scoring insight when deliberating this prize
     scoreBasis: v.optional(
-      v.union(v.literal("overall"), v.literal("categories"), v.literal("none"))
+      v.union(v.literal("overall"), v.literal("categories"), v.literal("none")),
     ),
     scoreCategoryNames: v.optional(v.array(v.string())),
     isActive: v.optional(v.boolean()),

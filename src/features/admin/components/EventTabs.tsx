@@ -3,11 +3,15 @@ import type { EventManagementTab } from "../types";
 export function EventTabs({
   activeTab,
   onTabChange,
+  showSetup = false,
 }: {
   activeTab: EventManagementTab;
   onTabChange: (tab: EventManagementTab) => void;
+  showSetup?: boolean;
 }) {
-  const tabs: EventManagementTab[] = ["details", "teams", "scores"];
+  const tabs: EventManagementTab[] = showSetup
+    ? ["setup", "details", "teams", "scores"]
+    : ["details", "teams", "scores"];
 
   return (
     <div className="inline-flex w-fit gap-1 rounded-lg border border-border bg-card/70 p-1">

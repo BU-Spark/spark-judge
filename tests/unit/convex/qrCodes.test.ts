@@ -11,7 +11,7 @@ describe("qrCodes business logic", () => {
       const appreciationUrl = `${baseUrl}/event/${eventSlug}/${teamSlug}/${teamId}`;
 
       expect(appreciationUrl).toBe(
-        "https://example.com/event/demo-day-fall-2024/my-awesome-team/team456"
+        "https://example.com/event/demo-day-fall-2024/my-awesome-team/team456",
       );
     });
 
@@ -25,7 +25,7 @@ describe("qrCodes business logic", () => {
       const appreciationUrl = `${baseUrl.replace(/\/$/, "")}/event/${eventSlug}/${teamSlug}/${teamId}`;
 
       expect(appreciationUrl).toBe(
-        "https://example.com/event/demo-day-fall-2024/my-awesome-team/team456"
+        "https://example.com/event/demo-day-fall-2024/my-awesome-team/team456",
       );
     });
   });
@@ -109,6 +109,13 @@ describe("qrCodes business logic", () => {
         "courseCode",
         "teamName",
         "slug",
+        "projectInstance",
+        "round",
+        "boardNumber",
+        "boardTime",
+        "courseName",
+        "signName",
+        "fullSignName",
         "qrFilename",
         "appreciationUrl",
       ];
@@ -116,7 +123,7 @@ describe("qrCodes business logic", () => {
       const csvHeader = headers.join(",");
 
       expect(csvHeader).toBe(
-        "teamId,courseCode,teamName,slug,qrFilename,appreciationUrl"
+        "teamId,courseCode,teamName,slug,projectInstance,round,boardNumber,boardTime,courseName,signName,fullSignName,qrFilename,appreciationUrl",
       );
     });
 
@@ -132,7 +139,7 @@ describe("qrCodes business logic", () => {
       const csvRow = row.map((cell) => `"${cell}"`).join(",");
 
       expect(csvRow).toBe(
-        '"team123","DS519","My Team","my-team","file.png","url"'
+        '"team123","DS519","My Team","my-team","file.png","url"',
       );
     });
   });
@@ -164,64 +171,68 @@ describe("qrCodes business logic", () => {
     });
   });
 
-  describe('XML escaping', () => {
-    it('should escape ampersands', () => {
-      const str = 'Team A & B';
+  describe("XML escaping", () => {
+    it("should escape ampersands", () => {
+      const str = "Team A & B";
       const escaped = str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
 
-      expect(escaped).toBe('Team A &amp; B');
+      expect(escaped).toBe("Team A &amp; B");
     });
 
-    it('should escape less than and greater than', () => {
+    it("should escape less than and greater than", () => {
       const str = '<script>alert("xss")</script>';
       const escaped = str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
 
-      expect(escaped).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+      expect(escaped).toBe(
+        "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;",
+      );
     });
 
-    it('should escape quotes and apostrophes', () => {
+    it("should escape quotes and apostrophes", () => {
       const str = 'Team "Best" \'s Project';
       const escaped = str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
 
-      expect(escaped).toBe('Team &quot;Best&quot; &apos;s Project');
+      expect(escaped).toBe("Team &quot;Best&quot; &apos;s Project");
     });
 
-    it('should handle multiple special characters', () => {
-      const str = 'A & B < C > D "E" \'F\'';
+    it("should handle multiple special characters", () => {
+      const str = "A & B < C > D \"E\" 'F'";
       const escaped = str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
 
-      expect(escaped).toBe('A &amp; B &lt; C &gt; D &quot;E&quot; &apos;F&apos;');
+      expect(escaped).toBe(
+        "A &amp; B &lt; C &gt; D &quot;E&quot; &apos;F&apos;",
+      );
     });
   });
 
-  describe('generateLabeledQrSvg format', () => {
-    it('should include XML declaration in SVG output', () => {
+  describe("generateLabeledQrSvg format", () => {
+    it("should include XML declaration in SVG output", () => {
       const svgStart = '<?xml version="1.0" encoding="UTF-8"?>';
-      expect(svgStart).toContain('<?xml');
+      expect(svgStart).toContain("<?xml");
       expect(svgStart).toContain('encoding="UTF-8"');
     });
 
-    it('should calculate correct SVG dimensions for labeled QR', () => {
+    it("should calculate correct SVG dimensions for labeled QR", () => {
       const svgWidth = 600;
       const svgHeight = 700;
 
@@ -229,7 +240,7 @@ describe("qrCodes business logic", () => {
       expect(svgHeight).toBe(700);
     });
 
-    it('should calculate QR code scale factor correctly', () => {
+    it("should calculate QR code scale factor correctly", () => {
       const qrNativeSize = 33;
       const qrTargetSize = 500;
       const scaleFactor = qrTargetSize / qrNativeSize;
@@ -237,7 +248,7 @@ describe("qrCodes business logic", () => {
       expect(scaleFactor).toBeCloseTo(15.15, 1);
     });
 
-    it('should center QR code horizontally', () => {
+    it("should center QR code horizontally", () => {
       const svgWidth = 600;
       const qrTargetSize = 500;
       const qrX = (svgWidth - qrTargetSize) / 2;
@@ -245,77 +256,92 @@ describe("qrCodes business logic", () => {
       expect(qrX).toBe(50);
     });
 
-    it('should position QR code lower when course code present', () => {
-      const courseCode = 'DS519';
+    it("should position QR code lower when course code present", () => {
+      const courseCode = "DS519";
       const qrY = courseCode ? 80 : 40;
 
       expect(qrY).toBe(80);
     });
 
-    it('should position QR code higher when no course code', () => {
+    it("should position QR code higher when no course code", () => {
       const courseCode = undefined;
       const qrY = courseCode ? 80 : 40;
 
       expect(qrY).toBe(40);
     });
 
-    it('should truncate long team names', () => {
+    it("should truncate long team names", () => {
       const maxLength = 50;
-      const teamName = 'A'.repeat(100);
+      const teamName = "A".repeat(100);
       const displayTeamName =
         teamName.length > maxLength
-          ? teamName.slice(0, maxLength - 3) + '...'
+          ? teamName.slice(0, maxLength - 3) + "..."
           : teamName;
 
       expect(displayTeamName.length).toBe(50);
-      expect(displayTeamName).toContain('...');
+      expect(displayTeamName).toContain("...");
     });
 
-    it('should not truncate short team names', () => {
+    it("should not truncate short team names", () => {
       const maxLength = 50;
-      const teamName = 'Short Team Name';
+      const teamName = "Short Team Name";
       const displayTeamName =
         teamName.length > maxLength
-          ? teamName.slice(0, maxLength - 3) + '...'
+          ? teamName.slice(0, maxLength - 3) + "..."
           : teamName;
 
-      expect(displayTeamName).toBe('Short Team Name');
+      expect(displayTeamName).toBe("Short Team Name");
     });
 
-    it('should include course code text element when present', () => {
-      const courseCode = 'DS519';
+    it("should include course code text element when present", () => {
+      const courseCode = "DS519";
       const svgWidth = 600;
       const courseElement = courseCode
         ? `<text x="${svgWidth / 2}" y="50" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="bold" fill="#333333">${courseCode}</text>`
-        : '';
+        : "";
 
-      expect(courseElement).toContain('DS519');
+      expect(courseElement).toContain("DS519");
       expect(courseElement).toContain('font-size="36"');
       expect(courseElement).toContain('font-weight="bold"');
     });
 
-    it('should omit course code text element when not present', () => {
+    it("should omit course code text element when not present", () => {
       const courseCode = undefined;
       const svgWidth = 600;
       const courseElement = courseCode
         ? `<text x="${svgWidth / 2}" y="50" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="bold" fill="#333333">${courseCode}</text>`
-        : '';
+        : "";
 
-      expect(courseElement).toBe('');
+      expect(courseElement).toBe("");
     });
   });
 
-  describe('generatePrintableHtml structure', () => {
-    it('should group teams by course code', () => {
+  describe("generatePrintableHtml structure", () => {
+    it("should group teams by course code", () => {
       const qrCodes = [
-        { teamName: 'Team 1', courseCode: 'DS519', svg: '<svg></svg>', url: 'url1' },
-        { teamName: 'Team 2', courseCode: 'DS519', svg: '<svg></svg>', url: 'url2' },
-        { teamName: 'Team 3', courseCode: 'DS549', svg: '<svg></svg>', url: 'url3' },
+        {
+          teamName: "Team 1",
+          courseCode: "DS519",
+          svg: "<svg></svg>",
+          url: "url1",
+        },
+        {
+          teamName: "Team 2",
+          courseCode: "DS519",
+          svg: "<svg></svg>",
+          url: "url2",
+        },
+        {
+          teamName: "Team 3",
+          courseCode: "DS549",
+          svg: "<svg></svg>",
+          url: "url3",
+        },
       ];
 
       const courseGroups = new Map<string, typeof qrCodes>();
       for (const qr of qrCodes) {
-        const course = qr.courseCode || 'General';
+        const course = qr.courseCode || "General";
         if (!courseGroups.has(course)) {
           courseGroups.set(course, []);
         }
@@ -323,80 +349,85 @@ describe("qrCodes business logic", () => {
       }
 
       expect(courseGroups.size).toBe(2);
-      expect(courseGroups.get('DS519')?.length).toBe(2);
-      expect(courseGroups.get('DS549')?.length).toBe(1);
+      expect(courseGroups.get("DS519")?.length).toBe(2);
+      expect(courseGroups.get("DS549")?.length).toBe(1);
     });
 
     it('should use "General" for teams without course code', () => {
       const qrCodes = [
-        { teamName: 'Team 1', courseCode: undefined, svg: '<svg></svg>', url: 'url1' },
+        {
+          teamName: "Team 1",
+          courseCode: undefined,
+          svg: "<svg></svg>",
+          url: "url1",
+        },
       ];
 
       const courseGroups = new Map<string, typeof qrCodes>();
       for (const qr of qrCodes) {
-        const course = qr.courseCode || 'General';
+        const course = qr.courseCode || "General";
         if (!courseGroups.has(course)) {
           courseGroups.set(course, []);
         }
         courseGroups.get(course)!.push(qr);
       }
 
-      expect(courseGroups.has('General')).toBe(true);
-      expect(courseGroups.get('General')?.length).toBe(1);
+      expect(courseGroups.has("General")).toBe(true);
+      expect(courseGroups.get("General")?.length).toBe(1);
     });
 
-    it('should sort courses alphabetically', () => {
+    it("should sort courses alphabetically", () => {
       const courseGroups = new Map([
-        ['DS549', []],
-        ['DS519', []],
-        ['CS101', []],
+        ["DS549", []],
+        ["DS519", []],
+        ["CS101", []],
       ]);
 
       const sortedCourses = Array.from(courseGroups.keys()).sort();
 
-      expect(sortedCourses).toEqual(['CS101', 'DS519', 'DS549']);
+      expect(sortedCourses).toEqual(["CS101", "DS519", "DS549"]);
     });
 
-    it('should escape XML in HTML document title', () => {
-      const eventName = 'Demo Day <Fall 2024>';
+    it("should escape XML in HTML document title", () => {
+      const eventName = "Demo Day <Fall 2024>";
       const escaped = eventName
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
 
-      expect(escaped).toBe('Demo Day &lt;Fall 2024&gt;');
+      expect(escaped).toBe("Demo Day &lt;Fall 2024&gt;");
     });
 
-    it('should create correct table of contents link format', () => {
-      const course = 'DS519';
+    it("should create correct table of contents link format", () => {
+      const course = "DS519";
       const createSlug = (str: string) =>
         str
           .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '');
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
 
       const link = `#course-${createSlug(course)}`;
 
-      expect(link).toBe('#course-ds519');
+      expect(link).toBe("#course-ds519");
     });
 
-    it('should format project count singular correctly', () => {
+    it("should format project count singular correctly", () => {
       const count = 1;
-      const text = `${count} project${count !== 1 ? 's' : ''}`;
+      const text = `${count} project${count !== 1 ? "s" : ""}`;
 
-      expect(text).toBe('1 project');
+      expect(text).toBe("1 project");
     });
 
-    it('should format project count plural correctly', () => {
+    it("should format project count plural correctly", () => {
       const count = 5;
-      const text = `${count} project${count !== 1 ? 's' : ''}`;
+      const text = `${count} project${count !== 1 ? "s" : ""}`;
 
-      expect(text).toBe('5 projects');
+      expect(text).toBe("5 projects");
     });
 
-    it('should embed SVG content directly in HTML cards', () => {
+    it("should embed SVG content directly in HTML cards", () => {
       const svgContent = '<svg viewBox="0 0 600 700"><rect/></svg>';
       const cardHtml = `
         <div class="qr-card">
@@ -404,21 +435,21 @@ describe("qrCodes business logic", () => {
         </div>`;
 
       expect(cardHtml).toContain(svgContent);
-      expect(cardHtml).toContain('qr-card');
+      expect(cardHtml).toContain("qr-card");
     });
 
-    it('should add page-break-before class to subsequent course sections', () => {
+    it("should add page-break-before class to subsequent course sections", () => {
       const courseIndex = 1;
-      const className = `course-section ${courseIndex > 0 ? 'page-break-before' : ''}`;
+      const className = `course-section ${courseIndex > 0 ? "page-break-before" : ""}`;
 
-      expect(className).toBe('course-section page-break-before');
+      expect(className).toBe("course-section page-break-before");
     });
 
-    it('should not add page-break-before class to first course section', () => {
+    it("should not add page-break-before class to first course section", () => {
       const courseIndex = 0;
-      const className = `course-section ${courseIndex > 0 ? 'page-break-before' : ''}`;
+      const className = `course-section ${courseIndex > 0 ? "page-break-before" : ""}`;
 
-      expect(className).toBe('course-section ');
+      expect(className).toBe("course-section ");
     });
   });
 
@@ -435,4 +466,3 @@ describe("qrCodes business logic", () => {
     });
   });
 });
-

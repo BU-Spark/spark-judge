@@ -27,8 +27,16 @@
           root.classList.remove("light", "dark");
           root.classList.add(resolved);
           var color = resolved === "dark" ? "#0b1215" : "#fafafa";
-          var meta = document.getElementById("theme-color-meta");
-          if (meta) meta.setAttribute("content", color);
+          var existing = document.getElementById("theme-color-meta");
+          var fresh = document.createElement("meta");
+          fresh.setAttribute("name", "theme-color");
+          fresh.id = "theme-color-meta";
+          fresh.setAttribute("content", color);
+          if (existing && existing.parentNode) {
+            existing.parentNode.replaceChild(fresh, existing);
+          } else {
+            document.head.appendChild(fresh);
+          }
           root.style.backgroundColor = color;
         } catch (e) {
           // Ignore: storage may be unavailable in some contexts.

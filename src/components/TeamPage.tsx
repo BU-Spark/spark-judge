@@ -73,6 +73,8 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
   }
 
   const isEventLive = event.status === "active";
+  const githubUrl =
+    typeof team.githubUrl === "string" ? team.githubUrl.trim() : "";
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -157,13 +159,13 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
           )}
 
           {/* GitHub Link */}
-          {team.githubUrl && team.githubUrl.trim() !== "" && (
+          {githubUrl !== "" && (
             <div>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 Project Link
               </h2>
               <a
-                href={team.githubUrl}
+                href={githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-primary hover:underline"

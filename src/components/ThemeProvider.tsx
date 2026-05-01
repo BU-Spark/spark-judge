@@ -33,12 +33,15 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
 
-    const resolveActiveTheme = (current: Theme): "light" | "dark" =>
-      current === "system"
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+    const resolveActiveTheme = (current: Theme): "light" | "dark" => {
+      if (current === "system") {
+        return window.matchMedia("(prefers-color-scheme: dark)").matches
           ? "dark"
-          : "light"
-        : current;
+          : "light";
+      }
+      if (current === "dark") return "dark";
+      return "light";
+    };
 
     const applyTheme = (active: "light" | "dark") => {
       root.classList.remove("light", "dark");

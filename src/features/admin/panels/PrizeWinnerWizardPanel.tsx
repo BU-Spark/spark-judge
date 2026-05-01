@@ -503,6 +503,10 @@ export function PrizeWinnerWizardPanel({
                                 scoreHintCategories.length - visibleCategories.length,
                                 0
                               );
+                              const github =
+                                typeof candidate.githubUrl === "string"
+                                  ? candidate.githubUrl.trim()
+                                  : "";
                               return (
                                 <tr
                                   key={`${currentPrizeId}-${candidate.teamId}`}
@@ -560,9 +564,9 @@ export function PrizeWinnerWizardPanel({
                                     )}
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap">
-                                    {candidate.githubUrl && candidate.githubUrl.trim() !== "" ? (
+                                    {github !== "" ? (
                                       <a
-                                        href={candidate.githubUrl}
+                                        href={github}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="inline-flex items-center rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:text-foreground"

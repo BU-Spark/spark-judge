@@ -32,25 +32,49 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement;
-    const metaThemeColor = document.getElementById("theme-color-meta");
 
-    root.classList.remove("light", "dark");
+    const resolveActiveTheme = (current: Theme): "light" | "dark" => {
+      if (current === "system") {
+        return window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+      }
+      if (current === "dark") return "dark";
+      return "light";
+    };
 
-    let activeTheme = theme;
-    if (theme === "system") {
-      activeTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    }
+    const applyTheme = (active: "light" | "dark") => {
+      root.classList.remove("light", "dark");
+      root.classList.add(active);
 
-    root.classList.add(activeTheme);
+      const color = active === "dark" ? "#0b1215" : "#fafafa";
+      // Match the html background so the iOS status bar / address bar area
+      // doesn't flash a stale color before <body> paints.
+      root.style.backgroundColor = color;
 
-    if (metaThemeColor) {
-      metaThemeColor.setAttribute(
-        "content",
-        activeTheme === "dark" ? "#0b1215" : "#fafafa"
-      );
-    }
+      // Replace the meta element instead of mutating it. iOS Safari sometimes
+      // ignores attribute mutations on the existing <meta name="theme-color">
+      // tag, so a fresh node forces the browser chrome to update.
+      const existing = document.getElementById("theme-color-meta");
+      const fresh = document.createElement("meta");
+      fresh.setAttribute("name", "theme-color");
+      fresh.id = "theme-color-meta";
+      fresh.setAttribute("content", color);
+      if (existing && existing.parentNode) {
+        existing.parentNode.replaceChild(fresh, existing);
+      } else {
+        document.head.appendChild(fresh);
+      }
+    };
+
+    applyTheme(resolveActiveTheme(theme));
+
+    if (theme !== "system") return;
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => applyTheme(resolveActiveTheme("system"));
+    media.addEventListener("change", handleChange);
+    return () => media.removeEventListener("change", handleChange);
   }, [theme]);
 
   const value = {

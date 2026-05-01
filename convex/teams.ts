@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { requireAdmin, computeEventStatus } from "./helpers";
+import { canAccessEvent, requireAdmin, computeEventStatus } from "./helpers";
 import {
   getEventMode,
   isCodeAndTellMode,
@@ -240,6 +240,7 @@ export const submitTeam = mutation({
     // Verify event is active (computed from dates)
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
+    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
     if (isCodeAndTellMode(event.mode)) {
       throw new Error("Project submission is admin-only for Code & Tell events");
     }
@@ -372,6 +373,9 @@ export const getMyTeam = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
 
+    const event = await ctx.db.get(args.eventId);
+    if (!(await canAccessEvent(ctx, event))) return null;
+
     const team = await ctx.db
       .query("teams")
       .withIndex("by_event_and_submitter", (q) =>
@@ -416,6 +420,7 @@ export const updateTeam = mutation({
 
     const event = await ctx.db.get(team.eventId);
     if (!event) throw new Error("Event not found");
+    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
     if (isCodeAndTellMode(event.mode)) {
       throw new Error("Entrants cannot edit Code & Tell projects");
     }
@@ -480,6 +485,9 @@ export const listTeams = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!(await canAccessEvent(ctx, event))) return [];
+
     const teams = await ctx.db
       .query("teams")
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
@@ -576,6 +584,8 @@ export const getTeamEventId = query({
   handler: async (ctx, args) => {
     const team = await ctx.db.get(args.teamId);
     if (!team) return null;
+    const event = await ctx.db.get(team.eventId);
+    if (!(await canAccessEvent(ctx, event))) return null;
     return team.eventId;
   },
 });
@@ -618,6 +628,7 @@ export const getTeamById = query({
 
     const event = await ctx.db.get(team.eventId);
     if (!event) return null;
+    if (!(await canAccessEvent(ctx, event))) return null;
 
     // Get logo URL if exists
     let logoUrl = null;

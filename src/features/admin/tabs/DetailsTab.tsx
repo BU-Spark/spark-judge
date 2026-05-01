@@ -26,6 +26,8 @@ export function DetailsTab({
   setEventStart,
   eventEnd,
   setEventEnd,
+  eventHidden,
+  setEventHidden,
   handleSaveDetails,
   savingDetails,
   eventMode,
@@ -66,6 +68,8 @@ export function DetailsTab({
   setEventStart: (value: string) => void;
   eventEnd: string;
   setEventEnd: (value: string) => void;
+  eventHidden: boolean;
+  setEventHidden: (value: boolean) => void;
   handleSaveDetails: () => void;
   savingDetails: boolean;
   eventMode?: "hackathon" | "demo_day" | "code_and_tell";
@@ -216,6 +220,18 @@ export function DetailsTab({
                 </p>
               </div>
             )}
+            <div className="md:col-span-2 rounded-lg border border-border bg-muted/20 p-3">
+              <StyledCheckbox
+                checked={eventHidden}
+                onCheckedChange={setEventHidden}
+                label="Admin-only event"
+                labelClassName="text-sm font-medium text-foreground"
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Hidden events stay out of the public event list and direct event
+                pages for non-admin users.
+              </p>
+            </div>
             {isCodeAndTell &&
               codeAndTellMaxBallotsInput !== undefined &&
               setCodeAndTellMaxBallotsInput && (

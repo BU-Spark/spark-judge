@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { isAdmin, requireAdmin } from "./helpers";
+import { canAccessEvent, isAdmin, requireAdmin } from "./helpers";
 import { isDemoDayMode, isHackathonMode } from "./eventModes";
 
 function computeTotalScore(
@@ -71,6 +71,7 @@ export const submitScore = mutation({
     // Fetch event to get category weights
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
+    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
     if (!isHackathonMode(event.mode)) {
       throw new Error("Scoring is only available for hackathon events");
     }
@@ -156,6 +157,7 @@ export const submitBatchScores = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
+    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
     if (!isHackathonMode(event.mode)) {
       throw new Error("Scoring is only available for hackathon events");
     }
@@ -228,6 +230,7 @@ export const getMyScores = query({
 
     const event = await ctx.db.get(args.eventId);
     if (!event || !isHackathonMode(event.mode)) return [];
+    if (!(await canAccessEvent(ctx, event))) return [];
 
     const judge = await ctx.db
       .query("judges")
@@ -257,6 +260,7 @@ export const getTeamScore = query({
 
     const event = await ctx.db.get(team.eventId);
     if (!event || !isHackathonMode(event.mode)) return null;
+    if (!(await canAccessEvent(ctx, event))) return null;
 
     const judge = await ctx.db
       .query("judges")

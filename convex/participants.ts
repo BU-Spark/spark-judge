@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { isAdmin, computeEventStatus } from "./helpers";
+import { canAccessEvent, isAdmin, computeEventStatus } from "./helpers";
 
 export const getUserEventRole = query({
   args: { eventId: v.id("events") },
@@ -17,6 +17,8 @@ export const getUserEventRole = query({
     if (!userId) return null;
 
     const userIsAdmin = await isAdmin(ctx);
+    const event = await ctx.db.get(args.eventId);
+    if (!(await canAccessEvent(ctx, event))) return null;
 
     const judge = await ctx.db
       .query("judges")
@@ -53,6 +55,7 @@ export const joinAsParticipant = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
+    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
 
     const status = computeEventStatus(event);
     if (status !== "active") {

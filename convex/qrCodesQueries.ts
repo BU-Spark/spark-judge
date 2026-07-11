@@ -1,7 +1,68 @@
 import { v } from "convex/values";
 import { internalQuery } from "./_generated/server";
+import { isDemoDayMode } from "./eventModes";
+import { canAccessEvent, isAdmin, requireAdmin } from "./helpers";
 
 // Internal queries for fetching data (used by QR code actions)
+
+export const getAuthorizedTeamQrContext = internalQuery({
+  args: { eventId: v.id("events"), teamId: v.id("teams") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      event: v.object({
+        _id: v.id("events"),
+        name: v.string(),
+        mode: v.optional(
+          v.union(
+            v.literal("hackathon"),
+            v.literal("demo_day"),
+            v.literal("code_and_tell"),
+          ),
+        ),
+      }),
+      team: v.object({
+        _id: v.id("teams"),
+        eventId: v.id("events"),
+        name: v.string(),
+        courseCode: v.optional(v.string()),
+        demoDaySignName: v.optional(v.string()),
+      }),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!event || !isDemoDayMode(event.mode) || !(await canAccessEvent(ctx, event))) {
+      return null;
+    }
+
+    const team = await ctx.db.get(args.teamId);
+    const viewerIsAdmin = await isAdmin(ctx);
+    if (!team || team.eventId !== event._id || (team.hidden && !viewerIsAdmin)) {
+      return null;
+    }
+
+    return {
+      event: { _id: event._id, name: event.name, mode: event.mode },
+      team: {
+        _id: team._id,
+        eventId: team.eventId,
+        name: team.name,
+        courseCode: team.courseCode,
+        demoDaySignName: team.demoDaySignName,
+      },
+    };
+  },
+});
+
+export const requireQrAdmin = internalQuery({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return null;
+  },
+});
 
 export const getEventInternal = internalQuery({
   args: { eventId: v.id("events") },

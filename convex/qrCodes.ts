@@ -1,11 +1,10 @@
 "use node";
 
 import { v } from "convex/values";
-import { action, internalQuery } from "./_generated/server";
+import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { isDemoDayMode } from "./eventModes";
-import { canAccessEvent, isAdmin, requireAdmin } from "./helpers";
 import { escapeCsvCell } from "./helpers";
 import QRCode from "qrcode";
 import JSZip from "jszip";
@@ -27,45 +26,6 @@ export function isQrTeamVisible(
 ): boolean {
   return viewerIsAdmin || !teamHidden;
 }
-
-export const getAuthorizedTeamQrContext = internalQuery({
-  args: { eventId: v.id("events"), teamId: v.id("teams") },
-  returns: v.any(),
-  handler: async (ctx, args) => {
-    const event = await ctx.db.get(args.eventId);
-    if (!event || !isDemoDayMode(event.mode) || !(await canAccessEvent(ctx, event))) {
-      return null;
-    }
-    const team = await ctx.db.get(args.teamId);
-    const viewerIsAdmin = await isAdmin(ctx);
-    if (
-      !team ||
-      team.eventId !== event._id ||
-      !isQrTeamVisible(team.hidden, viewerIsAdmin)
-    ) {
-      return null;
-    }
-    return {
-      event: { _id: event._id, name: event.name, mode: event.mode },
-      team: {
-        _id: team._id,
-        eventId: team.eventId,
-        name: team.name,
-        courseCode: team.courseCode,
-        demoDaySignName: team.demoDaySignName,
-      },
-    };
-  },
-});
-
-export const requireQrAdmin = internalQuery({
-  args: {},
-  returns: v.null(),
-  handler: async (ctx) => {
-    await requireAdmin(ctx);
-    return null;
-  },
-});
 
 // Type definitions for query results
 type EventResult = {
@@ -828,7 +788,7 @@ export const generateTeamQrCode = action({
     courseCode?: string;
   }> => {
     const authorizedContext = await ctx.runQuery(
-      internal.qrCodes.getAuthorizedTeamQrContext,
+      internal.qrCodesQueries.getAuthorizedTeamQrContext,
       { eventId: args.eventId, teamId: args.teamId },
     );
     if (!authorizedContext) return { success: false, error: "Team not found" };
@@ -890,7 +850,7 @@ export const generateQrCodeZip = action({
     zipBase64?: string;
     filename?: string;
   }> => {
-    await ctx.runQuery(internal.qrCodes.requireQrAdmin, {});
+    await ctx.runQuery(internal.qrCodesQueries.requireQrAdmin, {});
     const baseUrl = getTrustedFrontendBaseUrl();
     // Fetch event data
     const event: EventResult = await ctx.runQuery(

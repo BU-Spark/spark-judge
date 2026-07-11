@@ -37,7 +37,7 @@ describe("HTTP Turnstile validation", () => {
     ).toBe(false);
   });
 
-  it("derives the expected hostname from SITE_URL or an explicit hostname", () => {
+  it("derives the expected hostname from the configured site URL or an explicit hostname", () => {
     const siteUrlKey = ["SITE", "URL"].join("_");
 
     expect(

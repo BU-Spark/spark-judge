@@ -1,11 +1,36 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Id } from "../../../convex/_generated/dataModel";
+import { filterAppreciationsForVoter } from "../../../convex/appreciations";
+import { getAppreciationVoterKey } from "../../../convex/appreciations";
 
 // Note: These tests focus on the business logic of the appreciation functions
 // In a real scenario, you'd use Convex test utilities or integration tests
 // with a test database. This demonstrates the testing approach.
 
 describe("appreciations business logic", () => {
+  it("binds quota counting to the authenticated voter, not client attendee storage", () => {
+    const rows = [
+      { voterUserId: "user-1", attendeeId: "old-client-id" },
+      { voterUserId: "user-1", attendeeId: "new-client-id" },
+      { voterUserId: "user-2", attendeeId: "old-client-id" },
+    ];
+
+    expect(filterAppreciationsForVoter(rows, "user-1")).toHaveLength(2);
+    expect(
+      filterAppreciationsForVoter(rows, "user-1").map((row) => row.attendeeId),
+    ).toEqual(["old-client-id", "new-client-id"]);
+  });
+
+  it("uses voterUserId for unique metrics and legacy attendeeId only as fallback", () => {
+    expect(
+      [
+        { voterUserId: "user-1", attendeeId: "client-a" },
+        { voterUserId: "user-1", attendeeId: "client-b" },
+        { attendeeId: "legacy-a" },
+      ].map(getAppreciationVoterKey),
+    ).toEqual(["user-1", "user-1", "legacy:legacy-a"]);
+  });
+
   describe("rate limiting constants", () => {
     it("should have correct max taps per project per attendee", async () => {
       // Import the constants
@@ -69,6 +94,22 @@ describe("appreciations business logic", () => {
       const used = 1;
       const remaining = MAX_TAPS_PER_PROJECT - used;
       expect(remaining).toBe(9);
+    });
+
+    it("should keep rejected appreciations in budget counts but out of clean counts", () => {
+      const appreciations = [
+        { reviewStatus: "accepted", teamId: "team-a" },
+        { reviewStatus: "flagged", teamId: "team-a" },
+        { reviewStatus: "rejected", teamId: "team-a" },
+      ];
+
+      const budgetCount = appreciations.length;
+      const cleanCount = appreciations.filter(
+        (appreciation) => appreciation.reviewStatus !== "rejected",
+      ).length;
+
+      expect(budgetCount).toBe(3);
+      expect(cleanCount).toBe(2);
     });
   });
 

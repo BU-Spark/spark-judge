@@ -11,6 +11,8 @@ vi.mock("@/lib/demoDayIdentity", () => ({
 describe("demoDayApi", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
+    delete (window as any).turnstile;
     global.fetch = vi.fn();
   });
 
@@ -42,15 +44,86 @@ describe("demoDayApi", () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            eventId: "event-id",
-            teamId: "team-id",
-            attendeeId: "test-attendee-id",
-            fingerprintKey: "test-fingerprint",
-          }),
-        })
+          body: expect.any(String),
+        }),
       );
+      const [, requestInit] = vi.mocked(global.fetch).mock.calls[0];
+      const body = JSON.parse(String((requestInit as RequestInit).body));
+      expect(body).toMatchObject({
+        eventId: "event-id",
+        teamId: "team-id",
+        attendeeId: "test-attendee-id",
+        fingerprintKey: "test-fingerprint",
+      });
+      expect(body.clientSignals).toEqual(expect.any(Object));
       expect(result).toEqual(mockResponse);
+    });
+
+    it("uses the server auth token when sending a vote", async () => {
+      vi.mocked(demoDayIdentity.getIdentity).mockResolvedValue({
+        attendeeId: "changed-client-id",
+        fingerprintKey: "test-fingerprint",
+      });
+      global.fetch = vi.fn().mockResolvedValue({
+        json: async () => ({
+          success: true,
+          remainingForTeam: 1,
+          remainingTotal: 1,
+        }),
+      } as Response);
+
+      await sendAppreciation("event-id", "team-id", {}, "server-jwt");
+
+      const [, requestInit] = vi.mocked(global.fetch).mock.calls[0];
+      expect((requestInit as RequestInit).headers).toEqual(
+        expect.objectContaining({ Authorization: "Bearer server-jwt" }),
+      );
+    });
+
+    it("should retry with Turnstile when captcha is required", async () => {
+      vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "test-site-key");
+      vi.mocked(demoDayIdentity.getIdentity).mockResolvedValue({
+        attendeeId: "test-attendee-id",
+        fingerprintKey: "test-fingerprint",
+      });
+
+      const render = vi.fn((_container, options) => {
+        queueMicrotask(() => options.callback("turnstile-token"));
+        return "widget-id";
+      });
+      const execute = vi.fn();
+      const remove = vi.fn();
+      (window as any).turnstile = { render, execute, remove };
+
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          json: async () => ({
+            success: false,
+            requiresCaptcha: true,
+            error: "Verification required",
+            remainingForTeam: 0,
+            remainingTotal: 0,
+          }),
+        } as Response)
+        .mockResolvedValueOnce({
+          json: async () => ({
+            success: true,
+            remainingForTeam: 2,
+            remainingTotal: 14,
+          }),
+        } as Response);
+
+      const result = await sendAppreciation("event-id", "team-id");
+
+      expect(result.success).toBe(true);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      const [, retryInit] = vi.mocked(global.fetch).mock.calls[1];
+      const retryBody = JSON.parse(String((retryInit as RequestInit).body));
+      expect(retryBody.turnstileToken).toBe("turnstile-token");
+      expect(render).toHaveBeenCalled();
+      expect(execute).toHaveBeenCalledWith("widget-id");
+      expect(remove).toHaveBeenCalledWith("widget-id");
     });
 
     it("should handle error response", async () => {
@@ -158,7 +231,7 @@ describe("demoDayApi", () => {
           "event-id",
           "team-id",
           undefined,
-          onError
+          onError,
         );
       });
 
@@ -186,7 +259,7 @@ describe("demoDayApi", () => {
           "event-id",
           "team-id",
           undefined,
-          onError
+          onError,
         );
       });
 

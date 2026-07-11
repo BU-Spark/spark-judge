@@ -1,7 +1,12 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { canAccessEvent, isAdmin, computeEventStatus } from "./helpers";
+import {
+  canAccessEvent,
+  computeEventStatus,
+  isAdmin,
+  isJudgeVerifiedForEvent,
+} from "./helpers";
 
 export const getUserEventRole = query({
   args: { eventId: v.id("events") },
@@ -27,7 +32,7 @@ export const getUserEventRole = query({
       )
       .first();
 
-    if (judge) {
+    if (judge && isJudgeVerifiedForEvent(event!, judge)) {
       return { role: "judge" as const, isAdmin: userIsAdmin };
     }
 

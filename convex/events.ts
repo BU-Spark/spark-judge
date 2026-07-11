@@ -1,11 +1,16 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   canAccessEvent,
   isAdmin,
   requireAdmin,
   computeEventStatus,
+  getJudgeCodeFailureState,
+  isJudgeCodeLocked,
+  isJudgeVerifiedForEvent,
+  shapeEventForViewer,
+  shouldInvalidateJudgeCodeState,
 } from "./helpers";
 import { Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
@@ -22,6 +27,25 @@ const EVENT_MODE_VALIDATOR = v.union(
   v.literal("code_and_tell"),
 );
 
+async function invalidateJudgeCodeState(
+  ctx: MutationCtx,
+  eventId: Id<"events">,
+) {
+  const judges = await ctx.db
+    .query("judges")
+    .withIndex("by_event", (q) => q.eq("eventId", eventId))
+    .collect();
+  await Promise.all(
+    judges.map((judge) =>
+      ctx.db.patch(judge._id, {
+        judgeCodeVerifiedAt: undefined,
+        judgeCodeFailedAttempts: undefined,
+        judgeCodeLockedUntil: undefined,
+      }),
+    ),
+  );
+}
+
 export const listEvents = query({
   args: {},
   returns: v.object({
@@ -37,7 +61,10 @@ export const listEvents = query({
       ? allEvents
       : allEvents.filter((event) => !event.hidden);
 
-    let judgesByEventId = new Map<Id<"events">, Id<"judges">>();
+    let judgesByEventId = new Map<
+      Id<"events">,
+      { _id: Id<"judges">; judgeCodeVerifiedAt?: number }
+    >();
     let participantEventIds = new Set<Id<"events">>();
     let rankedVoteEventIds = new Set<Id<"events">>();
     if (userId) {
@@ -57,7 +84,7 @@ export const listEvents = query({
             .collect(),
         ]);
       judgesByEventId = new Map(
-        allMyJudgeRows.map((judge) => [judge.eventId, judge._id]),
+        allMyJudgeRows.map((judge) => [judge.eventId, judge]),
       );
       participantEventIds = new Set(
         allMyParticipantRows.map((participant) => participant.eventId),
@@ -84,13 +111,17 @@ export const listEvents = query({
           totalTeams: number;
         } | null = null;
         if (userId) {
-          const judgeId = judgesByEventId.get(event._id);
-          if (judgeId && isHackathonMode(event.mode)) {
+          const judge = judgesByEventId.get(event._id);
+          if (
+            judge &&
+            isHackathonMode(event.mode) &&
+            isJudgeVerifiedForEvent(event, judge)
+          ) {
             userRole = { role: "judge" as const, isAdmin: userIsAdmin };
             const judgeScores = await ctx.db
               .query("scores")
               .withIndex("by_event", (q) => q.eq("eventId", event._id))
-              .filter((q) => q.eq(q.field("judgeId"), judgeId))
+              .filter((q) => q.eq(q.field("judgeId"), judge._id))
               .collect();
             judgeProgress = {
               completedTeams: judgeScores.length,
@@ -102,10 +133,13 @@ export const listEvents = query({
         }
 
         const mode = getEventMode(event.mode);
+        const publicEvent = shapeEventForViewer(event, undefined, userIsAdmin);
         return {
-          ...event,
+          ...publicEvent,
           status, // Use computed status
-          teamCount: teams.length,
+          teamCount: userIsAdmin
+            ? teams.length
+            : teams.filter((team) => !team.hidden).length,
           mode,
           userRole,
           judgeProgress,
@@ -131,6 +165,7 @@ export const getEvent = query({
     const event = await ctx.db.get(args.eventId);
     if (!event) return null;
     if (!(await canAccessEvent(ctx, event))) return null;
+    const userIsAdmin = await isAdmin(ctx);
 
     const teams = await ctx.db
       .query("teams")
@@ -140,7 +175,11 @@ export const getEvent = query({
     // Compute status based on dates
     const status = computeEventStatus(event);
 
-    return { ...event, status, teams, mode: getEventMode(event.mode) };
+    return shapeEventForViewer(
+      { ...event, status, mode: getEventMode(event.mode) },
+      teams,
+      userIsAdmin,
+    );
   },
 });
 
@@ -225,10 +264,26 @@ export const verifyJudgeCodeAndStartJudging = mutation({
       throw new Error("You are not registered as a judge for this event");
     }
 
+    const now = Date.now();
+    if (isJudgeCodeLocked(judge, now)) {
+      throw new Error("Judge code verification is temporarily locked");
+    }
+
     // Validate judge code
     if (event.judgeCode && event.judgeCode !== args.judgeCode) {
+      // A verified judge already has valid access. A mistyped retry must not
+      // revoke or lock that access; only unverified judges accrue failures.
+      if (typeof judge.judgeCodeVerifiedAt !== "number") {
+        await ctx.db.patch(judge._id, getJudgeCodeFailureState(judge, now));
+      }
       throw new Error("Invalid judge code");
     }
+
+    await ctx.db.patch(judge._id, {
+      judgeCodeVerifiedAt: Date.now(),
+      judgeCodeFailedAttempts: undefined,
+      judgeCodeLockedUntil: undefined,
+    });
 
     return true;
   },
@@ -252,7 +307,7 @@ export const getJudgeStatus = query({
       )
       .first();
 
-    return judge;
+    return judge && isJudgeVerifiedForEvent(event, judge) ? judge : null;
   },
 });
 
@@ -378,6 +433,8 @@ export const removeEvent = mutation({
       prizeWinners,
       rankedVotes,
       appreciations,
+      captchaPasses,
+      integrityFindings,
     ] = await Promise.all([
       ctx.db
         .query("scores")
@@ -415,11 +472,23 @@ export const removeEvent = mutation({
         .query("appreciations")
         .withIndex("by_event", (q) => q.eq("eventId", eventId))
         .collect(),
+      ctx.db
+        .query("demoDayCaptchaPasses")
+        .withIndex("by_event_and_ip", (q) => q.eq("eventId", eventId))
+        .collect(),
+      ctx.db
+        .query("demoDayIntegrityFindings")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .collect(),
     ]);
 
     await Promise.all(scores.map((score) => ctx.db.delete(score._id)));
     await Promise.all(
       appreciations.map((appreciation) => ctx.db.delete(appreciation._id)),
+    );
+    await Promise.all(captchaPasses.map((pass) => ctx.db.delete(pass._id)));
+    await Promise.all(
+      integrityFindings.map((finding) => ctx.db.delete(finding._id)),
     );
 
     for (const team of teams) {
@@ -536,6 +605,11 @@ export const duplicateEvent = mutation({
       resultsReleased: event.resultsReleased,
       appreciationBudgetPerAttendee: event.appreciationBudgetPerAttendee,
       appreciationMaxPerTeam: event.appreciationMaxPerTeam,
+      captchaEnabled: event.captchaEnabled,
+      venueLocationEnabled: event.venueLocationEnabled,
+      venueLatitude: event.venueLatitude,
+      venueLongitude: event.venueLongitude,
+      venueRadiusMeters: event.venueRadiusMeters,
       judgeCode: event.judgeCode,
       enableCohorts: event.enableCohorts,
       mode: getEventMode(event.mode),
@@ -702,6 +776,12 @@ export const duplicateEvent = mutation({
         ipAddress: appreciation.ipAddress,
         userAgent: appreciation.userAgent,
         timestamp: appreciation.timestamp,
+        reviewStatus: appreciation.reviewStatus,
+        riskScore: appreciation.riskScore,
+        riskReasons: appreciation.riskReasons,
+        reviewedAt: appreciation.reviewedAt,
+        reviewedBy: appreciation.reviewedBy,
+        reviewNote: appreciation.reviewNote,
       });
     }
 
@@ -872,6 +952,12 @@ export const updateEventMode = mutation({
     }
 
     await ctx.db.patch(args.eventId, updates);
+    if (
+      updates.judgeCode !== undefined &&
+      shouldInvalidateJudgeCodeState(event.judgeCode, updates.judgeCode)
+    ) {
+      await invalidateJudgeCodeState(ctx, args.eventId);
+    }
     return null;
   },
 });
@@ -886,6 +972,11 @@ export const updateEventDetails = mutation({
     judgeCode: v.optional(v.union(v.string(), v.null())),
     appreciationBudgetPerAttendee: v.optional(v.number()),
     appreciationMaxPerTeam: v.optional(v.number()),
+    captchaEnabled: v.optional(v.boolean()),
+    venueLocationEnabled: v.optional(v.boolean()),
+    venueLatitude: v.optional(v.union(v.number(), v.null())),
+    venueLongitude: v.optional(v.union(v.number(), v.null())),
+    venueRadiusMeters: v.optional(v.union(v.number(), v.null())),
     tracks: v.optional(v.array(v.string())),
     codeAndTellMaxBallots: v.optional(v.union(v.number(), v.null())),
     hidden: v.optional(v.boolean()),
@@ -907,6 +998,11 @@ export const updateEventDetails = mutation({
       judgeCode?: string;
       appreciationBudgetPerAttendee?: number;
       appreciationMaxPerTeam?: number;
+      captchaEnabled?: boolean;
+      venueLocationEnabled?: boolean;
+      venueLatitude?: number | undefined;
+      venueLongitude?: number | undefined;
+      venueRadiusMeters?: number | undefined;
       tracks?: string[];
       codeAndTellMaxBallots?: number | undefined;
       hidden?: boolean;
@@ -917,6 +1013,24 @@ export const updateEventDetails = mutation({
     if (args.endDate !== undefined) updates.endDate = args.endDate;
     if (args.tracks !== undefined) updates.tracks = args.tracks;
     if (args.hidden !== undefined) updates.hidden = args.hidden;
+    if (args.captchaEnabled !== undefined) {
+      updates.captchaEnabled = args.captchaEnabled;
+    }
+    if (args.venueLocationEnabled !== undefined) {
+      updates.venueLocationEnabled = args.venueLocationEnabled;
+    }
+    if (args.venueLatitude !== undefined) {
+      updates.venueLatitude = args.venueLatitude ?? undefined;
+    }
+    if (args.venueLongitude !== undefined) {
+      updates.venueLongitude = args.venueLongitude ?? undefined;
+    }
+    if (args.venueRadiusMeters !== undefined) {
+      updates.venueRadiusMeters =
+        args.venueRadiusMeters === null
+          ? undefined
+          : Math.max(1, Math.round(args.venueRadiusMeters));
+    }
     if (args.judgeCode !== undefined) {
       // Treat null as a request to clear the judge code.
       updates.judgeCode = args.judgeCode ?? "";
@@ -956,6 +1070,12 @@ export const updateEventDetails = mutation({
 
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch(args.eventId, updates);
+      if (
+        updates.judgeCode !== undefined &&
+        shouldInvalidateJudgeCodeState(event.judgeCode, updates.judgeCode)
+      ) {
+        await invalidateJudgeCodeState(ctx, args.eventId);
+      }
     }
     return null;
   },
@@ -1026,7 +1146,7 @@ export const getAdminInsights = query({
       uniqueVoters: v.number(),
       totalAppreciations: v.number(),
       uniqueAppreciators: v.number(),
-    })
+    }),
   ),
   handler: async (ctx, args) => {
     const userIsAdmin = await isAdmin(ctx);

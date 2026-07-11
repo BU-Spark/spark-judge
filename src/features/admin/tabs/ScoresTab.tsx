@@ -25,6 +25,37 @@ type CodeAndTellSummary = {
   }>;
 } | null;
 
+type IntegritySummary =
+  | {
+      openFindings: number;
+      flaggedAppreciations: number;
+      rejectedAppreciations: number;
+      findings: Array<{
+        _id: any;
+        type: string;
+        severity: string;
+        status: string;
+        riskScore: number;
+        reasons: string[];
+        affectedCount: number;
+        affectedTeamIds: string[];
+        affectedAttendeeIds: string[];
+        affectedTeams?: Array<{
+          teamId: string;
+          teamName: string;
+          appreciationIds: any[];
+          affectedVotes: number;
+          projectedCleanScoreImpact: number;
+        }>;
+        summary: string;
+        firstSeenAt: number;
+        lastSeenAt: number;
+        reviewNote?: string;
+      }>;
+    }
+  | null
+  | undefined;
+
 export function ScoresTab({
   eventMode,
   eventStatus,
@@ -43,6 +74,13 @@ export function ScoresTab({
   onBackToScores,
   winnersContent,
   appreciationSummary,
+  integritySummary,
+  isScanningIntegrity,
+  onRunIntegrityScan,
+  onMarkIntegrityFindingReviewed,
+  onRejectIntegrityFinding,
+  onRestoreIntegrityFinding,
+  onReviewIntegrityAppreciations,
   onExportAppreciationsCsv,
   onDownloadQrCodes,
   isGeneratingQr,
@@ -72,6 +110,16 @@ export function ScoresTab({
   onBackToScores: () => void;
   winnersContent: ReactNode;
   appreciationSummary: any;
+  integritySummary: IntegritySummary;
+  isScanningIntegrity: boolean;
+  onRunIntegrityScan: () => void;
+  onMarkIntegrityFindingReviewed: (findingId: any) => void;
+  onRejectIntegrityFinding: (findingId: any) => void;
+  onRestoreIntegrityFinding: (findingId: any) => void;
+  onReviewIntegrityAppreciations: (
+    appreciationIds: any[],
+    reviewStatus: "accepted" | "flagged" | "rejected",
+  ) => void;
   onExportAppreciationsCsv: () => void;
   onDownloadQrCodes: () => void;
   isGeneratingQr: boolean;
@@ -276,6 +324,14 @@ export function ScoresTab({
               </div>
               <div className="w-px h-4 bg-border hidden sm:block"></div>
               <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Clean Count:</span>
+                <span className="font-semibold text-foreground">
+                  {appreciationSummary.cleanAppreciations ??
+                    appreciationSummary.totalAppreciations}
+                </span>
+              </div>
+              <div className="w-px h-4 bg-border hidden sm:block"></div>
+              <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Unique Attendees:</span>
                 <span className="font-semibold text-foreground">
                   {appreciationSummary.uniqueAttendees}
@@ -302,8 +358,18 @@ export function ScoresTab({
                   label: "Per-project cap",
                   value: `${appreciationSummary.appreciationMaxPerTeam ?? 10} hearts`,
                 },
-                { label: "Ranking field", value: "Total appreciations" },
+                { label: "Ranking field", value: "Clean appreciations" },
               ]}
+            />
+
+            <DemoDayIntegrityPanel
+              integritySummary={integritySummary}
+              isScanning={isScanningIntegrity}
+              onRunScan={onRunIntegrityScan}
+              onMarkReviewed={onMarkIntegrityFindingReviewed}
+              onReject={onRejectIntegrityFinding}
+              onRestore={onRestoreIntegrityFinding}
+              onReviewAppreciations={onReviewIntegrityAppreciations}
             />
 
             <div className="flex justify-end gap-3">
@@ -353,7 +419,13 @@ export function ScoresTab({
                         Course
                       </th>
                       <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                        Appreciations
+                        Clean
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                        Raw
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                        Review
                       </th>
                     </tr>
                   </thead>
@@ -379,7 +451,19 @@ export function ScoresTab({
                             {team.courseCode || "-"}
                           </td>
                           <td className="px-4 py-3 text-sm text-foreground">
+                            {team.cleanScore}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">
                             {team.rawScore}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {team.flagged ? (
+                              <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                Flagged
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
                           </td>
                         </tr>
                       ),
@@ -559,6 +643,239 @@ export function ScoresTab({
         </div>
       )}
     </>
+  );
+}
+
+function DemoDayIntegrityPanel({
+  integritySummary,
+  isScanning,
+  onRunScan,
+  onMarkReviewed,
+  onReject,
+  onRestore,
+  onReviewAppreciations,
+}: {
+  integritySummary: IntegritySummary;
+  isScanning: boolean;
+  onRunScan: () => void;
+  onMarkReviewed: (findingId: any) => void;
+  onReject: (findingId: any) => void;
+  onRestore: (findingId: any) => void;
+  onReviewAppreciations: (
+    appreciationIds: any[],
+    reviewStatus: "accepted" | "flagged" | "rejected",
+  ) => void;
+}) {
+  const findings = integritySummary?.findings ?? [];
+  const openFindings = integritySummary?.openFindings ?? 0;
+  const flagged = integritySummary?.flaggedAppreciations ?? 0;
+  const rejected = integritySummary?.rejectedAppreciations ?? 0;
+
+  return (
+    <div className="card-static bg-card border border-border rounded-lg overflow-hidden">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-b border-border">
+        <div>
+          <h4 className="text-lg font-heading font-bold text-foreground">
+            Integrity Review
+          </h4>
+          <p className="text-sm text-muted-foreground">
+            Scanner findings are suggestions. Flagged votes keep counting until
+            an admin rejects them.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onRunScan}
+          disabled={isScanning}
+          className="btn-secondary whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {isScanning ? "Scanning..." : "Run Scan"}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-muted/20">
+        <IntegrityMetric label="Open" value={openFindings} tone="amber" />
+        <IntegrityMetric label="Flagged votes" value={flagged} tone="amber" />
+        <IntegrityMetric label="Rejected votes" value={rejected} tone="rose" />
+      </div>
+
+      {integritySummary === undefined ? (
+        <div className="px-5 py-4 text-sm text-muted-foreground">
+          Loading integrity findings...
+        </div>
+      ) : findings.length === 0 ? (
+        <div className="px-5 py-4 text-sm text-muted-foreground">
+          No integrity findings yet.
+        </div>
+      ) : (
+        <div className="divide-y divide-border">
+          {findings.slice(0, 8).map((finding) => (
+            <div key={String(finding._id)} className="px-5 py-4 space-y-3">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        finding.status === "open"
+                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                          : finding.status === "rejected"
+                            ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                            : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {finding.status}
+                    </span>
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {finding.type.replaceAll("_", " ")} · risk{" "}
+                      {finding.riskScore}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">
+                    {finding.summary}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {finding.affectedCount} vote
+                    {finding.affectedCount === 1 ? "" : "s"} ·{" "}
+                    {finding.affectedTeamIds.length} project
+                    {finding.affectedTeamIds.length === 1 ? "" : "s"} ·{" "}
+                    {finding.affectedAttendeeIds.length} attendee ID
+                    {finding.affectedAttendeeIds.length === 1 ? "" : "s"}
+                  </p>
+                  {(finding.affectedTeams?.length ?? 0) > 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Affected:{" "}
+                      {finding.affectedTeams
+                        ?.slice(0, 3)
+                        .map((team) => team.teamName)
+                        .join(", ")}
+                      {(finding.affectedTeams?.length ?? 0) > 3
+                        ? ` +${(finding.affectedTeams?.length ?? 0) - 3} more`
+                        : ""}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {finding.status === "open" && (
+                    <button
+                      type="button"
+                      onClick={() => onMarkReviewed(finding._id)}
+                      className="btn-secondary text-xs"
+                    >
+                      Mark reviewed
+                    </button>
+                  )}
+                  {finding.status !== "rejected" ? (
+                    <button
+                      type="button"
+                      onClick={() => onReject(finding._id)}
+                      className="text-xs font-medium px-3 py-2 rounded-lg border border-rose-500/30 text-rose-600 hover:bg-rose-500/10 transition-colors"
+                    >
+                      Reject votes
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onRestore(finding._id)}
+                      className="text-xs font-medium px-3 py-2 rounded-lg border border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 transition-colors"
+                    >
+                      Restore votes
+                    </button>
+                  )}
+                </div>
+              </div>
+              {finding.reasons.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {finding.reasons.slice(0, 5).map((reason) => (
+                    <span
+                      key={reason}
+                      className="rounded-md bg-muted px-2 py-1 text-[11px] font-mono text-muted-foreground"
+                    >
+                      {reason}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {(finding.affectedTeams?.length ?? 0) > 0 && (
+                <div className="rounded-lg border border-border bg-muted/20">
+                  {finding.affectedTeams?.slice(0, 5).map((team) => (
+                    <div
+                      key={team.teamId}
+                      className="flex flex-col gap-2 border-b border-border px-3 py-2 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {team.teamName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {team.affectedVotes} affected vote
+                          {team.affectedVotes === 1 ? "" : "s"} · projected
+                          clean impact -{team.projectedCleanScoreImpact}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        {team.projectedCleanScoreImpact > 0 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onReviewAppreciations(
+                                team.appreciationIds,
+                                "rejected",
+                              )
+                            }
+                            className="text-xs font-medium px-2.5 py-1.5 rounded-md border border-rose-500/30 text-rose-600 hover:bg-rose-500/10 transition-colors"
+                          >
+                            Reject selected
+                          </button>
+                        )}
+                        {team.projectedCleanScoreImpact === 0 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onReviewAppreciations(
+                                team.appreciationIds,
+                                "flagged",
+                              )
+                            }
+                            className="text-xs font-medium px-2.5 py-1.5 rounded-md border border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 transition-colors"
+                          >
+                            Restore selected
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function IntegrityMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "amber" | "rose";
+}) {
+  return (
+    <div className="px-4 py-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p
+        className={`mt-1 font-mono text-lg font-bold ${
+          tone === "rose"
+            ? "text-rose-600 dark:text-rose-400"
+            : "text-amber-600 dark:text-amber-400"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
 

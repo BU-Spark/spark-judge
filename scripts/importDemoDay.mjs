@@ -2,7 +2,7 @@
 // Import Demo Day data from local CSV files by calling the Convex mutation.
 // Usage:
 //   CONVEX_URL="https://<your>.convex.cloud" \
-//   DEMO_DAY_IMPORT_SECRET="<secret>" \
+//   CONVEX_AUTH_TOKEN="<admin-auth-token>" \
 //   node scripts/importDemoDay.mjs "/path/Assignments.csv" "/path/Projects.csv"
 
 import fs from "fs/promises";
@@ -25,11 +25,10 @@ async function main() {
     process.exit(1);
   }
 
-  const adminSecret = process.env.DEMO_DAY_IMPORT_SECRET;
-  if (!adminSecret) {
-    console.warn(
-      "Warning: DEMO_DAY_IMPORT_SECRET not set; import will require admin auth."
-    );
+  const authToken = process.env.CONVEX_AUTH_TOKEN;
+  if (!authToken) {
+    console.error("Set CONVEX_AUTH_TOKEN for an authenticated admin session.");
+    process.exit(1);
   }
 
   const [assignmentsCsv, projectsCsv] = await Promise.all([
@@ -38,12 +37,12 @@ async function main() {
   ]);
 
   const client = new ConvexHttpClient(convexUrl);
+  client.setAuth(authToken);
   const result = await client.mutation(
     api.demoDayImport.importDemoDayEventFromCSVs,
     {
       assignmentsCsv,
       projectsCsv,
-      adminSecret,
     }
   );
 
@@ -55,4 +54,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

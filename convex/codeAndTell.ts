@@ -14,6 +14,22 @@ export const MAX_RANKED_CHOICES = 5;
 
 type VisibleTeam = Doc<"teams">;
 
+export function shapeVotingProject(
+  team: VisibleTeam,
+  isOwned: boolean,
+  isEligible: boolean,
+) {
+  return {
+    _id: team._id,
+    name: team.name,
+    description: team.description,
+    members: team.members,
+    projectUrl: team.projectUrl || team.githubUrl || undefined,
+    isOwned,
+    isEligible,
+  };
+}
+
 function normalizeEmail(value?: string | null) {
   const trimmed = value?.trim().toLowerCase();
   return trimmed || null;
@@ -230,7 +246,6 @@ export const getVotingContext = query({
           description: v.string(),
           members: v.array(v.string()),
           projectUrl: v.optional(v.string()),
-          entrantEmails: v.array(v.string()),
           isOwned: v.boolean(),
           isEligible: v.boolean(),
         })
@@ -290,16 +305,7 @@ export const getVotingContext = query({
         .sort((left, right) => left.name.localeCompare(right.name))
         .map((team) => {
           const isOwned = ownProjectIds.includes(team._id);
-          return {
-            _id: team._id,
-            name: team.name,
-            description: team.description,
-            members: team.members,
-            projectUrl: team.projectUrl || team.githubUrl || undefined,
-            entrantEmails: team.entrantEmails || [],
-            isOwned,
-            isEligible: !isOwned,
-          };
+          return shapeVotingProject(team, isOwned, !isOwned);
         }),
     };
   },

@@ -44,6 +44,7 @@ import { WinnersSummaryTab } from "../tabs/WinnersSummaryTab";
 import { EventsList as WorkspaceEventsList } from "../components/EventsList";
 import { ScoringDashboard as WorkspaceScoringDashboard } from "../components/ScoringDashboard";
 import { AddTeamPanel } from "../panels/AddTeamPanel";
+import { escapeCsvCell } from "../panels/teamCsv";
 import { CodeAndTellWinnerPanel } from "../panels/CodeAndTellWinnerPanel";
 import { DemoDaySetupPanel } from "../panels/DemoDaySetupPanel";
 import { DemoDayWinnersPanel } from "../panels/DemoDayWinnersPanel";
@@ -1963,6 +1964,10 @@ export function EventManagementModal({
     api.appreciations.getEventAppreciationSummary,
     { eventId },
   );
+  const integritySummary = useQuery(
+    api.demoDayIntegrity.getEventIntegritySummary,
+    event?.mode === "demo_day" ? { eventId } : "skip",
+  );
   const codeAndTellSummary = useQuery(
     api.codeAndTell.getAdminSummary,
     event?.mode === "code_and_tell" ? { eventId } : "skip",
@@ -1988,6 +1993,19 @@ export function EventManagementModal({
   const releaseResults = useMutation(api.scores.releaseResults);
   const releaseCodeAndTellResults = useMutation(api.codeAndTell.releaseResults);
   const setScoringLock = useMutation(api.events.setScoringLock);
+  const runIntegrityScan = useMutation(api.demoDayIntegrity.runIntegrityScan);
+  const markIntegrityFindingReviewed = useMutation(
+    api.demoDayIntegrity.markFindingReviewed,
+  );
+  const rejectIntegrityFinding = useMutation(
+    api.demoDayIntegrity.rejectFinding,
+  );
+  const restoreIntegrityFinding = useMutation(
+    api.demoDayIntegrity.restoreFinding,
+  );
+  const reviewIntegrityAppreciations = useMutation(
+    api.demoDayIntegrity.reviewAppreciations,
+  );
   const hideTeam = useMutation(api.teams.hideTeam);
   const removeTeam = useMutation(api.teams.removeTeam);
 
@@ -2006,6 +2024,7 @@ export function EventManagementModal({
   const [isRemovingEvent, setIsRemovingEvent] = useState(false);
   const [isDuplicatingEvent, setIsDuplicatingEvent] = useState(false);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+  const [isScanningIntegrity, setIsScanningIntegrity] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
   const [eventName, setEventName] = useState("");
   const [eventDescription, setEventDescription] = useState("");
@@ -2022,6 +2041,11 @@ export function EventManagementModal({
   const [appreciationBudget, setAppreciationBudget] = useState<number>(100);
   const [appreciationMaxPerTeam, setAppreciationMaxPerTeam] =
     useState<number>(10);
+  const [captchaEnabled, setCaptchaEnabled] = useState(false);
+  const [venueLocationEnabled, setVenueLocationEnabled] = useState(false);
+  const [venueLatitude, setVenueLatitude] = useState("");
+  const [venueLongitude, setVenueLongitude] = useState("");
+  const [venueRadiusMeters, setVenueRadiusMeters] = useState<number>(100);
   const [tracksEdit, setTracksEdit] = useState("");
   const [codeAndTellMaxBallotsInput, setCodeAndTellMaxBallotsInput] =
     useState("");
@@ -2094,6 +2118,23 @@ export function EventManagementModal({
         typeof event.appreciationMaxPerTeam === "number"
           ? event.appreciationMaxPerTeam
           : 10,
+      );
+      setCaptchaEnabled(event.captchaEnabled === true);
+      setVenueLocationEnabled(event.venueLocationEnabled === true);
+      setVenueLatitude(
+        typeof event.venueLatitude === "number"
+          ? String(event.venueLatitude)
+          : "",
+      );
+      setVenueLongitude(
+        typeof event.venueLongitude === "number"
+          ? String(event.venueLongitude)
+          : "",
+      );
+      setVenueRadiusMeters(
+        typeof event.venueRadiusMeters === "number"
+          ? event.venueRadiusMeters
+          : 100,
       );
       setTracksEdit(event.tracks?.join(", ") || "");
       const cap = (event as { codeAndTellMaxBallots?: number })
@@ -2371,7 +2412,7 @@ export function EventManagementModal({
 
     const csvContent = [
       headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+      ...rows.map((row) => row.map(escapeCsvCell).join(",")),
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -2394,12 +2435,8 @@ export function EventManagementModal({
 
     setIsGeneratingQr(true);
     try {
-      // Get the current origin for building URLs
-      const baseUrl = window.location.origin;
-
       const result = await generateQrZip({
         eventId,
-        baseUrl,
       });
 
       if (!result.success || !result.zipBase64) {
@@ -2431,6 +2468,81 @@ export function EventManagementModal({
       toast.error("Failed to download QR codes");
     } finally {
       setIsGeneratingQr(false);
+    }
+  };
+
+  const handleRunIntegrityScan = async () => {
+    if (!isDemoDayMode) return;
+    setIsScanningIntegrity(true);
+    try {
+      const result = await runIntegrityScan({ eventId });
+      toast.success(
+        `Integrity scan complete: ${result.findingCount} finding${result.findingCount === 1 ? "" : "s"} from ${result.scannedCount} appreciations.`,
+      );
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to run integrity scan");
+    } finally {
+      setIsScanningIntegrity(false);
+    }
+  };
+
+  const handleReviewFinding = async (
+    findingId: Id<"demoDayIntegrityFindings">,
+  ) => {
+    try {
+      await markIntegrityFindingReviewed({ findingId });
+      toast.success("Finding marked reviewed");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update finding");
+    }
+  };
+
+  const handleRejectFinding = async (
+    findingId: Id<"demoDayIntegrityFindings">,
+  ) => {
+    const confirmed = window.confirm(
+      "Reject all appreciations in this finding? Raw counts stay auditable, but clean rankings will exclude them.",
+    );
+    if (!confirmed) return;
+    try {
+      await rejectIntegrityFinding({ findingId });
+      toast.success("Finding votes rejected from clean scoring");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to reject finding");
+    }
+  };
+
+  const handleRestoreFinding = async (
+    findingId: Id<"demoDayIntegrityFindings">,
+  ) => {
+    try {
+      await restoreIntegrityFinding({ findingId });
+      toast.success("Finding votes restored to clean scoring");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to restore finding");
+    }
+  };
+
+  const handleReviewIntegrityAppreciations = async (
+    appreciationIds: Id<"appreciations">[],
+    reviewStatus: "accepted" | "flagged" | "rejected",
+  ) => {
+    if (appreciationIds.length === 0) return;
+    if (reviewStatus === "rejected") {
+      const confirmed = window.confirm(
+        `Reject ${appreciationIds.length} selected appreciation${appreciationIds.length === 1 ? "" : "s"} from clean scoring?`,
+      );
+      if (!confirmed) return;
+    }
+    try {
+      await reviewIntegrityAppreciations({ appreciationIds, reviewStatus });
+      toast.success(
+        reviewStatus === "rejected"
+          ? "Selected votes rejected from clean scoring"
+          : "Selected votes restored to clean scoring",
+      );
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update selected votes");
     }
   };
 
@@ -2615,12 +2727,31 @@ export function EventManagementModal({
     const maxPerTeamValue = Number.isFinite(parsedMaxPerTeam)
       ? Math.max(0, Math.round(parsedMaxPerTeam))
       : 0;
+    const latitudeValue =
+      venueLatitude.trim() === "" ? null : Number(venueLatitude);
+    const longitudeValue =
+      venueLongitude.trim() === "" ? null : Number(venueLongitude);
+    if (
+      venueLocationEnabled &&
+      (latitudeValue === null ||
+        longitudeValue === null ||
+        !Number.isFinite(latitudeValue) ||
+        !Number.isFinite(longitudeValue))
+    ) {
+      toast.error("Enter a valid venue latitude and longitude.");
+      return;
+    }
     setSavingAppreciationSettings(true);
     try {
       await updateEventDetails({
         eventId,
         appreciationBudgetPerAttendee: budgetValue,
         appreciationMaxPerTeam: maxPerTeamValue,
+        captchaEnabled,
+        venueLocationEnabled,
+        venueLatitude: latitudeValue,
+        venueLongitude: longitudeValue,
+        venueRadiusMeters: venueLocationEnabled ? venueRadiusMeters : null,
       });
       toast.success("Appreciation settings saved");
     } catch (error) {
@@ -3077,6 +3208,16 @@ export function EventManagementModal({
                 setAppreciationBudget={setAppreciationBudget}
                 appreciationMaxPerTeam={appreciationMaxPerTeam}
                 setAppreciationMaxPerTeam={setAppreciationMaxPerTeam}
+                captchaEnabled={captchaEnabled}
+                setCaptchaEnabled={setCaptchaEnabled}
+                venueLocationEnabled={venueLocationEnabled}
+                setVenueLocationEnabled={setVenueLocationEnabled}
+                venueLatitude={venueLatitude}
+                setVenueLatitude={setVenueLatitude}
+                venueLongitude={venueLongitude}
+                setVenueLongitude={setVenueLongitude}
+                venueRadiusMeters={venueRadiusMeters}
+                setVenueRadiusMeters={setVenueRadiusMeters}
                 handleSaveAppreciationSettings={handleSaveAppreciationSettings}
                 savingAppreciationSettings={savingAppreciationSettings}
                 StyledCheckbox={StyledCheckbox}
@@ -3216,6 +3357,24 @@ export function EventManagementModal({
                   )
                 }
                 appreciationSummary={appreciationSummary}
+                integritySummary={integritySummary}
+                isScanningIntegrity={isScanningIntegrity}
+                onRunIntegrityScan={() => void handleRunIntegrityScan()}
+                onMarkIntegrityFindingReviewed={(findingId) =>
+                  void handleReviewFinding(findingId)
+                }
+                onRejectIntegrityFinding={(findingId) =>
+                  void handleRejectFinding(findingId)
+                }
+                onRestoreIntegrityFinding={(findingId) =>
+                  void handleRestoreFinding(findingId)
+                }
+                onReviewIntegrityAppreciations={(appreciationIds, status) =>
+                  void handleReviewIntegrityAppreciations(
+                    appreciationIds,
+                    status,
+                  )
+                }
                 onExportAppreciationsCsv={handleExportAppreciationsCsv}
                 onDownloadQrCodes={() => void handleDownloadQrCodes()}
                 isGeneratingQr={isGeneratingQr}

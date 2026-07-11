@@ -1,6 +1,22 @@
 import { describe, it, expect } from "vitest";
+import { getTrustedFrontendBaseUrl, isQrTeamVisible } from "../../../convex/qrCodes";
+import { escapeCsvCell } from "../../../convex/helpers";
 
 describe("qrCodes business logic", () => {
+  it("uses only the configured trusted frontend URL", () => {
+    expect(
+      getTrustedFrontendBaseUrl({ SITE_URL: "https://trusted.example/" }),
+    ).toBe("https://trusted.example");
+    expect(() => getTrustedFrontendBaseUrl({})).toThrow(
+      "Trusted frontend URL is not configured",
+    );
+  });
+
+  it("does not generate single-team QR codes for hidden teams to public callers", () => {
+    expect(isQrTeamVisible(true, false)).toBe(false);
+    expect(isQrTeamVisible(true, true)).toBe(true);
+    expect(isQrTeamVisible(false, false)).toBe(true);
+  });
   describe("URL generation", () => {
     it("should build correct appreciation URL format with event slug, team slug, and team ID", () => {
       const baseUrl = "https://example.com";
@@ -132,6 +148,12 @@ describe("qrCodes business logic", () => {
       const escaped = `"${cellWithQuote.replace(/"/g, '""')}"`;
 
       expect(escaped).toBe('"Team ""Awesome"""');
+    });
+
+    it("should neutralize formula prefixes including leading whitespace", () => {
+      expect(escapeCsvCell("\t=HYPERLINK(\"x\")")).toBe(
+        '"\'\t=HYPERLINK(""x"")"',
+      );
     });
 
     it("should wrap cells in quotes", () => {

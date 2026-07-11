@@ -1,4 +1,10 @@
 import { describe, it, expect } from "vitest";
+import {
+  isTeamInJudgeCohort,
+  assertScoringTarget,
+  assertUniqueScoreTeamIds,
+  validateCategoryScores,
+} from "../../../convex/scores";
 
 function calculateTotalScore(
   categoryScores: Array<{
@@ -41,6 +47,73 @@ function calculateTotalScore(
 }
 
 describe("scores business logic", () => {
+  const categories = [
+    { name: "Innovation", weight: 1 },
+    { name: "Execution", weight: 1, optOutAllowed: true },
+  ];
+
+  describe("server-side score validation", () => {
+    it.each([
+      [{ category: "Unknown", score: 3 }],
+      [
+        { category: "Innovation", score: 3 },
+        { category: "Innovation", score: 4 },
+        { category: "Execution", score: 4 },
+      ],
+      [{ category: "Innovation", score: 3 }],
+      [{ category: "Innovation", score: 1.5 }, { category: "Execution", score: 3 }],
+      [{ category: "Innovation", score: 0 }, { category: "Execution", score: 3 }],
+      [{ category: "Innovation", score: 6 }, { category: "Execution", score: 3 }],
+      [{ category: "Innovation", score: null, optedOut: true }, { category: "Execution", score: 3 }],
+      [{ category: "Innovation", score: 3 }, { category: "Execution", score: null }],
+    ])("rejects invalid category payloads", (payload) => {
+      expect(() => validateCategoryScores(payload, categories)).toThrow();
+    });
+
+    it("accepts a complete payload and only allows configured opt-out", () => {
+      expect(
+        validateCategoryScores(
+          [
+            { category: "Innovation", score: 5 },
+            { category: "Execution", score: null, optedOut: true },
+          ],
+          categories,
+        ),
+      ).toEqual([
+        { category: "Innovation", score: 5, optedOut: false },
+        { category: "Execution", score: null, optedOut: true },
+      ]);
+    });
+  });
+
+  describe("cohort authorization", () => {
+    it("requires assignment only when cohorts are enabled", () => {
+      expect(isTeamInJudgeCohort(true, new Set(["team-1"]), "team-1")).toBe(true);
+      expect(isTeamInJudgeCohort(true, new Set(["team-1"]), "team-2")).toBe(false);
+      expect(isTeamInJudgeCohort(false, new Set(), "team-2")).toBe(true);
+    });
+  });
+
+  it("rejects duplicate batch team IDs before score writes", () => {
+    expect(() => assertUniqueScoreTeamIds(["team-1", "team-1"])).toThrow(
+      "duplicate teams",
+    );
+  });
+
+  it("rejects inactive and hidden scoring targets", () => {
+    expect(() =>
+      assertScoringTarget(
+        { startDate: 10, endDate: 20 },
+        false,
+      ),
+    ).toThrow("only available while the event is active");
+    expect(() =>
+      assertScoringTarget(
+        { startDate: Date.now() - 1_000, endDate: Date.now() + 1_000 },
+        true,
+      ),
+    ).toThrow("Hidden teams cannot be scored");
+  });
   describe("score calculation with category weights", () => {
     it("should calculate total score with equal weights", () => {
       const categoryScores = [

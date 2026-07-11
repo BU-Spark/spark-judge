@@ -30,6 +30,7 @@ describe("schema validation logic", () => {
         eventId: "event123",
         teamId: "team456",
         attendeeId: "attendee-uuid",
+        voterUserId: "server-user-id",
         fingerprintKey: "sha256-hash",
         ipAddress: "192.168.1.1",
         userAgent: "Mozilla/5.0...",
@@ -39,17 +40,34 @@ describe("schema validation logic", () => {
       expect(appreciation).toHaveProperty("eventId");
       expect(appreciation).toHaveProperty("teamId");
       expect(appreciation).toHaveProperty("attendeeId");
+      expect(appreciation).toHaveProperty("voterUserId");
       expect(appreciation).toHaveProperty("fingerprintKey");
       expect(appreciation).toHaveProperty("ipAddress");
       expect(appreciation).toHaveProperty("userAgent");
       expect(appreciation).toHaveProperty("timestamp");
     });
 
+    it("should allow integrity review fields", () => {
+      const appreciation = {
+        reviewStatus: "flagged",
+        riskScore: 75,
+        riskReasons: ["high_velocity", "location_out_of_range"],
+        captchaPassId: "pass123",
+        integrityFindingId: "finding123",
+      };
+
+      expect(["accepted", "flagged", "rejected"]).toContain(
+        appreciation.reviewStatus,
+      );
+      expect(appreciation.riskScore).toBeGreaterThan(0);
+      expect(appreciation.riskReasons).toContain("high_velocity");
+    });
+
     it("should validate attendeeId is a string (UUID format)", () => {
       const validUUID = "550e8400-e29b-41d4-a716-446655440000";
       expect(typeof validUUID).toBe("string");
       expect(validUUID).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
       );
     });
 
@@ -125,7 +143,15 @@ describe("schema validation logic", () => {
         by_team: ["teamId"],
         by_event_and_attendee: ["eventId", "attendeeId"],
         by_event_and_team_and_attendee: ["eventId", "teamId", "attendeeId"],
+        by_event_and_voter: ["eventId", "voterUserId"],
+        by_event_and_team_and_voter: [
+          "eventId",
+          "teamId",
+          "voterUserId",
+        ],
         by_ip_and_timestamp: ["ipAddress", "timestamp"],
+        by_event_and_review_status: ["eventId", "reviewStatus"],
+        by_integrity_finding: ["integrityFindingId"],
       };
 
       // Verify index names and fields
@@ -140,9 +166,69 @@ describe("schema validation logic", () => {
         "teamId",
         "attendeeId",
       ]);
+      expect(appreciationIndexes.by_event_and_voter).toEqual([
+        "eventId",
+        "voterUserId",
+      ]);
+      expect(appreciationIndexes.by_event_and_team_and_voter).toEqual([
+        "eventId",
+        "teamId",
+        "voterUserId",
+      ]);
       expect(appreciationIndexes.by_ip_and_timestamp).toEqual([
         "ipAddress",
         "timestamp",
+      ]);
+      expect(appreciationIndexes.by_event_and_review_status).toEqual([
+        "eventId",
+        "reviewStatus",
+      ]);
+      expect(appreciationIndexes.by_integrity_finding).toEqual([
+        "integrityFindingId",
+      ]);
+    });
+
+    it("should define integrity table indexes", () => {
+      const passIndexes = {
+        by_event_and_attendee_fingerprint: [
+          "eventId",
+          "attendeeId",
+          "fingerprintKey",
+        ],
+        by_event_and_voter_fingerprint: [
+          "eventId",
+          "voterUserId",
+          "fingerprintKey",
+        ],
+        by_event_and_ip: ["eventId", "ipAddress"],
+        by_event_and_fingerprint: ["eventId", "fingerprintKey"],
+      };
+      const findingIndexes = {
+        by_event: ["eventId"],
+        by_event_and_status: ["eventId", "status"],
+        by_event_and_dedupe_key: ["eventId", "dedupeKey"],
+      };
+
+      expect(passIndexes.by_event_and_attendee_fingerprint).toEqual([
+        "eventId",
+        "attendeeId",
+        "fingerprintKey",
+      ]);
+      expect(passIndexes.by_event_and_voter_fingerprint).toEqual([
+        "eventId",
+        "voterUserId",
+        "fingerprintKey",
+      ]);
+      expect(passIndexes.by_event_and_ip).toEqual(["eventId", "ipAddress"]);
+      expect(passIndexes.by_event_and_fingerprint).toEqual([
+        "eventId",
+        "fingerprintKey",
+      ]);
+      expect(findingIndexes.by_event).toEqual(["eventId"]);
+      expect(findingIndexes.by_event_and_status).toEqual(["eventId", "status"]);
+      expect(findingIndexes.by_event_and_dedupe_key).toEqual([
+        "eventId",
+        "dedupeKey",
       ]);
     });
 

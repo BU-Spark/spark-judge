@@ -50,6 +50,16 @@ export function DetailsTab({
   setAppreciationBudget,
   appreciationMaxPerTeam,
   setAppreciationMaxPerTeam,
+  captchaEnabled,
+  setCaptchaEnabled,
+  venueLocationEnabled,
+  setVenueLocationEnabled,
+  venueLatitude,
+  setVenueLatitude,
+  venueLongitude,
+  setVenueLongitude,
+  venueRadiusMeters,
+  setVenueRadiusMeters,
   handleSaveAppreciationSettings,
   savingAppreciationSettings,
   StyledCheckbox,
@@ -92,6 +102,16 @@ export function DetailsTab({
   setAppreciationBudget: (value: number) => void;
   appreciationMaxPerTeam: number;
   setAppreciationMaxPerTeam: (value: number) => void;
+  captchaEnabled: boolean;
+  setCaptchaEnabled: (value: boolean) => void;
+  venueLocationEnabled: boolean;
+  setVenueLocationEnabled: (value: boolean) => void;
+  venueLatitude: string;
+  setVenueLatitude: (value: string) => void;
+  venueLongitude: string;
+  setVenueLongitude: (value: string) => void;
+  venueRadiusMeters: number;
+  setVenueRadiusMeters: (value: number) => void;
   handleSaveAppreciationSettings: () => void;
   savingAppreciationSettings: boolean;
   StyledCheckbox: (props: any) => ReactNode;
@@ -636,6 +656,79 @@ export function DetailsTab({
                   Defaults to 10.
                 </p>
               </div>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <StyledCheckbox
+                    checked={captchaEnabled}
+                    onCheckedChange={setCaptchaEnabled}
+                    label="Require Turnstile verification"
+                    labelClassName="text-sm font-medium text-foreground"
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Attendees verify on first tap and again when activity looks
+                    suspicious.
+                  </p>
+                </div>
+                <div>
+                  <StyledCheckbox
+                    checked={venueLocationEnabled}
+                    onCheckedChange={setVenueLocationEnabled}
+                    label="Use venue location as a soft check"
+                    labelClassName="text-sm font-medium text-foreground"
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Denied, unavailable, inaccurate, or out-of-range location
+                    requires verification and is recorded for review.
+                  </p>
+                </div>
+              </div>
+              {venueLocationEnabled && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">
+                      Venue latitude
+                    </label>
+                    <input
+                      type="number"
+                      value={venueLatitude}
+                      onChange={(event) => setVenueLatitude(event.target.value)}
+                      className="input"
+                      placeholder="42.3601"
+                      step="0.000001"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">
+                      Venue longitude
+                    </label>
+                    <input
+                      type="number"
+                      value={venueLongitude}
+                      onChange={(event) =>
+                        setVenueLongitude(event.target.value)
+                      }
+                      className="input"
+                      placeholder="-71.0589"
+                      step="0.000001"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">
+                      Radius (meters)
+                    </label>
+                    <StyledNumberInput
+                      value={venueRadiusMeters}
+                      onValueChange={(nextValue: number) =>
+                        setVenueRadiusMeters(Math.max(1, Math.round(nextValue)))
+                      }
+                      min={1}
+                      step={25}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex justify-end">
               <button

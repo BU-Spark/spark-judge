@@ -192,6 +192,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
             attendeeId={attendeeId}
             appreciationData={appreciationData}
             isEventLive={isEventLive}
+            requestLocation={event.venueLocationEnabled === true}
           />
         </div>
       </div>
@@ -213,6 +214,7 @@ interface AppreciationSectionProps {
     maxPerTeam: number;
   };
   isEventLive: boolean;
+  requestLocation: boolean;
 }
 
 function AppreciationSection({
@@ -222,8 +224,9 @@ function AppreciationSection({
   attendeeId,
   appreciationData,
   isEventLive,
+  requestLocation,
 }: AppreciationSectionProps) {
-  const { appreciate, isLoading } = useAppreciation();
+  const { appreciate, isLoading, isAuthenticated } = useAppreciation();
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
 
   const attendeeCount = optimisticCount ?? appreciationData.attendeeCount;
@@ -234,6 +237,7 @@ function AppreciationSection({
     (optimisticCount !== null ? 1 : 0);
   const canAppreciate =
     isEventLive &&
+    isAuthenticated !== false &&
     attendeeId &&
     attendeeCount < maxPerTeam &&
     remainingBudget > 0;
@@ -255,6 +259,7 @@ function AppreciationSection({
         setOptimisticCount(null);
         toast.error(error);
       },
+      { requestLocation },
     );
 
     // If successful, the query will refresh and we can clear optimistic state
@@ -325,8 +330,10 @@ function AppreciationSection({
             />
           </svg>
         )}
-        {!isEventLive
-          ? "Opens when live"
+            {isAuthenticated === false
+              ? "Sign in to vote"
+              : !isEventLive
+              ? "Opens when live"
           : attendeeCount >= maxPerTeam
             ? "Max Appreciations Given"
             : remainingBudget <= 0

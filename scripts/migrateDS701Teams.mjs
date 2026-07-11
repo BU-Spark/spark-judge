@@ -168,18 +168,18 @@ async function main() {
     return;
   }
 
-  const adminSecret = process.env.DEMO_DAY_IMPORT_SECRET;
-  if (!adminSecret) {
-    console.error("Set DEMO_DAY_IMPORT_SECRET to apply updates.");
+  const authToken = process.env.CONVEX_AUTH_TOKEN;
+  if (!authToken) {
+    console.error("Set CONVEX_AUTH_TOKEN for an authenticated admin session.");
     process.exit(1);
   }
+  client.setAuth(authToken);
 
   console.log("\nApplying updates...");
   for (const u of updates) {
     await client.mutation(api.demoDayImport.renameTeam, {
       teamId: u.teamId,
       newName: u.newName,
-      adminSecret,
     });
     console.log(`  ✓ ${u.newName}`);
   }
@@ -191,4 +191,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

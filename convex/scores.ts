@@ -1,8 +1,99 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { canAccessEvent, isAdmin, requireAdmin } from "./helpers";
+import {
+  canAccessEvent,
+  computeEventStatus,
+  isAdmin,
+  isJudgeVerifiedForEvent,
+  requireAdmin,
+} from "./helpers";
 import { isDemoDayMode, isHackathonMode } from "./eventModes";
+
+type EventCategory = {
+  name: string;
+  weight?: number;
+  optOutAllowed?: boolean;
+};
+
+type CategoryScoreInput = {
+  category: string;
+  score: number | null;
+  optedOut?: boolean;
+};
+
+export function validateCategoryScores(
+  categoryScores: CategoryScoreInput[],
+  eventCategories: EventCategory[],
+) {
+  const configured = new Map(eventCategories.map((category) => [category.name, category]));
+  if (configured.size !== eventCategories.length) {
+    throw new Error("Event categories must have unique names");
+  }
+
+  const seen = new Set<string>();
+  for (const categoryScore of categoryScores) {
+    const category = configured.get(categoryScore.category);
+    if (!category) throw new Error(`Unknown scoring category: ${categoryScore.category}`);
+    if (seen.has(categoryScore.category)) {
+      throw new Error(`Duplicate scoring category: ${categoryScore.category}`);
+    }
+    seen.add(categoryScore.category);
+
+    if (categoryScore.score === null) {
+      if (category.optOutAllowed !== true || categoryScore.optedOut !== true) {
+        throw new Error(`Category ${categoryScore.category} requires a score`);
+      }
+      continue;
+    }
+
+    if (categoryScore.optedOut === true) {
+      throw new Error(`Category ${categoryScore.category} cannot be both scored and opted out`);
+    }
+    if (
+      !Number.isInteger(categoryScore.score) ||
+      categoryScore.score < 1 ||
+      categoryScore.score > 5
+    ) {
+      throw new Error(`Scores for ${categoryScore.category} must be integers from 1 to 5`);
+    }
+  }
+
+  if (seen.size !== configured.size) {
+    throw new Error("A score is required for every configured category");
+  }
+
+  return categoryScores.map((categoryScore) => ({
+    ...categoryScore,
+    optedOut: categoryScore.optedOut ?? false,
+  }));
+}
+
+export function isTeamInJudgeCohort(
+  cohortsEnabled: boolean | undefined,
+  assignedTeamIds: Set<string>,
+  teamId: string,
+) {
+  return !cohortsEnabled || assignedTeamIds.has(teamId);
+}
+
+export function assertUniqueScoreTeamIds(teamIds: string[]) {
+  if (new Set(teamIds).size !== teamIds.length) {
+    throw new Error("Batch scores cannot contain duplicate teams");
+  }
+}
+
+export function assertScoringTarget(
+  event: { startDate: number; endDate: number },
+  teamHidden: boolean | undefined,
+) {
+  if (computeEventStatus(event) !== "active") {
+    throw new Error("Scoring is only available while the event is active");
+  }
+  if (teamHidden) {
+    throw new Error("Hidden teams cannot be scored");
+  }
+}
 
 function computeTotalScore(
   categoryScores: Array<{
@@ -75,24 +166,37 @@ export const submitScore = mutation({
     if (!isHackathonMode(event.mode)) {
       throw new Error("Scoring is only available for hackathon events");
     }
+    if (!isJudgeVerifiedForEvent(event, judge)) {
+      throw new Error("Judge code verification required");
+    }
     if (event.scoringLockedAt) {
       throw new Error("Scoring is locked for this event");
     }
+    assertScoringTarget(event, false);
 
     // Ensure the submitted team belongs to this event.
     const team = await ctx.db.get(args.teamId);
     if (!team || team.eventId !== args.eventId) {
       throw new Error("Invalid team for this event");
     }
+    assertScoringTarget(event, team.hidden);
 
-    const sanitizedCategoryScores = args.categoryScores.map((cs) => {
-      const category = event.categories.find((c) => c.name === cs.category);
-      const optOutAllowed = category?.optOutAllowed === true;
-      return {
-        ...cs,
-        optedOut: optOutAllowed ? (cs.optedOut ?? false) : false,
-      };
-    });
+    const sanitizedCategoryScores = validateCategoryScores(
+      args.categoryScores,
+      event.categories,
+    );
+
+    if (event.enableCohorts) {
+      const assignment = await ctx.db
+        .query("judgeAssignments")
+        .withIndex("by_judge_and_team", (q) =>
+          q.eq("judgeId", judge._id).eq("teamId", args.teamId),
+        )
+        .first();
+      if (!assignment || assignment.eventId !== args.eventId) {
+        throw new Error("This team is outside your judging cohort");
+      }
+    }
 
     const totalScore = computeTotalScore(
       sanitizedCategoryScores,
@@ -161,14 +265,20 @@ export const submitBatchScores = mutation({
     if (!isHackathonMode(event.mode)) {
       throw new Error("Scoring is only available for hackathon events");
     }
+    if (!isJudgeVerifiedForEvent(event, judge)) {
+      throw new Error("Judge code verification required");
+    }
     if (event.scoringLockedAt) {
       throw new Error("Scoring is locked for this event");
     }
+    assertScoringTarget(event, false);
 
     const teamsForEvent = await ctx.db
       .query("teams")
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
+
+    assertUniqueScoreTeamIds(args.scores.map((entry) => entry.teamId.toString()));
 
     const teamIds = new Set(teamsForEvent.map((team) => team._id.toString()));
 
@@ -176,18 +286,33 @@ export const submitBatchScores = mutation({
       if (!teamIds.has(entry.teamId.toString())) {
         throw new Error("Invalid team for this event");
       }
+      const team = teamsForEvent.find((candidate) => candidate._id === entry.teamId);
+      assertScoringTarget(event, team?.hidden);
     }
 
+    const assignments = event.enableCohorts
+      ? await ctx.db
+          .query("judgeAssignments")
+          .withIndex("by_judge_and_event", (q) =>
+            q.eq("judgeId", judge._id).eq("eventId", args.eventId),
+          )
+          .collect()
+      : [];
+    const assignedTeamIds = new Set(assignments.map((assignment) => assignment.teamId.toString()));
+    for (const entry of args.scores) {
+      if (!isTeamInJudgeCohort(event.enableCohorts, assignedTeamIds, entry.teamId.toString())) {
+        throw new Error("One or more teams are outside your judging cohort");
+      }
+    }
+
+    const validatedScores = args.scores.map((entry) => ({
+      ...entry,
+      categoryScores: validateCategoryScores(entry.categoryScores, event.categories),
+    }));
+
     await Promise.all(
-      args.scores.map(async (entry) => {
-        const sanitizedCategoryScores = entry.categoryScores.map((cs) => {
-          const category = event.categories.find((c) => c.name === cs.category);
-          const optOutAllowed = category?.optOutAllowed === true;
-          return {
-            ...cs,
-            optedOut: optOutAllowed ? (cs.optedOut ?? false) : false,
-          };
-        });
+      validatedScores.map(async (entry) => {
+        const sanitizedCategoryScores = entry.categoryScores;
 
         const totalScore = computeTotalScore(
           sanitizedCategoryScores,
@@ -239,7 +364,7 @@ export const getMyScores = query({
       )
       .first();
 
-    if (!judge) return [];
+    if (!judge || !isJudgeVerifiedForEvent(event, judge)) return [];
 
     return await ctx.db
       .query("scores")
@@ -269,7 +394,7 @@ export const getTeamScore = query({
       )
       .first();
 
-    if (!judge) return null;
+    if (!judge || !isJudgeVerifiedForEvent(event, judge)) return null;
 
     return await ctx.db
       .query("scores")

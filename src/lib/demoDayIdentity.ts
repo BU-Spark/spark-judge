@@ -1,10 +1,9 @@
 /**
  * Demo Day Identity Utilities
  * 
- * Provides attendee identification and device fingerprinting for the
- * Demo Day appreciation system. Handles:
- * - Persistent attendee UUID (localStorage + cookie fallback)
- * - Device fingerprinting via browser characteristics
+ * Provides client metadata for the Demo Day appreciation system. Handles:
+ * - A client-supplied attendee label (metadata only; not authentication)
+ * - Device fingerprinting via browser characteristics for integrity review
  * - Session-level memoization for performance
  */
 
@@ -251,4 +250,3 @@ export function isIdentitySupported(): boolean {
   if (typeof navigator === "undefined") return false;
   return true;
 }
-

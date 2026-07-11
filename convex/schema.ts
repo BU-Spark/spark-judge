@@ -8,6 +8,43 @@ const EVENT_MODE_VALIDATOR = v.union(
   v.literal("code_and_tell"),
 );
 
+const APPRECIATION_REVIEW_STATUS_VALIDATOR = v.union(
+  v.literal("accepted"),
+  v.literal("flagged"),
+  v.literal("rejected"),
+);
+
+const LOCATION_STATUS_VALIDATOR = v.union(
+  v.literal("in_range"),
+  v.literal("out_of_range"),
+  v.literal("denied"),
+  v.literal("unavailable"),
+  v.literal("inaccurate"),
+  v.literal("unknown"),
+);
+
+const INTEGRITY_FINDING_STATUS_VALIDATOR = v.union(
+  v.literal("open"),
+  v.literal("reviewed"),
+  v.literal("rejected"),
+);
+
+const INTEGRITY_FINDING_SEVERITY_VALIDATOR = v.union(
+  v.literal("low"),
+  v.literal("medium"),
+  v.literal("high"),
+);
+
+const INTEGRITY_FINDING_TYPE_VALIDATOR = v.union(
+  v.literal("ip_ua_burst"),
+  v.literal("fingerprint_reuse"),
+  v.literal("high_velocity"),
+  v.literal("team_burst"),
+  v.literal("location_risk"),
+  v.literal("pass_metadata_change"),
+  v.literal("captcha_failures"),
+);
+
 // Extend auth tables to add isAdmin field to users
 const customAuthTables = {
   ...authTables,
@@ -38,6 +75,11 @@ const applicationTables = {
     // Demo Day appreciation limits (optional; defaults applied in logic)
     appreciationBudgetPerAttendee: v.optional(v.number()), // Total hearts an attendee can give
     appreciationMaxPerTeam: v.optional(v.number()), // Hearts an attendee can give a single team
+    captchaEnabled: v.optional(v.boolean()),
+    venueLocationEnabled: v.optional(v.boolean()),
+    venueLatitude: v.optional(v.number()),
+    venueLongitude: v.optional(v.number()),
+    venueRadiusMeters: v.optional(v.number()),
     tracks: v.optional(v.array(v.string())), // Tracks for team registration (optional, defaults to categories)
     enableCohorts: v.optional(v.boolean()), // Enable multiple judging cohorts (judges select their teams)
     resultsReleased: v.boolean(),
@@ -124,6 +166,9 @@ const applicationTables = {
   judges: defineTable({
     userId: v.id("users"),
     eventId: v.id("events"),
+    judgeCodeVerifiedAt: v.optional(v.number()),
+    judgeCodeFailedAttempts: v.optional(v.number()),
+    judgeCodeLockedUntil: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
     .index("by_event", ["eventId"])
@@ -217,11 +262,20 @@ const applicationTables = {
   appreciations: defineTable({
     eventId: v.id("events"),
     teamId: v.id("teams"), // teams function as projects
-    attendeeId: v.string(), // UUID stored client-side
+    attendeeId: v.string(), // Legacy/client telemetry identity; not a quota key
+    voterUserId: v.optional(v.id("users")), // Server-authenticated quota identity
     fingerprintKey: v.string(), // SHA-256 hash (device fingerprint)
     ipAddress: v.string(),
     userAgent: v.string(),
     timestamp: v.number(),
+    reviewStatus: v.optional(APPRECIATION_REVIEW_STATUS_VALIDATOR),
+    riskScore: v.optional(v.number()),
+    riskReasons: v.optional(v.array(v.string())),
+    captchaPassId: v.optional(v.id("demoDayCaptchaPasses")),
+    integrityFindingId: v.optional(v.id("demoDayIntegrityFindings")),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.id("users")),
+    reviewNote: v.optional(v.string()),
   })
     .index("by_event", ["eventId"])
     .index("by_team", ["teamId"])
@@ -231,7 +285,73 @@ const applicationTables = {
       "teamId",
       "attendeeId",
     ])
-    .index("by_ip_and_timestamp", ["ipAddress", "timestamp"]),
+    .index("by_event_and_voter", ["eventId", "voterUserId"])
+    .index("by_event_and_team_and_voter", [
+      "eventId",
+      "teamId",
+      "voterUserId",
+    ])
+    .index("by_ip_and_timestamp", ["ipAddress", "timestamp"])
+    .index("by_event_and_review_status", ["eventId", "reviewStatus"])
+    .index("by_integrity_finding", ["integrityFindingId"]),
+
+  demoDayCaptchaPasses: defineTable({
+    eventId: v.id("events"),
+    attendeeId: v.string(),
+    voterUserId: v.optional(v.id("users")),
+    fingerprintKey: v.string(),
+    ipAddress: v.string(),
+    userAgent: v.string(),
+    verifiedAt: v.optional(v.number()),
+    expiresAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    lastRecheckAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    verificationCount: v.number(),
+    recheckRequired: v.optional(v.boolean()),
+    riskScore: v.optional(v.number()),
+    riskReasons: v.optional(v.array(v.string())),
+    locationStatus: v.optional(LOCATION_STATUS_VALIDATOR),
+    locationDistanceMeters: v.optional(v.number()),
+    lastFailureAt: v.optional(v.number()),
+    failureCount: v.optional(v.number()),
+  })
+    .index("by_event_and_attendee_fingerprint", [
+      "eventId",
+      "attendeeId",
+      "fingerprintKey",
+    ])
+    .index("by_event_and_voter_fingerprint", [
+      "eventId",
+      "voterUserId",
+      "fingerprintKey",
+    ])
+    .index("by_event_and_ip", ["eventId", "ipAddress"])
+    .index("by_event_and_fingerprint", ["eventId", "fingerprintKey"]),
+
+  demoDayIntegrityFindings: defineTable({
+    eventId: v.id("events"),
+    dedupeKey: v.string(),
+    type: INTEGRITY_FINDING_TYPE_VALIDATOR,
+    severity: INTEGRITY_FINDING_SEVERITY_VALIDATOR,
+    status: INTEGRITY_FINDING_STATUS_VALIDATOR,
+    riskScore: v.number(),
+    reasons: v.array(v.string()),
+    affectedAppreciationIds: v.array(v.id("appreciations")),
+    affectedTeamIds: v.array(v.id("teams")),
+    affectedAttendeeIds: v.array(v.string()),
+    affectedCount: v.number(),
+    summary: v.string(),
+    firstSeenAt: v.number(),
+    lastSeenAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.id("users")),
+    reviewNote: v.optional(v.string()),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_event_and_status", ["eventId", "status"])
+    .index("by_event_and_dedupe_key", ["eventId", "dedupeKey"]),
 };
 
 export default defineSchema({

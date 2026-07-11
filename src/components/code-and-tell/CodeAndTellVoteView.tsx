@@ -33,7 +33,6 @@ type Project = {
   description: string;
   members: string[];
   projectUrl?: string;
-  entrantEmails: string[];
   isOwned: boolean;
   isEligible: boolean;
 };

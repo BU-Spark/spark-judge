@@ -16,7 +16,9 @@ import type {
 import type * as appreciations from "../appreciations.js";
 import type * as auth from "../auth.js";
 import type * as codeAndTell from "../codeAndTell.js";
+import type * as crons from "../crons.js";
 import type * as demoDayImport from "../demoDayImport.js";
+import type * as demoDayIntegrity from "../demoDayIntegrity.js";
 import type * as eventModes from "../eventModes.js";
 import type * as events from "../events.js";
 import type * as helpers from "../helpers.js";
@@ -57,7 +59,9 @@ declare const fullApi: ApiFromModules<{
   appreciations: typeof appreciations;
   auth: typeof auth;
   codeAndTell: typeof codeAndTell;
+  crons: typeof crons;
   demoDayImport: typeof demoDayImport;
+  demoDayIntegrity: typeof demoDayIntegrity;
   eventModes: typeof eventModes;
   events: typeof events;
   helpers: typeof helpers;

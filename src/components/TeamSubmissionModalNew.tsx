@@ -186,7 +186,7 @@ export function TeamSubmissionModal({
 
       // Upload logo if provided
       if (logoFile) {
-        const uploadUrl = await generateUploadUrl();
+        const uploadUrl = await generateUploadUrl({ eventId });
         const result = await fetch(uploadUrl, {
           method: "POST",
           headers: { "Content-Type": logoFile.type },

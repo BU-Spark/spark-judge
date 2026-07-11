@@ -3,8 +3,10 @@ import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
 import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 const http = httpRouter();
+export const DEMO_DAY_TURNSTILE_ACTION = "demo_day_appreciation";
 
 auth.addHttpRoutes(http);
 
@@ -32,6 +34,98 @@ function getClientIp(req: Request): string {
   return "unknown";
 }
 
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin");
+  const allowedOrigins = [
+    process.env.SITE_URL,
+    process.env.CONVEX_SITE_URL,
+  ].filter((value): value is string => !!value);
+  const isLocalhost =
+    !!origin &&
+    (/^http:\/\/localhost:\d+$/.test(origin) ||
+      /^http:\/\/127\.0\.0\.1:\d+$/.test(origin));
+  const isAllowed =
+    !!origin && (allowedOrigins.includes(origin) || isLocalhost);
+
+  return {
+    "Content-Type": "application/json",
+    ...(isAllowed ? { "Access-Control-Allow-Origin": origin } : {}),
+    "Access-Control-Allow-Credentials": "true",
+    Vary: "Origin",
+  };
+}
+
+export function getExpectedTurnstileHostname(
+  env: Record<string, string | undefined> = process.env,
+): string | undefined {
+  const configured = env.TURNSTILE_EXPECTED_HOSTNAME || env.SITE_URL;
+  if (!configured) return undefined;
+  try {
+    return new URL(configured.includes("://") ? configured : `https://${configured}`).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+export function validateTurnstileResponse(
+  result: {
+    success?: boolean;
+    action?: string;
+    hostname?: string;
+  },
+  expectedHostname?: string,
+): { success: boolean; error?: string } {
+  if (result.success !== true || result.action !== DEMO_DAY_TURNSTILE_ACTION) {
+    return { success: false, error: "Captcha verification failed" };
+  }
+  if (expectedHostname && result.hostname !== expectedHostname) {
+    return { success: false, error: "Captcha verification failed" };
+  }
+  return { success: true };
+}
+
+async function verifyTurnstileToken({
+  token,
+  ipAddress,
+}: {
+  token: string;
+  ipAddress: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) {
+    return { success: false, error: "Captcha is not configured" };
+  }
+
+  const formData = new URLSearchParams();
+  formData.set("secret", secret);
+  formData.set("response", token);
+  formData.set("action", DEMO_DAY_TURNSTILE_ACTION);
+  if (ipAddress !== "unknown") {
+    formData.set("remoteip", ipAddress);
+  }
+
+  const response = await fetch(
+    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+  if (!response.ok) {
+    return { success: false, error: "Captcha verification failed" };
+  }
+
+  const result = (await response.json()) as {
+    success?: boolean;
+    action?: string;
+    hostname?: string;
+  };
+  return validateTurnstileResponse(
+    result,
+    getExpectedTurnstileHostname(),
+  );
+}
+
 /**
  * POST /demo-day/appreciations
  * Create a new appreciation for a team in Demo Day mode.
@@ -50,12 +144,55 @@ http.route({
   handler: httpAction(async (ctx, req) => {
     try {
       // Parse request body
+      const headers = getCorsHeaders(req);
+      const voterUserId = await getAuthUserId(ctx);
+      if (!voterUserId) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Sign in is required to vote",
+            remainingForTeam: 0,
+            remainingTotal: 0,
+          }),
+          { status: 401, headers },
+        );
+      }
       const body = await req.json();
-      const { eventId, teamId, attendeeId, fingerprintKey } = body as {
+      const {
+        eventId,
+        teamId,
+        attendeeId,
+        fingerprintKey,
+        turnstileToken,
+        location,
+        clientSignals,
+      } = body as {
         eventId: string;
         teamId: string;
         attendeeId: string;
         fingerprintKey: string;
+        turnstileToken?: string;
+        location?: {
+          status:
+            | "in_range"
+            | "out_of_range"
+            | "denied"
+            | "unavailable"
+            | "inaccurate"
+            | "unknown";
+          latitude?: number;
+          longitude?: number;
+          accuracyMeters?: number;
+        };
+        clientSignals?: {
+          webdriver?: boolean;
+          isLikelyMobile?: boolean;
+          userAgentDataMobile?: boolean;
+          viewportWidth?: number;
+          viewportHeight?: number;
+          language?: string;
+          timezone?: string;
+        };
       };
 
       // Validate required fields
@@ -68,14 +205,111 @@ http.route({
           }),
           {
             status: 400,
-            headers: { "Content-Type": "application/json" },
-          }
+            headers,
+          },
         );
       }
 
       // Extract IP and User-Agent from request
       const ipAddress = getClientIp(req);
       const userAgent = req.headers.get("user-agent") || "unknown";
+
+      let integrity = await ctx.runMutation(
+        internal.demoDayIntegrity.evaluateAppreciationRequest,
+        {
+          eventId: eventId as Id<"events">,
+          attendeeId,
+          voterUserId,
+          fingerprintKey,
+          ipAddress,
+          userAgent,
+          captchaVerified: false,
+          location,
+          clientSignals,
+        },
+      );
+
+      if (integrity.requiresCaptcha) {
+        if (!turnstileToken) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Verification required. Please try again.",
+              requiresCaptcha: true,
+              captchaReason: integrity.captchaReason,
+              remainingForTeam: 0,
+              remainingTotal: 0,
+            }),
+            {
+              status: 403,
+              headers,
+            },
+          );
+        }
+
+        const captchaResult = await verifyTurnstileToken({
+          token: turnstileToken,
+          ipAddress,
+        });
+        if (!captchaResult.success) {
+          await ctx.runMutation(
+            internal.demoDayIntegrity.recordCaptchaFailure,
+            {
+              eventId: eventId as Id<"events">,
+              attendeeId,
+              voterUserId,
+              fingerprintKey,
+              ipAddress,
+              userAgent,
+              failureReason: captchaResult.error || "verification_failed",
+            },
+          );
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Verification failed",
+              requiresCaptcha: true,
+              remainingForTeam: 0,
+              remainingTotal: 0,
+            }),
+            {
+              status: 403,
+              headers,
+            },
+          );
+        }
+
+        integrity = await ctx.runMutation(
+          internal.demoDayIntegrity.evaluateAppreciationRequest,
+          {
+            eventId: eventId as Id<"events">,
+            attendeeId,
+            voterUserId,
+            fingerprintKey,
+            ipAddress,
+            userAgent,
+            captchaVerified: true,
+            location,
+            clientSignals,
+          },
+        );
+      }
+
+      if (!integrity.allowed) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: integrity.error || "Unable to verify request",
+            requiresCaptcha: integrity.requiresCaptcha,
+            remainingForTeam: 0,
+            remainingTotal: 0,
+          }),
+          {
+            status: integrity.requiresCaptcha ? 403 : 400,
+            headers,
+          },
+        );
+      }
 
       // Call the internal mutation with trusted metadata
       const result = await ctx.runMutation(
@@ -84,34 +318,42 @@ http.route({
           eventId: eventId as Id<"events">,
           teamId: teamId as Id<"teams">,
           attendeeId,
+          voterUserId,
           fingerprintKey,
           ipAddress,
           userAgent,
-        }
+          captchaPassId: integrity.captchaPassId,
+          reviewStatus: integrity.reviewStatus,
+          riskScore: integrity.riskScore,
+          riskReasons: integrity.riskReasons,
+        },
       );
 
-      return new Response(JSON.stringify(result), {
-        status: result.success ? 200 : 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
+      return new Response(
+        JSON.stringify({
+          ...result,
+          integrity: {
+            reviewStatus: integrity.reviewStatus,
+            riskScore: integrity.riskScore,
+            riskReasons: integrity.riskReasons,
+          },
+        }),
+        {
+          status: result.success ? 200 : 400,
+          headers,
         },
-      });
+      );
     } catch (error) {
       console.error("Error creating appreciation:", error);
       return new Response(
         JSON.stringify({
           success: false,
-          error:
-            error instanceof Error ? error.message : "Internal server error",
+          error: "Internal server error",
         }),
         {
           status: 500,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
+          headers: getCorsHeaders(req),
+        },
       );
     }
   }),
@@ -124,13 +366,13 @@ http.route({
 http.route({
   path: "/demo-day/appreciations",
   method: "OPTIONS",
-  handler: httpAction(async () => {
+  handler: httpAction(async (_ctx, req) => {
     return new Response(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        ...getCorsHeaders(req),
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Max-Age": "86400",
       },
     });
@@ -158,21 +400,14 @@ http.route({
           {
             status: 400,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
-
-      // Get the origin for building the appreciation URL
-      const origin =
-        url.origin || req.headers.get("origin") || "https://example.com";
-      // Replace .convex.site with the actual frontend URL if needed
-      const baseUrl = origin.replace(".convex.site", ".vercel.app");
 
       // Call the QR code generation action
       const result = await ctx.runAction(api.qrCodes.generateTeamQrCode, {
         eventId: eventId as Id<"events">,
         teamId: teamId as Id<"teams">,
-        baseUrl,
       });
 
       if (!result.success || !result.qrCodeBase64) {
@@ -183,24 +418,24 @@ http.route({
           {
             status: 400,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
 
       // Convert base64 data URL to binary
       const base64Data = result.qrCodeBase64.replace(
-        /^data:image\/png;base64,/,
-        ""
+        /^data:[^;]+;base64,/,
+        "",
       );
       const binaryData = Uint8Array.from(atob(base64Data), (c) =>
-        c.charCodeAt(0)
+        c.charCodeAt(0),
       );
 
       return new Response(binaryData, {
         status: 200,
         headers: {
-          "Content-Type": "image/png",
-          "Content-Disposition": `inline; filename="${result.teamName || "team"}_qr.png"`,
+          "Content-Type": "image/svg+xml",
+          "Content-Disposition": `inline; filename="${result.teamName || "team"}_qr.svg"`,
           "Cache-Control": "public, max-age=3600",
         },
       });
@@ -208,13 +443,12 @@ http.route({
       console.error("Error generating QR code:", error);
       return new Response(
         JSON.stringify({
-          error:
-            error instanceof Error ? error.message : "Internal server error",
+          error: "Internal server error",
         }),
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   }),

@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  escapeCsvCell,
   createTeamCsvTemplate,
   parseTeamCsv,
 } from "@/features/admin/panels/teamCsv";
 
 describe("teamCsv", () => {
+  it.each(["=1+1", "  +1", "\t-1", " @cmd"])(
+    "neutralizes formula prefixes in exported cells: %j",
+    (value) => {
+      expect(escapeCsvCell(value)).toBe(`"'${value}"`);
+    },
+  );
   it("parses hackathon CSV rows with quoted cells", () => {
     const csv = [
       "name,description,members,track,projectUrl,githubUrl,prizes",

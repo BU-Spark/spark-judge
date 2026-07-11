@@ -6,7 +6,6 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin } from "./helpers";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { isDemoDayMode } from "./eventModes";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -1870,18 +1869,10 @@ export const updateTeamBoardAssignment = mutation({
     teamId: v.id("teams"),
     demoDayRound: v.number(),
     demoDayBoardNumber: v.string(),
-    adminSecret: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const bypassAllowed =
-      !!args.adminSecret &&
-      !!process.env.DEMO_DAY_IMPORT_SECRET &&
-      args.adminSecret === process.env.DEMO_DAY_IMPORT_SECRET;
-
-    if (!bypassAllowed) {
-      await requireAdmin(ctx);
-    }
+    await requireAdmin(ctx);
 
     await ctx.db.patch(args.teamId, {
       demoDayRound: args.demoDayRound,
@@ -1895,18 +1886,10 @@ export const updateEventCourseCodes = mutation({
   args: {
     eventId: v.id("events"),
     courseCodes: v.array(v.string()),
-    adminSecret: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const bypassAllowed =
-      !!args.adminSecret &&
-      !!process.env.DEMO_DAY_IMPORT_SECRET &&
-      args.adminSecret === process.env.DEMO_DAY_IMPORT_SECRET;
-
-    if (!bypassAllowed) {
-      await requireAdmin(ctx);
-    }
+    await requireAdmin(ctx);
 
     await ctx.db.patch(args.eventId, { courseCodes: args.courseCodes });
     return null;
@@ -1920,18 +1903,10 @@ export const addTeamDirect = mutation({
     members: v.array(v.string()),
     courseCode: v.optional(v.string()),
     githubUrl: v.optional(v.string()),
-    adminSecret: v.optional(v.string()),
   },
   returns: v.id("teams"),
   handler: async (ctx, args) => {
-    const bypassAllowed =
-      !!args.adminSecret &&
-      !!process.env.DEMO_DAY_IMPORT_SECRET &&
-      args.adminSecret === process.env.DEMO_DAY_IMPORT_SECRET;
-
-    if (!bypassAllowed) {
-      await requireAdmin(ctx);
-    }
+    await requireAdmin(ctx);
 
     return await ctx.db.insert("teams", {
       eventId: args.eventId,
@@ -1951,18 +1926,10 @@ export const renameTeam = mutation({
   args: {
     teamId: v.id("teams"),
     newName: v.string(),
-    adminSecret: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const bypassAllowed =
-      !!args.adminSecret &&
-      !!process.env.DEMO_DAY_IMPORT_SECRET &&
-      args.adminSecret === process.env.DEMO_DAY_IMPORT_SECRET;
-
-    if (!bypassAllowed) {
-      await requireAdmin(ctx);
-    }
+    await requireAdmin(ctx);
 
     await ctx.db.patch(args.teamId, { name: args.newName });
     return null;
@@ -1980,7 +1947,6 @@ export const importDemoDayEventFromCSVs = mutation({
     status: v.optional(
       v.union(v.literal("upcoming"), v.literal("active"), v.literal("past")),
     ),
-    adminSecret: v.optional(v.string()),
   },
   returns: v.object({
     eventId: v.id("events"),
@@ -1994,14 +1960,7 @@ export const importDemoDayEventFromCSVs = mutation({
     ),
   }),
   handler: async (ctx, args) => {
-    const bypassAllowed =
-      !!args.adminSecret &&
-      !!process.env.DEMO_DAY_IMPORT_SECRET &&
-      args.adminSecret === process.env.DEMO_DAY_IMPORT_SECRET;
-
-    const userId = bypassAllowed
-      ? (((await getAuthUserId(ctx)) as any) ?? null)
-      : await requireAdmin(ctx);
+    const userId = await requireAdmin(ctx);
 
     const assignments = parseCsv(args.assignmentsCsv);
     const projects = parseCsv(args.projectsCsv);

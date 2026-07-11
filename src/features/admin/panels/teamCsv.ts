@@ -138,9 +138,10 @@ function parseCsvTable(text: string) {
   return rows;
 }
 
-function escapeCsvCell(value: string) {
-  const escaped = value.replace(/"/g, '""');
-  if (/[",\n]/.test(escaped)) {
+export function escapeCsvCell(value: string) {
+  const formulaSafe = /^\s*[=+\-@]/.test(value) ? `'${value}` : value;
+  const escaped = formulaSafe.replace(/"/g, '""');
+  if (/[",\n\r]/.test(escaped) || formulaSafe !== value) {
     return `"${escaped}"`;
   }
   return escaped;

@@ -5,8 +5,10 @@ import {
   canAccessEvent,
   computeEventStatus,
   isAdmin,
+  isJudgeVerifiedForEvent,
   requireAdmin,
 } from "./helpers";
+import { shapeTeamForPublic } from "./helpers";
 import { Doc, Id } from "./_generated/dataModel";
 import { isHackathonMode } from "./eventModes";
 
@@ -118,6 +120,30 @@ function sortPrizes(prizes: any[]) {
   });
 }
 
+export function shapePrizeForPublic(prize: any) {
+  return {
+    _id: prize._id,
+    eventId: prize.eventId,
+    name: prize.name,
+    description: prize.description,
+    type: prize.type,
+    track: prize.track,
+    sponsorName: prize.sponsorName,
+    scoreBasis: prize.scoreBasis,
+    scoreCategoryNames: prize.scoreCategoryNames,
+    isActive: prize.isActive,
+    sortOrder: prize.sortOrder,
+  };
+}
+
+export function shapePrizeSubmissionForJudge(submission: any) {
+  return {
+    eventId: submission.eventId,
+    teamId: submission.teamId,
+    prizeId: submission.prizeId,
+  };
+}
+
 export const listEventPrizes = query({
   args: { eventId: v.id("events") },
   returns: v.array(v.any()),
@@ -131,7 +157,7 @@ export const listEventPrizes = query({
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
 
-    return sortPrizes(prizes);
+    return sortPrizes(prizes).map(shapePrizeForPublic);
   },
 });
 
@@ -258,10 +284,30 @@ export const getEventPrizeSubmissions = query({
   args: { eventId: v.id("events") },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
-    return await ctx.db
+    const event = await ctx.db.get(args.eventId);
+    if (!event) return [];
+
+    const admin = await isAdmin(ctx);
+    if (!admin) {
+      if (!(await canAccessEvent(ctx, event))) return [];
+      const userId = await getAuthUserId(ctx);
+      if (!userId) return [];
+      const judge = await ctx.db
+        .query("judges")
+        .withIndex("by_user_and_event", (q) =>
+          q.eq("userId", userId).eq("eventId", args.eventId),
+        )
+        .first();
+      if (!judge || !isJudgeVerifiedForEvent(event, judge)) return [];
+    }
+
+    const submissions = await ctx.db
       .query("teamPrizeSubmissions")
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
+    return admin
+      ? submissions
+      : submissions.map(shapePrizeSubmissionForJudge);
   },
 });
 
@@ -567,6 +613,10 @@ export const listPrizeWinners = query({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event || !isHackathonMode(event.mode)) return [];
+    const admin = await isAdmin(ctx);
+    if (!admin && (!(await canAccessEvent(ctx, event)) || !event.resultsReleased)) {
+      return [];
+    }
 
     const [winners, prizes, teams] = await Promise.all([
       ctx.db
@@ -587,11 +637,34 @@ export const listPrizeWinners = query({
     const teamsById = new Map(teams.map((team) => [team._id, team]));
 
     return winners
-      .map((winner) => ({
-        ...winner,
-        prize: prizesById.get(winner.prizeId),
-        team: teamsById.get(winner.teamId),
-      }))
+      .map((winner) => {
+        const prize = prizesById.get(winner.prizeId);
+        const team = teamsById.get(winner.teamId);
+        if (admin) return { ...winner, prize, team };
+        return {
+          _id: winner._id,
+          eventId: winner.eventId,
+          prizeId: winner.prizeId,
+          teamId: winner.teamId,
+          placement: winner.placement,
+          notes: winner.notes,
+          prize: prize
+            ? {
+                _id: prize._id,
+                name: prize.name,
+                description: prize.description,
+                type: prize.type,
+                track: prize.track,
+                sponsorName: prize.sponsorName,
+                scoreBasis: prize.scoreBasis,
+                scoreCategoryNames: prize.scoreCategoryNames,
+                isActive: prize.isActive,
+                sortOrder: prize.sortOrder,
+              }
+            : undefined,
+          team: team ? shapeTeamForPublic(team) : undefined,
+        };
+      })
       .sort((a, b) => {
         const orderA = a.prize?.sortOrder ?? Number.MAX_SAFE_INTEGER;
         const orderB = b.prize?.sortOrder ?? Number.MAX_SAFE_INTEGER;

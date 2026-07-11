@@ -1,8 +1,12 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { query, mutation } from "./_generated/server";
+import { query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { computeEventStatus } from "./helpers";
+import {
+  computeEventStatus,
+  isJudgeVerifiedForEvent,
+  shapeEventForViewer,
+} from "./helpers";
 
 export const getUserProfile = query({
   args: {},
@@ -76,6 +80,7 @@ export const getUserProfile = query({
       judgeRecords.map(async (judgeRecord) => {
         const event = await ctx.db.get(judgeRecord.eventId);
         if (!event) return null;
+        if (!isJudgeVerifiedForEvent(event, judgeRecord)) return null;
 
         // Get scores submitted by this judge
         const scores = await ctx.db
@@ -87,8 +92,9 @@ export const getUserProfile = query({
         // Get unique teams judged
         const uniqueTeams = new Set(scores.map((s) => s.teamId));
 
+        const publicEvent = shapeEventForViewer(event, undefined, false);
         return {
-          event,
+          event: publicEvent,
           judgeRecord,
           teamsJudged: uniqueTeams.size,
           scoresSubmitted: scores.length,
@@ -132,20 +138,10 @@ export const getUserProfile = query({
       activeEvents,
       upcomingEvents,
       stats: {
-        totalEvents: judgeRecords.length,
+        totalEvents: validEventsData.length,
         totalTeamsScored,
         averageScore: Math.round(averageScore * 10) / 10, // Round to 1 decimal
       },
     };
-  },
-});
-
-export const debugMakeMeAdmin = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-    await ctx.db.patch(userId, { isAdmin: true });
-    return { success: true };
   },
 });

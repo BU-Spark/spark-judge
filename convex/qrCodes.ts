@@ -1,12 +1,71 @@
 "use node";
 
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { action, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { isDemoDayMode } from "./eventModes";
+import { canAccessEvent, isAdmin, requireAdmin } from "./helpers";
+import { escapeCsvCell } from "./helpers";
 import QRCode from "qrcode";
 import JSZip from "jszip";
+
+export function getTrustedFrontendBaseUrl(
+  env: Record<string, string | undefined> = process.env,
+): string {
+  const configured = env.SITE_URL || env.FRONTEND_URL || env.PUBLIC_SITE_URL;
+  const baseUrl = configured?.trim().replace(/\/+$/, "");
+  if (!baseUrl) {
+    throw new Error("Trusted frontend URL is not configured");
+  }
+  return baseUrl;
+}
+
+export function isQrTeamVisible(
+  teamHidden: boolean | undefined,
+  viewerIsAdmin: boolean,
+): boolean {
+  return viewerIsAdmin || !teamHidden;
+}
+
+export const getAuthorizedTeamQrContext = internalQuery({
+  args: { eventId: v.id("events"), teamId: v.id("teams") },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!event || !isDemoDayMode(event.mode) || !(await canAccessEvent(ctx, event))) {
+      return null;
+    }
+    const team = await ctx.db.get(args.teamId);
+    const viewerIsAdmin = await isAdmin(ctx);
+    if (
+      !team ||
+      team.eventId !== event._id ||
+      !isQrTeamVisible(team.hidden, viewerIsAdmin)
+    ) {
+      return null;
+    }
+    return {
+      event: { _id: event._id, name: event.name, mode: event.mode },
+      team: {
+        _id: team._id,
+        eventId: team.eventId,
+        name: team.name,
+        courseCode: team.courseCode,
+        demoDaySignName: team.demoDaySignName,
+      },
+    };
+  },
+});
+
+export const requireQrAdmin = internalQuery({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return null;
+  },
+});
 
 // Type definitions for query results
 type EventResult = {
@@ -750,7 +809,6 @@ export const generateTeamQrCode = action({
   args: {
     eventId: v.id("events"),
     teamId: v.id("teams"),
-    baseUrl: v.string(), // The base URL for the appreciation page
   },
   returns: v.object({
     success: v.boolean(),
@@ -769,35 +827,17 @@ export const generateTeamQrCode = action({
     teamName?: string;
     courseCode?: string;
   }> => {
-    // Fetch event and team data
-    const event: EventResult = await ctx.runQuery(
-      internal.qrCodesQueries.getEventInternal,
-      {
-        eventId: args.eventId,
-      },
+    const authorizedContext = await ctx.runQuery(
+      internal.qrCodes.getAuthorizedTeamQrContext,
+      { eventId: args.eventId, teamId: args.teamId },
     );
-
-    if (!event) {
-      return { success: false, error: "Event not found" };
-    }
-
-    if (!isDemoDayMode(event.mode)) {
-      return { success: false, error: "Event is not in Demo Day mode" };
-    }
-
-    const team: TeamResult = await ctx.runQuery(
-      internal.qrCodesQueries.getTeamInternal,
-      {
-        teamId: args.teamId,
-      },
-    );
-
-    if (!team || team.eventId !== args.eventId) {
-      return { success: false, error: "Team not found" };
-    }
+    if (!authorizedContext) return { success: false, error: "Team not found" };
+    const event = authorizedContext.event as NonNullable<EventResult>;
+    const team = authorizedContext.team as NonNullable<TeamResult>;
+    const baseUrl = getTrustedFrontendBaseUrl();
 
     // Build the appreciation URL: /event/:eventId/team/:teamId
-    const appreciationUrl: string = `${args.baseUrl}/event/${args.eventId}/team/${args.teamId}`;
+    const appreciationUrl: string = `${baseUrl}/event/${args.eventId}/team/${args.teamId}`;
 
     try {
       // Generate labeled SVG QR code
@@ -834,7 +874,6 @@ export const generateTeamQrCode = action({
 export const generateQrCodeZip = action({
   args: {
     eventId: v.id("events"),
-    baseUrl: v.string(),
   },
   returns: v.object({
     success: v.boolean(),
@@ -851,6 +890,8 @@ export const generateQrCodeZip = action({
     zipBase64?: string;
     filename?: string;
   }> => {
+    await ctx.runQuery(internal.qrCodes.requireQrAdmin, {});
+    const baseUrl = getTrustedFrontendBaseUrl();
     // Fetch event data
     const event: EventResult = await ctx.runQuery(
       internal.qrCodesQueries.getEventInternal,
@@ -925,7 +966,7 @@ export const generateQrCodeZip = action({
         const qrFilename: string = `${coursePrefix}_${teamSlug}_${team._id.slice(-4)}.svg`;
 
         // Build appreciation URL: /event/:eventId/team/:teamId
-        const appreciationUrl: string = `${args.baseUrl}/event/${args.eventId}/team/${team._id}`;
+        const appreciationUrl: string = `${baseUrl}/event/${args.eventId}/team/${team._id}`;
 
         // Generate labeled SVG QR code
         const svg = await generateLabeledQrSvg(
@@ -970,9 +1011,7 @@ export const generateQrCodeZip = action({
 
       // Create CSV content
       const csvContent: string = csvRows
-        .map((row) =>
-          row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","),
-        )
+        .map((row) => row.map(escapeCsvCell).join(","))
         .join("\n");
       zip.file("projects.csv", csvContent);
 

@@ -149,7 +149,11 @@ describe("CodeAndTellVoteView", () => {
     expect(screen.getByText("Your project")).toBeInTheDocument();
     expect(screen.getAllByText("Project Two").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Project Three").length).toBeGreaterThan(0);
-    expect(screen.getByText("Existing ballot loaded. You can replace it until the event ends.")).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        "Existing ballot loaded. You can replace it until the event ends.",
+      ),
+    ).not.toHaveLength(0);
     expect(screen.getByText("Ineligible")).toBeInTheDocument();
   });
 
@@ -171,7 +175,7 @@ describe("CodeAndTellVoteView", () => {
     fireEvent.click(addButtons[0]);
     fireEvent.click(addButtons[1]);
 
-    fireEvent.click(screen.getByText("Save Ballot"));
+    fireEvent.click(screen.getAllByText("Save Ballot")[0]);
 
     await waitFor(() => {
       expect(saveBallotMock).toHaveBeenCalledWith({

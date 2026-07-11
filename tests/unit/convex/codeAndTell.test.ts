@@ -3,11 +3,28 @@ import { describe, expect, it } from "vitest";
 import {
   computeCodeAndTellStandings,
   getRequiredRankCount,
+  shapeVotingProject,
   validateRankedBallot,
 } from "../../../convex/codeAndTell";
 import type { Id } from "../../../convex/_generated/dataModel";
 
 describe("codeAndTell helpers", () => {
+  it("does not expose entrant emails in voting projects", () => {
+    const project = shapeVotingProject(
+      {
+        _id: "team-1" as Id<"teams">,
+        name: "Project",
+        description: "Demo",
+        members: ["A"],
+        entrantEmails: ["entrant@example.com"],
+        projectUrl: "https://example.com",
+      } as any,
+      false,
+      true,
+    );
+    expect(project).not.toHaveProperty("entrantEmails");
+    expect(project).toMatchObject({ _id: "team-1", isEligible: true });
+  });
   it("caps the required rank count at five", () => {
     expect(getRequiredRankCount(0)).toBe(0);
     expect(getRequiredRankCount(3)).toBe(3);

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { Id } from "./_generated/dataModel";
 import {
   canAccessEvent,
@@ -24,6 +25,22 @@ function getEventLimits(event: any) {
     maxPerAttendee:
       event?.appreciationBudgetPerAttendee ?? MAX_TAPS_PER_ATTENDEE,
   };
+}
+
+export function filterAppreciationsForVoter<T extends { voterUserId?: string }>(
+  appreciations: T[],
+  voterUserId: string,
+): T[] {
+  return appreciations.filter(
+    (appreciation) => appreciation.voterUserId === voterUserId,
+  );
+}
+
+export function getAppreciationVoterKey(appreciation: {
+  voterUserId?: string;
+  attendeeId: string;
+}): string {
+  return appreciation.voterUserId ?? `legacy:${appreciation.attendeeId}`;
 }
 
 /**
@@ -56,6 +73,9 @@ export const getTeamAppreciations = query({
     if (!(await canAccessEvent(ctx, event))) {
       throw new Error("Event not found");
     }
+    if (!isDemoDayMode(event.mode)) {
+      throw new Error("Appreciations are only available for Demo Day events");
+    }
     const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
 
     // Get all teams for this event
@@ -69,20 +89,27 @@ export const getTeamAppreciations = query({
       .query("appreciations")
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
+    const countableAppreciations = allAppreciations.filter(
+      (appreciation) =>
+        (appreciation.reviewStatus ?? "accepted") !== "rejected",
+    );
 
-    // Get attendee's appreciations if attendeeId provided
+    const voterUserId = await getAuthUserId(ctx);
+
+    // Quota counts are keyed by the authenticated server identity. The
+    // client attendeeId is intentionally ignored for authorization/counts.
     let attendeeAppreciations: typeof allAppreciations = [];
-    if (args.attendeeId) {
+    if (voterUserId) {
       attendeeAppreciations = await ctx.db
         .query("appreciations")
-        .withIndex("by_event_and_attendee", (q) =>
-          q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId!),
+        .withIndex("by_event_and_voter", (q) =>
+          q.eq("eventId", args.eventId).eq("voterUserId", voterUserId),
         )
         .collect();
     }
 
     const totalByTeam = new Map<Id<"teams">, number>();
-    for (const appreciation of allAppreciations) {
+    for (const appreciation of countableAppreciations) {
       totalByTeam.set(
         appreciation.teamId,
         (totalByTeam.get(appreciation.teamId) ?? 0) + 1,
@@ -98,7 +125,7 @@ export const getTeamAppreciations = query({
     }
 
     // Build team counts in O(teams + appreciations) time.
-    const teamCounts = teams.map((team) => {
+    const teamCounts = teams.filter((team) => !team.hidden).map((team) => {
       const totalCount = totalByTeam.get(team._id) ?? 0;
       const attendeeCount = attendeeByTeam.get(team._id) ?? 0;
       return {
@@ -150,6 +177,14 @@ export const getSingleTeamAppreciation = query({
     if (!(await canAccessEvent(ctx, event))) {
       throw new Error("Event not found");
     }
+    if (!isDemoDayMode(event.mode)) {
+      throw new Error("Appreciations are only available for Demo Day events");
+    }
+
+    const team = await ctx.db.get(args.teamId);
+    if (!team || team.eventId !== args.eventId || team.hidden) {
+      throw new Error("Team not found");
+    }
     const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
 
     // Get all appreciations for this team
@@ -158,22 +193,28 @@ export const getSingleTeamAppreciation = query({
       .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
       .collect();
 
-    const totalCount = teamAppreciations.length;
+    const totalCount = teamAppreciations.filter(
+      (appreciation) =>
+        (appreciation.reviewStatus ?? "accepted") !== "rejected",
+    ).length;
 
-    // Get attendee's appreciations if attendeeId provided
+    const voterUserId = await getAuthUserId(ctx);
+
+    // Quota counts are keyed by the authenticated server identity.
     let attendeeCount = 0;
     let attendeeTotalCount = 0;
-    if (args.attendeeId) {
+    if (voterUserId) {
       // Count for this specific team
-      attendeeCount = teamAppreciations.filter(
-        (a) => a.attendeeId === args.attendeeId,
+      attendeeCount = filterAppreciationsForVoter(
+        teamAppreciations,
+        voterUserId,
       ).length;
 
       // Count total across all teams for budget calculation
       const allAttendeeAppreciations = await ctx.db
         .query("appreciations")
-        .withIndex("by_event_and_attendee", (q) =>
-          q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId!),
+        .withIndex("by_event_and_voter", (q) =>
+          q.eq("eventId", args.eventId).eq("voterUserId", voterUserId),
         )
         .collect();
       attendeeTotalCount = allAttendeeAppreciations.length;
@@ -205,6 +246,7 @@ export const getEventAppreciationSummary = query({
   },
   returns: v.object({
     totalAppreciations: v.number(),
+    cleanAppreciations: v.number(),
     uniqueAttendees: v.number(),
     appreciationBudgetPerAttendee: v.number(),
     appreciationMaxPerTeam: v.number(),
@@ -220,6 +262,7 @@ export const getEventAppreciationSummary = query({
     ),
   }),
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const event = await ctx.db.get(args.eventId);
     if (!event) {
       throw new Error("Event not found");
@@ -241,8 +284,12 @@ export const getEventAppreciationSummary = query({
       .collect();
 
     // Count unique attendees
-    const uniqueAttendees = new Set(allAppreciations.map((a) => a.attendeeId))
+    const uniqueAttendees = new Set(allAppreciations.map(getAppreciationVoterKey))
       .size;
+    const cleanAppreciations = allAppreciations.filter(
+      (appreciation) =>
+        (appreciation.reviewStatus ?? "accepted") !== "rejected",
+    ).length;
 
     const countsByTeam = new Map<Id<"teams">, number>();
     for (const appreciation of allAppreciations) {
@@ -265,11 +312,12 @@ export const getEventAppreciationSummary = query({
       };
     });
 
-    // Sort by rawScore descending
-    teamSummary.sort((a, b) => b.rawScore - a.rawScore);
+    // Sort by clean score so admin rankings reflect reviewed results.
+    teamSummary.sort((a, b) => b.cleanScore - a.cleanScore);
 
     return {
       totalAppreciations: allAppreciations.length,
+      cleanAppreciations,
       uniqueAttendees,
       appreciationBudgetPerAttendee:
         event.appreciationBudgetPerAttendee ?? MAX_TAPS_PER_ATTENDEE,
@@ -289,9 +337,20 @@ export const createAppreciationInternal = internalMutation({
     eventId: v.id("events"),
     teamId: v.id("teams"),
     attendeeId: v.string(),
+    voterUserId: v.id("users"),
     fingerprintKey: v.string(),
     ipAddress: v.string(),
     userAgent: v.string(),
+    captchaPassId: v.optional(v.id("demoDayCaptchaPasses")),
+    reviewStatus: v.optional(
+      v.union(
+        v.literal("accepted"),
+        v.literal("flagged"),
+        v.literal("rejected"),
+      ),
+    ),
+    riskScore: v.optional(v.number()),
+    riskReasons: v.optional(v.array(v.string())),
   },
   returns: v.object({
     success: v.boolean(),
@@ -344,15 +403,23 @@ export const createAppreciationInternal = internalMutation({
         remainingTotal: 0,
       };
     }
+    if (team.hidden) {
+      return {
+        success: false,
+        error: "Team not found",
+        remainingForTeam: 0,
+        remainingTotal: 0,
+      };
+    }
 
-    // 3. Check per-team limit
+    // 3. Check per-team limit using only the authenticated server identity.
     const attendeeTeamAppreciations = await ctx.db
       .query("appreciations")
-      .withIndex("by_event_and_team_and_attendee", (q) =>
+      .withIndex("by_event_and_team_and_voter", (q) =>
         q
           .eq("eventId", args.eventId)
           .eq("teamId", args.teamId)
-          .eq("attendeeId", args.attendeeId),
+          .eq("voterUserId", args.voterUserId),
       )
       .collect();
 
@@ -367,10 +434,10 @@ export const createAppreciationInternal = internalMutation({
             (
               await ctx.db
                 .query("appreciations")
-                .withIndex("by_event_and_attendee", (q) =>
+                .withIndex("by_event_and_voter", (q) =>
                   q
                     .eq("eventId", args.eventId)
-                    .eq("attendeeId", args.attendeeId),
+                    .eq("voterUserId", args.voterUserId),
                 )
                 .collect()
             ).length,
@@ -381,8 +448,8 @@ export const createAppreciationInternal = internalMutation({
     // 4. Check total event budget
     const attendeeAllAppreciations = await ctx.db
       .query("appreciations")
-      .withIndex("by_event_and_attendee", (q) =>
-        q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId),
+      .withIndex("by_event_and_voter", (q) =>
+        q.eq("eventId", args.eventId).eq("voterUserId", args.voterUserId),
       )
       .collect();
 
@@ -418,160 +485,31 @@ export const createAppreciationInternal = internalMutation({
       eventId: args.eventId,
       teamId: args.teamId,
       attendeeId: args.attendeeId,
+      voterUserId: args.voterUserId,
       fingerprintKey: args.fingerprintKey,
       ipAddress: args.ipAddress,
       userAgent: args.userAgent,
       timestamp: now,
+      captchaPassId: args.captchaPassId,
+      reviewStatus: args.reviewStatus ?? "accepted",
+      riskScore: args.riskScore,
+      riskReasons: args.riskReasons,
     });
 
     // 7. Update denormalized score without a full recount query.
-    await ctx.db.patch(args.teamId, { rawScore: (team.rawScore ?? 0) + 1 });
+    const currentRawScore = team.rawScore ?? 0;
+    const currentCleanScore = team.cleanScore ?? currentRawScore;
+    const reviewStatus = args.reviewStatus ?? "accepted";
+    await ctx.db.patch(args.teamId, {
+      rawScore: currentRawScore + 1,
+      cleanScore:
+        reviewStatus === "rejected" ? currentCleanScore : currentCleanScore + 1,
+      flagged: (team.flagged ?? false) || reviewStatus === "flagged",
+    });
 
     return {
       success: true,
       appreciationId,
-      remainingForTeam: maxPerTeam - attendeeTeamAppreciations.length - 1,
-      remainingTotal: maxPerAttendee - attendeeAllAppreciations.length - 1,
-    };
-  },
-});
-
-/**
- * Public mutation for creating appreciation (for direct client calls without HTTP).
- * Note: This won't have accurate IP/UA - prefer HTTP endpoint for production.
- */
-export const createAppreciation = mutation({
-  args: {
-    eventId: v.id("events"),
-    teamId: v.id("teams"),
-    attendeeId: v.string(),
-    fingerprintKey: v.string(),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    error: v.optional(v.string()),
-    remainingForTeam: v.number(),
-    remainingTotal: v.number(),
-  }),
-  handler: async (ctx, args) => {
-    const now = Date.now();
-
-    // 1. Verify event exists and is in demo_day mode
-    const event = await ctx.db.get(args.eventId);
-    if (!event) {
-      return {
-        success: false,
-        error: "Event not found",
-        remainingForTeam: 0,
-        remainingTotal: 0,
-      };
-    }
-    if (!(await canAccessEvent(ctx, event))) {
-      return {
-        success: false,
-        error: "Event not found",
-        remainingForTeam: 0,
-        remainingTotal: 0,
-      };
-    }
-    if (!isDemoDayMode(event.mode)) {
-      return {
-        success: false,
-        error: "Event is not in Demo Day mode",
-        remainingForTeam: 0,
-        remainingTotal: 0,
-      };
-    }
-    const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
-
-    // 2b. Enforce live status
-    const status = computeEventStatus(event);
-    if (status !== "active") {
-      return {
-        success: false,
-        error: "Appreciations open once the event is live",
-        remainingForTeam: 0,
-        remainingTotal: 0,
-      };
-    }
-
-    // 2. Verify team exists and belongs to this event
-    const team = await ctx.db.get(args.teamId);
-    if (!team || team.eventId !== args.eventId) {
-      return {
-        success: false,
-        error: "Team not found",
-        remainingForTeam: 0,
-        remainingTotal: 0,
-      };
-    }
-
-    // 3. Check per-team limit
-    const attendeeTeamAppreciations = await ctx.db
-      .query("appreciations")
-      .withIndex("by_event_and_team_and_attendee", (q) =>
-        q
-          .eq("eventId", args.eventId)
-          .eq("teamId", args.teamId)
-          .eq("attendeeId", args.attendeeId),
-      )
-      .collect();
-
-    if (attendeeTeamAppreciations.length >= maxPerTeam) {
-      return {
-        success: false,
-        error: `You've already given ${maxPerTeam} appreciations to this team`,
-        remainingForTeam: 0,
-        remainingTotal: Math.max(
-          0,
-          maxPerAttendee -
-            (
-              await ctx.db
-                .query("appreciations")
-                .withIndex("by_event_and_attendee", (q) =>
-                  q
-                    .eq("eventId", args.eventId)
-                    .eq("attendeeId", args.attendeeId),
-                )
-                .collect()
-            ).length,
-        ),
-      };
-    }
-
-    // 4. Check total event budget
-    const attendeeAllAppreciations = await ctx.db
-      .query("appreciations")
-      .withIndex("by_event_and_attendee", (q) =>
-        q.eq("eventId", args.eventId).eq("attendeeId", args.attendeeId),
-      )
-      .collect();
-
-    if (attendeeAllAppreciations.length >= maxPerAttendee) {
-      return {
-        success: false,
-        error: `You've used all ${maxPerAttendee} appreciations for this event`,
-        remainingForTeam: maxPerTeam - attendeeTeamAppreciations.length,
-        remainingTotal: 0,
-      };
-    }
-
-    // 5. Insert the appreciation (with placeholder IP/UA for direct mutation calls)
-    await ctx.db.insert("appreciations", {
-      eventId: args.eventId,
-      teamId: args.teamId,
-      attendeeId: args.attendeeId,
-      fingerprintKey: args.fingerprintKey,
-      ipAddress: "direct-mutation",
-      userAgent: "direct-mutation",
-      timestamp: now,
-    });
-
-    // 6. Update denormalized score without a full recount query.
-    await ctx.db.patch(args.teamId, { rawScore: (team.rawScore ?? 0) + 1 });
-
-    return {
-      success: true,
       remainingForTeam: maxPerTeam - attendeeTeamAppreciations.length - 1,
       remainingTotal: maxPerAttendee - attendeeAllAppreciations.length - 1,
     };
@@ -596,6 +534,7 @@ export const getAppreciationsCsvData = query({
     }),
   ),
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const event = await ctx.db.get(args.eventId);
     if (!event) {
       throw new Error("Event not found");
@@ -625,7 +564,7 @@ export const getAppreciationsCsvData = query({
       );
       const attendees =
         uniqueAttendeesByTeam.get(appreciation.teamId) ?? new Set<string>();
-      attendees.add(appreciation.attendeeId);
+      attendees.add(getAppreciationVoterKey(appreciation));
       uniqueAttendeesByTeam.set(appreciation.teamId, attendees);
     }
 
@@ -680,7 +619,11 @@ export const clearTeamAppreciations = mutation({
       deletedCount += 1;
     }
 
-    await ctx.db.patch(args.teamId, { rawScore: 0, cleanScore: 0 });
+    await ctx.db.patch(args.teamId, {
+      rawScore: 0,
+      cleanScore: 0,
+      flagged: false,
+    });
 
     return { deletedCount };
   },
@@ -717,13 +660,34 @@ export const clearEventAppreciations = mutation({
       deletedCount += 1;
     }
 
+    const [passes, findings] = await Promise.all([
+      ctx.db
+        .query("demoDayCaptchaPasses")
+        .withIndex("by_event_and_ip", (q) => q.eq("eventId", args.eventId))
+        .collect(),
+      ctx.db
+        .query("demoDayIntegrityFindings")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+        .collect(),
+    ]);
+    for (const pass of passes) {
+      await ctx.db.delete(pass._id);
+    }
+    for (const finding of findings) {
+      await ctx.db.delete(finding._id);
+    }
+
     const teams = await ctx.db
       .query("teams")
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
 
     for (const team of teams) {
-      await ctx.db.patch(team._id, { rawScore: 0, cleanScore: 0 });
+      await ctx.db.patch(team._id, {
+        rawScore: 0,
+        cleanScore: 0,
+        flagged: false,
+      });
     }
 
     return {

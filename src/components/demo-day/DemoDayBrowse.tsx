@@ -18,6 +18,7 @@ interface DemoDayBrowseProps {
     startDate: number;
     endDate: number;
     status: string;
+    venueLocationEnabled?: boolean;
     teams: Array<{
       _id: Id<"teams">;
       name: string;
@@ -48,7 +49,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
   // Get appreciation data
   const appreciationData = useQuery(
     api.appreciations.getTeamAppreciations,
-    attendeeId ? { eventId, attendeeId } : "skip",
+    { eventId },
   );
   const maxPerAttendee = appreciationData?.maxPerAttendee ?? 100;
   const maxPerTeam = appreciationData?.maxPerTeam ?? 10;
@@ -360,6 +361,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
                     maxPerTeam={maxPerTeam}
                     index={index}
                     isEventLive={isEventLive}
+                    requestLocation={event.venueLocationEnabled === true}
                     onQuickView={(enrichedTeam) =>
                       setQuickTeam({
                         ...enrichedTeam,
@@ -387,6 +389,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
               maxPerTeam={maxPerTeam}
               index={index}
               isEventLive={isEventLive}
+              requestLocation={event.venueLocationEnabled === true}
               onQuickView={(enrichedTeam) =>
                 setQuickTeam({
                   ...enrichedTeam,
@@ -411,6 +414,7 @@ export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
             maxPerAttendee={maxPerAttendee}
             onHeightChange={(h) => setSheetHeight(h)}
             isEventLive={isEventLive}
+            requestLocation={event.venueLocationEnabled === true}
           />
         )}
       </AnimatePresence>
@@ -478,6 +482,7 @@ interface TeamCardProps {
   onQuickView?: (team: TeamCardProps["team"]) => void;
   layout?: "grid" | "carousel";
   isEventLive: boolean;
+  requestLocation: boolean;
 }
 
 function TeamCard({
@@ -491,13 +496,15 @@ function TeamCard({
   onQuickView,
   layout = "grid",
   isEventLive,
+  requestLocation,
 }: TeamCardProps) {
-  const { appreciate, isLoading } = useAppreciation();
+  const { appreciate, isLoading, isAuthenticated } = useAppreciation();
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
 
   const attendeeCount = optimisticCount ?? appreciationData?.attendeeCount ?? 0;
   const canAppreciate =
     isEventLive &&
+    isAuthenticated !== false &&
     attendeeId &&
     attendeeCount < maxPerTeam &&
     remainingBudget > 0;
@@ -519,6 +526,7 @@ function TeamCard({
         setOptimisticCount(null);
         toast.error(error);
       },
+      { requestLocation },
     );
 
     // If successful, the query will refresh and we can clear optimistic state
@@ -607,7 +615,9 @@ function TeamCard({
               ) : (
                 <span>❤️</span>
               )}
-              {!isEventLive
+              {isAuthenticated === false
+                ? "Sign in to vote"
+                : !isEventLive
                 ? "Opens when live"
                 : attendeeCount >= maxPerTeam
                   ? "Max"
@@ -636,6 +646,7 @@ interface QuickViewSheetProps {
   maxPerAttendee: number;
   onHeightChange: (height: number) => void;
   isEventLive: boolean;
+  requestLocation: boolean;
 }
 
 function QuickViewSheet({
@@ -648,8 +659,9 @@ function QuickViewSheet({
   maxPerAttendee,
   onHeightChange,
   isEventLive,
+  requestLocation,
 }: QuickViewSheetProps) {
-  const { appreciate, isLoading } = useAppreciation();
+  const { appreciate, isLoading, isAuthenticated } = useAppreciation();
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
 
@@ -675,6 +687,7 @@ function QuickViewSheet({
     optimisticCount ?? team.appreciationData?.attendeeCount ?? 0;
   const canAppreciate =
     isEventLive &&
+    isAuthenticated !== false &&
     attendeeId &&
     attendeeCount < maxPerTeam &&
     remainingBudget > 0;
@@ -693,6 +706,7 @@ function QuickViewSheet({
         setOptimisticCount(null);
         toast.error(error);
       },
+      { requestLocation },
     );
 
     if (result.success) {
@@ -791,7 +805,9 @@ function QuickViewSheet({
             ) : (
               <span>❤️</span>
             )}
-            {!isEventLive
+            {isAuthenticated === false
+              ? "Sign in to vote"
+              : !isEventLive
               ? "Opens when live"
               : attendeeCount >= maxPerTeam
                 ? "Max"

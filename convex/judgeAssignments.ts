@@ -2,7 +2,13 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { isHackathonMode } from "./eventModes";
-import { canAccessEvent } from "./helpers";
+import { canAccessEvent, isJudgeVerifiedForEvent } from "./helpers";
+
+export function assertCanRemoveTeamAssignment(hasSubmittedScore: boolean) {
+  if (hasSubmittedScore) {
+    throw new Error("Cannot remove a team after submitting scores");
+  }
+}
 
 export const addTeamToAssignment = mutation({
   args: {
@@ -37,6 +43,9 @@ export const addTeamToAssignment = mutation({
     }
     if (!isHackathonMode(event.mode)) {
       throw new Error("Judge assignments are only available for hackathon events");
+    }
+    if (!isJudgeVerifiedForEvent(event, judge)) {
+      throw new Error("Judge code verification required");
     }
     if (event.scoringLockedAt) {
       throw new Error("Scoring is locked for this event");
@@ -91,6 +100,9 @@ export const addMultipleTeamsToAssignment = mutation({
     }
     if (!isHackathonMode(event.mode)) {
       throw new Error("Judge assignments are only available for hackathon events");
+    }
+    if (!isJudgeVerifiedForEvent(event, judge)) {
+      throw new Error("Judge code verification required");
     }
     if (event.scoringLockedAt) {
       throw new Error("Scoring is locked for this event");
@@ -162,6 +174,9 @@ export const removeTeamFromAssignment = mutation({
     if (!isHackathonMode(event.mode)) {
       throw new Error("Judge assignments are only available for hackathon events");
     }
+    if (!isJudgeVerifiedForEvent(event, judge)) {
+      throw new Error("Judge code verification required");
+    }
     if (event.scoringLockedAt) {
       throw new Error("Scoring is locked for this event");
     }
@@ -173,10 +188,6 @@ export const removeTeamFromAssignment = mutation({
       )
       .first();
 
-    if (assignment) {
-      await ctx.db.delete(assignment._id);
-    }
-
     const existingScore = await ctx.db
       .query("scores")
       .withIndex("by_judge_and_team", (q) =>
@@ -184,8 +195,10 @@ export const removeTeamFromAssignment = mutation({
       )
       .first();
 
-    if (existingScore) {
-      await ctx.db.delete(existingScore._id);
+    assertCanRemoveTeamAssignment(Boolean(existingScore));
+
+    if (assignment) {
+      await ctx.db.delete(assignment._id);
     }
 
     return null;
@@ -211,6 +224,7 @@ export const getMyAssignments = query({
       .first();
 
     if (!judge) return [];
+    if (!isJudgeVerifiedForEvent(event, judge)) return [];
 
     const assignments = await ctx.db
       .query("judgeAssignments")

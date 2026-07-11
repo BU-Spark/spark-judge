@@ -1,7 +1,13 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { canAccessEvent, requireAdmin, computeEventStatus } from "./helpers";
+import {
+  canAccessEvent,
+  computeEventStatus,
+  isAdmin,
+  requireAdmin,
+  shapeTeamForPublic,
+} from "./helpers";
 import {
   getEventMode,
   isCodeAndTellMode,
@@ -73,6 +79,32 @@ function buildProjectUrlFields(
     projectUrl: normalizedProjectUrl,
     githubUrl: normalizedGithubUrl,
   };
+}
+
+export function shapeTeamsForViewer(
+  teams: any[],
+  viewerIsAdmin: boolean,
+  includeHidden = false,
+) {
+  const visibleTeams = includeHidden && viewerIsAdmin
+    ? teams
+    : teams.filter((team) => !team.hidden);
+  return viewerIsAdmin ? visibleTeams : visibleTeams.map(shapeTeamForPublic);
+}
+
+export function assertEditableTeamEvent(
+  event: { startDate: number; endDate: number; mode?: string },
+  hidden: boolean | undefined,
+) {
+  if (computeEventStatus(event) !== "active") {
+    throw new Error("Team edits are only available while the event is active");
+  }
+  if (hidden) {
+    throw new Error("Hidden teams cannot be edited");
+  }
+  if (isCodeAndTellMode(event.mode)) {
+    throw new Error("Entrants cannot edit Code & Tell projects");
+  }
 }
 
 export const createTeam = mutation({
@@ -421,9 +453,7 @@ export const updateTeam = mutation({
     const event = await ctx.db.get(team.eventId);
     if (!event) throw new Error("Event not found");
     if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
-    if (isCodeAndTellMode(event.mode)) {
-      throw new Error("Entrants cannot edit Code & Tell projects");
-    }
+    assertEditableTeamEvent(event, team.hidden);
 
     const isDemoDay = isDemoDayMode(event.mode);
 
@@ -468,11 +498,22 @@ export const updateTeam = mutation({
 });
 
 export const generateUploadUrl = mutation({
-  args: {},
+  args: { eventId: v.id("events") },
   returns: v.string(),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event || !(await canAccessEvent(ctx, event))) {
+      throw new Error("Event not found");
+    }
+    if (computeEventStatus(event) !== "active") {
+      throw new Error("Uploads are only available while the event is active");
+    }
+    if (isCodeAndTellMode(event.mode)) {
+      throw new Error("Project uploads are not available for Code & Tell events");
+    }
 
     return await ctx.storage.generateUploadUrl();
   },
@@ -487,18 +528,14 @@ export const listTeams = query({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!(await canAccessEvent(ctx, event))) return [];
+    const viewerIsAdmin = await isAdmin(ctx);
 
     const teams = await ctx.db
       .query("teams")
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
 
-    // Filter out hidden teams unless explicitly requested
-    if (!args.includeHidden) {
-      return teams.filter((team) => !team.hidden);
-    }
-
-    return teams;
+    return shapeTeamsForViewer(teams, viewerIsAdmin, args.includeHidden);
   },
 });
 
@@ -586,6 +623,7 @@ export const getTeamEventId = query({
     if (!team) return null;
     const event = await ctx.db.get(team.eventId);
     if (!(await canAccessEvent(ctx, event))) return null;
+    if (team.hidden && !(await isAdmin(ctx))) return null;
     return team.eventId;
   },
 });
@@ -629,6 +667,7 @@ export const getTeamById = query({
     const event = await ctx.db.get(team.eventId);
     if (!event) return null;
     if (!(await canAccessEvent(ctx, event))) return null;
+    if (team.hidden && !(await isAdmin(ctx))) return null;
 
     // Get logo URL if exists
     let logoUrl = null;

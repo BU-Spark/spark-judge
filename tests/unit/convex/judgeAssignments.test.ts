@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
+import { assertCanRemoveTeamAssignment } from '../../../convex/judgeAssignments';
 
 describe('judgeAssignments business logic', () => {
+  it('does not allow removing an assignment after a score exists', () => {
+    expect(() => assertCanRemoveTeamAssignment(true)).toThrow(
+      'Cannot remove a team after submitting scores',
+    );
+    expect(() => assertCanRemoveTeamAssignment(false)).not.toThrow();
+  });
   describe('assignment deduplication', () => {
     it('should detect existing assignment', () => {
       const existingAssignments = [
@@ -62,4 +69,3 @@ describe('judgeAssignments business logic', () => {
     });
   });
 });
-

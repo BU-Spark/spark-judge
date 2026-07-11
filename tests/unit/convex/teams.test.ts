@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { shapeTeamsForViewer } from '../../../convex/teams';
 
 describe('teams business logic', () => {
   describe('team name validation', () => {
@@ -123,6 +124,17 @@ describe('teams business logic', () => {
       const allTeams = teams; // When includeHidden is true, return all
       expect(allTeams.length).toBe(2);
     });
+
+    it('only admins receive raw rows or hidden teams', () => {
+      const teams = [
+        { _id: '1', eventId: 'event-1', name: 'Visible', hidden: false, entrantEmails: ['a@example.com'] },
+        { _id: '2', eventId: 'event-1', name: 'Hidden', hidden: true, entrantEmails: ['b@example.com'] },
+      ];
+      const publicRows = shapeTeamsForViewer(teams, false, true);
+      expect(publicRows).toHaveLength(1);
+      expect(publicRows[0]).not.toHaveProperty('entrantEmails');
+      expect(shapeTeamsForViewer(teams, true, true)).toEqual(teams);
+    });
   });
 
   describe('getTeamEventId', () => {
@@ -154,4 +166,3 @@ describe('teams business logic', () => {
     });
   });
 });
-

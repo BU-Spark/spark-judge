@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { clearAllDataHandler } from "./seeds/admin/clearAllData";
 import {
@@ -18,12 +18,12 @@ import {
   seedPrizeJudgingFlowCohortsDemoHandler,
 } from "./seeds/prize/prizeFlow";
 
-export const seedEvents = mutation({
+export const seedEvents = internalMutation({
   args: {},
   handler: seedEventsHandler,
 });
 
-export const seedJudgeScores = mutation({
+export const seedJudgeScores = internalMutation({
   args: {},
   returns: v.object({
     message: v.string(),
@@ -33,17 +33,17 @@ export const seedJudgeScores = mutation({
   handler: seedJudgeScoresHandler,
 });
 
-export const clearAllData = mutation({
+export const clearAllData = internalMutation({
   args: {},
   handler: clearAllDataHandler,
 });
 
-export const makeCurrentUserAdminForAllEvents = mutation({
+export const makeCurrentUserAdminForAllEvents = internalMutation({
   args: {},
   handler: makeCurrentUserAdminForAllEventsHandler,
 });
 
-export const makeUserAdminByEmail = mutation({
+export const makeUserAdminByEmail = internalMutation({
   args: { email: v.string() },
   returns: v.object({
     message: v.string(),
@@ -52,7 +52,7 @@ export const makeUserAdminByEmail = mutation({
   handler: makeUserAdminByEmailHandler,
 });
 
-export const seedEverything = mutation({
+export const seedEverything = internalMutation({
   args: {},
   returns: v.object({
     message: v.string(),
@@ -64,7 +64,7 @@ export const seedEverything = mutation({
   handler: seedEverythingHandler,
 });
 
-export const seedDemoDayEvent = mutation({
+export const seedDemoDayEvent = internalMutation({
   args: {},
   returns: v.object({
     message: v.string(),
@@ -74,7 +74,7 @@ export const seedDemoDayEvent = mutation({
   handler: seedDemoDayEventHandler,
 });
 
-export const seedCohortJudgingDemo = mutation({
+export const seedCohortJudgingDemo = internalMutation({
   args: {},
   returns: v.object({
     message: v.string(),
@@ -87,7 +87,7 @@ export const seedCohortJudgingDemo = mutation({
   handler: seedCohortJudgingDemoHandler,
 });
 
-export const seedRegularJudgingDemo = mutation({
+export const seedRegularJudgingDemo = internalMutation({
   args: {},
   returns: v.object({
     message: v.string(),
@@ -99,7 +99,7 @@ export const seedRegularJudgingDemo = mutation({
   handler: seedRegularJudgingDemoHandler,
 });
 
-export const seedPrizeJudgingFlowDemo = mutation({
+export const seedPrizeJudgingFlowDemo = internalMutation({
   args: {},
   returns: v.object({
     message: v.string(),
@@ -113,7 +113,7 @@ export const seedPrizeJudgingFlowDemo = mutation({
   handler: seedPrizeJudgingFlowDemoHandler,
 });
 
-export const seedPrizeJudgingFlowLockedDemo = mutation({
+export const seedPrizeJudgingFlowLockedDemo = internalMutation({
   args: {},
   returns: v.object({
     message: v.string(),
@@ -128,7 +128,7 @@ export const seedPrizeJudgingFlowLockedDemo = mutation({
   handler: seedPrizeJudgingFlowLockedDemoHandler,
 });
 
-export const seedPrizeJudgingFlowCohortsDemo = mutation({
+export const seedPrizeJudgingFlowCohortsDemo = internalMutation({
   args: {},
   returns: v.object({
     message: v.string(),
@@ -143,7 +143,7 @@ export const seedPrizeJudgingFlowCohortsDemo = mutation({
   handler: seedPrizeJudgingFlowCohortsDemoHandler,
 });
 
-export const seedCodeAndTellDemo = mutation({
+export const seedCodeAndTellDemo = internalMutation({
   args: {},
   returns: v.object({
     message: v.string(),

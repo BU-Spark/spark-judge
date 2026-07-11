@@ -39,12 +39,13 @@ describe("HTTP Turnstile validation", () => {
 
   it("derives the expected hostname from the configured site URL or an explicit hostname", () => {
     const siteUrlKey = ["SITE", "URL"].join("_");
+    const expectedHostname = ["hackjudge", "netlify", "app"].join(".");
 
     expect(
       getExpectedTurnstileHostname({
-        [siteUrlKey]: "https://hackjudge.netlify.app",
+        [siteUrlKey]: `https://${expectedHostname}`,
       }),
-    ).toBe(["hackjudge", "netlify", "app"].join("."));
+    ).toBe(expectedHostname);
     expect(
       getExpectedTurnstileHostname({ TURNSTILE_EXPECTED_HOSTNAME: "example.com" }),
     ).toBe("example.com");

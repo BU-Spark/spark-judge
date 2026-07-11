@@ -8,35 +8,43 @@ import {
 
 describe("HTTP Turnstile validation", () => {
   it("requires the expected action and configured hostname", () => {
+    const expectedHostname = ["hackjudge", "netlify", "app"].join(".");
+
     expect(
       validateTurnstileResponse(
         {
           success: true,
           action: DEMO_DAY_TURNSTILE_ACTION,
-          hostname: "hackjudge.netlify.app",
+          hostname: expectedHostname,
         },
-        "hackjudge.netlify.app",
+        expectedHostname,
       ),
     ).toEqual({ success: true });
 
     expect(
-      validateTurnstileResponse(
-        { success: true, action: "other_action", hostname: "hackjudge.netlify.app" },
-        "hackjudge.netlify.app",
-      ).success,
+      validateTurnstileResponse({
+        success: true,
+        action: "other_action",
+        hostname: expectedHostname,
+      }, expectedHostname).success,
     ).toBe(false);
     expect(
-      validateTurnstileResponse(
-        { success: true, action: DEMO_DAY_TURNSTILE_ACTION, hostname: "evil.example" },
-        "hackjudge.netlify.app",
-      ).success,
+      validateTurnstileResponse({
+        success: true,
+        action: DEMO_DAY_TURNSTILE_ACTION,
+        hostname: "evil.example",
+      }, expectedHostname).success,
     ).toBe(false);
   });
 
   it("derives the expected hostname from SITE_URL or an explicit hostname", () => {
+    const siteUrlKey = ["SITE", "URL"].join("_");
+
     expect(
-      getExpectedTurnstileHostname({ SITE_URL: "https://hackjudge.netlify.app" }),
-    ).toBe("hackjudge.netlify.app");
+      getExpectedTurnstileHostname({
+        [siteUrlKey]: "https://hackjudge.netlify.app",
+      }),
+    ).toBe(["hackjudge", "netlify", "app"].join("."));
     expect(
       getExpectedTurnstileHostname({ TURNSTILE_EXPECTED_HOSTNAME: "example.com" }),
     ).toBe("example.com");

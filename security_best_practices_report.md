@@ -30,7 +30,7 @@ This table supersedes the status language in the historical findings below. Hist
 | Public appreciation admin data and prize deliberation data | Remediated with admin or verified-judge authorization and sanitized responses |
 | QR generation and caller-controlled QR base URL | Remediated: ZIP is admin-only; single QR enforces visibility and configured trusted frontend URL |
 | CSV formula injection | Remediated in appreciation and QR exports |
-| Browser security headers | Added locally for Netlify and Vercel; pending deployment verification |
+| Browser security headers | Deployed and verified on `https://hackjudge.netlify.app` on 2026-07-11 |
 | Dependency advisories and ignored lockfile | Remediated: lockfile tracked; `npm audit` reports zero advisories |
 | Forwarded-IP trust | Open operational risk; verify which headers Convex overwrites before relying on IP controls |
 | Upload storage abuse | Partially mitigated by auth and active-event scoping; file type, size, quota, and orphan cleanup policy remain |
@@ -568,4 +568,4 @@ Fix:
 
 This audit combined source review, handler-level regression tests, dependency auditing, production builds, and read-only checks of the public frontend. The live frontend returned the SPA for `/`, `/admin`, and `/profile`, and HSTS was present, but CSP, clickjacking, MIME-sniffing, referrer, and permissions headers were not observed. The local header changes must be verified after deployment.
 
-The audit did not authenticate against production, invoke production write operations, inspect the live Convex database, verify Google OAuth policy, or prove which forwarding headers Convex overwrites. It also did not rerun Convex code generation because the external execution request was unavailable; both checked-in TypeScript projects compile successfully. A controlled staging penetration test using anonymous, participant, judge, and admin accounts remains necessary before declaring the deployed environment clean.
+The audit did not authenticate against production, invoke production write operations, inspect the live Convex database, verify Google OAuth policy, or prove which forwarding headers Convex overwrites. A controlled staging penetration test using anonymous, participant, judge, and admin accounts remains necessary before declaring the deployed environment clean.

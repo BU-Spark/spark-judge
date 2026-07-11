@@ -30,7 +30,7 @@ This table supersedes the status language in the historical findings below. Hist
 | Public appreciation admin data and prize deliberation data | Remediated with admin or verified-judge authorization and sanitized responses |
 | QR generation and caller-controlled QR base URL | Remediated: ZIP is admin-only; single QR enforces visibility and configured trusted frontend URL |
 | CSV formula injection | Remediated in appreciation and QR exports |
-| Browser security headers | Deployed and verified on `https://hackjudge.netlify.app` on 2026-07-11 |
+| Browser security headers | Deployed and verified on the production HackJudge hostname on 2026-07-11 |
 | Dependency advisories and ignored lockfile | Remediated: lockfile tracked; `npm audit` reports zero advisories |
 | Forwarded-IP trust | Open operational risk; verify which headers Convex overwrites before relying on IP controls |
 | Upload storage abuse | Partially mitigated by auth and active-event scoping; file type, size, quota, and orphan cleanup policy remain |

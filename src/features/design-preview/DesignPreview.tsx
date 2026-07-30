@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import "./designPreview.css";
+import festivalHero from "../../assets/design-preview/maker-festival/hero-bridge.webp";
+import echoGridCover from "../../assets/design-preview/maker-festival/echo-grid.webp";
 
 type Direction = "festival" | "control" | "gallery";
 type Screen = "home" | "create" | "score";
@@ -173,18 +175,47 @@ function HomeScreen({ direction }: { direction: Direction }) {
   }
 
   return (
-    <ScreenShell active="home" direction={direction}>
-      <section className="dp-festival-hero">
-        <span className="dp-tape">MAY 24–26 · METRO INNOVATION HUB</span>
-        <div className="dp-burst">69<br /><small>PROJECTS</small></div>
-        <p className="dp-hand">Welcome to the showcase!</p>
-        <h1>Civic Futures<br /><em>Hackathon</em></h1>
-        <p>Big ideas. Bold makers. A weekend to build a better city.</p>
-        <div><button className="dp-primary">Start the showcase tour <Glyph name="arrow" /></button><button className="dp-secondary">Surprise me</button></div>
+    <ScreenShell active="home" direction={direction} fullWidth>
+      <div className="dp-festival-phase"><span>Phase 0 fidelity spike</span><span>Local concept data</span></div>
+      <section className="dp-f2-hero">
+        <img src={festivalHero} alt="" />
+        <div className="dp-f2-hero-content">
+          <span className="dp-f2-live"><i /> Live now</span>
+          <h1>HackFest<br />Boston 2026</h1>
+          <p>Apr 10 – Apr 12, 2026<br />Boston, MA</p>
+          <button className="dp-f2-primary">Explore 42 projects <Glyph name="arrow" /></button>
+        </div>
+        <div className="dp-f2-seal" aria-hidden="true"><span>Make</span><i>+</i><span>Build</span><i>+</i><span>Ship</span></div>
       </section>
-      <section className="dp-festival-projects">
-        <div className="dp-section-title"><div><span className="dp-kicker">Fresh from the floor</span><h2>Meet the makers</h2></div><span className="dp-sticker">MADE HERE</span></div>
-        <div className="dp-project-grid">{projects.map((project, index) => <article key={project.name} className={`tilt-${index + 1}`}><ProjectArt mark={project.mark} /><small>{project.tag}</small><h3>{project.name}</h3><p>Thoughtful tools for everyday civic life.</p><span className="dp-card-arrow">↗</span></article>)}</div>
+
+      <section className="dp-f2-projects" aria-labelledby="festival-featured-projects">
+        <div className="dp-f2-section-head">
+          <h2 id="festival-featured-projects">Featured projects</h2>
+          <button>View all <Glyph name="arrow" /></button>
+        </div>
+        <div className="dp-f2-project-grid">
+          <article className="dp-f2-project-card">
+            <div className="dp-f2-cover"><img src={echoGridCover} alt="" /><span>AI/ML</span></div>
+            <div><h3>Echo Grid</h3><p>Team Aurora</p><Glyph name="arrow" /></div>
+          </article>
+          <article className="dp-f2-project-card">
+            <div className="dp-f2-cover dp-f2-cover--canvas" aria-hidden="true"><i /><i /><i /><span>Web</span></div>
+            <div><h3>Civic Canvas</h3><p>Team Northpoint</p><Glyph name="arrow" /></div>
+          </article>
+          <article className="dp-f2-project-card">
+            <div className="dp-f2-cover dp-f2-cover--nexus" aria-hidden="true"><i /><i /><span>Hardware</span></div>
+            <div><h3>Nexus Labs</h3><p>Team Circuit</p><Glyph name="arrow" /></div>
+          </article>
+        </div>
+      </section>
+
+      <section className="dp-f2-upcoming" aria-labelledby="festival-upcoming-events">
+        <div className="dp-f2-section-head"><h2 id="festival-upcoming-events">Upcoming events</h2></div>
+        <div className="dp-f2-event-grid">
+          <article><time><strong>May</strong><span>22–24</span></time><div><h3>MakeFest Austin 2026</h3><p>Austin, TX</p></div><Glyph name="arrow" /></article>
+          <article><time><strong>Jun</strong><span>12–14</span></time><div><h3>BuildDay Seattle 2026</h3><p>Seattle, WA</p></div><Glyph name="arrow" /></article>
+          <article><time><strong>Jul</strong><span>17–19</span></time><div><h3>HackTheBay 2026</h3><p>San Francisco, CA</p></div><Glyph name="arrow" /></article>
+        </div>
       </section>
     </ScreenShell>
   );
@@ -270,11 +301,11 @@ function ScoreScreen({ direction }: { direction: Direction }) {
   );
 }
 
-function ScreenShell({ active, direction, children }: { active: Screen; direction: Direction; children: ReactNode }) {
+function ScreenShell({ active, direction, children, fullWidth = false }: { active: Screen; direction: Direction; children: ReactNode; fullWidth?: boolean }) {
   return (
-    <div className="dp-app-frame">
+    <div className={`dp-app-frame${fullWidth ? " is-festival-home" : ""}`}>
       <AppHeader direction={direction} />
-      <div className="dp-app-body"><SideNav active={active} /><main>{children}</main></div>
+      <div className={`dp-app-body${fullWidth ? " dp-app-body--full" : ""}`}>{!fullWidth && <SideNav active={active} />}<main>{children}</main></div>
     </div>
   );
 }

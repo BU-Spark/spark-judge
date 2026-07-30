@@ -12,6 +12,7 @@ import { AdminHomeRoute } from "./features/admin/routes/AdminHomeRoute";
 import { AdminCreateEventRoute } from "./features/admin/routes/AdminCreateEventRoute";
 import { AdminEventRoute } from "./features/admin/routes/AdminEventRoute";
 import { AdminInsightsRoute } from "./features/admin/routes/AdminInsightsRoute";
+import { DesignPreview } from "./features/design-preview/DesignPreview";
 import { useState, useEffect } from "react";
 import { Id } from "../convex/_generated/dataModel";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -31,6 +32,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/design-preview" element={<DesignPreview />} />
         <Route element={<Layout />}>
           <Route path="/" element={<LandingPageWrapper />} />
           <Route path="/event/:eventId" element={<EventViewWrapper />} />

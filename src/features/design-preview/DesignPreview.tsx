@@ -65,6 +65,9 @@ function Glyph({ name }: { name: string }) {
     grid: <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />,
     list: <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />,
     leaf: <><path d="M19 4C11 4 5 8 5 14c0 3 2 5 5 5 6 0 9-7 9-15Z" /><path d="M5 20c2-5 6-8 11-11" /></>,
+    trophy: <><path d="M8 4h8v5c0 3-1.5 5-4 5s-4-2-4-5V4Zm4 10v5m-4 1h8" /><path d="M8 6H4v2c0 2 1.5 3 4 3m8-5h4v2c0 2-1.5 3-4 3" /></>,
+    heart: <path d="M12 20S4 15.5 4 9.5A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 8 3.5C20 15.5 12 20 12 20Z" />,
+    mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11c0 4 3 6 7 6s7-2 7-6m-7 6v4m-4 0h8" /></>,
   };
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="dp-glyph">
@@ -82,14 +85,14 @@ function ProductMark() {
   );
 }
 
-function AppHeader({ direction }: { direction: Direction }) {
+function AppHeader({ direction, active }: { direction: Direction; active: Screen }) {
   return (
     <header className="dp-app-header">
       <ProductMark />
       <nav aria-label="Preview product navigation">
-        <span>Events</span>
+        <span className={active !== "score" ? "is-active" : ""}>Events</span>
         <span>Projects</span>
-        <span>Judging</span>
+        <span className={active === "score" ? "is-active" : ""}>Judging</span>
       </nav>
       <div className="dp-avatar" aria-label="Signed in as Jordan Davis">JD</div>
       {direction === "festival" && <span className="dp-sticker dp-sticker--header">LIVE!</span>}
@@ -230,7 +233,57 @@ function Field({ label, children, wide = false }: { label: string; children: Rea
   return <label className={wide ? "is-wide" : ""}><span>{label}</span><div className="dp-input">{children}</div></label>;
 }
 
+function FestivalField({ label, value, wide = false, multiline = false }: { label: string; value: string; wide?: boolean; multiline?: boolean }) {
+  return (
+    <label className={`dp-f3-field${wide ? " is-wide" : ""}`}>
+      <span>{label}</span>
+      {multiline
+        ? <textarea readOnly value={value} />
+        : <input readOnly value={value} />}
+    </label>
+  );
+}
+
 function CreateScreen({ direction }: { direction: Direction }) {
+  if (direction === "festival") {
+    return (
+      <ScreenShell active="create" direction={direction} festivalScreen="create">
+        <div className="dp-festival-phase"><span>Maker Festival system</span><span>Local concept data</span></div>
+        <header className="dp-f3-create-head">
+          <div><span className="dp-kicker">New event</span><h1>Create your event</h1><p>Set the stage for a weekend worth remembering.</p></div>
+          <span className="dp-f3-draft"><i /> Draft</span>
+        </header>
+
+        <ol className="dp-f3-steps" aria-label="Event creation progress">
+          <li className="is-active"><span>01</span><strong>Event details</strong><i /></li>
+          <li><span>02</span><strong>Judging setup</strong><i /></li>
+          <li><span>03</span><strong>Review & publish</strong></li>
+        </ol>
+
+        <section className="dp-f3-mode-section" aria-labelledby="festival-mode-heading">
+          <div className="dp-f3-section-title"><div><span className="dp-kicker">Choose a format</span><h2 id="festival-mode-heading">What are you hosting?</h2></div><p>This shapes participation, judging, and results.</p></div>
+          <div className="dp-f3-mode-grid">
+            <button type="button" className="is-selected" aria-pressed="true"><span><Glyph name="trophy" /></span><div><strong>Hackathon</strong><small>Rubric judging for teams</small></div><i><Glyph name="check" /></i></button>
+            <button type="button" aria-pressed="false"><span><Glyph name="heart" /></span><div><strong>Demo Day</strong><small>Public project appreciations</small></div></button>
+            <button type="button" aria-pressed="false"><span><Glyph name="mic" /></span><div><strong>Code & Tell</strong><small>Ranked community ballots</small></div></button>
+          </div>
+        </section>
+
+        <form className="dp-f3-event-form">
+          <div className="dp-f3-section-title"><div><span className="dp-kicker">Event details</span><h2>The essentials</h2></div><p>All fields can be changed before publishing.</p></div>
+          <div className="dp-f3-fields">
+            <FestivalField label="Event name" value="Civic Futures Hackathon" wide />
+            <FestivalField label="Start date" value="May 24, 2026" />
+            <FestivalField label="End date" value="May 26, 2026" />
+            <FestivalField label="Location" value="Metro Innovation Hub, Austin" wide />
+            <FestivalField label="Description" value="A weekend of building, collaboration, and civic impact. Teams turn local challenges into working prototypes." wide multiline />
+          </div>
+          <div className="dp-f3-create-actions"><button type="button" className="dp-f3-save">Save draft</button><button type="button" className="dp-f2-primary">Continue to judging setup <Glyph name="arrow" /></button></div>
+        </form>
+      </ScreenShell>
+    );
+  }
+
   const heading = direction === "control" ? "Launch event" : direction === "festival" ? "Make some noise" : "Create event";
   const subheading = direction === "control" ? "Set the foundation for a fair, successful evaluation." : direction === "festival" ? "Set the stage for a weekend worth remembering." : "Set the stage for something meaningful.";
   return (
@@ -275,6 +328,44 @@ function ScoreControls({ direction }: { direction: Direction }) {
 }
 
 function ScoreScreen({ direction }: { direction: Direction }) {
+  if (direction === "festival") {
+    return (
+      <ScreenShell active="score" direction={direction} festivalScreen="score">
+        <div className="dp-festival-phase"><span>Maker Festival system</span><span>Local concept data</span></div>
+        <header className="dp-f3-score-head">
+          <div><span className="dp-kicker">Civic Futures Hackathon</span><h1>Score project</h1><p>Your draft stays private until final submission.</p></div>
+          <div className="dp-f3-progress" aria-label="4 of 12 projects scored"><span><i style={{ width: "33%" }} /></span><strong>4 / 12 scored</strong></div>
+        </header>
+
+        <section className="dp-f3-dossier" aria-labelledby="festival-score-project">
+          <div className="dp-f3-dossier-cover"><img src={echoGridCover} alt="" /><span>AI/ML</span></div>
+          <div className="dp-f3-dossier-copy"><span>Project 05 of 12</span><h2 id="festival-score-project">Echo Grid</h2><p>Adaptive energy routing that helps community buildings cut peak demand without sacrificing comfort.</p></div>
+          <dl><div><dt>Team</dt><dd>Aurora</dd></div><div><dt>Track</dt><dd>Climate tech</dd></div><div><dt>Stack</dt><dd>React · Python · OpenAI</dd></div></dl>
+        </section>
+
+        <section className="dp-f3-scoring" aria-labelledby="festival-rubric-heading">
+          <div className="dp-f3-section-title"><div><span className="dp-kicker">Weighted rubric</span><h2 id="festival-rubric-heading">Rate each category</h2></div><p>Select one score per criterion.</p></div>
+          <div className="dp-f3-rubrics">
+            {rubric.map((criterion, criterionIndex) => (
+              <article key={criterion.name} className={criterion.score ? "is-reviewed" : ""}>
+                <div className="dp-f3-rubric-copy">
+                  <span className="dp-f3-rubric-icon"><Glyph name={criterionIndex === 0 ? "leaf" : criterionIndex === 1 ? "spark" : "check"} /></span>
+                  <div><h3>{criterion.name}</h3><p>{criterion.detail}</p></div>
+                  <small>{criterion.score ? "Reviewed" : "Not reviewed"}</small>
+                </div>
+                <div className="dp-f3-score-row">
+                  {[1, 2, 3, 4, 5].map((value) => <button key={value} type="button" className={criterion.score === value ? "is-selected" : ""} aria-label={`${criterion.name}: ${value} of 5`}>{value}</button>)}
+                </div>
+              </article>
+            ))}
+          </div>
+          <label className="dp-f3-notes"><span>Private notes</span><textarea readOnly value="Strong technical execution. Ask how the demand forecast handles incomplete building data." /></label>
+          <footer className="dp-f3-score-actions"><button type="button" className="dp-f3-save">Previous project</button><span><Glyph name="shield" /> Draft saved privately</span><button type="button" className="dp-f2-primary">Save & next project <Glyph name="arrow" /></button></footer>
+        </section>
+      </ScreenShell>
+    );
+  }
+
   return (
     <ScreenShell active="score" direction={direction}>
       <div className="dp-score-head">
@@ -301,11 +392,13 @@ function ScoreScreen({ direction }: { direction: Direction }) {
   );
 }
 
-function ScreenShell({ active, direction, children, fullWidth = false }: { active: Screen; direction: Direction; children: ReactNode; fullWidth?: boolean }) {
+function ScreenShell({ active, direction, children, fullWidth = false, festivalScreen }: { active: Screen; direction: Direction; children: ReactNode; fullWidth?: boolean; festivalScreen?: Screen }) {
+  const isFullWidth = fullWidth || Boolean(festivalScreen);
+  const festivalClass = festivalScreen ? ` is-festival-screen is-festival-${festivalScreen}` : "";
   return (
-    <div className={`dp-app-frame${fullWidth ? " is-festival-home" : ""}`}>
-      <AppHeader direction={direction} />
-      <div className={`dp-app-body${fullWidth ? " dp-app-body--full" : ""}`}>{!fullWidth && <SideNav active={active} />}<main>{children}</main></div>
+    <div className={`dp-app-frame${fullWidth ? " is-festival-home" : ""}${festivalClass}`}>
+      <AppHeader direction={direction} active={active} />
+      <div className={`dp-app-body${isFullWidth ? " dp-app-body--full" : ""}`}>{!isFullWidth && <SideNav active={active} />}<main>{children}</main></div>
     </div>
   );
 }

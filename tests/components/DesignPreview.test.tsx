@@ -32,6 +32,20 @@ describe("DesignPreview", () => {
     expect(screen.getByText(/Interactive concept · Dummy data/)).toBeInTheDocument();
   });
 
+  it("renders the calmer Maker Festival scoring workflow", () => {
+    render(
+      <MemoryRouter initialEntries={["/design-preview?direction=festival&screen=score"]}>
+        <DesignPreview />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Score project", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Echo Grid", level: 2 })).toBeInTheDocument();
+    expect(screen.getByLabelText("4 of 12 projects scored")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Impact: 4 of 5" })).toHaveClass("is-selected");
+    expect(screen.getByText("Draft saved privately")).toBeInTheDocument();
+  });
+
   it("switches direction and screen without touching product data", async () => {
     const user = userEvent.setup();
     render(
@@ -43,7 +57,8 @@ describe("DesignPreview", () => {
     await user.click(screen.getByRole("tab", { name: /Maker Festival/ }));
     await user.click(screen.getByRole("tab", { name: "Create event" }));
 
-    expect(screen.getByRole("heading", { name: "Make some noise", level: 1 })).toBeInTheDocument();
-    expect(screen.getByText("Civic Futures Hackathon")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Create your event", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Hackathon/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByDisplayValue("Civic Futures Hackathon")).toBeInTheDocument();
   });
 });

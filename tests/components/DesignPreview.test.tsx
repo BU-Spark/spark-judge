@@ -16,7 +16,9 @@ describe("DesignPreview", () => {
     expect(screen.getByRole("heading", { name: /HackFest\s*Boston 2026/, level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Featured projects", level: 2 })).toBeInTheDocument();
     expect(screen.getByText("Echo Grid")).toBeInTheDocument();
-    expect(screen.getByText("Phase 0 fidelity spike")).toBeInTheDocument();
+    expect(screen.getAllByTestId("festival-project-card")).toHaveLength(6);
+    expect(screen.getByText("LearnLoop")).toBeInTheDocument();
+    expect(screen.getByText("Maker Festival system")).toBeInTheDocument();
   });
 
   it("opens a deep-linked direction and screen using dummy content", () => {
@@ -32,7 +34,8 @@ describe("DesignPreview", () => {
     expect(screen.getByText(/Interactive concept · Dummy data/)).toBeInTheDocument();
   });
 
-  it("renders the calmer Maker Festival scoring workflow", () => {
+  it("renders an accessible, interactive Maker Festival scoring workflow", async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={["/design-preview?direction=festival&screen=score"]}>
         <DesignPreview />
@@ -42,7 +45,12 @@ describe("DesignPreview", () => {
     expect(screen.getByRole("heading", { name: "Score project", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Echo Grid", level: 2 })).toBeInTheDocument();
     expect(screen.getByLabelText("4 of 12 projects scored")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Impact: 4 of 5" })).toHaveClass("is-selected");
+    expect(screen.getByRole("radio", { name: "Impact: 4 of 5" })).toBeChecked();
+    expect(screen.getByRole("group", { name: "Score Impact" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "Impact: 5 of 5" }));
+
+    expect(screen.getByRole("radio", { name: "Impact: 5 of 5" })).toBeChecked();
     expect(screen.getByText("Draft saved privately")).toBeInTheDocument();
   });
 
@@ -59,6 +67,7 @@ describe("DesignPreview", () => {
 
     expect(screen.getByRole("heading", { name: "Create your event", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Hackathon/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("01").closest("li")).toHaveAttribute("aria-current", "step");
     expect(screen.getByDisplayValue("Civic Futures Hackathon")).toBeInTheDocument();
   });
 });

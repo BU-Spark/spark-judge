@@ -3,6 +3,11 @@ import { Link, useSearchParams } from "react-router-dom";
 import "./designPreview.css";
 import festivalHero from "../../assets/design-preview/maker-festival/hero-bridge.webp";
 import echoGridCover from "../../assets/design-preview/maker-festival/echo-grid.webp";
+import civicCanvasCover from "../../assets/design-preview/maker-festival/civic-canvas.webp";
+import nexusLabsCover from "../../assets/design-preview/maker-festival/nexus-labs.webp";
+import greenRouteCover from "../../assets/design-preview/maker-festival/greenroute.webp";
+import careLinkCover from "../../assets/design-preview/maker-festival/carelink.webp";
+import learnLoopCover from "../../assets/design-preview/maker-festival/learnloop.webp";
 
 type Direction = "festival" | "control" | "gallery";
 type Screen = "home" | "create" | "score";
@@ -179,7 +184,7 @@ function HomeScreen({ direction }: { direction: Direction }) {
 
   return (
     <ScreenShell active="home" direction={direction} fullWidth>
-      <div className="dp-festival-phase"><span>Phase 0 fidelity spike</span><span>Local concept data</span></div>
+      <div className="dp-festival-phase"><span>Maker Festival system</span><span>Local concept data</span></div>
       <section className="dp-f2-hero">
         <img src={festivalHero} alt="" />
         <div className="dp-f2-hero-content">
@@ -197,17 +202,29 @@ function HomeScreen({ direction }: { direction: Direction }) {
           <button>View all <Glyph name="arrow" /></button>
         </div>
         <div className="dp-f2-project-grid">
-          <article className="dp-f2-project-card">
+          <article className="dp-f2-project-card" data-testid="festival-project-card">
             <div className="dp-f2-cover"><img src={echoGridCover} alt="" /><span>AI/ML</span></div>
             <div><h3>Echo Grid</h3><p>Team Aurora</p><Glyph name="arrow" /></div>
           </article>
-          <article className="dp-f2-project-card">
-            <div className="dp-f2-cover dp-f2-cover--canvas" aria-hidden="true"><i /><i /><i /><span>Web</span></div>
+          <article className="dp-f2-project-card" data-testid="festival-project-card">
+            <div className="dp-f2-cover"><img src={civicCanvasCover} alt="" /><span>Web</span></div>
             <div><h3>Civic Canvas</h3><p>Team Northpoint</p><Glyph name="arrow" /></div>
           </article>
-          <article className="dp-f2-project-card">
-            <div className="dp-f2-cover dp-f2-cover--nexus" aria-hidden="true"><i /><i /><span>Hardware</span></div>
+          <article className="dp-f2-project-card" data-testid="festival-project-card">
+            <div className="dp-f2-cover"><img src={nexusLabsCover} alt="" /><span>Hardware</span></div>
             <div><h3>Nexus Labs</h3><p>Team Circuit</p><Glyph name="arrow" /></div>
+          </article>
+          <article className="dp-f2-project-card" data-testid="festival-project-card">
+            <div className="dp-f2-cover"><img src={greenRouteCover} alt="" /><span>Climate</span></div>
+            <div><h3>GreenRoute</h3><p>Team Meridian</p><Glyph name="arrow" /></div>
+          </article>
+          <article className="dp-f2-project-card" data-testid="festival-project-card">
+            <div className="dp-f2-cover"><img src={careLinkCover} alt="" /><span>Health</span></div>
+            <div><h3>CareLink</h3><p>Team Common Thread</p><Glyph name="arrow" /></div>
+          </article>
+          <article className="dp-f2-project-card" data-testid="festival-project-card">
+            <div className="dp-f2-cover"><img src={learnLoopCover} alt="" /><span>Education</span></div>
+            <div><h3>LearnLoop</h3><p>Team Relay</p><Glyph name="arrow" /></div>
           </article>
         </div>
       </section>
@@ -255,7 +272,7 @@ function CreateScreen({ direction }: { direction: Direction }) {
         </header>
 
         <ol className="dp-f3-steps" aria-label="Event creation progress">
-          <li className="is-active"><span>01</span><strong>Event details</strong><i /></li>
+          <li className="is-active" aria-current="step"><span>01</span><strong>Event details</strong><i /></li>
           <li><span>02</span><strong>Judging setup</strong><i /></li>
           <li><span>03</span><strong>Review & publish</strong></li>
         </ol>
@@ -328,6 +345,8 @@ function ScoreControls({ direction }: { direction: Direction }) {
 }
 
 function ScoreScreen({ direction }: { direction: Direction }) {
+  const [festivalScores, setFestivalScores] = useState(() => rubric.map((criterion) => criterion.score));
+
   if (direction === "festival") {
     return (
       <ScreenShell active="score" direction={direction} festivalScreen="score">
@@ -346,18 +365,34 @@ function ScoreScreen({ direction }: { direction: Direction }) {
         <section className="dp-f3-scoring" aria-labelledby="festival-rubric-heading">
           <div className="dp-f3-section-title"><div><span className="dp-kicker">Weighted rubric</span><h2 id="festival-rubric-heading">Rate each category</h2></div><p>Select one score per criterion.</p></div>
           <div className="dp-f3-rubrics">
-            {rubric.map((criterion, criterionIndex) => (
-              <article key={criterion.name} className={criterion.score ? "is-reviewed" : ""}>
-                <div className="dp-f3-rubric-copy">
-                  <span className="dp-f3-rubric-icon"><Glyph name={criterionIndex === 0 ? "leaf" : criterionIndex === 1 ? "spark" : "check"} /></span>
-                  <div><h3>{criterion.name}</h3><p>{criterion.detail}</p></div>
-                  <small>{criterion.score ? "Reviewed" : "Not reviewed"}</small>
-                </div>
-                <div className="dp-f3-score-row">
-                  {[1, 2, 3, 4, 5].map((value) => <button key={value} type="button" className={criterion.score === value ? "is-selected" : ""} aria-label={`${criterion.name}: ${value} of 5`}>{value}</button>)}
-                </div>
-              </article>
-            ))}
+            {rubric.map((criterion, criterionIndex) => {
+              const selectedScore = festivalScores[criterionIndex];
+              return (
+                <article key={criterion.name} className={selectedScore ? "is-reviewed" : ""}>
+                  <div className="dp-f3-rubric-copy">
+                    <span className="dp-f3-rubric-icon"><Glyph name={criterionIndex === 0 ? "leaf" : criterionIndex === 1 ? "spark" : "check"} /></span>
+                    <div><h3>{criterion.name}</h3><p>{criterion.detail}</p></div>
+                    <small>{selectedScore ? "Reviewed" : "Not reviewed"}</small>
+                  </div>
+                  <fieldset className="dp-f3-score-row">
+                    <legend className="sr-only">Score {criterion.name}</legend>
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <label key={value}>
+                        <input
+                          type="radio"
+                          name={`festival-${criterion.name.toLowerCase()}-score`}
+                          value={value}
+                          checked={selectedScore === value}
+                          onChange={() => setFestivalScores((scores) => scores.map((score, index) => index === criterionIndex ? value : score))}
+                          aria-label={`${criterion.name}: ${value} of 5`}
+                        />
+                        <span>{value}</span>
+                      </label>
+                    ))}
+                  </fieldset>
+                </article>
+              );
+            })}
           </div>
           <label className="dp-f3-notes"><span>Private notes</span><textarea readOnly value="Strong technical execution. Ask how the demand forecast handles incomplete building data." /></label>
           <footer className="dp-f3-score-actions"><button type="button" className="dp-f3-save">Previous project</button><span><Glyph name="shield" /> Draft saved privately</span><button type="button" className="dp-f2-primary">Save & next project <Glyph name="arrow" /></button></footer>

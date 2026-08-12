@@ -1,0 +1,39 @@
+{
+  "title": "Approve homepage composition",
+  "question": "Which composition should we build? Teletext theming is fixed; pick the layout.",
+  "options": [
+    {
+      "id": "comp-a",
+      "label": "Focal Board",
+      "kicker": "COMP A",
+      "thesis": "Large phase board first; Active cards and Upcoming list below.",
+      "viewport": "Status bar → monumental focal event with one CTA → horizontal Active → Upcoming rows.",
+      "risk": "Strong first viewport; denser multi-event scanning waits for scroll.",
+      "hero": ".impeccable/mocks/homepage-comp-a.webp",
+      "sketch": ".impeccable/mocks/homepage-comp-a.webp"
+    },
+    {
+      "id": "comp-b",
+      "label": "Semester Split",
+      "kicker": "COMP B",
+      "thesis": "Compact focal beside a live semester board; project mosaic under.",
+      "viewport": "Ticker → two-column focal + table → mosaic strip of projects.",
+      "risk": "Best for operators with many events; can feel denser on laptop.",
+      "hero": ".impeccable/mocks/homepage-comp-b.webp",
+      "sketch": ".impeccable/mocks/homepage-comp-b.webp"
+    },
+    {
+      "id": "comp-c",
+      "label": "Magazine Frame",
+      "kicker": "COMP C",
+      "thesis": "Teletext page chrome framing a familiar content well and project strip.",
+      "viewport": "Outer page frame → hero + project highlights → Upcoming list.",
+      "risk": "Most themed; frame must stay secondary to usability.",
+      "hero": ".impeccable/mocks/homepage-comp-c.webp",
+      "sketch": ".impeccable/mocks/homepage-comp-c.webp"
+    }
+  ],
+  "reroll": false,
+  "steer": true,
+  "canon": false
+}

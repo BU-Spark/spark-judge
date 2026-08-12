@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-12T02:30:00.000Z",
+  "title": "Design System: HackJudge",
+  "extensions": {
+    "colorMeta": {
+      "desk": { "role": "neutral", "displayName": "Workbench", "canonical": "#ddd9d0", "tonalRamp": ["#43423d", "#6a6862", "#91908a", "#b7b5ad", "#ddd9d0", "#e5e2da", "#edeae4", "#f5f3ee"] },
+      "chassis": { "role": "neutral", "displayName": "Chassis", "canonical": "#eceae4", "tonalRamp": ["#474642", "#706e68", "#99968e", "#c3c0b9", "#eceae4", "#efede8", "#f3f1ec", "#f7f6f2"] },
+      "panel": { "role": "neutral", "displayName": "Recessed Panel", "canonical": "#e3e0d7", "tonalRamp": ["#45443e", "#6d6b64", "#94928a", "#bcb9af", "#e3e0d7", "#e8e5dd", "#eeece5", "#f5f3ee"] },
+      "hair": { "role": "neutral", "displayName": "Scored Hairline", "canonical": "#cfccc0", "tonalRamp": ["#3f3e3a", "#64635d", "#8b897f", "#adaba0", "#cfccc0", "#dbd8cf", "#e7e5de", "#f3f2ed"] },
+      "hair-lit": { "role": "neutral", "displayName": "Engraved Highlight", "canonical": "#f7f5ee", "tonalRamp": ["#4b4a45", "#75736b", "#9e9c92", "#cbc9c1", "#f7f5ee", "#f8f6f0", "#faf8f3", "#fbfaf6"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#1a1c1e", "tonalRamp": ["#060707", "#0c0d0e", "#131516", "#1a1c1e", "#484a4d", "#76787b", "#a4a6a8", "#d2d3d4"] },
+      "ink-soft": { "role": "neutral", "displayName": "Soft Ink", "canonical": "#42443e", "tonalRamp": ["#141513", "#22231f", "#32332e", "#42443e", "#686a64", "#8e908a", "#b4b5b0", "#dadbda"] },
+      "ink-dim": { "role": "neutral", "displayName": "Dim Ink", "canonical": "#5b5d55", "tonalRamp": ["#1c1d1a", "#2e2f2a", "#454640", "#5b5d55", "#7c7e77", "#9d9f99", "#bebfbb", "#dfe0de"] },
+      "screen": { "role": "neutral", "displayName": "Screen Glass", "canonical": "#12181d", "tonalRamp": ["#05080a", "#090e11", "#0d1317", "#12181d", "#41464a", "#6f7478", "#9da3a6", "#ccd1d2"] },
+      "screen-edge": { "role": "neutral", "displayName": "Screen Edge", "canonical": "#080c0f", "tonalRamp": ["#020304", "#040607", "#06090b", "#080c0f", "#393d40", "#696d70", "#9a9ea0", "#cbced0"] },
+      "screen-deep": { "role": "neutral", "displayName": "Screen Deep", "canonical": "#0b1115", "tonalRamp": ["#030405", "#05090b", "#080d10", "#0b1115", "#3c4246", "#6c7276", "#9ca2a5", "#ccd1d3"] },
+      "screen-ink": { "role": "neutral", "displayName": "Screen Ink", "canonical": "#e8edee", "tonalRamp": ["#474a4b", "#6f7274", "#979a9c", "#c0c4c5", "#e8edee", "#ecf0f1", "#f1f3f4", "#f6f7f7"] },
+      "screen-dim": { "role": "neutral", "displayName": "Screen Dim", "canonical": "#9fb0b5", "tonalRamp": ["#303638", "#4d5558", "#6a7479", "#85939a", "#9fb0b5", "#b5c2c6", "#ccd5d8", "#e4e9eb"] },
+      "key-white": { "role": "neutral", "displayName": "Key White", "canonical": "#fbfaf6", "tonalRamp": ["#4d4c48", "#77756f", "#a19e96", "#ceccc3", "#fbfaf6", "#fbfaf7", "#fcfbf9", "#fdfdfc"] },
+      "encoder-orange": { "role": "secondary", "displayName": "Encoder Orange", "canonical": "#ff6b2c", "tonalRamp": ["#4d1f0b", "#7a3112", "#a8471b", "#d6591f", "#ff6b2c", "#ff8956", "#ffa780", "#ffc5aa"] },
+      "encoder-orange-hot": { "role": "secondary", "displayName": "Encoder Orange Hot", "canonical": "#ff7d45", "tonalRamp": ["#4d2615", "#7a3a1f", "#a84e29", "#d66532", "#ff7d45", "#ff9769", "#ffb18d", "#ffcbb1"] },
+      "encoder-orange-edge": { "role": "secondary", "displayName": "Encoder Orange Edge", "canonical": "#d14d16", "tonalRamp": ["#411704", "#67250a", "#8d340e", "#b24012", "#d14d16", "#da6a3a", "#e48a62", "#eeaa8c"] },
+      "encoder-orange-shadow": { "role": "secondary", "displayName": "Encoder Orange Shadow", "canonical": "#c74e17", "tonalRamp": ["#3e1805", "#63270b", "#883710", "#ac4314", "#c74e17", "#d26b3c", "#de8a63", "#eaa98c"] },
+      "transport-ink": { "role": "ink", "displayName": "Transport Ink", "canonical": "#14100c", "tonalRamp": ["#14100c", "#2c251e", "#463f35", "#615a4d", "#7d7768", "#99937f", "#b5b09c", "#d1cdb8"] },
+      "encoder-blue": { "role": "secondary", "displayName": "Encoder Blue", "canonical": "#3d7bff", "tonalRamp": ["#12254d", "#1d3b7a", "#2852a8", "#3266d6", "#3d7bff", "#6496ff", "#8bb1ff", "#b1ccff"] },
+      "encoder-green": { "role": "secondary", "displayName": "Encoder Green", "canonical": "#2fbf71", "tonalRamp": ["#0e3a22", "#165c36", "#1e7d4a", "#279e5e", "#2fbf71", "#59cc8e", "#83d9ab", "#ade6c8"] },
+      "house-teal": { "role": "primary", "displayName": "House Teal", "canonical": "#0d9488", "tonalRamp": ["#042c29", "#074a44", "#0a6f66", "#0d9488", "#4aafa6", "#7ac4be", "#aadad5", "#dbefed"] },
+      "teal-deep": { "role": "secondary", "displayName": "Teal Deep (text on chassis)", "canonical": "#0a6e63", "tonalRamp": ["#03221e", "#053832", "#07554a", "#0a6e63", "#3c8b82", "#6ea8a2", "#a0c5c1", "#d2e2e0"] },
+      "teal-phosphor": { "role": "secondary", "displayName": "Teal Phosphor (on screen)", "canonical": "#2dd4bf", "tonalRamp": ["#0e4039", "#176a60", "#229f8f", "#2dd4bf", "#62dfcf", "#8ce7dc", "#b6f0e9", "#e0f9f5"] },
+      "mode-blue-deep": { "role": "secondary", "displayName": "Code & Tell Blue (text on chassis)", "canonical": "#1d4ed8", "tonalRamp": ["#091742", "#102666", "#17368f", "#1d4ed8", "#4a72e2", "#7796ea", "#a4baf1", "#d1ddf8"] },
+      "mode-blue-lit": { "role": "secondary", "displayName": "Code & Tell Blue (on screen)", "canonical": "#7fa8ff", "tonalRamp": ["#26334d", "#3c517a", "#526fa8", "#6888d6", "#7fa8ff", "#99baff", "#b3cbff", "#ccddff"] },
+      "mode-green-deep": { "role": "secondary", "displayName": "Demo Day Green (text on chassis)", "canonical": "#14713f", "tonalRamp": ["#062413", "#0a3a20", "#0f562e", "#14713f", "#438e65", "#72aa8c", "#a1c7b2", "#d0e3d9"] },
+      "mode-green-lit": { "role": "secondary", "displayName": "Demo Day Green (on screen)", "canonical": "#4ade80", "tonalRamp": ["#164326", "#256f40", "#38a760", "#4ade80", "#77e6a0", "#9bedb9", "#c0f3d3", "#e4faec"] },
+      "chassis-edge": { "role": "neutral", "displayName": "Chassis Edge", "canonical": "#c4c1b6", "tonalRamp": ["#4a483f", "#6b6960", "#8d8b81", "#b0aea4", "#c4c1b6", "#d0cec4", "#dcdad2", "#e8e7e0"] },
+      "key-edge": { "role": "neutral", "displayName": "Key Edge", "canonical": "#b9b6ab", "tonalRamp": ["#46443b", "#65635a", "#868478", "#a5a396", "#b9b6ab", "#c7c5bc", "#d5d4cd", "#e3e2de"] },
+      "rule": { "role": "neutral", "displayName": "Rule", "canonical": "#b3b0a4", "tonalRamp": ["#424138", "#605f55", "#807f71", "#a09d90", "#b3b0a4", "#c2c0b6", "#d1d0c8", "#e0dfda"] },
+      "step-past": { "role": "neutral", "displayName": "Step Past", "canonical": "#a8a599", "tonalRamp": ["#3e3d35", "#59584e", "#75746a", "#94918a", "#a8a599", "#b9b7ad", "#cac9c2", "#dbdbd6"] },
+      "step-past-edge": { "role": "neutral", "displayName": "Step Past Edge", "canonical": "#8f8c81", "tonalRamp": ["#34332c", "#4c4b43", "#65635a", "#807d73", "#8f8c81", "#a5a39a", "#bbbab3", "#d1d1cb"] },
+      "key-pressed": { "role": "surface", "displayName": "Key Pressed", "canonical": "#f2f0e9", "tonalRamp": ["#5c5a51", "#807e74", "#a5a398", "#cac9c1", "#f2f0e9", "#f5f4ee", "#f8f7f3", "#fbfaf8"] },
+      "row-hover": { "role": "surface", "displayName": "Row Hover", "canonical": "#efede6", "tonalRamp": ["#5a584f", "#7c7a70", "#9f9d93", "#c4c2b9", "#efede6", "#f2f1eb", "#f5f4f0", "#f8f7f5"] },
+      "ledger-name": { "role": "ink", "displayName": "Ledger Name", "canonical": "#43453f", "tonalRamp": ["#171812", "#262824", "#353734", "#43453f", "#5c5e57", "#76786f", "#909189", "#aaaba5"] },
+      "stamp-ink": { "role": "ink", "displayName": "Stamp Ink", "canonical": "#4e5048", "tonalRamp": ["#1c1d18", "#2f3029", "#41433b", "#4e5048", "#686a61", "#82847a", "#9c9e95", "#b6b8b0"] },
+      "stamp-edge": { "role": "neutral", "displayName": "Stamp Edge", "canonical": "#b3afa2", "tonalRamp": ["#434036", "#615e53", "#817e70", "#a09c8e", "#b3afa2", "#c2bfb4", "#d1cfc6", "#e0dfda"] },
+      "screen-hair": { "role": "screen", "displayName": "Screen Hair", "canonical": "#2a383f", "tonalRamp": ["#0d1214", "#161e22", "#1f2a30", "#2a383f", "#3d4f58", "#526872", "#69828d", "#849ca8"] },
+      "screen-bezel": { "role": "screen", "displayName": "Screen Bezel", "canonical": "#1e2a30", "tonalRamp": ["#090e10", "#10171b", "#172126", "#1e2a30", "#2f3f47", "#41545e", "#556a76", "#6b808d"] },
+      "screen-tag": { "role": "screen", "displayName": "Screen Tag", "canonical": "#6b7f86", "tonalRamp": ["#242d31", "#39454b", "#4f5d64", "#6b7f86", "#879aa1", "#a3b5bb", "#bfcfd4", "#dbe9ed"] },
+      "select-dim": { "role": "screen", "displayName": "Select Dim", "canonical": "#7d9198", "tonalRamp": ["#2a3236", "#424c51", "#5b676d", "#7d9198", "#97a8ae", "#b1bfc4", "#cbd6da", "#e5edef"] },
+      "scope-grid": { "role": "screen", "displayName": "Scope Grid", "canonical": "#1b262c", "tonalRamp": ["#080d10", "#0e1518", "#141d22", "#1b262c", "#2c3a42", "#3e4f58", "#51646e", "#667a85"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Live event name on the display module" },
+      "zone": { "displayName": "Zone", "purpose": "Section words (Projects, Upcoming, Past); no kickers above" },
+      "title": { "displayName": "Title", "purpose": "Key names and track names" },
+      "body": { "displayName": "Body", "purpose": "Descriptions; measure ≤65ch" },
+      "small": { "displayName": "Small", "purpose": "Footer blurb and secondary prose" },
+      "wordmark": { "displayName": "Wordmark", "purpose": "Engraved HACKJUDGE brand line" },
+      "engraved": { "displayName": "Engraved", "purpose": "Micro-labels the machine prints on its case" },
+      "engraved-sm": { "displayName": "Engraved SM", "purpose": "Key indexes, team lines, scale legends" },
+      "readout": { "displayName": "Readout", "purpose": "Data values, chips, dates, CTA label" }
+    },
+    "shadows": [
+      { "name": "unit-ambient", "value": "0 24px 48px rgba(26, 28, 30, 0.14), 0 3px 10px rgba(26, 28, 30, 0.08)", "purpose": "The chassis resting on the workbench" },
+      { "name": "screen-inset", "value": "inset 0 2px 10px rgba(0, 0, 0, 0.55), 0 1px 0 #f7f5ee", "purpose": "Display glass sunk into the face" },
+      { "name": "key-rest", "value": "0 4px 9px rgba(26, 28, 30, 0.12)", "purpose": "Key caps and transport at rest" },
+      { "name": "key-pressed", "value": "0 1px 3px rgba(26, 28, 30, 0.16)", "purpose": "Pressed state, paired with 3px travel" },
+      { "name": "tip-lift", "value": "0 4px 10px rgba(26, 28, 30, 0.12)", "purpose": "Lane tooltip readouts" }
+    ],
+    "motion": [
+      { "name": "live-pulse", "value": "livepulse 1.6s ease-in-out infinite", "purpose": "LIVE LED and rail live step; only under prefers-reduced-motion: no-preference" },
+      { "name": "state-feedback", "value": "160ms ease", "purpose": "All hover/focus/press transitions" },
+      { "name": "screen-canvas", "value": "requestAnimationFrame canvas scene", "purpose": "The one authored motion per surface: the display module's mode-voiced animation (orbits for hackathon, spectrum for Code & Tell, spotlights for Demo Day); renders one static frame under reduced motion" }
+    ],
+    "breakpoints": [
+      { "name": "lane-stagger", "value": "560px" },
+      { "name": "keys-2up", "value": "700px" },
+      { "name": "tracks-wide", "value": "760px" },
+      { "name": "module-split", "value": "900px" },
+      { "name": "unit-fullbleed", "value": "1160px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Transport Key",
+      "kind": "button",
+      "refersTo": "transport-key",
+      "description": "The single commit action of a surface; always encoder orange, always names the verb.",
+      "html": "<button class=\"ds-transport\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M4 2.5v11l9-5.5z\"/></svg>START SCORING</button>",
+      "css": ".ds-transport { display:inline-flex; align-items:center; gap:0.65em; font-family:'IBM Plex Mono',ui-monospace,monospace; font-weight:600; font-size:0.8125rem; letter-spacing:0.14em; text-transform:uppercase; color:#14100c; background:#ff6b2c; border:1px solid #d14e16; border-radius:10px; padding:0.85em 1.3em; box-shadow:0 4px 10px rgba(26,28,30,0.35); cursor:pointer; transition:background 160ms ease; } .ds-transport svg { width:13px; height:13px; fill:currentColor; } .ds-transport:hover { background:#ff7d45; } .ds-transport:focus-visible { outline:2px solid #0d9488; outline-offset:3px; } .ds-transport:active { transform:translateY(2px); box-shadow:0 1px 3px rgba(26,28,30,0.4); }"
+    },
+    {
+      "name": "Soft Key",
+      "kind": "button",
+      "refersTo": "soft-key",
+      "description": "White key-cap button for rail-level actions like Sign in.",
+      "html": "<button class=\"ds-softkey\">SIGN IN</button>",
+      "css": ".ds-softkey { font-family:'IBM Plex Mono',ui-monospace,monospace; font-weight:600; font-size:0.6875rem; letter-spacing:0.1em; text-transform:uppercase; color:#1a1c1e; background:#fbfaf6; border:1px solid #cfccc0; border-radius:8px; padding:0.55em 0.9em; box-shadow:0 2px 5px rgba(26,28,30,0.10); cursor:pointer; transition:border-color 160ms ease, color 160ms ease; } .ds-softkey:hover { border-color:#0d9488; color:#0a6e63; } .ds-softkey:focus-visible { outline:2px solid #0d9488; outline-offset:3px; } .ds-softkey:active { transform:translateY(1px); box-shadow:0 1px 2px rgba(26,28,30,0.12); }"
+    },
+    {
+      "name": "Live Chip",
+      "kind": "chip",
+      "refersTo": "live-chip",
+      "description": "The live phase signal: phosphor text with a pulsing LED dot, shown on the dark screen.",
+      "html": "<span class=\"ds-live\"><span class=\"ds-live-dot\" aria-hidden=\"true\"></span>LIVE</span>",
+      "css": ".ds-live { display:inline-flex; align-items:center; gap:0.45em; font-family:'IBM Plex Mono',ui-monospace,monospace; font-weight:600; font-size:0.6875rem; letter-spacing:0.22em; color:#2dd4bf; background:#12181d; padding:0.3em 0.6em; border-radius:6px; } .ds-live-dot { width:8px; height:8px; border-radius:50%; background:#2dd4bf; } @media (prefers-reduced-motion: no-preference) { .ds-live-dot { animation:ds-livepulse 1.6s ease-in-out infinite; } @keyframes ds-livepulse { 0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(45,212,191,0.45); } 50% { opacity:0.55; box-shadow:0 0 0 5px rgba(45,212,191,0); } } }"
+    },
+    {
+      "name": "Project Key",
+      "kind": "card",
+      "refersTo": "key-tile",
+      "description": "Square key cap in the project matrix: LED in the project's hue, engraved index, glyph, name, team; 3px press travel.",
+      "html": "<button class=\"ds-key\" style=\"--key-hue:#6366f1\"><span class=\"ds-key-top\"><span class=\"ds-key-led\" aria-hidden=\"true\"></span><span class=\"ds-key-num\">01</span></span><span class=\"ds-key-glyph\" aria-hidden=\"true\"><svg viewBox=\"0 0 32 32\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"><path d=\"M18.4 2.5 6.2 18.1h9.1l-1.7 11.4 12.2-16.2h-8.7l1.3-10.8Z\"/></svg></span><span><span class=\"ds-key-name\">Voltify</span><span class=\"ds-key-team\">Team Volt</span></span></button>",
+      "css": ".ds-key { position:relative; display:flex; flex-direction:column; justify-content:space-between; gap:0.7rem; aspect-ratio:1/1; width:150px; padding:0.85rem; background:#fbfaf6; border:1px solid #b9b6ab; border-radius:12px; color:#1a1c1e; box-shadow:0 4px 9px rgba(26,28,30,0.12); font-family:'Instrument Sans',system-ui,sans-serif; text-align:left; cursor:pointer; transition:border-color 160ms ease; } .ds-key:hover { border-color:var(--key-hue); } .ds-key:focus-visible { outline:2px solid #0d9488; outline-offset:3px; } .ds-key:active { transform:translateY(3px); box-shadow:0 1px 3px rgba(26,28,30,0.16); background:#f2f0e9; } .ds-key-top { display:flex; align-items:center; justify-content:space-between; } .ds-key-led { width:8px; height:8px; border-radius:50%; background:var(--key-hue); box-shadow:0 0 6px 1px rgba(26,28,30,0.15); } .ds-key-num { font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:0.5625rem; font-weight:500; letter-spacing:0.14em; color:#5b5d55; } .ds-key-glyph { display:block; } .ds-key-glyph svg { display:block; width:30px; height:auto; } .ds-key-name { display:block; font-weight:700; font-size:1rem; letter-spacing:-0.01em; line-height:1.15; } .ds-key-team { display:block; font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:0.5625rem; font-weight:500; letter-spacing:0.13em; text-transform:uppercase; color:#5b5d55; margin-top:0.25rem; }"
+    },
+    {
+      "name": "Semester Rail",
+      "kind": "custom",
+      "refersTo": "panel-tile",
+      "description": "The semester as a clean sequencer rail docked under the display module as its time axis: month ticks, past steps dim, upcoming hollow in mode color, live step solid and pulsing, patched to the screen by the Patch Lead — a 2px run rising from the live step, sweeping through smooth rounded elbows across the 96px channel, terminating in a single input jack on the module's edge. Each event mode has its own socket position and color (Code & Tell left/blue, hackathon center/teal, Demo Day right/green); only the jack in use is rendered, with a solid mode-color core. No unused jacks, no labels, no bus hardware.",
+      "html": "<div class=\"ds-lane\"><div class=\"ds-lane-bed\"><span class=\"ds-lane-rule\"></span><a class=\"ds-lane-ev\" style=\"left:20%\" href=\"#past\"><span class=\"ds-step ds-step--past\"></span><span class=\"ds-lane-date\">APR 18</span></a><a class=\"ds-lane-ev\" style=\"left:55%\" href=\"#live\" aria-current=\"true\"><span class=\"ds-step ds-step--live\"></span><span class=\"ds-lane-date ds-lane-date--live\">MAY 24</span></a><a class=\"ds-lane-ev\" style=\"left:75%\" href=\"#upcoming\"><span class=\"ds-step ds-step--next\" style=\"--c:#3d7bff\"></span><span class=\"ds-lane-date\">JUN 07</span></a></div></div>",
+      "css": ".ds-lane { position:relative; background:#e3e0d7; border:1px solid #cfccc0; border-radius:12px; padding:1.4rem 1.5rem; } .ds-lane-bed { position:relative; height:72px; } .ds-lane-rule { position:absolute; left:0; right:0; top:40px; border-top:1px solid #b3b0a4; } .ds-lane-ev { position:absolute; top:34px; transform:translateX(-50%); display:block; width:12px; height:12px; text-decoration:none; } .ds-step { position:absolute; inset:0; border-radius:3px; transition:background-color 160ms ease, border-color 160ms ease; } .ds-step--past { background:#a8a599; border:1px solid #8f8c81; } .ds-step--next { background:transparent; border:1.5px solid var(--c); } .ds-lane-ev:hover .ds-step--next, .ds-lane-ev:focus-visible .ds-step--next { background:var(--c); } .ds-step--live { background:#0d9488; border:1px solid #0a6e63; } .ds-lane-date { position:absolute; top:18px; left:50%; transform:translateX(-50%); white-space:nowrap; font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:0.5625rem; font-weight:500; letter-spacing:0.13em; text-transform:uppercase; color:#5b5d55; } .ds-lane-date--live { color:#0a6e63; font-weight:600; }"
+    },
+    {
+      "name": "Sequencer Track",
+      "kind": "custom",
+      "refersTo": "panel-tile",
+      "description": "An upcoming event as a sequencer row: mode LED, name, step-LED countdown bank, dates, T-minus readout.",
+      "html": "<a class=\"ds-track\" style=\"--c:#3d7bff\" href=\"#\"><span class=\"ds-track-led\" aria-hidden=\"true\"></span><span class=\"ds-track-name\">Code &amp; Tell: AI Edition</span><span class=\"ds-track-mode\">Code &amp; Tell</span><span class=\"ds-track-steps\" aria-hidden=\"true\"><span class=\"ds-step on\"></span><span class=\"ds-step on\"></span><span class=\"ds-step on\"></span><span class=\"ds-step\"></span><span class=\"ds-step\"></span><span class=\"ds-step\"></span></span><span class=\"ds-track-dates\">Jun 07 – Jun 08</span><span class=\"ds-track-count\">T−13 days</span></a>",
+      "css": ".ds-track { display:grid; grid-template-columns:26px minmax(0,1.35fr) auto minmax(0,1fr) auto auto; gap:0 1.4rem; align-items:center; padding:1rem 0.9rem; text-decoration:none; border-top:1px solid #cfccc0; color:#1a1c1e; font-family:'Instrument Sans',system-ui,sans-serif; transition:background 160ms ease; } .ds-track:last-child { border-bottom:1px solid #cfccc0; } .ds-track:hover { background:#efede6; } .ds-track:focus-visible { outline:2px solid #0d9488; outline-offset:3px; } .ds-track-led { width:12px; height:12px; border-radius:3px; background:var(--c); border:1px solid rgba(26,28,30,0.25); } .ds-track-name { font-weight:600; font-size:1.05rem; letter-spacing:-0.01em; } .ds-track-mode { font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:0.5625rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#1d4ed8; } .ds-track-steps { display:flex; gap:4px; align-items:center; } .ds-step { width:10px; height:10px; border-radius:2px; border:1px solid #b3b0a4; background:transparent; } .ds-step.on { background:var(--c); border-color:rgba(26,28,30,0.25); } .ds-track-dates { font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:0.6875rem; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#42443e; } .ds-track-count { font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:0.6875rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; white-space:nowrap; }"
+    },
+    {
+      "name": "Tape Log Row",
+      "kind": "custom",
+      "refersTo": "panel-tile",
+      "description": "A past event pressed into the tape log: dashed perforation divider, date, name, mode, COMPLETE stamp.",
+      "html": "<div class=\"ds-tape-row\"><span class=\"ds-tape-date\">Apr 18 – Apr 20 2025</span><span class=\"ds-tape-name\">Hack the North 2025</span><span class=\"ds-tape-mode\">Hackathon</span><span class=\"ds-tape-status\">Complete</span></div>",
+      "css": ".ds-tape-row { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,2fr) auto auto; align-items:baseline; gap:0 1.5rem; padding:0.85rem 1.5rem; background:#e3e0d7; font-family:'IBM Plex Mono',ui-monospace,monospace; border-bottom:1px dashed #c2beb1; } .ds-tape-date { font-size:0.6875rem; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:#42443e; } .ds-tape-name { font-family:'Instrument Sans',system-ui,sans-serif; font-weight:600; font-size:0.95rem; color:#43453f; } .ds-tape-mode { font-size:0.5625rem; font-weight:500; letter-spacing:0.14em; text-transform:uppercase; color:#5b5d55; } .ds-tape-status { font-size:0.625rem; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:#4e5048; border:1px solid #b3afa2; border-radius:5px; padding:0.25em 0.55em; justify-self:end; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Field Instrument",
+    "overview": "HackJudge is rendered as a precision pocket instrument in the Teenage Engineering lineage: a light, milled warm-gray chassis carrying a dark display module, a keyboard of square project keys, and a sequencer rail for time. It is an Operate surface first — a console a judge works in for hours — but every control is machined, labeled, and a little playful, because the instrument makers proved that pro tools can be joyful without becoming toys. The system's whole discipline is one sentence: knobs are inputs, meters are outputs. Anything the user can change earns an interactive control with real travel; anything the user merely reads earns an honest readout — on the event card, not in a stat band. Color is load-bearing, never decorative: hardware hues mark parameters, event modes are color-coded, and house teal is reserved for HackJudge itself. HackJudge is not an event-marketing surface: the events it judges (DS+X, CivicHacks, and the Code & Tell / Demo Day formats) have their own sites; this homepage is the console for the event in front of you.",
+    "keyCharacteristics": [
+      "A single floating chassis (max 1120px, 22px radius) on a darker workbench ground; below 1160px it becomes the full-bleed face",
+      "Engraved micro-labels (IBM Plex Mono, uppercase, wide tracking, highlight under-shadow) instead of helper text",
+      "The dark display module is where color and motion live: one authored canvas animation per surface, mode-voiced",
+      "Square project keys with LED accents, 3px press travel, and honest dashed open-slot keys",
+      "Time rendered as a sequencer: the semester rail docks under the display module, its live step patched to the screen by a dogleg lead; step-sequencer upcoming list, engraved ledger for the past"
+    ],
+    "rules": [
+      { "name": "The Tinted-Ink Rule", "body": "Secondary text is always tinted from the surface it sits on (warm ink on chassis, phosphor-dim on screen). Neutral gray helper text is banned.", "section": "colors" },
+      { "name": "The Mode-Color Rule", "body": "Event modes are color-coded: hackathon = teal, Code & Tell = blue, Demo Day = green. The active mode color lights the top-rail pictogram, the screen's mode chip, and the rail's live step and patch lead. House teal never performs a non-house job while another mode is active.", "section": "colors" },
+      { "name": "The Engraving Rule", "body": "Anything the device would print on its case is set in engraved mono; anything the device would show is set in the UI sans. The two never swap.", "section": "typography" },
+      { "name": "The Travel Rule", "body": "Pressable things move when pressed (keys 3px, transport 2px, soft keys 1px). If it can't move, it isn't a key — it's a readout.", "section": "elevation" },
+      { "name": "The Knobs-Are-Inputs Rule", "body": "Knobs, dials, and rotary encoders are only rendered for parameters the user can change. Facts you read get honest readouts, on the event card itself.", "section": "components" },
+      { "name": "The No Stat-Band Rule", "body": "Never ship a strip of big-number metric tiles that repeat what the event card already says — hero-metric bands are marketing furniture, and event marketing lives on the events' own sites (dsplusx.com, civichacks.com), not on the console.", "section": "components" }
+    ],
+    "dos": [
+      "Do tint every secondary text from its surface hue (Ink Soft on chassis, Screen Dim on glass).",
+      "Do give every pressable control real travel and a state change; keep the SELECT readout live.",
+      "Do color-code modes end to end: pictogram, screen chip, playhead, sequencer LEDs.",
+      "Do reserve house teal for HackJudge itself: focus, selection, wordmark, live hackathon state.",
+      "Do render empty and idle states as instrument idles (unlit steps, dashed slots, engraved status lines).",
+      "Do keep exactly one authored motion per surface — the display module's canvas; everything else is 160ms state feedback and the live LED pulse, all reduced-motion safe."
+    ],
+    "donts": [
+      "Don't ship a strip of big-number metric tiles that repeat what the event card already says — hero-metric stat bands are marketing furniture (The No Stat-Band Rule).",
+      "Don't render knobs, dials, or rotary encoders for read-only values — knobs are inputs (The Knobs-Are-Inputs Rule).",
+      "Don't use neutral gray text, gradient text, or kicker/eyebrow labels above headings.",
+      "Don't scatter motion across sections or add glow as decoration; phosphor bloom belongs to lit LEDs only.",
+      "Don't let a stock component survive inside the instrument — nav, chips, inputs, and lists are rebuilt in the machine's vocabulary."
+    ]
+  }
+}

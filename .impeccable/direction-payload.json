@@ -1,0 +1,72 @@
+{
+  "title": "Choose the visual world",
+  "question": "Nixie is out; The Field Instrument joins by request. Keep the roll, take a card, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "The Team Whiteboard",
+      "kicker": "THE ROLL",
+      "lineage": "the hackathon war-room whiteboard: marker strokes, sticky notes, drawn grids, washi tape",
+      "thesis": "The homepage as the team's working whiteboard: the live event drawn big in marker, projects as sticky notes, the semester sketched as a calendar strip.",
+      "palette": [
+        "#fbfcfd",
+        "#1e293b",
+        "#0d9488",
+        "#e05d4f",
+        "#f0b429"
+      ],
+      "materials": [
+        "dry-erase board",
+        "four marker colors with teal as the house marker",
+        "sticky notes",
+        "washi tape",
+        "the eraser"
+      ],
+      "viewport": "A crisp whiteboard: the live event blocked in black marker with a red countdown, a hand-drawn connector to a row of sticky-note projects, the semester calendar sketched along the bottom, one teal marker underline marking what matters.",
+      "risk": "Whiteboard mess is the failure mode; refinement lives in disciplined strokes over a ruled grid, or it reads kindergarten.",
+      "sketch": ".impeccable/sketches/assigned.png"
+    },
+    {
+      "id": "challenger-hypercard",
+      "label": "HyperCard Shoebox",
+      "lineage": "1987 HyperCard: the home stack, buttons anyone can paint, reading and making in one object",
+      "thesis": "The original welcoming home interface: every event a card, every action a visible button, and admin is the same tool with the lid off.",
+      "case": "Reader/author duality maps team-operable judging exactly; the one-bit world must smuggle the teal thread without breaking.",
+      "sketch": ".impeccable/sketches/challenger-hypercard.png",
+      "hero": "https://impeccable.style/worlds/cards/medium-native-hypercard-stack-shoebox-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/medium-native-hypercard-stack-shoebox.webp"
+    },
+    {
+      "id": "challenger-anime",
+      "label": "Crisis Wall",
+      "lineage": "90s mecha-anime command centers: phosphor orange on black, monumental countdowns",
+      "thesis": "The live event as an operations wall: seven-segment countdown at monumental scale, condition bars, every reading framed.",
+      "case": "Peak ops drama and engineers adore it, but a wall of alarms is the opposite of a welcoming home.",
+      "sketch": ".impeccable/sketches/challenger-anime.png",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-anime-command-center-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/pop-culture-shelf-anime-command-center.webp"
+    },
+    {
+      "id": "field-instrument",
+      "kicker": "REQUESTED",
+      "label": "The Field Instrument",
+      "lineage": "Teenage Engineering OP-1 / OP-Z: pro pocket instruments, color-coded modes, geometric pictograms",
+      "thesis": "The judging tool as a pocket instrument: a light chassis, four color-coded encoder dials, crisp small labels, dense and legible and quietly playful.",
+      "case": "Engineers get real instrument density, students get the joyful object; fails as skeuomorph kitsch if dials decorate instead of operate.",
+      "palette": ["#eceae4", "#1a1c1e", "#ff6b2c", "#3d7bff", "#0d9488"],
+      "materials": ["milled light-gray panels", "four colored encoder dials", "crisp small mono labels", "geometric pictograms"],
+      "viewport": "The homepage as the instrument's face: the live event on a crisp dark display module, mode marked by a color-coded pictogram, four encoder dials bound to the stats, projects as a grid of square keys.",
+      "risk": "Knob-and-dial skeuomorph kitsch if it decorates instead of operating; every dial must bind to real data or a real action.",
+      "sketch": ".impeccable/sketches/field-instrument.png"
+    }
+  ],
+  "reroll": true,
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "The familiar dark judging dashboard — Devpost's world, executed impeccably in HackJudge teal.",
+    "viewport": "Dark dashboard with clean event cards, one teal accent, stats where expected; full craft, zero surprises.",
+    "sketch": ".impeccable/sketches/canon.png"
+  },
+  "steer": true
+}

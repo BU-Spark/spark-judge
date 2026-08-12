@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HackJudge — Semester Tape · Connector Studies</title>
+<meta name="description" content="HackJudge design comp — three connector studies for the semester tape lane. Synthetic demo data.">
+<!-- impeccable-disable design-system-font, design-system-font-size, design-system-color, design-system-radius, overused-font -- standalone connector study page inside the committed Field Instrument world; comp-only layout, not a production surface -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --desk: #ddd9d0;
+    --chassis: #eceae4;
+    --panel: #e3e0d7;
+    --ink: #1a1c1e;
+    --ink-soft: #42443e;
+    --ink-dim: #5b5d55;
+    --hair: #cfccc0;
+    --hair-lit: #f7f5ee;
+    --screen: #12181d;
+    --screen-edge: #080c0f;
+    --screen-ink: #e8edee;
+    --screen-dim: #9fb0b5;
+    --orange: #ff6b2c;
+    --blue: #3d7bff;
+    --green: #2fbf71;
+    --teal: #0d9488;
+    --teal-deep: #0a6e63;
+    --teal-lit: #2dd4bf;
+    --font-ui: "Instrument Sans", "Helvetica Neue", sans-serif;
+    --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--desk);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    line-height: 1.5;
+  }
+
+  .engraved {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    text-shadow: 0 1px 0 var(--hair-lit);
+  }
+
+  .page { max-width: 1120px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+  .page-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+  .page-title { margin: 0; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.015em; }
+  .page-sub { margin: 0.25rem 0 0; color: var(--ink-soft); font-size: 0.95rem; max-width: 62ch; }
+
+  /* ---------- comp frame ---------- */
+  .comp { margin-top: 3rem; }
+  .comp-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+    margin-bottom: 1.1rem;
+  }
+  .comp-idx {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--teal);
+    border: 1.5px solid var(--teal);
+    border-radius: 6px;
+    padding: 0.15em 0.5em;
+  }
+  .comp-name { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
+  .comp-why { margin: 0; color: var(--ink-dim); font-size: 0.85rem; }
+
+  /* the instrument excerpt: module slice + channel + lane, fixed comp width */
+  .stage {
+    width: 960px;
+    background: var(--chassis);
+    border: 1px solid var(--hair);
+    border-radius: 22px;
+    box-shadow: 0 24px 48px rgba(26, 28, 30, 0.14), 0 3px 10px rgba(26, 28, 30, 0.08);
+    padding: 1.25rem 0 2rem;
+  }
+  @media (max-width: 1020px) {
+    .stage-scroll { overflow-x: auto; padding-bottom: 1rem; }
+  }
+
+  /* ---------- module slice (bottom of the event card) ---------- */
+  .modslice {
+    margin: 0 2rem;
+    background: var(--screen);
+    border: 1px solid var(--screen-edge);
+    border-radius: 16px;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.55), 0 1px 0 var(--hair-lit);
+    padding: 0.9rem 1.25rem 1rem;
+    position: relative;
+    z-index: 1;
+  }
+  .modslice .chips { display: flex; gap: 0.5rem; align-items: center; }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--screen-dim);
+    border: 1px solid #2c383f;
+    border-radius: 6px;
+    padding: 0.3em 0.6em;
+  }
+  .chip--live { color: var(--teal-lit); display: inline-flex; align-items: center; gap: 0.45em; }
+  .chip--live::before {
+    content: "";
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--teal-lit);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .chip--live::before, .step--live { animation: livepulse 1.6s ease-in-out infinite; }
+  }
+  @keyframes livepulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+  .modslice .ev-name {
+    margin: 0.5rem 0 0.15rem;
+    color: var(--screen-ink);
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .modslice .ev-meta {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--screen-dim);
+    display: flex;
+    gap: 1.4rem;
+  }
+  .modslice .ev-meta b { color: var(--screen-ink); font-weight: 600; }
+
+  /* ---------- channel ---------- */
+  .chan {
+    position: relative;
+    height: 96px;
+    margin: 0 2rem;
+  }
+  /* A and C draw their hardware over the lane's top edge; B's tape tucks behind it */
+  .comp--a .chan, .comp--c .chan { z-index: 2; }
+  .comp--c .chan .chan-r { top: 80px; }
+  .chan .chan-l, .chan .chan-r {
+    position: absolute;
+    top: 44px;
+    pointer-events: none;
+  }
+  .chan .chan-l { left: 0; }
+  .chan .chan-r { right: 0; }
+  .chan svg { position: absolute; inset: 0; overflow: visible; }
+
+  /* shared hardware, drawn in HTML so shadows behave */
+  .jack {
+    position: absolute;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--screen);
+    border: 1.5px solid var(--teal);
+    box-shadow: 0 0 0 2px var(--chassis), inset 0 0 0 2.5px var(--teal);
+  }
+  .bus {
+    position: absolute;
+    height: 14px;
+    background: #e2ded5;
+    border-radius: 3px;
+    box-shadow: inset 0 1px 2px rgba(26, 28, 30, 0.14), 0 1px 0 var(--hair-lit);
+  }
+  .slot {
+    position: absolute;
+    width: 36px; height: 8px;
+    border-radius: 3px;
+    background: var(--screen);
+    border: 1px solid var(--screen-edge);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.6), 0 1px 0 var(--hair-lit);
+  }
+
+  /* ---------- lane ---------- */
+  .lane {
+    position: relative;
+    margin: 0 2rem;
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    padding: 1.4rem 1.5rem;
+  }
+  .lane::before, .lane::after {
+    content: "";
+    position: absolute;
+    left: 0.9rem;
+    right: 0.9rem;
+    height: 10px;
+    background-image: radial-gradient(circle, #c6c3b8 1.3px, transparent 1.7px);
+    background-size: 14px 10px;
+    background-repeat: repeat-x;
+    background-position: center;
+  }
+  .lane::before { top: 5px; }
+  .lane::after { bottom: 5px; }
+  .lane-bed { position: relative; height: 72px; margin: 0.35rem 0; }
+  .lane-rule { position: absolute; left: 0; right: 0; top: 40px; border-top: 1px solid #b3b0a4; }
+  .lane-tick { position: absolute; top: 14px; width: 1px; height: 26px; background: #b3b0a4; transform: translateX(-50%); }
+  .lane-month { position: absolute; top: 0; transform: translateX(-50%); }
+  .lane-month.first { transform: none; }
+  .lane-month.last { transform: translateX(-100%); }
+
+  .step {
+    position: absolute;
+    top: 34px;
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    transform: translateX(-50%);
+  }
+  .step--past { background: #a8a599; border: 1px solid #8f8c81; }
+  .step--next { background: transparent; border: 1.5px solid var(--c); }
+  .step--live { background: var(--teal); border: 1px solid var(--teal-deep); border-radius: 50%; }
+  .lane-date {
+    position: absolute;
+    top: 52px;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .lane-date::before {
+    content: "";
+    position: absolute;
+    bottom: calc(100% + 1px);
+    left: 50%;
+    width: 1px; height: 5px;
+    background: #c2beb1;
+  }
+  .lane-date.first { transform: none; }
+  .lane-date.first::before { left: 6px; }
+  .lane-date--live { color: var(--teal-deep); font-weight: 600; text-shadow: none; }
+
+  /* playhead wedge/stem (variant A keeps them) */
+  .ph-stem { position: absolute; top: 21px; width: 2px; height: 13px; margin-left: -1px; background: var(--teal); transform: translateX(-50%); }
+  .ph-wedge {
+    position: absolute; top: 14px; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 5.5px solid transparent;
+    border-right: 5.5px solid transparent;
+    border-top: 7px solid var(--teal);
+  }
+  .ph-collar {
+    position: absolute; top: 17.5px; transform: translateX(-50%);
+    width: 5px; height: 5px; border-radius: 1.5px;
+    background: var(--teal); border: 1px solid var(--teal-deep);
+  }
+
+  .page-foot { margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--hair); display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="page-head">
+    <h1 class="page-title">Semester tape — connector studies</h1>
+    <span class="engraved">Field instrument · 03 studies</span>
+  </header>
+  <p class="page-sub">Three answers to one question: how does the live step on the tape connect to the event card it feeds? Same data, same geometry (live event at 55.3%), same 96px channel. Pick one and it merges into the base preview, then propagates to the Code &amp; Tell and Demo Day variants in their mode colors.</p>
+
+  <!-- ==================== A · THE DOGLEG ==================== -->
+  <section class="comp comp--a" id="a">
+    <header class="comp-head">
+      <span class="comp-idx">A</span>
+      <h2 class="comp-name">The Dogleg</h2>
+      <p class="comp-why">Routed like a PCB trace: 45° chamfered elbows, the horizontal leg runs in a milled bus gutter, and the jack is always at the same address — engraved 03&nbsp;IN, third socket from the left, like a patch bay.</p>
+    </header>
+    <div class="stage-scroll">
+      <div class="stage">
+        <div class="modslice">
+          <div class="chips"><span class="chip" style="color:var(--teal-lit); border-color:#1d4a44">Hackathon</span><span class="chip chip--live">Live</span></div>
+          <h3 class="ev-name">TechNova Hackathon 2025</h3>
+          <p class="ev-meta"><span>Started <b>24-05-25</b></span><span>Closes in <b>31 h</b></span><span>Seat <b>Judge · Pro</b></span></p>
+        </div>
+        <div class="chan">
+          <span class="engraved chan-l">Semester tape</span>
+          <span class="engraved chan-r">Track 00 · Mar–Aug 2025 · 06 events</span>
+          <div class="bus" style="left: 131px; width: 404px; top: 49px;"></div>
+          <svg viewBox="0 0 896 170" width="896" height="170" aria-hidden="true">
+            <!-- elbow vias at the chamfer midpoints -->
+            <circle cx="492" cy="61" r="3.5" fill="var(--chassis)" stroke="var(--teal)" stroke-width="1.5"/>
+            <circle cx="158" cy="51" r="3.5" fill="var(--chassis)" stroke="var(--teal)" stroke-width="1.5"/>
+            <!-- the routed lead: up from the playhead collar, 45° chamfer, bus run, chamfer, up to jack 03 -->
+            <path d="M 497 143 L 497 66 L 487 56 L 163 56 L 153 46 L 153 5"
+                  fill="none" stroke="var(--teal)" stroke-width="2" stroke-linejoin="bevel"/>
+          </svg>
+          <div class="jack" style="left: 148.5px; top: -4.5px;"></div>
+          <span class="engraved" style="position:absolute; left: 162px; top: -2px;">03 · Signal in</span>
+          <span class="engraved" style="position:absolute; left: 120px; top: -2px;">01</span>
+          <span class="engraved" style="position:absolute; left: 92px; top: -2px;">02</span>
+          <span class="jack" style="left: 99.5px; top: -4.5px; border-color:#8f8c81; box-shadow:0 0 0 2px var(--chassis);"></span>
+          <span class="jack" style="left: 127.5px; top: -4.5px; border-color:#8f8c81; box-shadow:0 0 0 2px var(--chassis);"></span>
+        </div>
+        <div class="lane">
+          <div class="lane-bed">
+            <span class="lane-rule"></span>
+            <span class="engraved lane-month first" style="left:0%">Mar</span>
+            <span class="engraved lane-month" style="left:20.4%">Apr</span>
+            <span class="engraved lane-month" style="left:40.1%">May</span>
+            <span class="engraved lane-month" style="left:60.5%">Jun</span>
+            <span class="engraved lane-month" style="left:80.3%">Jul</span>
+            <span class="engraved lane-month last" style="left:100%">Aug</span>
+            <span class="lane-tick" style="left:0%"></span>
+            <span class="lane-tick" style="left:20.4%"></span>
+            <span class="lane-tick" style="left:40.1%"></span>
+            <span class="lane-tick" style="left:60.5%"></span>
+            <span class="lane-tick" style="left:80.3%"></span>
+            <span class="step step--past" style="left:0.6%"></span>
+            <span class="step step--past" style="left:30.9%"></span>
+            <span class="ph-wedge" style="left:55.3%"></span>
+            <span class="ph-stem" style="left:55.3%"></span>
+            <span class="ph-collar" style="left:55.3%"></span>
+            <span class="step step--live" style="left:55.3%"></span>
+            <span class="step step--next" style="left:64.5%; --c:var(--orange)"></span>
+            <span class="step step--next" style="left:73.7%; --c:var(--blue)"></span>
+            <span class="step step--next" style="left:82.9%; --c:var(--green)"></span>
+            <span class="engraved lane-date first" style="left:0.6%">Mar 01</span>
+            <span class="engraved lane-date" style="left:30.9%">Apr 18</span>
+            <span class="engraved lane-date lane-date--live" style="left:55.3%">May 24 · Live</span>
+            <span class="engraved lane-date" style="left:64.5%">Jun 07</span>
+            <span class="engraved lane-date" style="left:73.7%">Jun 21</span>
+            <span class="engraved lane-date" style="left:82.9%">Jul 05</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== B · THE TAPE LOOP ==================== -->
+  <section class="comp comp--b" id="b">
+    <header class="comp-head">
+      <span class="comp-idx">B</span>
+      <h2 class="comp-name">The Tape Loop</h2>
+      <p class="comp-why">The most literal answer: the tape itself lifts off the reel at the live step, loops up in a slack arc, and feeds into a reader slot on the module — the display is <em>reading this moment</em> off the tape.</p>
+    </header>
+    <div class="stage-scroll">
+      <div class="stage">
+        <div class="modslice">
+          <div class="chips"><span class="chip" style="color:var(--teal-lit); border-color:#1d4a44">Hackathon</span><span class="chip chip--live">Live</span></div>
+          <h3 class="ev-name">TechNova Hackathon 2025</h3>
+          <p class="ev-meta"><span>Started <b>24-05-25</b></span><span>Closes in <b>31 h</b></span><span>Seat <b>Judge · Pro</b></span></p>
+        </div>
+        <div class="chan">
+          <span class="engraved chan-l">Semester tape</span>
+          <span class="engraved chan-r">Track 00 · Mar–Aug 2025 · 06 events</span>
+          <div class="slot" style="left: 660px; top: -4px;"></div>
+          <span class="engraved" style="position:absolute; left: 610px; top: -3px;">Tape in</span>
+          <svg viewBox="0 0 896 170" width="896" height="170" aria-hidden="true">
+            <!-- tape stock lifting off the reel: edge, stock, sprocket holes; base tucks behind the deck edge -->
+            <path d="M 497 170 C 497 100, 590 44, 678 7" fill="none" stroke="var(--hair)" stroke-width="16" stroke-linecap="round"/>
+            <path d="M 497 170 C 497 100, 590 44, 678 7" fill="none" stroke="var(--panel)" stroke-width="13" stroke-linecap="round"/>
+            <path d="M 497 170 C 497 100, 590 44, 678 7" fill="none" stroke="#b3b0a4" stroke-width="2" stroke-linecap="round" stroke-dasharray="0.1 8"/>
+          </svg>
+        </div>
+        <div class="lane">
+          <div class="lane-bed">
+            <span class="lane-rule"></span>
+            <span class="engraved lane-month first" style="left:0%">Mar</span>
+            <span class="engraved lane-month" style="left:20.4%">Apr</span>
+            <span class="engraved lane-month" style="left:40.1%">May</span>
+            <span class="engraved lane-month" style="left:60.5%">Jun</span>
+            <span class="engraved lane-month" style="left:80.3%">Jul</span>
+            <span class="engraved lane-month last" style="left:100%">Aug</span>
+            <span class="lane-tick" style="left:0%"></span>
+            <span class="lane-tick" style="left:20.4%"></span>
+            <span class="lane-tick" style="left:40.1%"></span>
+            <span class="lane-tick" style="left:60.5%"></span>
+            <span class="lane-tick" style="left:80.3%"></span>
+            <span class="step step--past" style="left:0.6%"></span>
+            <span class="step step--past" style="left:30.9%"></span>
+            <span class="step step--live" style="left:55.3%"></span>
+            <span class="step step--next" style="left:64.5%; --c:var(--orange)"></span>
+            <span class="step step--next" style="left:73.7%; --c:var(--blue)"></span>
+            <span class="step step--next" style="left:82.9%; --c:var(--green)"></span>
+            <span class="engraved lane-date first" style="left:0.6%">Mar 01</span>
+            <span class="engraved lane-date" style="left:30.9%">Apr 18</span>
+            <span class="engraved lane-date lane-date--live" style="left:55.3%">May 24 · Live</span>
+            <span class="engraved lane-date" style="left:64.5%">Jun 07</span>
+            <span class="engraved lane-date" style="left:73.7%">Jun 21</span>
+            <span class="engraved lane-date" style="left:82.9%">Jul 05</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== C · THE TONEARM ==================== -->
+  <section class="comp comp--c" id="c">
+    <header class="comp-head">
+      <span class="comp-idx">C</span>
+      <h2 class="comp-name">The Tonearm</h2>
+      <p class="comp-why">A pivoted gauge arm mounted on the module's edge swings down and rests its needle on the live step — like a tonearm dropping onto the track that's playing. The arm's angle is the readout: it steepens as the semester advances.</p>
+    </header>
+    <div class="stage-scroll">
+      <div class="stage">
+        <div class="modslice">
+          <div class="chips"><span class="chip" style="color:var(--teal-lit); border-color:#1d4a44">Hackathon</span><span class="chip chip--live">Live</span></div>
+          <h3 class="ev-name">TechNova Hackathon 2025</h3>
+          <p class="ev-meta"><span>Started <b>24-05-25</b></span><span>Closes in <b>31 h</b></span><span>Seat <b>Judge · Pro</b></span></p>
+        </div>
+        <div class="chan">
+          <span class="engraved chan-l">Semester tape</span>
+          <span class="engraved chan-r">Track 00 · Mar–Aug 2025 · 06 events</span>
+          <svg viewBox="0 0 896 170" width="896" height="170" aria-hidden="true">
+            <!-- counterweight stub behind the pivot -->
+            <line x1="726" y1="-2.5" x2="732" y2="-6.5" stroke="var(--ink-soft)" stroke-width="5" stroke-linecap="round"/>
+            <!-- tapered arm: pivot -> needle, 2.6px at the hub to 1.4px at the tip -->
+            <polygon points="712.1,8.1 714.9,3.7 502.8,143.5 501.2,145.9" fill="var(--ink-soft)"/>
+            <!-- cartridge riding the arm, needle resting on the live step -->
+            <g transform="translate(507, 142) rotate(33)">
+              <rect x="-8.5" y="-3.5" width="17" height="7" rx="2" fill="var(--panel)" stroke="var(--hair)"/>
+            </g>
+            <line x1="497" y1="146" x2="497" y2="160" stroke="var(--ink-soft)" stroke-width="1.5"/>
+            <!-- pivot hub: bezel ring, dark center, screw slot -->
+            <circle cx="721" cy="1" r="10" fill="var(--panel)" stroke="var(--hair)" stroke-width="1.5"/>
+            <circle cx="721" cy="1" r="4.5" fill="var(--screen)"/>
+            <line x1="717.8" y1="-1.8" x2="724.2" y2="3.8" stroke="var(--screen-dim)" stroke-width="1.4"/>
+          </svg>
+          <span class="engraved" style="position:absolute; left: 640px; top: 12px;">Trk 03 · Playing</span>
+        </div>
+        <div class="lane">
+          <div class="lane-bed">
+            <span class="lane-rule"></span>
+            <span class="engraved lane-month first" style="left:0%">Mar</span>
+            <span class="engraved lane-month" style="left:20.4%">Apr</span>
+            <span class="engraved lane-month" style="left:40.1%">May</span>
+            <span class="engraved lane-month" style="left:60.5%">Jun</span>
+            <span class="engraved lane-month" style="left:80.3%">Jul</span>
+            <span class="engraved lane-month last" style="left:100%">Aug</span>
+            <span class="lane-tick" style="left:0%"></span>
+            <span class="lane-tick" style="left:20.4%"></span>
+            <span class="lane-tick" style="left:40.1%"></span>
+            <span class="lane-tick" style="left:60.5%"></span>
+            <span class="lane-tick" style="left:80.3%"></span>
+            <span class="step step--past" style="left:0.6%"></span>
+            <span class="step step--past" style="left:30.9%"></span>
+            <span class="step step--live" style="left:55.3%"></span>
+            <span class="step step--next" style="left:64.5%; --c:var(--orange)"></span>
+            <span class="step step--next" style="left:73.7%; --c:var(--blue)"></span>
+            <span class="step step--next" style="left:82.9%; --c:var(--green)"></span>
+            <span class="engraved lane-date first" style="left:0.6%">Mar 01</span>
+            <span class="engraved lane-date" style="left:30.9%">Apr 18</span>
+            <span class="engraved lane-date lane-date--live" style="left:55.3%">May 24 · Live</span>
+            <span class="engraved lane-date" style="left:64.5%">Jun 07</span>
+            <span class="engraved lane-date" style="left:73.7%">Jun 21</span>
+            <span class="engraved lane-date" style="left:82.9%">Jul 05</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="page-foot">
+    <span class="engraved">Connector studies · synthetic data</span>
+    <span class="engraved">Pick one — it merges into field-instrument.html, then propagates to both mode variants</span>
+  </footer>
+
+</div>
+</body>
+</html>

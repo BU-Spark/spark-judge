@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HackJudge — "TechNova Hackathon 2025" — Crisis Wall Preview</title>
+<meta name="description" content="HackJudge design preview — Crisis Wall world. Synthetic demo data.">
+<!-- impeccable-disable design-system-font, design-system-font-size, design-system-color, dark-glow -- standalone direction preview exploring a candidate world distinct from the app's locked DESIGN.md system; this preview's phosphor palette, display type, and the brief-mandated phosphor bloom (low-opacity text bloom and lit indicator lamps, used sparingly per the world brief) are demo content -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;             /* ops-room wall */
+    --panel: #12100b;          /* instrument face, warm black */
+    --panel-alt: #0f0d09;
+    --screen: #060504;         /* CRT inset */
+    --line: #2c2417;           /* hairline, warm */
+    --tick: #7a5b23;           /* corner ticks, decorative */
+    --phosphor: #ff9d3d;       /* primary signal, 9.5:1 on --bg */
+    --phosphor-hi: #ffc987;    /* bright readings, ~12:1 */
+    --dim: #d99a55;            /* secondary text, hue-tinted, ~8.6:1 */
+    --faint: #a97a44;          /* stenciled micro-labels, ~5.2:1 */
+    --past: #c08b4d;           /* dimmed phosphor for the mission log, ~6.5:1 */
+    --teal: #0d9488;           /* brand thread: the NOMINAL channel */
+    --teal-hi: #2dd4bf;        /* teal text/lamps on black, ~10:1 */
+    --pad-x: clamp(1rem, 3.2vw, 2.75rem);
+    --font-tech: "Chakra Petch", "Segoe UI", sans-serif;
+    --font-mono: "Share Tech Mono", "SFMono-Regular", monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--phosphor);
+    font-family: var(--font-tech);
+    font-size: 1rem;
+    line-height: 1.5;
+    overflow-x: clip;
+  }
+
+  ::selection { background: var(--phosphor); color: var(--bg); }
+
+  a { color: inherit; }
+
+  :focus-visible {
+    outline: 2px solid var(--teal-hi);
+    outline-offset: 3px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 80;
+    transform: translateY(-300%);
+    background: var(--phosphor);
+    color: var(--bg);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    padding: 0.6em 0.9em;
+    text-decoration: none;
+  }
+  .skip:focus-visible { transform: none; }
+
+  /* ---------- framed instrument panel + corner ticks ---------- */
+  .panel {
+    position: relative;
+    background-color: var(--panel);
+    border: 1px solid var(--line);
+    background-image:
+      linear-gradient(to right, var(--tick), var(--tick)),
+      linear-gradient(to bottom, var(--tick), var(--tick)),
+      linear-gradient(to right, var(--tick), var(--tick)),
+      linear-gradient(to bottom, var(--tick), var(--tick)),
+      linear-gradient(to right, var(--tick), var(--tick)),
+      linear-gradient(to bottom, var(--tick), var(--tick)),
+      linear-gradient(to right, var(--tick), var(--tick)),
+      linear-gradient(to bottom, var(--tick), var(--tick));
+    background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px, 12px 2px, 2px 12px, 12px 2px, 2px 12px;
+    background-position: top left, top left, top right, top right, bottom left, bottom left, bottom right, bottom right;
+    background-repeat: no-repeat;
+  }
+
+  /* bezel nameplate strip on every instrument */
+  .bezel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.25rem;
+    flex-wrap: wrap;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--line);
+    background: #16130c;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .bezel .cond {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    color: var(--teal-hi);
+    white-space: nowrap;
+  }
+
+  /* status lamps are light emitters: their halo is the lamp being lit */
+  .lamp {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 7px rgba(45, 212, 191, 0.55);
+    flex: none;
+  }
+  .lamp.amber {
+    background: var(--phosphor);
+    box-shadow: 0 0 8px rgba(255, 157, 61, 0.6);
+  }
+
+  /* the one authored motion: the live tick. lamp + colon blink with it. */
+  .blink { animation: lamp-blink 1.1s steps(1) infinite; }
+  @keyframes lamp-blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0.12; } }
+
+  /* ---------- ops header ---------- */
+  .ops {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    flex-wrap: wrap;
+    padding: 0.7rem var(--pad-x);
+    border-bottom: 1px solid var(--line);
+    background: #100e09;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    text-decoration: none;
+  }
+  .brand svg { display: block; width: 27px; height: 22px; }
+  .wordmark {
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.14em;
+    color: var(--phosphor-hi);
+  }
+  .console-tag {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    color: var(--faint);
+    white-space: nowrap;
+  }
+  .ops-right {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .wall-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55em;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    color: var(--teal-hi);
+    white-space: nowrap;
+  }
+  .wallclock {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+  .wallclock b { color: var(--phosphor-hi); font-weight: 400; }
+
+  main {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: clamp(1rem, 2.6vw, 2.25rem) var(--pad-x) clamp(2.5rem, 5vw, 4rem);
+    display: grid;
+    gap: clamp(0.9rem, 1.6vw, 1.4rem);
+  }
+
+  /* ---------- primary display ---------- */
+  .primary { background-color: var(--panel); }
+  .primary .bezel { font-size: 0.85rem; }
+  .live-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55em;
+    font-family: var(--font-mono);
+    letter-spacing: 0.14em;
+    color: var(--phosphor);
+    white-space: nowrap;
+  }
+
+  .primary-main {
+    padding: clamp(1.4rem, 3vw, 2.5rem) clamp(1.1rem, 2.4vw, 2rem) clamp(1.1rem, 2vw, 1.6rem);
+  }
+  .event-name {
+    margin: 0 0 0.9rem;
+    font-weight: 700;
+    font-size: clamp(2.1rem, 5vw, 4.1rem);
+    line-height: 1.02;
+    letter-spacing: 0.01em;
+    color: var(--phosphor-hi);
+    text-wrap: balance;
+    text-shadow: 0 0 26px rgba(255, 157, 61, 0.16);
+  }
+  .lede {
+    margin: 0 0 1.6rem;
+    max-width: 68ch;
+    font-size: clamp(1rem, 1.25vw, 1.12rem);
+    font-weight: 400;
+    color: var(--dim);
+  }
+
+  .readings {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    border: 1px solid var(--line);
+    background: var(--panel-alt);
+  }
+  .reading {
+    padding: 0.65rem 0.9rem;
+    border-left: 1px solid var(--line);
+    min-width: 0;
+  }
+  .reading:first-child { border-left: 0; }
+  .reading dt {
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 0.2rem;
+  }
+  .reading dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: clamp(0.9rem, 1.15vw, 1.02rem);
+    letter-spacing: 0.04em;
+    color: var(--phosphor-hi);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+  }
+
+  /* the CRT inset: monumental countdown */
+  .screen {
+    position: relative;
+    margin: 0 clamp(1.1rem, 2.4vw, 2rem);
+    border: 1px solid var(--line);
+    background: var(--screen);
+    overflow: hidden;
+  }
+  .screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at center, transparent 52%, rgba(0, 0, 0, 0.42)),
+      repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.26) 0 1px, transparent 1px 3px);
+  }
+  .screen-head, .screen-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.55rem 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    color: var(--faint);
+  }
+  .screen-head { border-bottom: 1px solid #1d1810; }
+  .screen-foot { border-top: 1px solid #1d1810; }
+  .sync { display: inline-flex; align-items: center; gap: 0.5em; color: var(--teal-hi); }
+
+  .digits {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    align-items: baseline;
+    padding: clamp(1rem, 2.6vw, 2rem) 1rem 0.35rem;
+    font-family: var(--font-mono);
+    font-size: clamp(3rem, 13.5vw, 8rem);
+    line-height: 1;
+    color: var(--phosphor);
+    text-shadow: 0 0 30px rgba(255, 157, 61, 0.26), 0 0 4px rgba(255, 157, 61, 0.5);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .digits .grp { text-align: center; }
+  .digits .colon {
+    padding: 0 0.06em;
+    animation: colon-blink 1s steps(1) infinite;
+  }
+  @keyframes colon-blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0.18; } }
+
+  .units {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    padding: 0 1rem clamp(1rem, 2vw, 1.5rem);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.34em;
+    color: var(--faint);
+    text-align: center;
+  }
+  .units .colon { visibility: hidden; }
+
+  /* commit row */
+  .commit-row {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 1.25rem 2.5rem;
+    flex-wrap: wrap;
+    padding: clamp(1.1rem, 2.4vw, 1.8rem) clamp(1.1rem, 2.4vw, 2rem) clamp(1.4rem, 2.6vw, 2.1rem);
+  }
+  .commit {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    min-width: min(100%, 380px);
+    flex: 1 1 340px;
+    max-width: 560px;
+  }
+  .commit-face {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border: 2px solid var(--phosphor);
+    background:
+      linear-gradient(to right, var(--tick), var(--tick)) top left / 12px 2px,
+      linear-gradient(to bottom, var(--tick), var(--tick)) top left / 2px 12px,
+      linear-gradient(to right, var(--tick), var(--tick)) top right / 12px 2px,
+      linear-gradient(to bottom, var(--tick), var(--tick)) top right / 2px 12px,
+      linear-gradient(to right, var(--tick), var(--tick)) bottom left / 12px 2px,
+      linear-gradient(to bottom, var(--tick), var(--tick)) bottom left / 2px 12px,
+      linear-gradient(to right, var(--tick), var(--tick)) bottom right / 12px 2px,
+      linear-gradient(to bottom, var(--tick), var(--tick)) bottom right / 2px 12px,
+      #171307;
+    background-repeat: no-repeat;
+    padding: 1.05em 1.3em;
+    transition: background-color 120ms ease-out;
+  }
+  .commit-label {
+    font-weight: 700;
+    font-size: clamp(1.35rem, 2vw, 1.7rem);
+    letter-spacing: 0.06em;
+    color: var(--phosphor-hi);
+    line-height: 1.1;
+  }
+  .commit-sub {
+    display: block;
+    margin-top: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    color: var(--faint);
+  }
+  .commit-face svg { width: 30px; height: 30px; flex: none; color: var(--phosphor); }
+  .commit:hover .commit-face,
+  .commit:focus-visible .commit-face {
+    background-color: var(--phosphor);
+  }
+  .commit:hover .commit-label, .commit:hover .commit-sub, .commit:hover svg,
+  .commit:focus-visible .commit-label, .commit:focus-visible .commit-sub, .commit:focus-visible svg {
+    color: var(--bg);
+  }
+  .commit-stripe {
+    height: 7px;
+    background: repeating-linear-gradient(-45deg, var(--phosphor) 0 9px, #171307 9px 18px);
+    border: 1px solid var(--line);
+    border-top: 0;
+    transition: background 120ms steps(1);
+  }
+  .commit:hover .commit-stripe,
+  .commit:focus-visible .commit-stripe {
+    background: repeating-linear-gradient(-45deg, #171307 0 9px, var(--phosphor) 9px 18px);
+    border-color: var(--phosphor);
+  }
+  .welcome {
+    margin: 0;
+    align-self: center;
+    max-width: 34ch;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    line-height: 1.7;
+    color: var(--dim);
+  }
+  .welcome b { color: var(--teal-hi); font-weight: 400; }
+
+  /* ---------- telemetry instruments ---------- */
+  .instruments {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(0.9rem, 1.6vw, 1.4rem);
+  }
+  @media (min-width: 1080px) {
+    .instruments { grid-template-columns: 0.85fr 0.85fr 1.35fr 1.35fr; }
+  }
+
+  .counter-body { padding: 1.1rem 1.15rem 1.25rem; }
+  .counter-num {
+    font-family: var(--font-mono);
+    font-size: clamp(2.6rem, 4.2vw, 3.6rem);
+    line-height: 1;
+    color: var(--phosphor-hi);
+    text-shadow: 0 0 18px rgba(255, 157, 61, 0.18);
+  }
+  .counter-sub {
+    margin-top: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    color: var(--faint);
+  }
+
+  .gauge-body { padding: 1rem 1.15rem 1.2rem; }
+  .gauge-readout {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.7rem;
+    font-family: var(--font-mono);
+  }
+  .gauge-pct { font-size: clamp(1.5rem, 2.4vw, 2rem); color: var(--phosphor-hi); }
+  .gauge-note { font-size: 0.74rem; letter-spacing: 0.08em; color: var(--faint); text-align: right; }
+  .gauge-track {
+    position: relative;
+    height: 16px;
+    border: 1px solid var(--line);
+    background:
+      repeating-linear-gradient(to right, rgba(255, 157, 61, 0.22) 0 1px, transparent 1px 10%),
+      var(--screen);
+  }
+  .gauge-fill {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+    right: 2px;
+    transform: scaleX(0);
+    transform-origin: left center;
+    background: var(--phosphor);
+    transition: transform 600ms ease-out;
+  }
+  .gauge-fill.teal { background: var(--teal); }
+  .gauge-scale {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    color: var(--faint);
+  }
+
+  /* ---------- roster strip ---------- */
+  .roster-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .roster-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.9rem 1.25rem;
+    padding: 0.85rem 1.15rem;
+    border-bottom: 1px solid var(--line);
+    transition: background-color 120ms ease-out;
+  }
+  .roster-row:last-child { border-bottom: 0; }
+  .roster-row:hover { background: #17130c; }
+  .roster-row.scored { background: #0e120c; }
+  .glyph {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line);
+    background: var(--screen);
+    color: var(--phosphor);
+    flex: none;
+  }
+  .glyph svg { width: 24px; height: 24px; display: block; }
+  .who { min-width: 0; }
+  .pname {
+    display: block;
+    font-weight: 600;
+    font-size: 1.06rem;
+    letter-spacing: 0.05em;
+    color: var(--phosphor-hi);
+  }
+  .tname {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.12em;
+    color: var(--faint);
+  }
+  .rstatus {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.12em;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+  .rstatus .lamp { background: var(--hue, var(--phosphor)); box-shadow: 0 0 7px var(--hue, var(--phosphor)); width: 7px; height: 7px; }
+  .roster-row.scored .rstatus { color: var(--teal-hi); }
+  .roster-row.scored .rstatus .lamp { background: var(--teal); box-shadow: 0 0 7px rgba(45, 212, 191, 0.55); }
+  .score-btn {
+    font-family: var(--font-tech);
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.14em;
+    color: var(--phosphor);
+    background: transparent;
+    border: 1px solid var(--phosphor);
+    padding: 0.6em 1.2em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 120ms ease-out, color 120ms ease-out;
+  }
+  .score-btn:hover { background: var(--phosphor); color: var(--bg); }
+  .roster-row.scored .score-btn {
+    border-color: var(--teal);
+    color: var(--teal-hi);
+  }
+  .roster-row.scored .score-btn:hover { background: var(--teal); color: var(--bg); }
+
+  /* ---------- timeline: queue + log ---------- */
+  .timeline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(0.9rem, 1.6vw, 1.4rem);
+  }
+  @media (min-width: 1020px) {
+    .timeline { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; }
+  }
+
+  .mission-list { list-style: none; margin: 0; padding: 0; }
+  .mission-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.4rem 1.25rem;
+    align-items: center;
+    padding: 0.9rem 1.15rem;
+    border-bottom: 1px solid var(--line);
+    text-decoration: none;
+    transition: background-color 120ms ease-out;
+  }
+  .mission-row:last-child { border-bottom: 0; }
+  a.mission-row:hover { background: #17130c; }
+  .mission-name {
+    font-weight: 600;
+    font-size: 1.02rem;
+    letter-spacing: 0.04em;
+    color: var(--phosphor-hi);
+  }
+  .mission-meta {
+    grid-column: 1;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    color: var(--faint);
+  }
+  .mission-mode {
+    border: 1px solid var(--line);
+    padding: 0.15em 0.55em;
+    margin-right: 0.75em;
+    color: var(--dim);
+  }
+  .tminus {
+    grid-row: 1;
+    grid-column: 2;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    color: var(--phosphor);
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  /* mission log: dimmed phosphor, stamped complete */
+  .log { background-color: #0d0b08; }
+  .log .mission-name { color: var(--past); font-weight: 500; }
+  .stamp {
+    grid-row: 1;
+    grid-column: 2;
+    justify-self: end;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
+    color: var(--faint);
+    border: 1px solid var(--faint);
+    padding: 0.3em 0.6em;
+    transform: rotate(-2.5deg);
+    white-space: nowrap;
+  }
+  .log-note {
+    margin: 0;
+    padding: 0.7rem 1.15rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    color: var(--faint);
+  }
+
+  /* ---------- footer ---------- */
+  footer {
+    border-top: 1px solid var(--line);
+    background: #100e09;
+    padding: 0.8rem var(--pad-x);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem 1.5rem;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    color: var(--faint);
+  }
+  footer .ok { color: var(--teal-hi); display: inline-flex; align-items: center; gap: 0.5em; }
+
+  .badge {
+    position: fixed;
+    right: 10px;
+    bottom: 10px;
+    z-index: 60;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    color: var(--faint);
+    border: 1px solid var(--line);
+    background: rgba(10, 10, 10, 0.85);
+    padding: 0.35em 0.6em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blink, .digits .colon { animation: none; }
+    .gauge-fill { transition: none; }
+  }
+
+  /* ---------- small screens ---------- */
+  @media (max-width: 720px) {
+    .console-tag { display: none; }
+    .readings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .reading { border-top: 1px solid var(--line); }
+    .reading:nth-child(-n+2) { border-top: 0; }
+    .reading:nth-child(even) { border-left: 1px solid var(--line); }
+    .reading:nth-child(odd) { border-left: 0; }
+    .digits { font-size: clamp(2.6rem, 14.5vw, 4.5rem); }
+    .welcome { max-width: none; }
+  }
+  @media (max-width: 560px) {
+    .instruments { grid-template-columns: minmax(0, 1fr); }
+    .roster-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+    .rstatus { grid-column: 2; grid-row: 2; }
+    .score-btn { grid-row: 1 / span 2; grid-column: 3; align-self: center; }
+    .glyph { grid-row: 1 / span 2; width: 38px; height: 38px; }
+    .wall-status .ws-label { display: none; }
+  }
+</style>
+</head>
+<body>
+<!--
+THESIS: The live event as an operations wall — one monumental countdown, every other reading a disciplined framed instrument. It refuses the category default — the gradient SaaS hero with floating rounded cards — and it refuses the world's own failure mode, the wall of alarms: one primary display, everything else subordinate.
+OWN-WORLD: black ops-room wall, phosphor orange signal, thin framed panels with corner ticks and bezel nameplates, scanline CRT inset for the countdown, blocky mono numerals, teal as the single NOMINAL/READY condition channel.
+STORY: One event is live; the clock is the monument. The judge's roster, the telemetry, the queued missions, and the stamped mission log all report to it. Warmth comes from human copy ("Welcome back, Judge"), not from softening the world.
+FIRST VIEWPORT: thin ops header with wall clock and NOMINAL status, bezel strip with blinking LIVE lamp, event name, readings strip, then the full-width scanline CRT countdown and the START SCORING commit switch on a caution stripe.
+FORM: challenger ops-wall hero; kept challenger.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md.
+-->
+<a class="skip" href="#roster">SKIP TO SCORING ROSTER</a>
+
+<header class="ops">
+  <a class="brand" href="#" aria-label="HackJudge — home">
+    <svg viewBox="0 0 54 44" aria-hidden="true" focusable="false">
+      <path fill="#2dd4bf" d="M0 7h7v7H0V7Zm0 7h5v16H0V14Zm0 16h7v7H0v-7ZM7 0h13v6H7v-6Zm0 38h13v6H7v-6ZM47 7h7v7h-7V7Zm2 7h5v16h-5V14Zm-2 16h7v7h-7v-7ZM34 0h13v6H34V0Zm0 38h13v6H34v-6Z"/>
+      <path fill="#2dd4bf" d="M22 18h10v10H22z"/>
+      <path fill="#0d9488" d="M29 13h7v7h-7zM17 25h7v7h-7z"/>
+    </svg>
+    <span class="wordmark">HACKJUDGE</span>
+  </a>
+  <span class="console-tag">JUDGE CONSOLE // WALL P214</span>
+  <span class="ops-right">
+    <span class="wall-status"><span class="lamp"></span><span class="ws-label">WALL STATUS</span> NOMINAL</span>
+    <span class="wallclock">WALL CLOCK <b id="wallclock">--:--:-- UTC</b></span>
+  </span>
+</header>
+
+<main>
+  <!-- ================= PRIMARY DISPLAY ================= -->
+  <section class="panel primary" id="live-event" aria-labelledby="event-name">
+    <div class="bezel">
+      <span>PRIMARY DISPLAY // LIVE EVENT</span>
+      <span class="live-chip"><span class="lamp amber blink"></span>LIVE — CONDITION: <span class="cond">NOMINAL</span></span>
+    </div>
+
+    <div class="primary-main">
+      <h1 class="event-name" id="event-name">TechNova Hackathon 2025</h1>
+      <p class="lede">48 hours. Build bold. Ship real. Solve meaningful problems and create impact.</p>
+      <dl class="readings">
+        <div class="reading"><dt>Mode</dt><dd>HACKATHON</dd></div>
+        <div class="reading"><dt>Phase</dt><dd><span class="lamp amber blink"></span>LIVE</dd></div>
+        <div class="reading"><dt>Started</dt><dd>24-05-25</dd></div>
+        <div class="reading"><dt>Duration</dt><dd>48 HOURS</dd></div>
+        <div class="reading"><dt>Field</dt><dd>128 TEAMS / 512 PROJ</dd></div>
+      </dl>
+    </div>
+
+    <div class="screen" role="timer" aria-label="Time remaining in TechNova Hackathon 2025">
+      <div class="screen-head">
+        <span>T-MINUS // TIME TO CUTOFF</span>
+        <span class="sync"><span class="lamp"></span>FEED SYNC</span>
+      </div>
+      <div class="digits" aria-hidden="true">
+        <span class="grp" id="d-h">17</span><span class="colon">:</span><span class="grp" id="d-m">42</span><span class="colon">:</span><span class="grp" id="d-s">11</span>
+      </div>
+      <div class="units" aria-hidden="true">
+        <span>HOURS</span><span class="colon">:</span><span>MINUTES</span><span class="colon">:</span><span>SECONDS</span>
+      </div>
+      <span class="sr-only" id="timer-sr">17 hours 42 minutes remaining</span>
+      <div class="screen-foot">
+        <span>OPERATION WINDOW 48H</span>
+        <span>ELAPSED <span id="elapsed">30:17:49</span></span>
+      </div>
+    </div>
+
+    <div class="commit-row">
+      <a class="commit" href="#roster">
+        <span class="commit-face">
+          <span>
+            <span class="commit-label">START SCORING</span>
+            <span class="commit-sub">COMMIT // SCORING CHANNEL OPEN</span>
+          </span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7"/></svg>
+        </span>
+        <span class="commit-stripe" aria-hidden="true"></span>
+      </a>
+      <p class="welcome">WELCOME BACK, JUDGE — <b>5 ASSIGNMENTS</b> WAITING ON THE ROSTER BELOW. THE CLOCK ABOVE IS THE ONLY THING THAT CANNOT BE APPEALED.</p>
+    </div>
+  </section>
+
+  <!-- ================= TELEMETRY ================= -->
+  <section class="instruments" aria-label="Event telemetry">
+    <div class="panel">
+      <div class="bezel"><span>INSTRUMENT // TEAMS</span><span class="cond"><span class="lamp"></span>NOMINAL</span></div>
+      <div class="counter-body">
+        <div class="counter-num">128</div>
+        <div class="counter-sub">REGISTERED · AVG 4.0 PROJECTS / TEAM</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="bezel"><span>INSTRUMENT // PROJECTS</span><span class="cond"><span class="lamp"></span>NOMINAL</span></div>
+      <div class="counter-body">
+        <div class="counter-num">512</div>
+        <div class="counter-sub">SUBMITTED · 5 ASSIGNED TO YOU</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="bezel"><span>INSTRUMENT // EVENT CLOCK</span><span class="cond"><span class="lamp"></span>NOMINAL</span></div>
+      <div class="gauge-body">
+        <div class="gauge-readout">
+          <span class="gauge-pct" id="g-pct">63%</span>
+          <span class="gauge-note">ELAPSED <span id="g-elapsed">30:17:49</span> OF 48:00:00</span>
+        </div>
+        <div class="gauge-track" role="img" aria-label="Event clock: 63 percent of the 48 hour operation elapsed">
+          <div class="gauge-fill" id="g-fill" style="transform:scaleX(0.63)"></div>
+        </div>
+        <div class="gauge-scale"><span>00H</span><span>24H</span><span>48H</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="bezel"><span>INSTRUMENT // YOUR QUEUE</span><span class="cond" id="q-chip"><span class="lamp"></span>READY</span></div>
+      <div class="gauge-body">
+        <div class="gauge-readout">
+          <span class="gauge-pct" id="q-count">0 / 5</span>
+          <span class="gauge-note">ASSIGNMENTS LOGGED</span>
+        </div>
+        <div class="gauge-track" id="q-track" role="img" aria-label="Your scoring queue: 0 of 5 assignments logged">
+          <div class="gauge-fill teal" id="q-fill" style="transform:scaleX(0)"></div>
+        </div>
+        <div class="gauge-scale"><span>0</span><span>QUEUE</span><span>5</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ROSTER ================= -->
+  <section class="panel" id="roster" aria-labelledby="roster-h">
+    <div class="bezel">
+      <span id="roster-h">PROJECT ROSTER // ASSIGNED TO YOU — 05</span>
+      <span class="cond"><span class="lamp"></span>CHANNEL OPEN</span>
+    </div>
+    <ul class="roster-list">
+      <li class="roster-row">
+        <span class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter"><path d="M13 3 6 13h5l-2 8 8-11h-5l1-7z"/></svg>
+        </span>
+        <span class="who"><span class="pname">Voltify</span><span class="tname">TEAM VOLT</span></span>
+        <span class="rstatus"><span class="lamp" style="--hue:#6366f1"></span><span class="stext">AWAITING SCORE</span></span>
+        <button class="score-btn" type="button" aria-pressed="false">SCORE</button>
+      </li>
+      <li class="roster-row">
+        <span class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 21v-8"/><path d="M12 13C12 8 9 5 4 5c0 5 3 8 8 8"/><path d="M12 13c0-5 3-8 8-8 0 5-3 8-8 8"/></svg>
+        </span>
+        <span class="who"><span class="pname">AgriSense</span><span class="tname">GREENBYTE</span></span>
+        <span class="rstatus"><span class="lamp" style="--hue:#22c55e"></span><span class="stext">AWAITING SCORE</span></span>
+        <button class="score-btn" type="button" aria-pressed="false">SCORE</button>
+      </li>
+      <li class="roster-row">
+        <span class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 3l7 3v6l-7 9-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+        </span>
+        <span class="who"><span class="pname">ShieldAI</span><span class="tname">NULL POINTERS</span></span>
+        <span class="rstatus"><span class="lamp" style="--hue:#7c3aed"></span><span class="stext">AWAITING SCORE</span></span>
+        <button class="score-btn" type="button" aria-pressed="false">SCORE</button>
+      </li>
+      <li class="roster-row">
+        <span class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter"><circle cx="5.5" cy="6" r="2.25"/><circle cx="18.5" cy="6" r="2.25"/><circle cx="12" cy="18" r="2.25"/><path d="M7.4 7.2 10.3 16M16.6 7.2 13.7 16M7.8 6h8.4"/></svg>
+        </span>
+        <span class="who"><span class="pname">MedSync</span><span class="tname">CODECRAFTERS</span></span>
+        <span class="rstatus"><span class="lamp" style="--hue:#fbbf24"></span><span class="stext">AWAITING SCORE</span></span>
+        <button class="score-btn" type="button" aria-pressed="false">SCORE</button>
+      </li>
+      <li class="roster-row">
+        <span class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 5h16v11H10l-6 4.5z"/><path d="M8 9.5h8M8 12.5h5"/></svg>
+        </span>
+        <span class="who"><span class="pname">LinguaLink</span><span class="tname">LOST IN TRANSLATION</span></span>
+        <span class="rstatus"><span class="lamp" style="--hue:#ec4899"></span><span class="stext">AWAITING SCORE</span></span>
+        <button class="score-btn" type="button" aria-pressed="false">SCORE</button>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ================= TIMELINE ================= -->
+  <div class="timeline">
+    <section class="panel" aria-labelledby="queue-h">
+      <div class="bezel">
+        <span id="queue-h">MISSION QUEUE // UPCOMING — 03</span>
+        <span class="cond"><span class="lamp"></span>STANDBY</span>
+      </div>
+      <ol class="mission-list">
+        <li>
+          <a class="mission-row" href="#" aria-label="View event Code and Tell: AI Edition, starts in 13 days">
+            <span class="mission-name">Code &amp; Tell: AI Edition</span>
+            <span class="mission-meta"><span class="mission-mode">CODE &amp; TELL</span>JUN 07 – JUN 08 2025</span>
+            <span class="tminus">T-13 DAYS</span>
+          </a>
+        </li>
+        <li>
+          <a class="mission-row" href="#" aria-label="View event InnovateX Hackathon, starts in 27 days">
+            <span class="mission-name">InnovateX Hackathon</span>
+            <span class="mission-meta"><span class="mission-mode">HACKATHON</span>JUN 21 – JUN 22 2025</span>
+            <span class="tminus">T-27 DAYS</span>
+          </a>
+        </li>
+        <li>
+          <a class="mission-row" href="#" aria-label="View event Build for Bharat Demo Day, starts in 41 days">
+            <span class="mission-name">Build for Bharat Demo Day</span>
+            <span class="mission-meta"><span class="mission-mode">DEMO DAY</span>JUL 05 2025</span>
+            <span class="tminus">T-41 DAYS</span>
+          </a>
+        </li>
+      </ol>
+    </section>
+
+    <section class="panel log" aria-labelledby="log-h">
+      <div class="bezel">
+        <span id="log-h">MISSION LOG // PAST — 02</span>
+        <span class="cond"><span class="lamp"></span>ARCHIVED</span>
+      </div>
+      <ol class="mission-list">
+        <li class="mission-row">
+          <span class="mission-name">Hack the North 2025</span>
+          <span class="mission-meta">APR 18 – APR 20 2025</span>
+          <span class="stamp">COMPLETE</span>
+        </li>
+        <li class="mission-row">
+          <span class="mission-name">Code &amp; Tell: Climate Edition</span>
+          <span class="mission-meta">MAR 01 2025</span>
+          <span class="stamp">COMPLETE</span>
+        </li>
+      </ol>
+      <p class="log-note">SCORES SEALED · RESULTS PUBLISHED TO CREWS</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <span>HACKJUDGE OPS WALL · P214 · SYNTHETIC DEMO FIXTURE — ALL READINGS ILLUSTRATIVE</span>
+  <span class="ok"><span class="lamp"></span>ALL SYSTEMS NOMINAL</span>
+</footer>
+
+<div class="badge">PREVIEW · CRISIS WALL · SYNTHETIC DATA</div>
+
+<script>
+(function () {
+  var pad = function (n) { return String(n).padStart(2, "0"); };
+
+  /* wall clock — real UTC time */
+  var clockEl = document.getElementById("wallclock");
+  function renderClock() {
+    var d = new Date();
+    clockEl.textContent = pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" + pad(d.getUTCSeconds()) + " UTC";
+  }
+
+  /* countdown — simulated feed, 48h operation, ticks once per second */
+  var TOTAL = 48 * 3600;
+  var remaining = 17 * 3600 + 42 * 60 + 11;
+  var dH = document.getElementById("d-h");
+  var dM = document.getElementById("d-m");
+  var dS = document.getElementById("d-s");
+  var elaps = document.querySelectorAll("#elapsed, #g-elapsed");
+  var gFill = document.getElementById("g-fill");
+  var gPct = document.getElementById("g-pct");
+  var gTrack = gFill.parentElement;
+  var srTimer = document.getElementById("timer-sr");
+  var lastAnnouncedMinute = -1;
+
+  function renderCountdown() {
+    var h = Math.floor(remaining / 3600);
+    var m = Math.floor((remaining % 3600) / 60);
+    var s = remaining % 60;
+    dH.textContent = pad(h);
+    dM.textContent = pad(m);
+    dS.textContent = pad(s);
+    var e = TOTAL - remaining;
+    var eStr = pad(Math.floor(e / 3600)) + ":" + pad(Math.floor((e % 3600) / 60)) + ":" + pad(e % 60);
+    elaps.forEach(function (el) { el.textContent = eStr; });
+    var frac = e / TOTAL;
+    gFill.style.transform = "scaleX(" + frac + ")";
+    gPct.textContent = Math.round(frac * 100) + "%";
+    gTrack.setAttribute("aria-label", "Event clock: " + Math.round(frac * 100) + " percent of the 48 hour operation elapsed");
+    if (m !== lastAnnouncedMinute) {
+      lastAnnouncedMinute = m;
+      srTimer.textContent = h + " hours " + m + " minutes remaining";
+    }
+  }
+
+  renderClock();
+  renderCountdown();
+  setInterval(function () {
+    renderClock();
+    remaining = Math.max(0, remaining - 1);
+    renderCountdown();
+  }, 1000);
+
+  /* scoring queue — toggling a roster row's commit updates the queue instrument */
+  var rows = Array.prototype.slice.call(document.querySelectorAll(".roster-row"));
+  var qCount = document.getElementById("q-count");
+  var qFill = document.getElementById("q-fill");
+  var qChip = document.getElementById("q-chip");
+  var qTrack = document.getElementById("q-track");
+
+  function refreshQueue() {
+    var done = rows.filter(function (r) { return r.classList.contains("scored"); }).length;
+    qCount.textContent = done + " / 5";
+    qFill.style.transform = "scaleX(" + (done / 5) + ")";
+    qTrack.setAttribute("aria-label", "Your scoring queue: " + done + " of 5 assignments logged");
+    if (done === 5) {
+      qChip.innerHTML = '<span class="lamp"></span>COMPLETE';
+    } else if (done > 0) {
+      qChip.innerHTML = '<span class="lamp amber"></span>IN PROGRESS';
+    } else {
+      qChip.innerHTML = '<span class="lamp"></span>READY';
+    }
+  }
+
+  rows.forEach(function (row) {
+    var btn = row.querySelector(".score-btn");
+    var stext = row.querySelector(".stext");
+    btn.addEventListener("click", function () {
+      var scored = row.classList.toggle("scored");
+      btn.setAttribute("aria-pressed", String(scored));
+      btn.textContent = scored ? "LOGGED" : "SCORE";
+      stext.textContent = scored ? "SCORE LOGGED" : "AWAITING SCORE";
+      refreshQueue();
+    });
+  });
+})();
+</script>
+</body>
+</html>

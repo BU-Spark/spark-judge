@@ -1,0 +1,76 @@
+{
+  "title": "Refine HackJudge's new visual world",
+  "question": "Keep Semester Lines, choose a new challenger, or steer the next round.",
+  "options": [
+    {
+      "id": "semester-lines",
+      "label": "Semester Lines",
+      "kicker": "KEPT FROM ROUND ONE",
+      "lineage": "Metropolitan rail maps, enamel signage, and live service diagrams",
+      "thesis": "Events are clear routes through a semester, with scoring, appreciation, and voting as distinct but connected lines.",
+      "palette": ["#082f2c", "#f7faf8", "#0d9488", "#f2b84b", "#e85d5d"],
+      "materials": ["midnight enamel", "porcelain station ticks", "disciplined route lines"],
+      "viewport": "A live semester diagram connects the focal event to upcoming and past events while the active route opens into its mode-specific action.",
+      "risk": "Lifecycle navigation is exceptionally clear, but projects need strong story panels so they never feel like anonymous stations.",
+      "case": "Still the strongest platform model: high professional clarity, with project storytelling added to earn student delight.",
+      "sketch": ".impeccable/sketches/semester-lines.webp",
+      "hero": ".impeccable/quality-bars/transit-hero.webp",
+      "board": ".impeccable/quality-bars/transit-board.webp"
+    },
+    {
+      "id": "build-sheet",
+      "label": "The Build Sheet",
+      "kicker": "NEW CHALLENGER",
+      "lineage": "Product teardown manuals, exploded assembly drawings, and engineering review packets",
+      "thesis": "Every project is an engineered object under review, with evidence, decisions, and outcomes annotated directly onto the work.",
+      "palette": ["#f3f6f3", "#16211f", "#0d9488", "#0a4942", "#e5a93a"],
+      "materials": ["technical vellum", "registration blueprints", "precise annotation leaders"],
+      "viewport": "One featured project or event sits as a large exploded composition, surrounded by its people, criteria, live state, and next action; the system reads like a beautifully edited review packet.",
+      "risk": "Excellent evidence clarity and engineer credibility, but it must celebrate finished work rather than making every student project feel unfinished.",
+      "case": "Wins on professional product clarity; student gratification depends on using annotation as recognition, not inspection theater.",
+      "sketch": ".impeccable/sketches/build-sheet.webp"
+    },
+    {
+      "id": "signal-horizon",
+      "label": "Signal Horizon",
+      "kicker": "NEW CHALLENGER",
+      "lineage": "Theater cycloramas, lighting cue sheets, and controlled dawn transitions",
+      "thesis": "An event visibly changes the atmosphere of the whole product as it moves from anticipation to live participation to release.",
+      "palette": ["#07110f", "#0a4942", "#0d9488", "#ef8b83", "#f5faf8"],
+      "materials": ["matte black stage", "teal horizon wash", "soft day field"],
+      "viewport": "The focal event lives on a wide horizon whose light phase communicates upcoming, live, closed, or released; precise controls and project stories sit low and clear in the frame.",
+      "risk": "Strong emotional reward and lifecycle memory, but color-rich fields require disciplined contrast and non-color state labels in dense screens.",
+      "case": "Wins on student emotion while retaining clear named states; trails Semester Lines on complex admin navigation.",
+      "sketch": ".impeccable/sketches/signal-horizon.webp",
+      "hero": ".impeccable/quality-bars/cyclorama-hero.webp",
+      "board": ".impeccable/quality-bars/cyclorama-board.webp"
+    },
+    {
+      "id": "command-elbows",
+      "label": "Command Elbows",
+      "kicker": "NEW CHALLENGER",
+      "lineage": "Flat starship wall panels and pill-cornered command banks",
+      "thesis": "HackJudge becomes a lively shared command surface where each event mode is a color bank and the important action is physically obvious.",
+      "palette": ["#070a09", "#0d9488", "#a99bf2", "#f1b83f", "#f0f4f2"],
+      "materials": ["flat black panel", "teal elbow frames", "periwinkle and gold state banks"],
+      "viewport": "Thick elbow frames organize one focal event, a ranked bank of projects, and a single bright action segment without relying on cards or page chrome.",
+      "risk": "Highly gratifying and technical, but the sci-fi association can feel costume-like unless the geometry remains restrained and semantic.",
+      "case": "Wins on playful engineer identification; trails both Semester Lines and Build Sheet on neutral professional longevity.",
+      "sketch": ".impeccable/sketches/command-elbows.webp",
+      "hero": ".impeccable/quality-bars/elbow-hero.webp",
+      "board": ".impeccable/quality-bars/elbow-board.webp"
+    }
+  ],
+  "reroll": true,
+  "steer": true,
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A polished contemporary SaaS event platform, executed impeccably and without a governing metaphor.",
+    "palette": ["#ffffff", "#111827", "#0d9488", "#e5e7eb"],
+    "materials": ["clean surfaces", "soft dividers", "conventional product controls"],
+    "viewport": "A familiar hero, event cards, project grid, and straightforward application navigation.",
+    "risk": "Immediately usable, but unlikely to give HackJudge a distinctive identity students or judges remember.",
+    "sketch": ".impeccable/sketches/category-standard.webp"
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "title": "Choose HackJudge's new visual world",
+  "question": "Which direction should define the homepage and the full product UI?",
+  "options": [
+    {
+      "id": "builder-pass",
+      "label": "The Builder Pass",
+      "kicker": "PROPOSED DIRECTION",
+      "lineage": "Contemporary design-conference credentials, programs, and venue wayfinding",
+      "thesis": "HackJudge becomes the beautifully engineered event credential that makes every project and action feel officially in play.",
+      "palette": ["#0a4942", "#0d9488", "#edf5f2", "#17201e", "#f2b84b"],
+      "materials": ["uncoated credential stock", "woven lanyard bands", "precise registration marks"],
+      "viewport": "A spacious live-event masthead gives way to a project program: one focal event, a confident action, and a structured semester rail without dashboard chrome.",
+      "risk": "It can drift into decorative event branding unless task states stay as disciplined as the program grid.",
+      "sketch": ".impeccable/sketches/builder-pass.webp"
+    },
+    {
+      "id": "judging-bench",
+      "label": "The Judging Bench",
+      "kicker": "CHALLENGER",
+      "lineage": "Creator-hardware desk instruments and precision control surfaces",
+      "thesis": "Scoring, appreciating, and ranking feel like deliberate inputs on a beautifully made engineering instrument.",
+      "palette": ["#1b211f", "#d8d4c8", "#0d9488", "#f2b84b", "#f4f1e8"],
+      "materials": ["gunmetal chassis", "bone keycaps", "knurled controls"],
+      "viewport": "The homepage is a restrained control surface: a compact event readout, tactile project modules, and one unmistakable commit action.",
+      "risk": "Exceptional engineer identification and task clarity, but the hardware metaphor may make Demo Day browsing feel too procedural.",
+      "case": "Wins on professional familiarity and decisive interaction; trails on the open, celebratory side of student showcases.",
+      "sketch": ".impeccable/sketches/judging-bench.webp",
+      "hero": ".impeccable/quality-bars/creator-hero.webp",
+      "board": ".impeccable/quality-bars/creator-board.webp"
+    },
+    {
+      "id": "semester-lines",
+      "label": "Semester Lines",
+      "kicker": "CHALLENGER",
+      "lineage": "Metropolitan rail maps, enamel signage, and live service diagrams",
+      "thesis": "Events are clear routes through a semester, with scoring, appreciation, and voting as distinct but connected lines.",
+      "palette": ["#082f2c", "#f7faf8", "#0d9488", "#f2b84b", "#e85d5d"],
+      "materials": ["midnight enamel", "porcelain station ticks", "disciplined route lines"],
+      "viewport": "A live semester diagram connects the focal event to upcoming and past events while the active route opens into its mode-specific action.",
+      "risk": "Lifecycle navigation becomes exceptionally clear, but projects can feel like anonymous stations unless their stories break through the diagram.",
+      "case": "Wins on platform structure and multi-mode legibility; needs deliberate project imagery to preserve emotional reward.",
+      "sketch": ".impeccable/sketches/semester-lines.webp",
+      "hero": ".impeccable/quality-bars/transit-hero.webp",
+      "board": ".impeccable/quality-bars/transit-board.webp"
+    },
+    {
+      "id": "build-tags",
+      "label": "Build Tags",
+      "kicker": "CHALLENGER",
+      "lineage": "Industrial streetwear labels, stockroom systems, and durable product tagging",
+      "thesis": "Every project, event, and decision carries a bold functional tag that celebrates what students built without hiding how the system works.",
+      "palette": ["#f7f7f3", "#111413", "#0d9488", "#0a4942", "#dff4ee"],
+      "materials": ["woven labels", "utility tags", "black-and-white structure"],
+      "viewport": "A bright project-forward homepage uses oversized build labels, clean evidence panels, and teal tags for live state and primary action.",
+      "risk": "Strong student energy, but the fashion language can overpower dense judging and admin workflows if applied literally.",
+      "case": "Wins on student identification and memorable personality; trails the others on calm density for professional operations.",
+      "sketch": ".impeccable/sketches/build-tags.webp",
+      "hero": ".impeccable/quality-bars/streetwear-hero.webp",
+      "board": ".impeccable/quality-bars/streetwear-board.webp"
+    }
+  ],
+  "reroll": true,
+  "steer": true,
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A polished contemporary SaaS event platform, executed impeccably and without a governing metaphor.",
+    "palette": ["#ffffff", "#111827", "#0d9488", "#e5e7eb"],
+    "materials": ["clean surfaces", "soft dividers", "conventional product controls"],
+    "viewport": "A familiar hero, event cards, project grid, and straightforward application navigation.",
+    "risk": "Immediately usable, but unlikely to give HackJudge a distinctive identity students or judges remember.",
+    "sketch": ".impeccable/sketches/category-standard.webp"
+  }
+}

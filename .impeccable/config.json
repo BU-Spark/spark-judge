@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [
+      ".impeccable/previews/standard.html",
+      "src/legacy.css"
+    ],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "instrument sans",
+        "createdAt": "2026-08-12T17:21:05.030Z",
+        "reason": "Instrument Sans is the declared UI face of the user-confirmed Field Instrument design system (DESIGN.md typography)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,1329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HackJudge — "TechNova Hackathon 2025" — Live Scoring Preview</title>
+<meta name="description" content="HackJudge design preview — The Field Instrument world. Synthetic demo data.">
+<!-- impeccable-disable design-system-font, design-system-font-size, design-system-color, design-system-radius, overused-font -- standalone direction preview exploring a candidate world distinct from the app's locked DESIGN.md system; this preview's palette, radii, and instrument type are brief-mandated demo content -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --desk: #ddd9d0;            /* workbench surface the unit sits on */
+    --chassis: #eceae4;         /* milled light warm-gray panel */
+    --panel: #e3e0d7;           /* recessed sub-panel */
+    --ink: #1a1c1e;
+    --ink-soft: #42443e;        /* secondary text on chassis, tinted from ground hue */
+    --ink-dim: #5b5d55;         /* engraved micro-labels on chassis */
+    --hair: #cfccc0;            /* scored panel hairlines */
+    --hair-lit: #f7f5ee;        /* engraved highlight */
+    --screen: #12181d;          /* dark display module glass */
+    --screen-edge: #080c0f;
+    --screen-ink: #e8edee;      /* primary text on screen */
+    --screen-dim: #9fb0b5;      /* secondary text on screen, tinted from screen hue */
+    --orange: #ff6b2c;
+    --blue: #3d7bff;
+    --green: #2fbf71;           /* TE spring green */
+    --white-key: #fbfaf6;
+    --teal: #0d9488;
+    --teal-lit: #2dd4bf;        /* teal phosphor on dark screen */
+    --pad-x: clamp(1rem, 3.5vw, 2.75rem);
+    --font-ui: "Instrument Sans", "Helvetica Neue", sans-serif;
+    --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
+
+  body {
+    margin: 0;
+    background: var(--desk);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    line-height: 1.55;
+    overflow-x: clip;
+  }
+
+  ::selection { background: var(--teal); color: #fff; }
+
+  a { color: inherit; }
+
+  :focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 3px;
+  }
+
+  .skip {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 90;
+    transform: translateY(-300%);
+    background: var(--ink);
+    color: var(--chassis);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    padding: 0.6em 0.9em;
+    text-decoration: none;
+  }
+  .skip:focus-visible { transform: none; }
+
+  /* ---------- engraved micro-label grammar ---------- */
+  .engraved {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    text-shadow: 0 1px 0 var(--hair-lit);
+  }
+
+  /* ---------- the unit (device chassis) ---------- */
+  .unit {
+    max-width: 1120px;
+    margin: clamp(0px, 3vw, 2.5rem) auto;
+    background: var(--chassis);
+    border: 1px solid #c4c1b6;
+    border-radius: 22px;
+    box-shadow:
+      0 24px 48px rgba(26, 28, 30, 0.14),
+      0 3px 10px rgba(26, 28, 30, 0.08);
+    overflow: hidden;
+  }
+  @media (max-width: 1160px) {
+    .unit { border-radius: 0; margin: 0 auto; border-left: 0; border-right: 0; }
+  }
+
+  /* ---------- top rail ---------- */
+  .rail {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.5rem;
+    padding: 1rem var(--pad-x);
+    border-bottom: 1px solid var(--hair);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    text-decoration: none;
+  }
+  .brand svg { display: block; width: 30px; height: 26px; }
+  .brand-text { display: flex; flex-direction: column; gap: 1px; }
+  .wordmark {
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.14em;
+    color: #33352f;
+    text-shadow: 0 1px 0 var(--hair-lit);
+  }
+  .brand-sub { font-size: 0.5625rem; }
+
+  .modes {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.9rem, 2.5vw, 1.6rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .mode svg { display: block; width: 18px; height: 18px; }
+  .mode .engraved { font-size: 0.5rem; letter-spacing: 0.12em; }
+  .mode[aria-current="true"] .engraved { color: #0a6e63; text-shadow: none; font-weight: 600; }
+
+  .rail-readouts {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+  .readout { display: flex; flex-direction: column; gap: 1px; text-align: right; }
+  .readout .engraved { font-size: 0.5rem; }
+  .readout b {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+  }
+  .signin {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--ink);
+    border: 1px solid var(--hair);
+    background: var(--white-key);
+    border-radius: 8px;
+    padding: 0.55em 0.9em;
+    box-shadow: 0 2px 5px rgba(26, 28, 30, 0.10);
+    white-space: nowrap;
+  }
+  .signin:hover { border-color: var(--teal); color: #0a6e63; }
+  .signin:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(26, 28, 30, 0.12); }
+
+  /* ---------- display module (the screen) ---------- */
+  .face { padding: clamp(1.25rem, 3vw, 2.25rem) var(--pad-x); }
+
+  .module {
+    background: var(--screen);
+    border: 1px solid var(--screen-edge);
+    border-radius: 16px;
+    box-shadow:
+      inset 0 2px 10px rgba(0, 0, 0, 0.55),
+      0 1px 0 var(--hair-lit);
+    padding: clamp(1.1rem, 2.5vw, 1.75rem);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.4rem;
+    color: var(--screen-ink);
+  }
+  @media (min-width: 900px) {
+    .module { grid-template-columns: minmax(280px, 5fr) minmax(0, 7fr); align-items: stretch; }
+  }
+
+  .screen {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #0b1115;
+    border: 1px solid #1e2a30;
+    min-height: 250px;
+  }
+  .screen canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+  .screen-tag {
+    position: absolute;
+    top: 0.6rem;
+    left: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    letter-spacing: 0.18em;
+    color: #6b7f86;
+    text-transform: uppercase;
+  }
+  .screen-tag--r { left: auto; right: 0.75rem; }
+
+  .module-info { display: flex; flex-direction: column; gap: 0.85rem; min-width: 0; }
+
+  .module-status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .live-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.6875rem;
+    letter-spacing: 0.22em;
+    color: var(--teal-lit);
+  }
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--teal-lit);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .live-dot, .lane-step--live { animation: livepulse 1.6s ease-in-out infinite; }
+    @keyframes livepulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.45); }
+      50% { opacity: 0.55; box-shadow: 0 0 0 5px rgba(45, 212, 191, 0); }
+    }
+  }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--screen-dim);
+    border: 1px solid #2a383f;
+    border-radius: 6px;
+    padding: 0.3em 0.6em;
+    white-space: nowrap;
+  }
+  .chip--mode { color: var(--teal-lit); border-color: rgba(45, 212, 191, 0.4); }
+
+  .event-name {
+    margin: 0;
+    font-size: clamp(1.55rem, 3.2vw, 2.3rem);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    color: var(--screen-ink);
+  }
+  .event-desc {
+    margin: 0;
+    max-width: 58ch;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--screen-dim);
+  }
+  .event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--screen-dim);
+  }
+  .event-meta b { color: var(--screen-ink); font-weight: 600; }
+
+  .select-line {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #7d9198;
+    min-height: 1.2em;
+  }
+  .select-line b { color: var(--teal-lit); font-weight: 600; }
+
+  .module-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.4rem;
+    margin-top: auto;
+    padding-top: 0.4rem;
+  }
+  .transport {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65em;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #14100c;
+    background: var(--orange);
+    border: 1px solid #d14e16;
+    border-radius: 10px;
+    padding: 0.85em 1.3em;
+    box-shadow: 0 4px 10px rgba(26, 28, 30, 0.35);
+  }
+  .transport svg { width: 13px; height: 13px; display: block; }
+  .transport:hover { background: #ff7d45; }
+  .transport:active { transform: translateY(2px); box-shadow: 0 1px 3px rgba(26, 28, 30, 0.4); }
+  .ghost-link {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--screen-dim);
+    text-decoration: underline;
+    text-underline-offset: 5px;
+    text-decoration-color: #2a383f;
+  }
+  .ghost-link:hover { color: var(--screen-ink); text-decoration-color: var(--teal-lit); }
+
+  /* ---------- speaker grille divider ---------- */
+  .grille {
+    height: 22px;
+    margin: 0 var(--pad-x);
+    background-image: radial-gradient(circle, #c6c3b8 1px, transparent 1.4px);
+    background-size: 7px 7px;
+    background-position: center;
+  }
+  /* grille is the sole seam; drop the first zone rule so it doesn't double-strike */
+  .grille + .zone { border-top: none; }
+
+  /* ---------- zones ---------- */
+  .zone { padding: clamp(1.5rem, 3.5vw, 2.5rem) var(--pad-x); border-top: 1px solid var(--hair); }
+  .zone-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-bottom: clamp(1.1rem, 2.5vw, 1.6rem);
+  }
+  .zone-word {
+    margin: 0;
+    font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  /* ---------- project keyboard ---------- */
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(0.6rem, 1.6vw, 1rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (max-width: 700px) {
+    .keys { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  .key {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.7rem;
+    aspect-ratio: 1 / 1;
+    padding: clamp(0.65rem, 1.6vw, 0.95rem);
+    background: var(--white-key);
+    border: 1px solid #b9b6ab;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--ink);
+    box-shadow: 0 4px 9px rgba(26, 28, 30, 0.12);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .key:hover { border-color: var(--key-hue); }
+  .key:active, .key.pressed {
+    transform: translateY(3px);
+    box-shadow: 0 1px 3px rgba(26, 28, 30, 0.16);
+    background: #f2f0e9;
+  }
+  .key-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .key-led {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--key-hue);
+    box-shadow: 0 0 6px 1px rgba(26, 28, 30, 0.15);
+  }
+  .key-num {
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    color: var(--ink-dim);
+  }
+  .key-glyph { display: block; color: var(--ink); }
+  .key-glyph svg { display: block; width: clamp(26px, 3vw, 34px); height: auto; }
+  .key-name {
+    display: block;
+    font-weight: 700;
+    font-size: clamp(0.9rem, 1.6vw, 1.05rem);
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+  }
+  .key-team {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-top: 0.25rem;
+  }
+  .key--open {
+    background: transparent;
+    border: 1.5px dashed #b3b0a4;
+    box-shadow: none;
+    cursor: default;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+  .key--open:hover { border-color: #b3b0a4; }
+  .key--open:active { transform: none; background: transparent; }
+  .key--open .key-glyph { color: #a3a094; }
+  .key--open .engraved { text-shadow: none; }
+
+  /* ---------- semester rail ---------- */
+  .lane {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    padding: 1.4rem 1.5rem;
+  }
+  .lane-bed { position: relative; height: 72px; margin: 0.35rem 0; }
+
+  .lane-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 40px;
+    border-top: 1px solid #b3b0a4;
+  }
+  .lane-tick {
+    position: absolute;
+    top: 14px;
+    width: 1px;
+    height: 26px;
+    background: #b3b0a4;
+    transform: translateX(-50%);
+  }
+  .lane-month { position: absolute; top: 0; transform: translateX(-50%); }
+  .lane-month.first { transform: none; }
+  .lane-month.last { transform: translateX(-100%); }
+
+  .lane-evs {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .lane-evs > li {
+    position: absolute;
+    left: var(--x);
+    top: 34px;
+    transform: translateX(-50%);
+  }
+  .lane-ev {
+    position: relative;
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    text-decoration: none;
+  }
+  .lane-step {
+    position: absolute;
+    inset: 0;
+    border-radius: 3px;
+    transition: background-color 160ms ease, border-color 160ms ease;
+  }
+  .lane-step--past { background: #a8a599; border: 1px solid #8f8c81; }
+  .lane-ev:hover .lane-step--past, .lane-ev:focus-visible .lane-step--past { background: #8f8c81; }
+  .lane-step--next { background: transparent; border: 1.5px solid var(--c); }
+  .lane-ev:hover .lane-step--next, .lane-ev:focus-visible .lane-step--next { background: var(--c); }
+  .lane-step--live { background: var(--teal); border: 1px solid #0a6e63; }
+  .lane-date {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .lane-date::before {
+    /* hairline connector hanging the date from its step */
+    content: "";
+    position: absolute;
+    bottom: calc(100% + 1px);
+    left: 50%;
+    width: 1px;
+    height: 5px;
+    background: #c2beb1;
+  }
+  .lane-date--live { color: #0a6e63; font-weight: 600; text-shadow: none; }
+  .lane-evs > li:first-child .lane-date { left: 0; transform: none; }
+  .lane-evs > li:first-child .lane-date::before { left: 6px; }
+
+  .lane-tip {
+    position: absolute;
+    bottom: calc(100% + 24px);
+    left: 50%;
+    transform: translateX(-50%) translateY(2px);
+    z-index: 6;
+    background: var(--chassis);
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 0.4em 0.65em;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease, transform 160ms ease;
+    box-shadow: 0 4px 10px rgba(26, 28, 30, 0.12);
+  }
+  .lane-ev:hover .lane-tip, .lane-ev:focus-visible .lane-tip { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .lane-evs > li:first-child .lane-tip { left: 0; transform: translateY(2px); }
+  .lane-evs > li:first-child .lane-ev:hover .lane-tip,
+  .lane-evs > li:first-child .lane-ev:focus-visible .lane-tip { transform: none; }
+  .lane-evs > li:last-child .lane-tip { left: auto; right: 0; transform: translateY(2px); }
+  .lane-evs > li:last-child .lane-ev:hover .lane-tip,
+  .lane-evs > li:last-child .lane-ev:focus-visible .lane-tip { transform: none; }
+
+  @media (max-width: 560px) {
+    .lane { padding: 1.3rem 1rem; }
+    .lane-bed { height: 84px; }
+    .lane-evs > li:nth-child(even) .lane-date { top: 32px; }
+    .lane-evs > li:nth-child(even) .lane-date::before { height: 19px; }
+    .lane-live-tag { display: none; }
+    .trace-channel { display: none; }
+  }
+
+  /* ---------- patch lead: live step -> bus gutter -> patch bay on the module's edge ---------- */
+  /* the rail docks directly under the module; the 96px channel between them carries the run */
+  #live { padding-bottom: 0; }
+  #semester { position: relative; border-top: none; padding-top: 96px; }
+  .trace-channel {
+    position: absolute;
+    top: 0;
+    left: var(--pad-x);
+    right: var(--pad-x);
+    height: 96px;
+    pointer-events: none;
+  }
+  .trace-channel .chan-l, .trace-channel .chan-r { position: absolute; top: 44px; }
+  .trace-channel .chan-l { left: 0; }
+  .trace-channel .chan-r { right: 0; }
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .patch-bay { position: absolute; inset: 0; pointer-events: none; }
+  .patch-bay svg { position: absolute; inset: 0; z-index: 3; overflow: visible; }
+  .pjack {
+    /* one input jack per event mode — only the patched one is rendered */
+    position: absolute;
+    top: 0;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--screen);
+    border: 1.5px solid var(--c, var(--teal));
+    box-shadow: 0 0 0 2px var(--chassis), inset 0 0 0 2.5px var(--c, var(--teal));
+  }
+
+  /* ---------- upcoming: sequencer track list ---------- */
+  .track-list { margin: 0; padding: 0; list-style: none; }
+  .track {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.35rem 1rem;
+    align-items: center;
+    padding: 1rem 0.9rem;
+    text-decoration: none;
+    border-top: 1px solid var(--hair);
+  }
+  .track:last-child { border-bottom: 1px solid var(--hair); }
+  .track:hover { background: #efede6; }
+  @media (min-width: 760px) {
+    .track {
+      grid-template-columns: 26px minmax(0, 1.35fr) auto minmax(0, 1fr) auto;
+      gap: 0 1.4rem;
+      padding: 1rem 0.9rem;
+    }
+  }
+  .track-led {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background: var(--c);
+    border: 1px solid rgba(26, 28, 30, 0.25);
+  }
+  .track-name {
+    font-weight: 600;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+    min-width: 0;
+  }
+  .track-steps {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .step {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    border: 1px solid #b3b0a4;
+    background: transparent;
+  }
+  .step.on { background: var(--c); border-color: rgba(26, 28, 30, 0.25); }
+  .track-dates {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .track-count {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .track-mode {
+    grid-column: 2;
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #0a6e63;
+  }
+  @media (min-width: 760px) { .track-mode { grid-column: auto; } }
+
+  /* ---------- past: event log ---------- */
+  .tape {
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    padding: 0.5rem 0;
+    position: relative;
+  }
+  .tape-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.2rem 1rem;
+    padding: 0.85rem 1.5rem;
+    margin: 0.35rem 0;
+    font-family: var(--font-mono);
+  }
+  .tape-row + .tape-row { border-top: 1px solid var(--hair); }
+  @media (min-width: 700px) {
+    .tape-row {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) auto auto;
+      align-items: baseline;
+      gap: 0 1.5rem;
+    }
+  }
+  .tape-date {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .tape-name {
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #43453f;
+    letter-spacing: 0;
+  }
+  .tape-mode {
+    font-size: 0.5625rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .tape-status {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    color: #4e5048;
+    border: 1px solid #b3afa2;
+    border-radius: 5px;
+    padding: 0.25em 0.55em;
+    justify-self: start;
+  }
+  @media (min-width: 700px) { .tape-status { justify-self: end; } }
+
+  /* ---------- footer ---------- */
+  .unit-footer {
+    border-top: 1px solid var(--hair);
+    padding: 1.5rem var(--pad-x) 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+  }
+  .footer-brand { display: flex; align-items: center; gap: 0.6rem; }
+  .footer-brand svg { width: 24px; height: 20px; display: block; }
+  .footer-brand .wordmark { font-size: 0.85rem; }
+  .blurb {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--ink-soft);
+    max-width: 46ch;
+  }
+  .footer-signin {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .footer-signin svg { width: 14px; height: 14px; }
+  .footer-signin:hover { color: #0a6e63; }
+
+  .badge {
+    position: fixed;
+    left: 0.75rem;
+    bottom: 0.75rem;
+    z-index: 70;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--chassis);
+    border: 1px solid var(--hair);
+    border-radius: 7px;
+    padding: 0.45em 0.75em;
+    box-shadow: 0 3px 8px rgba(26, 28, 30, 0.14);
+  }
+
+  @media (max-width: 560px) {
+    .rail-readouts .readout { display: none; }
+    .module-actions .transport { width: 100%; justify-content: center; }
+    .badge { font-size: 0.5625rem; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#projects">Skip to projects to score</a>
+
+<div class="unit">
+
+  <!-- ============ top rail ============ -->
+  <header class="rail">
+    <a class="brand" href="#" aria-label="HackJudge home">
+      <svg viewBox="0 0 54 44" aria-hidden="true" focusable="false">
+        <path fill="#1a1c1e" d="M0 7h7v7H0V7Zm0 7h5v16H0V14Zm0 16h7v7H0v-7ZM7 0h13v6H7V0Zm0 38h13v6H7v-6ZM47 7h7v7h-7V7Zm2 7h5v16h-5V14Zm-2 16h7v7h-7v-7ZM34 0h13v6H34V0Zm0 38h13v6H34v-6Z"/>
+        <path fill="#0d9488" d="M22 18h10v10H22z"/>
+        <path fill="#1a1c1e" d="M29 13h7v7h-7zM17 25h7v7h-7z"/>
+      </svg>
+      <span class="brand-text">
+        <span class="wordmark">HACKJUDGE</span>
+        <span class="engraved brand-sub">FIELD UNIT · P214</span>
+      </span>
+    </a>
+
+    <ul class="modes" aria-label="Event modes">
+      <li class="mode" aria-current="true">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3.5 17 16H3Z" fill="#0d9488" stroke="#0d9488" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span class="engraved">Hackathon</span>
+      </li>
+      <li class="mode">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6.5" fill="none" stroke="#5b5d55" stroke-width="1.5"/></svg>
+        <span class="engraved">Code &amp; Tell</span>
+      </li>
+      <li class="mode">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="none" stroke="#5b5d55" stroke-width="1.5"/></svg>
+        <span class="engraved">Demo Day</span>
+      </li>
+    </ul>
+
+    <div class="rail-readouts">
+      <div class="readout">
+        <span class="engraved">Judge</span>
+        <b>PRO SEAT</b>
+      </div>
+      <div class="readout">
+        <span class="engraved">Session</span>
+        <b id="clock">--:-- UTC</b>
+      </div>
+      <a class="signin" href="#">Sign in</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ display module ============ -->
+    <section class="face" id="live" aria-labelledby="event-name">
+      <div class="module">
+        <div class="screen" aria-hidden="true">
+          <canvas id="scope"></canvas>
+          <span class="screen-tag">SIG · LIVE FEED</span>
+          <span class="screen-tag screen-tag--r">CH 01</span>
+        </div>
+
+        <div class="module-info">
+          <div class="module-status">
+            <span class="live-chip"><span class="live-dot"></span>LIVE</span>
+            <span class="chip chip--mode">Mode · Hackathon</span>
+            <span class="chip">48h format</span>
+          </div>
+
+          <h1 class="event-name" id="event-name">TechNova Hackathon 2025</h1>
+          <p class="event-desc">48 hours. Build bold. Ship real. Solve meaningful problems and create impact.</p>
+
+          <p class="event-meta">
+            <span>Started <b>24-05-25</b></span>
+            <span>Closes in <b>31 h</b></span>
+            <span>Seat <b>Judge · Pro</b></span>
+          </p>
+
+          <p class="select-line" id="select-line" aria-live="polite">Select · no project key pressed</p>
+
+          <div class="module-actions">
+            <a class="transport" href="#projects">
+              <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1.5 10 6 2 10.5Z" fill="currentColor"/></svg>
+              Start scoring
+            </a>
+            <a class="ghost-link" href="#semester">All events</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ semester rail — the display's time axis, coupled by a patch lead ============ -->
+    <section class="zone" id="semester" aria-labelledby="semester-h">
+      <h2 class="sr" id="semester-h">Semester rail</h2>
+      <div class="trace-channel" aria-hidden="true">
+        <span class="engraved chan-l">Semester</span>
+        <span class="engraved chan-r">Track 00 · Mar–Aug 2025 · 06 events</span>
+      </div>
+      <div class="patch-bay" aria-hidden="true">
+        <svg id="patchsvg"><path id="patchlead" d="" fill="none" stroke="#1ec8b6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <div class="pjack" id="patchjack"></div>
+      </div>
+      <div class="lane">
+        <div class="lane-bed">
+          <span class="lane-rule" aria-hidden="true"></span>
+          <span class="engraved lane-month first" style="left:0%" aria-hidden="true">Mar</span>
+          <span class="engraved lane-month" style="left:20.4%" aria-hidden="true">Apr</span>
+          <span class="engraved lane-month" style="left:40.1%" aria-hidden="true">May</span>
+          <span class="engraved lane-month" style="left:60.5%" aria-hidden="true">Jun</span>
+          <span class="engraved lane-month" style="left:80.3%" aria-hidden="true">Jul</span>
+          <span class="engraved lane-month last" style="left:100%" aria-hidden="true">Aug</span>
+          <span class="lane-tick" style="left:0%" aria-hidden="true"></span>
+          <span class="lane-tick" style="left:20.4%" aria-hidden="true"></span>
+          <span class="lane-tick" style="left:40.1%" aria-hidden="true"></span>
+          <span class="lane-tick" style="left:60.5%" aria-hidden="true"></span>
+          <span class="lane-tick" style="left:80.3%" aria-hidden="true"></span>
+          <ol class="lane-evs">
+            <li style="--x:0.6%">
+              <a class="lane-ev" href="#past" aria-label="Code &amp; Tell: Climate Edition — Mar 01 2025 — past event">
+                <span class="lane-step lane-step--past" aria-hidden="true"></span>
+                <span class="engraved lane-date" aria-hidden="true">Mar 01</span>
+                <span class="lane-tip" aria-hidden="true">Code &amp; Tell: Climate Edition</span>
+              </a>
+            </li>
+            <li style="--x:30.9%">
+              <a class="lane-ev" href="#past" aria-label="Hack the North 2025 — Apr 18 – Apr 20 2025 — past event">
+                <span class="lane-step lane-step--past" aria-hidden="true"></span>
+                <span class="engraved lane-date" aria-hidden="true">Apr 18</span>
+                <span class="lane-tip" aria-hidden="true">Hack the North 2025</span>
+              </a>
+            </li>
+            <li class="is-live" data-mode="hackathon" style="--x:55.3%">
+              <a class="lane-ev" href="#live" aria-label="TechNova Hackathon 2025 — started May 24 2025 — live now">
+                <span class="lane-step lane-step--live" aria-hidden="true"></span>
+                <span class="engraved lane-date lane-date--live" aria-hidden="true">May 24<span class="lane-live-tag"> · Live</span></span>
+                <span class="lane-tip" aria-hidden="true">TechNova Hackathon 2025</span>
+              </a>
+            </li>
+            <li style="--x:64.5%; --c:#ff6b2c">
+              <a class="lane-ev" href="#upcoming" aria-label="Code &amp; Tell: AI Edition — Jun 07 – Jun 08 2025 — upcoming, starts in 13 days">
+                <span class="lane-step lane-step--next" aria-hidden="true"></span>
+                <span class="engraved lane-date" aria-hidden="true">Jun 07</span>
+                <span class="lane-tip" aria-hidden="true">Code &amp; Tell: AI Edition</span>
+              </a>
+            </li>
+            <li style="--x:73.7%; --c:#3d7bff">
+              <a class="lane-ev" href="#upcoming" aria-label="InnovateX Hackathon — Jun 21 – Jun 22 2025 — upcoming, starts in 27 days">
+                <span class="lane-step lane-step--next" aria-hidden="true"></span>
+                <span class="engraved lane-date" aria-hidden="true">Jun 21</span>
+                <span class="lane-tip" aria-hidden="true">InnovateX Hackathon</span>
+              </a>
+            </li>
+            <li style="--x:82.9%; --c:#2fbf71">
+              <a class="lane-ev" href="#upcoming" aria-label="Build for Bharat Demo Day — Jul 05 2025 — upcoming, starts in 41 days">
+                <span class="lane-step lane-step--next" aria-hidden="true"></span>
+                <span class="engraved lane-date" aria-hidden="true">Jul 05</span>
+                <span class="lane-tip" aria-hidden="true">Build for Bharat Demo Day</span>
+              </a>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <div class="grille" aria-hidden="true"></div>
+
+    <!-- ============ project keyboard ============ -->
+    <section class="zone" id="projects" aria-labelledby="projects-h">
+      <header class="zone-head">
+        <h2 class="zone-word" id="projects-h">Projects to score</h2>
+        <span class="engraved">Matrix A · keys 01–08 · 05 assigned</span>
+      </header>
+      <ul class="keys">
+        <li>
+          <a class="key" href="#" style="--key-hue:#6366f1" data-name="Voltify" data-team="Team Volt" aria-label='Score project "Voltify" — Team Volt'>
+            <span class="key-top"><span class="key-led" aria-hidden="true"></span><span class="key-num">K01</span></span>
+            <span class="key-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter"><path d="M13 3 6 13h5l-2 8 8-11h-5l1-7z"/></svg>
+            </span>
+            <span><span class="key-name">Voltify</span><span class="key-team">Team Volt</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="key" href="#" style="--key-hue:#22c55e" data-name="AgriSense" data-team="GreenByte" aria-label='Score project "AgriSense" — GreenByte'>
+            <span class="key-top"><span class="key-led" aria-hidden="true"></span><span class="key-num">K02</span></span>
+            <span class="key-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 21v-8"/><path d="M12 13C12 8 9 5 4 5c0 5 3 8 8 8"/><path d="M12 13c0-5 3-8 8-8 0 5-3 8-8 8"/></svg>
+            </span>
+            <span><span class="key-name">AgriSense</span><span class="key-team">GreenByte</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="key" href="#" style="--key-hue:#7c3aed" data-name="ShieldAI" data-team="Null Pointers" aria-label='Score project "ShieldAI" — Null Pointers'>
+            <span class="key-top"><span class="key-led" aria-hidden="true"></span><span class="key-num">K03</span></span>
+            <span class="key-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 3l7 3v6l-7 9-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+            </span>
+            <span><span class="key-name">ShieldAI</span><span class="key-team">Null Pointers</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="key" href="#" style="--key-hue:#fbbf24" data-name="MedSync" data-team="CodeCrafters" aria-label='Score project "MedSync" — CodeCrafters'>
+            <span class="key-top"><span class="key-led" aria-hidden="true"></span><span class="key-num">K04</span></span>
+            <span class="key-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter"><circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M12 7.2 5.8 16.2M12 7.2l6.2 9M7.2 18h9.6"/></svg>
+            </span>
+            <span><span class="key-name">MedSync</span><span class="key-team">CodeCrafters</span></span>
+          </a>
+        </li>
+        <li>
+          <a class="key" href="#" style="--key-hue:#ec4899" data-name="LinguaLink" data-team="Lost in Translation" aria-label='Score project "LinguaLink" — Lost in Translation'>
+            <span class="key-top"><span class="key-led" aria-hidden="true"></span><span class="key-num">K05</span></span>
+            <span class="key-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 5h13v9H9l-5 4z"/><path d="M9 9.5h5M9 12h3"/></svg>
+            </span>
+            <span><span class="key-name">LinguaLink</span><span class="key-team">Lost in Translation</span></span>
+          </a>
+        </li>
+        <li>
+          <div class="key key--open" aria-label="Open slot — no project assigned to key 6">
+            <span class="key-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><circle cx="12" cy="12" r="6.5" stroke-dasharray="3 3.5"/></svg>
+            </span>
+            <span class="engraved">K06 · Open slot</span>
+          </div>
+        </li>
+        <li>
+          <div class="key key--open" aria-label="Open slot — no project assigned to key 7">
+            <span class="key-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><circle cx="12" cy="12" r="6.5" stroke-dasharray="3 3.5"/></svg>
+            </span>
+            <span class="engraved">K07 · Open slot</span>
+          </div>
+        </li>
+        <li>
+          <div class="key key--open" aria-label="Open slot — no project assigned to key 8">
+            <span class="key-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><circle cx="12" cy="12" r="6.5" stroke-dasharray="3 3.5"/></svg>
+            </span>
+            <span class="engraved">K08 · Open slot</span>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ============ upcoming: sequencer ============ -->
+    <section class="zone" id="upcoming" aria-labelledby="upcoming-h">
+      <header class="zone-head">
+        <h2 class="zone-word" id="upcoming-h">Upcoming events</h2>
+        <span class="engraved">Sequencer · 03 tracks armed</span>
+      </header>
+      <ol class="track-list">
+        <li>
+          <a class="track" href="#" style="--c:#ff6b2c" aria-label='View event "Code & Tell: AI Edition" — starts in 13 days'>
+            <span class="track-led" aria-hidden="true"></span>
+            <span class="track-name">Code &amp; Tell: AI Edition</span>
+            <span class="track-steps" role="img" aria-label="Starts in 13 days — 2 of 8 step LEDs lit">
+              <span class="step on"></span><span class="step on"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span>
+            </span>
+            <span class="track-dates">Jun 07 – Jun 08 2025</span>
+            <span class="track-count">T−13 days</span>
+            <span class="track-mode">Code &amp; Tell</span>
+          </a>
+        </li>
+        <li>
+          <a class="track" href="#" style="--c:#3d7bff" aria-label='View event "InnovateX Hackathon" — starts in 27 days'>
+            <span class="track-led" aria-hidden="true"></span>
+            <span class="track-name">InnovateX Hackathon</span>
+            <span class="track-steps" role="img" aria-label="Starts in 27 days — 4 of 8 step LEDs lit">
+              <span class="step on"></span><span class="step on"></span><span class="step on"></span><span class="step on"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span>
+            </span>
+            <span class="track-dates">Jun 21 – Jun 22 2025</span>
+            <span class="track-count">T−27 days</span>
+            <span class="track-mode">Hackathon</span>
+          </a>
+        </li>
+        <li>
+          <a class="track" href="#" style="--c:#2fbf71" aria-label='View event "Build for Bharat Demo Day" — starts in 41 days'>
+            <span class="track-led" aria-hidden="true"></span>
+            <span class="track-name">Build for Bharat Demo Day</span>
+            <span class="track-steps" role="img" aria-label="Starts in 41 days — 6 of 8 step LEDs lit">
+              <span class="step on"></span><span class="step on"></span><span class="step on"></span><span class="step on"></span><span class="step on"></span><span class="step on"></span><span class="step"></span><span class="step"></span>
+            </span>
+            <span class="track-dates">Jul 05 2025</span>
+            <span class="track-count">T−41 days</span>
+            <span class="track-mode">Demo Day</span>
+          </a>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ============ past: event log ============ -->
+    <section class="zone" id="past" aria-labelledby="past-h">
+      <header class="zone-head">
+        <h2 class="zone-word" id="past-h">Past events</h2>
+        <span class="engraved">Event log · 02 records</span>
+      </header>
+      <div class="tape">
+        <p class="tape-row">
+          <span class="tape-date">Apr 18 – Apr 20 2025</span>
+          <span class="tape-name">Hack the North 2025</span>
+          <span class="tape-mode">Hackathon</span>
+          <span class="tape-status">CLOSED</span>
+        </p>
+        <p class="tape-row">
+          <span class="tape-date">Mar 01 2025</span>
+          <span class="tape-name">Code &amp; Tell: Climate Edition</span>
+          <span class="tape-mode">Code &amp; Tell</span>
+          <span class="tape-status">CLOSED</span>
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ footer ============ -->
+  <footer class="unit-footer">
+    <div class="footer-brand">
+      <svg viewBox="0 0 54 44" aria-hidden="true" focusable="false">
+        <path fill="#1a1c1e" d="M0 7h7v7H0V7Zm0 7h5v16H0V14Zm0 16h7v7H0v-7ZM7 0h13v6H7V0Zm0 38h13v6H7v-6ZM47 7h7v7h-7V7Zm2 7h5v16h-5V14Zm-2 16h7v7h-7v-7ZM34 0h13v6H34V0Zm0 38h13v6H34v-6Z"/>
+        <path fill="#0d9488" d="M22 18h10v10H22z"/>
+        <path fill="#1a1c1e" d="M29 13h7v7h-7zM17 25h7v7h-7z"/>
+      </svg>
+      <span class="wordmark">HACKJUDGE</span>
+    </div>
+    <p class="blurb">One workspace for hackathons, demo days, and code &amp; tells — scoring, rubrics, and results.</p>
+    <a class="footer-signin" href="#">
+      Judges &amp; admins
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M3 12h17M13 5l7 7-7 7"/></svg>
+    </a>
+  </footer>
+</div>
+
+<div class="badge">Preview · The Field Instrument · synthetic data</div>
+
+<script>
+(function () {
+  "use strict";
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---- session clock: set once on load, no ticking ---- */
+  var clock = document.getElementById("clock");
+  if (clock) {
+    var d = new Date();
+    var hh = String(d.getUTCHours()).padStart(2, "0");
+    var mm = String(d.getUTCMinutes()).padStart(2, "0");
+    clock.textContent = hh + ":" + mm + " UTC";
+  }
+
+  /* ---- display module: authored scope animation ---- */
+  var canvas = document.getElementById("scope");
+  var ctx = canvas.getContext("2d");
+  var TEAL = "#2dd4bf", ORANGE = "#ff6b2c", WHITE = "#e8edee", GRID = "#1b262c";
+
+  function sizeCanvas() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var r = canvas.parentElement.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.round(r.width * dpr));
+    canvas.height = Math.max(1, Math.round(r.height * dpr));
+  }
+
+  function drawScope(t) {
+    var w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    /* faint dot grid */
+    ctx.fillStyle = GRID;
+    var gap = Math.max(18, w / 22);
+    for (var gx = gap / 2; gx < w; gx += gap) {
+      for (var gy = gap / 2; gy < h; gy += gap) {
+        ctx.fillRect(gx, gy, 1.4, 1.4);
+      }
+    }
+
+    var cx = w * 0.5, cy = h * 0.46;
+    var base = Math.min(w, h);
+
+    /* orbit rings */
+    ctx.strokeStyle = "rgba(159,176,181,0.28)";
+    ctx.lineWidth = 1;
+    [0.34, 0.24, 0.14].forEach(function (f) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, base * f, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
+    /* orbiting dots: the live event's signal */
+    var dots = [
+      { r: 0.34, speed: 0.00022, size: 4.5, color: TEAL, phase: 0 },
+      { r: 0.34, speed: 0.00022, size: 3, color: TEAL, phase: Math.PI },
+      { r: 0.24, speed: -0.00034, size: 3.5, color: ORANGE, phase: 1.2 },
+      { r: 0.14, speed: 0.00052, size: 2.6, color: WHITE, phase: 3.9 }
+    ];
+    dots.forEach(function (d) {
+      var a = d.phase + t * d.speed;
+      var x = cx + Math.cos(a) * base * d.r;
+      var y = cy + Math.sin(a) * base * d.r;
+      ctx.beginPath();
+      ctx.fillStyle = d.color;
+      ctx.arc(x, y, d.size * (w / 700 + 0.6), 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    /* center pulse */
+    var pulse = reduceMotion ? 0.5 : (Math.sin(t * 0.0021) + 1) / 2;
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(45,212,191,0.9)";
+    ctx.arc(cx, cy, 3 + pulse * 3.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* waveform along the bottom */
+    var wy = h * 0.82;
+    var amp = h * 0.07 * (0.55 + pulse * 0.45);
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = TEAL;
+    ctx.beginPath();
+    for (var x = 0; x <= w; x += 3) {
+      var y = wy + Math.sin((x / w) * Math.PI * 6 + t * 0.0026) * amp
+                  * Math.sin((x / w) * Math.PI);
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(255,107,44,0.75)";
+    ctx.beginPath();
+    for (var x2 = 0; x2 <= w; x2 += 3) {
+      var y2 = wy + Math.sin((x2 / w) * Math.PI * 10 - t * 0.0038) * amp * 0.45
+                   * Math.sin((x2 / w) * Math.PI);
+      if (x2 === 0) ctx.moveTo(x2, y2); else ctx.lineTo(x2, y2);
+    }
+    ctx.stroke();
+  }
+
+  sizeCanvas();
+  if (reduceMotion) {
+    drawScope(0);
+  } else {
+    var raf;
+    var loop = function (t) { drawScope(t); raf = requestAnimationFrame(loop); };
+    raf = requestAnimationFrame(loop);
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) { cancelAnimationFrame(raf); }
+      else { raf = requestAnimationFrame(loop); }
+    });
+  }
+  window.addEventListener("resize", function () {
+    sizeCanvas();
+    if (reduceMotion) drawScope(0);
+  });
+
+  /* ---- patch lead: dogleg from the live step to its mode's input jack ---- */
+  /* each event mode has its own socket position + color on the module's edge */
+  var JACKS = {
+    "code-tell": { x: 96, c: "#3d7bff" },
+    "hackathon": { x: 156, c: "#1ec8b6" },
+    "demo-day": { x: 216, c: "#2fbf71" }
+  };
+  var semSection = document.getElementById("semester");
+  var patchSvg = document.getElementById("patchsvg");
+  var patchLead = document.getElementById("patchlead");
+  var patchJack = document.getElementById("patchjack");
+  var liveLi = semSection.querySelector("li.is-live");
+  function routePatch() {
+    var sr = semSection.getBoundingClientRect();
+    var lr = liveLi.getBoundingClientRect();
+    var padX = parseFloat(getComputedStyle(semSection).paddingLeft);
+    var mode = JACKS[liveLi.getAttribute("data-mode")] || JACKS["hackathon"];
+    var x = lr.left - sr.left + lr.width / 2;
+    var stepTop = lr.top - sr.top;
+    var jackX = padX + mode.x;
+    patchJack.style.left = jackX + "px";
+    patchJack.style.setProperty("--c", mode.c);
+    patchLead.setAttribute("stroke", mode.c);
+    patchSvg.setAttribute("viewBox", "0 0 " + sr.width + " " + sr.height);
+    var runY = 56;
+    var dir = x >= jackX ? 1 : -1;
+    var r = Math.min(16, Math.abs(x - jackX) / 2 - 2);
+    patchLead.setAttribute("d",
+      "M " + x + " " + (stepTop - 2) +
+      " L " + x + " " + (runY + r) +
+      " Q " + x + " " + runY + " " + (x - dir * r) + " " + runY +
+      " L " + (jackX + dir * r) + " " + runY +
+      " Q " + jackX + " " + runY + " " + jackX + " " + (runY - r) +
+      " L " + jackX + " 2");
+  }
+  routePatch();
+  window.addEventListener("resize", routePatch);
+
+  /* ---- keyboard: keys press and report to the screen ---- */
+  var selectLine = document.getElementById("select-line");
+  Array.prototype.slice.call(document.querySelectorAll(".key[data-name]")).forEach(function (key) {
+    key.addEventListener("click", function (e) {
+      e.preventDefault();
+      key.classList.add("pressed");
+      window.setTimeout(function () { key.classList.remove("pressed"); }, 220);
+      if (selectLine) {
+        selectLine.textContent = "";
+        var lead = document.createTextNode("Select · ");
+        var b = document.createElement("b");
+        b.textContent = key.getAttribute("data-name");
+        var tail = document.createTextNode(" — " + key.getAttribute("data-team") + " · ready to score");
+        selectLine.appendChild(lead);
+        selectLine.appendChild(b);
+        selectLine.appendChild(tail);
+      }
+    });
+  });
+
+  /* ---- placeholder links stay on the instrument ---- */
+  Array.prototype.slice.call(document.querySelectorAll('a[href="#"]')).forEach(function (a) {
+    a.addEventListener("click", function (e) { e.preventDefault(); });
+  });
+})();
+</script>
+</body>
+</html>

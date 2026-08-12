@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HackJudge — "TechNova Hackathon 2025" — Live Scoring Preview</title>
+<meta name="description" content="HackJudge design preview — Straight-Quote Stockroom world. Synthetic demo data.">
+<!-- impeccable-disable design-system-font, design-system-font-size, design-system-color -- standalone direction preview exploring a candidate world distinct from the app's locked DESIGN.md teletext system; the condensed grotesk fonts, this preview's own type ramp, and the fixture project accent colors are brief-mandated demo content -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=Archivo+Narrow:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f5f4f0;
+    --ink: #111111;
+    --orange: #ff5a00;
+    --teal: #0d9488;
+    --ink-soft: #3b3a35;      /* secondary text on paper, tinted from ground hue */
+    --ink-mute: #55534c;      /* past-event names on paper */
+    --ink-dim: #6b6a63;       /* past-event meta on paper */
+    --paper-dim: #b9b7ae;     /* secondary text on ink panels, tinted from foreground */
+    --hair-on-ink: #2e2d2a;   /* decorative ledger lines inside black panel */
+    --hazard: repeating-linear-gradient(45deg, var(--ink) 0 10px, transparent 10px 20px);
+    --pad-x: clamp(1rem, 4vw, 3.5rem);
+    --font-display: "Archivo Black", "Arial Black", sans-serif;
+    --font-plate: "Archivo Narrow", "Arial Narrow", sans-serif;
+    --font-body: "Archivo", "Helvetica Neue", sans-serif;
+    --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    overflow-x: clip;
+  }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.55;
+    overflow-x: clip;
+  }
+
+  ::selection { background: var(--ink); color: var(--paper); }
+
+  a { color: inherit; }
+
+  :focus-visible {
+    outline: 3px solid var(--orange);
+    outline-offset: 3px;
+  }
+
+  /* ---------- skip link (a11y chrome) ---------- */
+  .skip {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 80;
+    transform: translateY(-300%);
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    padding: 0.6em 0.9em;
+    text-decoration: none;
+  }
+  .skip:focus-visible { transform: none; }
+
+  /* ---------- header ---------- */
+  .site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem var(--pad-x);
+    border-bottom: 3px solid var(--ink);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    text-decoration: none;
+  }
+  .brand svg { display: block; width: 30px; height: 25px; }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    letter-spacing: 0.02em;
+  }
+  .signin {
+    font-family: var(--font-plate);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.07em;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+    padding: 0.4em 0.2em;
+    white-space: nowrap;
+  }
+  .signin:hover { background: var(--ink); color: var(--paper); }
+
+  /* ---------- hero ---------- */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(2rem, 4vw, 4rem);
+    padding: clamp(2.5rem, 6vw, 5.5rem) var(--pad-x) clamp(3rem, 6vw, 5.5rem);
+  }
+  @media (min-width: 1020px) {
+    .hero { grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr); align-items: start; }
+  }
+
+  .phase-hazard {
+    position: relative;
+    display: inline-block;
+    margin-top: 14px;               /* room for the zip-tie strap above the edge */
+    padding: 12px 74px 12px 14px;     /* tag hangs over the right end */
+    background-color: var(--paper);
+    background-image: var(--hazard);
+  }
+  .phase-plate {
+    display: inline-block;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-plate);
+    font-weight: 700;
+    font-size: clamp(1.15rem, 2vw, 1.5rem);
+    letter-spacing: 0.05em;
+    line-height: 1;
+    padding: 0.4em 0.55em;
+  }
+
+  /* the one authored motion: zip-tie tag on the live event */
+  .ziptie {
+    position: absolute;
+    top: -9px;
+    right: 16px;
+    width: 48px;
+    height: 62px;
+    transform-origin: 50% 20px;      /* the punched hole */
+    animation: ziptie-swing 2.1s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+  }
+  .ziptie-strap {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 3px;
+    height: 12px;
+    transform: translateX(-50%);
+    background: var(--ink);
+  }
+  .ziptie-tag {
+    position: absolute;
+    top: 12px;
+    left: 0;
+    width: 48px;
+    height: 46px;
+    background: var(--orange);
+    border: 2px solid var(--ink);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 5px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+  }
+  .ziptie-tag::after {              /* zip ridges on the trailing edge */
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 4px;
+    background: repeating-linear-gradient(to bottom, var(--ink) 0 2px, transparent 2px 5px);
+  }
+  .ziptie-hole {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+  }
+  @keyframes ziptie-swing {
+    0%   { transform: rotate(16deg); }
+    30%  { transform: rotate(-7deg); }
+    55%  { transform: rotate(3deg); }
+    75%  { transform: rotate(-1.5deg); }
+    100% { transform: rotate(0deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ziptie { animation: none; }
+  }
+
+  .event-name {
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 6vw, 5.4rem);
+    line-height: 0.98;
+    letter-spacing: 0;
+    margin: 1.4rem 0 1.1rem;
+    text-wrap: balance;
+  }
+  .kq { white-space: nowrap; }      /* keep the quote welded to its word */
+
+  .lede {
+    margin: 0 0 2.2rem;
+    max-width: 65ch;
+    font-size: clamp(1.05rem, 1.4vw, 1.2rem);
+    color: var(--ink-soft);
+  }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1.6rem 2.4rem;
+  }
+  .cta-pallet {
+    display: inline-block;
+    padding-bottom: 14px;             /* hazard base visible under the action */
+    background-color: var(--paper);
+    background-image: var(--hazard);
+    background-position: bottom left;
+    background-repeat: no-repeat;
+    background-size: 100% 14px;
+  }
+  .btn-primary {
+    display: block;
+    background: var(--ink);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 1.6vw, 1.45rem);
+    letter-spacing: 0.02em;
+    padding: 1em 1.7em;
+    text-decoration: none;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .btn-primary:hover { background: var(--paper); color: var(--ink); }
+
+  .cta-secondary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.8rem;
+    padding-bottom: 16px;
+  }
+  .cta-secondary a {
+    font-family: var(--font-plate);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.07em;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+    padding: 0.35em 0.15em;
+    white-space: nowrap;
+  }
+  .cta-secondary a:hover { background: var(--ink); color: var(--paper); }
+
+  /* ---------- manifest panel (black crate label) ---------- */
+  .manifest {
+    background: var(--ink);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    max-width: 560px;
+  }
+  .manifest ::selection { background: var(--paper); color: var(--ink); }
+  .manifest-title {
+    margin: 0;
+    font-family: var(--font-plate);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.09em;
+    padding: 0.9rem 1.15rem;
+    border-bottom: 2px solid var(--paper);
+  }
+  .manifest dl { margin: 0; }
+  .manifest-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 1.15rem;
+    border-bottom: 1px solid var(--hair-on-ink);
+  }
+  .manifest dt {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    color: var(--paper-dim);
+  }
+  .manifest dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+  }
+  .countdown {
+    margin: 0;
+    padding: 1.05rem 1.15rem 1.2rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.35rem, 2vw, 1.8rem);
+    letter-spacing: 0.01em;
+    color: var(--orange);
+  }
+
+  /* ---------- zone headers ---------- */
+  .zone { padding: 0 var(--pad-x) clamp(3rem, 6vw, 5rem); }
+  .zone-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    border-top: 3px solid var(--ink);
+    padding-top: 1.1rem;
+    margin-bottom: clamp(1.6rem, 3vw, 2.4rem);
+  }
+  .zone-word {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(2.1rem, 5vw, 3.8rem);
+    line-height: 1;
+    letter-spacing: 0.01em;
+  }
+  .zone-meta {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- project plates ---------- */
+  .plates {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 14px;
+  }
+  .plate {
+    display: block;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .plate-band {
+    height: 10px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .plate-body { padding: 14px 14px 16px; }
+  .plate-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border: 2px solid var(--ink);
+    margin-bottom: 14px;
+    color: var(--ink);
+  }
+  .plate-glyph svg { display: block; width: 26px; height: 26px; }
+  .plate-name {
+    display: block;
+    font-family: var(--font-plate);
+    font-weight: 700;
+    font-size: 1.12rem;
+    letter-spacing: 0.03em;
+    line-height: 1.15;
+  }
+  .plate-team {
+    display: block;
+    margin-top: 6px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.68rem;
+    letter-spacing: 0.09em;
+    color: var(--ink-soft);
+  }
+  .plate:hover, .plate:focus-visible {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .plate:hover .plate-glyph, .plate:focus-visible .plate-glyph { color: var(--paper); border-color: var(--paper); }
+  .plate:hover .plate-team, .plate:focus-visible .plate-team { color: var(--paper-dim); }
+
+  /* ---------- event ledger (upcoming + past) ---------- */
+  .ledger {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-bottom: 1.5px solid var(--ink);
+  }
+  .ledger li { border-top: 1.5px solid var(--ink); }
+  .row-link, .row-static {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem clamp(1rem, 3vw, 2.4rem);
+    padding: 1.15rem 0.5rem;
+    text-decoration: none;
+    position: relative;
+  }
+  .row-date {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    min-width: 19ch;
+  }
+  .row-name {
+    flex: 1 1 320px;
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 2vw, 1.45rem);
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+  }
+  .plate-teal {
+    font-family: var(--font-plate);
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.07em;
+    background: var(--teal);
+    color: #ffffff;
+    padding: 0.5em 0.7em;
+    white-space: nowrap;
+  }
+  .row-status {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    border: 2px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    padding: 0.45em 0.7em;
+    white-space: nowrap;
+  }
+  .row-link:hover { background: var(--ink); color: var(--paper); }
+  .row-link:hover .row-date { color: var(--paper-dim); }
+
+  /* closed events: brand plate withdrawn, hazard tape across the item */
+  .past .row-static { color: var(--ink-mute); }
+  .past .row-date { color: var(--ink-dim); }
+  .past .row-mode-plain {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-dim);
+    white-space: nowrap;
+  }
+  .closed-chip {
+    display: inline-block;
+    background-color: var(--paper);
+    background-image: var(--hazard);
+    padding: 4px;
+  }
+  .closed-chip span {
+    display: inline-block;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    padding: 0.35em 0.6em;
+  }
+  .past .row-static::after {
+    content: "";
+    position: absolute;
+    left: -6px;
+    right: -6px;
+    top: 50%;
+    height: 10px;
+    transform: translateY(-50%);
+    background-color: var(--paper);
+    background-image: var(--hazard);
+    pointer-events: none;
+  }
+
+  /* ---------- footer ---------- */
+  .dock {
+    height: 20px;
+    border-top: 3px solid var(--ink);
+    background-color: var(--paper);
+    background-image: var(--hazard);
+  }
+  .footer-inner {
+    background: var(--ink);
+    color: var(--paper);
+    padding: clamp(2.5rem, 5vw, 4rem) var(--pad-x) clamp(3.5rem, 6vw, 5rem);
+  }
+  .footer-inner ::selection { background: var(--paper); color: var(--ink); }
+  .footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1.4rem;
+  }
+  .footer-brand svg { display: block; width: 30px; height: 25px; }
+  .footer-brand .wordmark { font-size: 1.3rem; }
+  .blurb {
+    margin: 0 0 1.8rem;
+    max-width: 68ch;
+    color: var(--paper-dim);
+  }
+  .footer-signin {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--font-plate);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+    color: var(--paper);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+    padding: 0.4em 0.2em;
+  }
+  .footer-signin svg { display: block; width: 18px; height: 18px; }
+  .footer-signin:hover { background: var(--paper); color: var(--ink); }
+
+  /* ---------- preview badge ---------- */
+  .badge {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    z-index: 60;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 9px;
+  }
+
+  /* ---------- small screens ---------- */
+  @media (max-width: 640px) {
+    .row-date { min-width: 0; }
+    .cta-row { align-items: stretch; flex-direction: column; }
+    .cta-pallet { display: block; }
+    .cta-secondary { padding-bottom: 0; }
+    .past .row-static::after { left: -2px; right: -2px; }
+  }
+</style>
+</head>
+<body>
+<!--
+THESIS: A judging homepage run like a stockroom: literal quoted names, square plates, strict grid. It refuses the category default — the gradient SaaS hero with floating rounded cards.
+OWN-WORLD: stockroom white cotton ground, black nylon ink panels, 45-degree hazard stripes carrying structure, safety orange only on zip-tie tags and the live countdown, teal label plates as the brand thread, condensed industrial caps inside straight quotes.
+STORY: One event is live; scoring is one tap away. Projects queue like tagged crates, upcoming reads as a manifest, the past is taped shut.
+FIRST VIEWPORT: "LIVE" phase plate on hazard with swinging zip-tie, giant quoted event name, black manifest panel with orange countdown at right, "START SCORING" bolted to a hazard pallet below the lede.
+FORM: challenger manifest-hero; kept challenger, seed e986a751.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md.
+-->
+<a class="skip" href="#live-event">SKIP TO "LIVE" EVENT</a>
+
+<header class="site-header">
+  <a class="brand" href="#" aria-label="HackJudge — home">
+    <svg viewBox="0 0 54 44" aria-hidden="true" focusable="false">
+      <path fill="#29D3CC" d="M0 7h7v7H0V7Zm0 7h5v16H0V14Zm0 16h7v7H0v-7ZM7 0h13v6H7V0Zm0 38h13v6H7v-6ZM47 7h7v7h-7V7Zm2 7h5v16h-5V14Zm-2 16h7v7h-7v-7ZM34 0h13v6H34V0Zm0 38h13v6H34v-6Z"/>
+      <path fill="#29D3CC" d="M22 18h10v10H22z"/>
+      <path fill="#0B6968" d="M29 13h7v7h-7zM17 25h7v7h-7z"/>
+    </svg>
+    <span class="wordmark">HACKJUDGE</span>
+  </a>
+  <a class="signin" href="#">"SIGN IN"</a>
+</header>
+
+<main>
+  <section class="hero" id="live-event" aria-labelledby="event-name">
+    <div class="hero-main">
+      <p class="phase-hazard">
+        <span class="phase-plate">"LIVE"</span>
+        <span class="ziptie" aria-hidden="true">
+          <span class="ziptie-strap"></span>
+          <span class="ziptie-tag"><span class="ziptie-hole"></span>"LIVE"</span>
+        </span>
+      </p>
+      <h1 class="event-name" id="event-name"><span class="kq">"TECHNOVA</span> <span class="kq">HACKATHON</span> <span class="kq">2025"</span></h1>
+      <p class="lede">48 hours. Build bold. Ship real. Solve meaningful problems and create impact.</p>
+      <div class="cta-row">
+        <span class="cta-pallet"><a class="btn-primary" href="#">"START SCORING"</a></span>
+        <span class="cta-secondary">
+          <a href="#">"EVENT DETAILS"</a>
+          <a href="#">"RULEBOOK"</a>
+        </span>
+      </div>
+    </div>
+
+    <aside class="manifest" aria-labelledby="manifest-title">
+      <h2 class="manifest-title" id="manifest-title">"MANIFEST"</h2>
+      <dl>
+        <div class="manifest-row"><dt>MODE</dt><dd>"HACKATHON"</dd></div>
+        <div class="manifest-row"><dt>DATE</dt><dd>24-05-25</dd></div>
+        <div class="manifest-row"><dt>TEAMS</dt><dd>128</dd></div>
+        <div class="manifest-row"><dt>PROJECTS</dt><dd>512</dd></div>
+        <div class="manifest-row"><dt>PHASE</dt><dd>"LIVE"</dd></div>
+      </dl>
+      <p class="countdown">"ENDS IN 2D 14H"</p>
+    </aside>
+  </section>
+
+  <section class="zone" aria-labelledby="projects-h">
+    <header class="zone-head">
+      <h2 class="zone-word" id="projects-h">"PROJECTS"</h2>
+      <p class="zone-meta">QUEUE 05</p>
+    </header>
+    <ul class="plates">
+      <li>
+        <a class="plate" href="#" aria-label='Score project "Voltify" — Team Volt'>
+          <span class="plate-band" style="background:#6366f1"></span>
+          <span class="plate-body">
+            <span class="plate-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M13 3 6 13h5l-2 8 8-11h-5l1-7z"/></svg>
+            </span>
+            <span class="plate-name">"VOLTIFY"</span>
+            <span class="plate-team">TEAM VOLT</span>
+          </span>
+        </a>
+      </li>
+      <li>
+        <a class="plate" href="#" aria-label='Score project "AgriSense" — GreenByte'>
+          <span class="plate-band" style="background:#22c55e"></span>
+          <span class="plate-body">
+            <span class="plate-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 21v-8"/><path d="M12 13C12 8 9 5 4 5c0 5 3 8 8 8"/><path d="M12 13c0-5 3-8 8-8 0 5-3 8-8 8"/></svg>
+            </span>
+            <span class="plate-name">"AGRISENSE"</span>
+            <span class="plate-team">GREENBYTE</span>
+          </span>
+        </a>
+      </li>
+      <li>
+        <a class="plate" href="#" aria-label='Score project "ShieldAI" — Null Pointers'>
+          <span class="plate-band" style="background:#7c3aed"></span>
+          <span class="plate-body">
+            <span class="plate-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 3l7 3v6l-7 9-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+            </span>
+            <span class="plate-name">"SHIELDAI"</span>
+            <span class="plate-team">NULL POINTERS</span>
+          </span>
+        </a>
+      </li>
+      <li>
+        <a class="plate" href="#" aria-label='Score project "MedSync" — CodeCrafters'>
+          <span class="plate-band" style="background:#fbbf24"></span>
+          <span class="plate-body">
+            <span class="plate-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M9 4h6v5h5v6h-5v5h-6v-5H4V9h5z"/></svg>
+            </span>
+            <span class="plate-name">"MEDSYNC"</span>
+            <span class="plate-team">CODECRAFTERS</span>
+          </span>
+        </a>
+      </li>
+      <li>
+        <a class="plate" href="#" aria-label='Score project "LinguaLink" — Lost in Translation'>
+          <span class="plate-band" style="background:#ec4899"></span>
+          <span class="plate-body">
+            <span class="plate-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="4" y="4" width="11" height="11"/><rect x="9" y="9" width="11" height="11"/></svg>
+            </span>
+            <span class="plate-name">"LINGUALINK"</span>
+            <span class="plate-team">LOST IN TRANSLATION</span>
+          </span>
+        </a>
+      </li>
+    </ul>
+  </section>
+
+  <section class="zone" aria-labelledby="upcoming-h">
+    <header class="zone-head">
+      <h2 class="zone-word" id="upcoming-h">"UPCOMING"</h2>
+      <p class="zone-meta">SCHEDULED 03</p>
+    </header>
+    <ol class="ledger">
+      <li>
+        <a class="row-link" href="#" aria-label='View event "Code &amp; Tell: AI Edition"'>
+          <span class="row-date">JUN 07 – JUN 08, 2025</span>
+          <span class="row-name">"CODE &amp; TELL: AI EDITION"</span>
+          <span class="plate-teal">"CODE &amp; TELL"</span>
+          <span class="row-status">"STARTS IN 13 DAYS"</span>
+        </a>
+      </li>
+      <li>
+        <a class="row-link" href="#" aria-label='View event "InnovateX Hackathon"'>
+          <span class="row-date">JUN 21 – JUN 22, 2025</span>
+          <span class="row-name">"INNOVATEX HACKATHON"</span>
+          <span class="plate-teal">"HACKATHON"</span>
+          <span class="row-status">"STARTS IN 27 DAYS"</span>
+        </a>
+      </li>
+      <li>
+        <a class="row-link" href="#" aria-label='View event "Build for Bharat Demo Day"'>
+          <span class="row-date">JUL 05, 2025</span>
+          <span class="row-name">"BUILD FOR BHARAT DEMO DAY"</span>
+          <span class="plate-teal">"DEMO DAY"</span>
+          <span class="row-status">"STARTS IN 41 DAYS"</span>
+        </a>
+      </li>
+    </ol>
+  </section>
+
+  <section class="zone past" aria-labelledby="past-h">
+    <header class="zone-head">
+      <h2 class="zone-word" id="past-h">"PAST"</h2>
+      <p class="zone-meta">CLOSED 02</p>
+    </header>
+    <ol class="ledger">
+      <li>
+        <div class="row-static">
+          <span class="row-date">APR 18 – APR 20, 2025</span>
+          <span class="row-name">"HACK THE NORTH 2025"</span>
+          <span class="row-mode-plain">"HACKATHON"</span>
+          <span class="closed-chip"><span>CLOSED</span></span>
+        </div>
+      </li>
+      <li>
+        <div class="row-static">
+          <span class="row-date">MAR 01, 2025</span>
+          <span class="row-name">"CODE &amp; TELL: CLIMATE EDITION"</span>
+          <span class="row-mode-plain">"CODE &amp; TELL"</span>
+          <span class="closed-chip"><span>CLOSED</span></span>
+        </div>
+      </li>
+    </ol>
+  </section>
+</main>
+
+<footer>
+  <div class="dock" aria-hidden="true"></div>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <svg viewBox="0 0 54 44" aria-hidden="true" focusable="false">
+        <path fill="#29D3CC" d="M0 7h7v7H0V7Zm0 7h5v16H0V14Zm0 16h7v7H0v-7ZM7 0h13v6H7V0Zm0 38h13v6H7v-6ZM47 7h7v7h-7V7Zm2 7h5v16h-5V14Zm-2 16h7v7h-7v-7ZM34 0h13v6H34V0Zm0 38h13v6H34v-6Z"/>
+        <path fill="#29D3CC" d="M22 18h10v10H22z"/>
+        <path fill="#0B6968" d="M29 13h7v7h-7zM17 25h7v7h-7z"/>
+      </svg>
+      <span class="wordmark">HACKJUDGE</span>
+    </div>
+    <p class="blurb">One workspace for hackathons, demo days, and code &amp; tells — scoring, rubrics, and results.</p>
+    <a class="footer-signin" href="#">
+      Judges &amp; admins — sign in
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M3 12h17M13 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+</footer>
+
+<div class="badge">PREVIEW · STRAIGHT-QUOTE STOCKROOM · synthetic data</div>
+</body>
+</html>

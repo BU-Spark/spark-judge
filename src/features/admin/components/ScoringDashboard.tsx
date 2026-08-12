@@ -66,7 +66,7 @@ export function ScoringDashboard({
     if (sortColumn !== column) {
       return (
         <svg
-          className="w-4 h-4 inline-block ml-1 text-muted-foreground opacity-30"
+          className="w-4 h-4 inline-block ml-1 fi-muted opacity-30"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -113,13 +113,13 @@ export function ScoringDashboard({
 
   return (
     <div className="space-y-4">
-      <div className="card-static p-6 bg-card">
+      <div className="fi-panel p-6 fi-surface">
         <div className="mb-5 space-y-4">
           <div>
-            <h4 className="text-xl font-heading font-bold text-foreground">
+            <h4 className="text-xl fi-zone font-bold fi-ink">
               Overall Rankings
             </h4>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm fi-muted">
               Judges score each category from 1-5. Rubric percentages set how
               much each category contributes to the total.
             </p>
@@ -129,15 +129,15 @@ export function ScoringDashboard({
             <div className="rounded-lg border border-border bg-muted/20 p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm font-semibold text-foreground">
+                  <p className="text-sm font-semibold fi-ink">
                     Rubric weighting
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs fi-muted">
                     Category opt-outs are neutral and do not reduce a team's
                     total.
                   </p>
                 </div>
-                <span className="text-xs font-medium text-muted-foreground">
+                <span className="text-xs font-medium fi-muted">
                   100% allocated
                 </span>
               </div>
@@ -145,17 +145,17 @@ export function ScoringDashboard({
                 {scores.categoryRubric.map((category) => (
                   <div
                     key={category.name}
-                    className="rounded-md border border-border bg-background px-3 py-2"
+                    className="rounded-md border border-border fi-surface px-3 py-2"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-sm font-medium fi-ink">
                         {category.name}
                       </span>
-                      <span className="font-mono text-sm font-semibold text-foreground">
+                      <span className="font-mono text-sm font-semibold fi-ink">
                         {formatRubricPercent(category.percent)}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-xs fi-muted">
                       up to {category.maxPoints.toFixed(2)} pts per judge
                     </p>
                   </div>
@@ -168,25 +168,25 @@ export function ScoringDashboard({
           <table className="min-w-full text-left">
             <thead className="bg-muted/20 border-b border-border">
               <tr>
-                <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                <th className="px-6 py-4 text-xs font-bold fi-muted uppercase tracking-wide">
                   Rank
                 </th>
                 <th
-                  className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wide cursor-pointer hover:bg-muted/30 transition-colors select-none"
+                  className="px-6 py-4 text-xs font-bold fi-muted uppercase tracking-wide cursor-pointer hover:bg-muted/30 transition-colors select-none"
                   onClick={() => handleSort("name")}
                 >
                   Team Name
                   <SortIcon column="name" />
                 </th>
                 <th
-                  className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wide cursor-pointer hover:bg-muted/30 transition-colors select-none"
+                  className="px-6 py-4 text-xs font-bold fi-muted uppercase tracking-wide cursor-pointer hover:bg-muted/30 transition-colors select-none"
                   onClick={() => handleSort("averageScore")}
                 >
                   Avg Score
                   <SortIcon column="averageScore" />
                 </th>
                 <th
-                  className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wide cursor-pointer hover:bg-muted/30 transition-colors select-none"
+                  className="px-6 py-4 text-xs font-bold fi-muted uppercase tracking-wide cursor-pointer hover:bg-muted/30 transition-colors select-none"
                   onClick={() => handleSort("judges")}
                 >
                   Judges
@@ -195,12 +195,12 @@ export function ScoringDashboard({
                 {scores.categories.map((cat) => (
                   <th
                     key={cat}
-                    className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wide cursor-pointer hover:bg-muted/30 transition-colors select-none"
+                    className="px-6 py-4 text-xs font-bold fi-muted uppercase tracking-wide cursor-pointer hover:bg-muted/30 transition-colors select-none"
                     onClick={() => handleSort(cat)}
                   >
-                    <span className="block text-foreground">{cat}</span>
+                    <span className="block fi-ink">{cat}</span>
                     {rubricByCategory.has(cat) && (
-                      <span className="mt-1 block font-medium normal-case tracking-normal text-muted-foreground">
+                      <span className="mt-1 block font-medium normal-case tracking-normal fi-muted">
                         {formatRubricPercent(
                           rubricByCategory.get(cat)!.percent,
                         )}
@@ -217,22 +217,22 @@ export function ScoringDashboard({
                   key={ranking.team._id}
                   className="hover:bg-muted/20 transition-colors"
                 >
-                  <td className="px-6 py-4 text-sm font-bold text-foreground">
+                  <td className="px-6 py-4 text-sm font-bold fi-ink">
                     #{index + 1}
                   </td>
-                  <td className="px-6 py-4 text-sm font-semibold text-foreground">
+                  <td className="px-6 py-4 text-sm font-semibold fi-ink">
                     {ranking.team.name}
                   </td>
-                  <td className="px-6 py-4 text-sm font-mono text-foreground">
+                  <td className="px-6 py-4 text-sm font-mono fi-ink">
                     {ranking.averageScore.toFixed(2)}
                   </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
+                  <td className="px-6 py-4 text-sm fi-muted">
                     {ranking.judgeCount}
                   </td>
                   {scores.categories.map((cat) => (
                     <td
                       key={cat}
-                      className="px-6 py-4 text-sm font-mono text-muted-foreground"
+                      className="px-6 py-4 text-sm font-mono fi-muted"
                     >
                       {ranking.categoryAverages[cat]?.toFixed(2) || "-"}
                     </td>

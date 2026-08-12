@@ -345,10 +345,10 @@ export function DateTimePicker({
         }
         className={cn(
           "input justify-start gap-2 text-left font-medium",
-          !selectedDate && "text-muted-foreground"
+          !selectedDate && "fi-muted"
         )}
       >
-        <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <CalendarIcon className="h-4 w-4 shrink-0 fi-muted" />
         <span className="truncate">{dateButtonLabel}</span>
       </button>
 
@@ -364,7 +364,7 @@ export function DateTimePicker({
         }
         className={cn(
           "input justify-between gap-2 text-left font-medium tabular-nums",
-          !selectedDate && "text-muted-foreground"
+          !selectedDate && "fi-muted"
         )}
       >
         <span>{timeValue || "--:--"}</span>
@@ -375,7 +375,7 @@ export function DateTimePicker({
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="h-4 w-4 shrink-0 text-muted-foreground"
+          className="h-4 w-4 shrink-0 fi-muted"
           aria-hidden="true"
         >
           <circle cx="12" cy="12" r="9" />
@@ -390,7 +390,7 @@ export function DateTimePicker({
             role="dialog"
             aria-label={`${label} calendar`}
             style={datePopoverStyle}
-            className="fixed z-[80] w-[19rem] rounded-2xl border border-border bg-card p-4 shadow-2xl shadow-black/10"
+            className="fixed z-[80] w-[19rem] fi-radius-panel border border-border fi-surface p-4 fi-elevation-panel shadow-black/10"
           >
             <div className="mb-4 flex items-center justify-between gap-2">
               <button
@@ -405,7 +405,7 @@ export function DateTimePicker({
                       )
                   )
                 }
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border fi-muted transition-colors hover:bg-muted hover:fi-ink"
                 aria-label="Previous month"
               >
                 <svg
@@ -420,7 +420,7 @@ export function DateTimePicker({
                   <path d="m12.5 4.5-5 5 5 5" />
                 </svg>
               </button>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-sm font-semibold fi-ink">
                 {visibleMonth.toLocaleDateString(undefined, {
                   month: "long",
                   year: "numeric",
@@ -438,7 +438,7 @@ export function DateTimePicker({
                       )
                   )
                 }
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border fi-muted transition-colors hover:bg-muted hover:fi-ink"
                 aria-label="Next month"
               >
                 <svg
@@ -455,7 +455,7 @@ export function DateTimePicker({
               </button>
             </div>
 
-            <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium uppercase tracking-[0.18em] fi-muted">
               {WEEKDAY_LABELS.map((day) => (
                 <span key={day} className="py-1">
                   {day}
@@ -483,10 +483,10 @@ export function DateTimePicker({
                         "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
                       !isSelected &&
                         !isOutsideMonth &&
-                        "text-foreground hover:bg-muted",
+                        "fi-ink hover:bg-muted",
                       !isSelected &&
                         isOutsideMonth &&
-                        "text-muted-foreground/60 hover:bg-muted/60",
+                        "fi-muted/60 hover:bg-muted/60",
                       isToday &&
                         !isSelected &&
                         "border border-primary/30 text-primary"
@@ -508,16 +508,16 @@ export function DateTimePicker({
             role="dialog"
             aria-label={`${label} time picker`}
             style={timePopoverStyle}
-            className="fixed z-[80] w-[15.5rem] rounded-2xl border border-border bg-card p-3 shadow-2xl shadow-black/10"
+            className="fixed z-[80] w-[15.5rem] fi-radius-panel border border-border fi-surface p-3 fi-elevation-panel shadow-black/10"
           >
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-2">
-                <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] fi-muted">
                   Hour
                 </p>
                 <div
                   ref={hourListRef}
-                  className="max-h-64 space-y-1 overflow-y-auto rounded-xl border border-border bg-background p-1 custom-scrollbar"
+                  className="max-h-64 space-y-1 overflow-y-auto rounded-xl border border-border fi-surface p-1 custom-scrollbar"
                 >
                   {HOUR_OPTIONS.map((hour) => (
                     <button
@@ -529,7 +529,7 @@ export function DateTimePicker({
                         "flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-medium tabular-nums transition-colors",
                         hour === selectedHour
                           ? "bg-primary text-primary-foreground"
-                          : "text-foreground hover:bg-muted"
+                          : "fi-ink hover:bg-muted"
                       )}
                     >
                       {pad(hour)}
@@ -539,12 +539,12 @@ export function DateTimePicker({
               </div>
 
               <div className="space-y-2">
-                <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] fi-muted">
                   Minute
                 </p>
                 <div
                   ref={minuteListRef}
-                  className="max-h-64 space-y-1 overflow-y-auto rounded-xl border border-border bg-background p-1 custom-scrollbar"
+                  className="max-h-64 space-y-1 overflow-y-auto rounded-xl border border-border fi-surface p-1 custom-scrollbar"
                 >
                   {minuteOptions.map((minute) => (
                     <button
@@ -556,7 +556,7 @@ export function DateTimePicker({
                         "flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-medium tabular-nums transition-colors",
                         minute === selectedMinute
                           ? "bg-primary text-primary-foreground"
-                          : "text-foreground hover:bg-muted"
+                          : "fi-ink hover:bg-muted"
                       )}
                     >
                       {pad(minute)}

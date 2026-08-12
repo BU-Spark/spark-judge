@@ -270,11 +270,11 @@ export function PrizeWinnerWizardPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
-      <div className="w-full h-full flex flex-col bg-card rounded-xl border border-border shadow-2xl overflow-hidden relative">
+    <div className="fixed inset-0 z-[100] fi-surface/80 backdrop-blur-sm p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
+      <div className="w-full h-full flex flex-col fi-surface rounded-xl border border-border fi-elevation-panel overflow-hidden relative">
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors z-10"
+          className="absolute top-4 right-4 p-2 fi-muted hover:bg-muted rounded-full transition-colors z-10"
           aria-label="Close Winner Wizard"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,16 +282,16 @@ export function PrizeWinnerWizardPanel({
           </svg>
         </button>
         <div className="bg-muted/10 border-b border-border px-6 py-5 pr-16 space-y-3 shrink-0">
-          <h2 className="text-2xl font-heading font-bold text-foreground">
+          <h2 className="text-2xl fi-zone font-bold fi-ink">
             Prize Winner Wizard
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm fi-muted mt-1">
             Assign one winner per prize. {assignedCount}/{prizes.length} assigned.
           </p>
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center justify-between text-xs fi-muted">
               <span>Completion</span>
-              <span className="font-medium text-foreground">{completionPercent}%</span>
+              <span className="font-medium fi-ink">{completionPercent}%</span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
@@ -304,16 +304,16 @@ export function PrizeWinnerWizardPanel({
 
         <div className="flex-1 min-h-0 overflow-auto px-4 py-3">
           {prizes.length === 0 && (
-            <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm fi-muted">
               No prizes configured yet.
             </div>
           )}
 
           {prizes.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-4">
-              <aside className="rounded-lg border border-border bg-card overflow-hidden h-fit lg:sticky lg:top-4">
+              <aside className="rounded-lg border border-border fi-surface overflow-hidden h-fit lg:sticky lg:top-4">
                 <div className="px-4 py-3 border-b border-border bg-muted/20">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  <p className="text-xs uppercase tracking-wide fi-muted">
                     Prize Queue
                   </p>
                   <div className="mt-2">
@@ -336,7 +336,7 @@ export function PrizeWinnerWizardPanel({
                 </div>
                 <div className="max-h-[55vh] overflow-y-auto">
                   {visiblePrizes.length === 0 && (
-                    <div className="p-4 text-sm text-muted-foreground">
+                    <div className="p-4 text-sm fi-muted">
                       No prizes match this sponsor filter.
                     </div>
                   )}
@@ -356,17 +356,17 @@ export function PrizeWinnerWizardPanel({
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">
+                            <p className="text-sm font-semibold fi-ink truncate">
                               {index + 1}. {entry.prize.name}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs fi-muted">
                               {(entry.candidates || []).length} candidates
                             </p>
                           </div>
                           <span
                             className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-medium ${isAssigned
-                              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-                              : "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300"
+                              ? "bg-emerald-500/15 text-emerald-700 "
+                              : "bg-zinc-500/15 text-zinc-700 "
                               }`}
                           >
                             {isAssigned ? "Done" : "Open"}
@@ -378,15 +378,15 @@ export function PrizeWinnerWizardPanel({
                 </div>
               </aside>
 
-              <section className="min-w-0 rounded-lg border border-border bg-card p-4 space-y-4">
+              <section className="min-w-0 rounded-lg border border-border fi-surface p-4 space-y-4">
                 {currentEntry && (
                   <>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-1">
-                        <h3 className="text-xl font-heading font-bold text-foreground">
+                        <h3 className="text-xl fi-zone font-bold fi-ink">
                           {currentPrizeIndex + 1}. {currentEntry.prize.name}
                         </h3>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs fi-muted">
                           {PRIZE_TYPE_LABELS[currentEntry.prize.type as PrizeType]}
                           {currentEntry.prize.track ? ` · Track: ${currentEntry.prize.track}` : ""}
                           {currentEntry.prize.sponsorName
@@ -395,15 +395,15 @@ export function PrizeWinnerWizardPanel({
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs fi-muted">
                           {(currentEntry.candidates || []).length} candidates
                         </span>
                         <button
                           type="button"
                           onClick={() => setIsFilterDrawerOpen(true)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-muted/20 hover:bg-muted/40 text-xs font-medium text-foreground transition-colors"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-muted/20 hover:bg-muted/40 text-xs font-medium fi-ink transition-colors"
                         >
-                          <svg className="w-3.5 h-3.5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3.5 h-3.5 fi-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                           </svg>
                           Filters
@@ -417,37 +417,37 @@ export function PrizeWinnerWizardPanel({
                     </div>
 
                     {currentEntry.prize.description && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm fi-muted">
                         {currentEntry.prize.description}
                       </p>
                     )}
 
-                    <div className="rounded-lg border border-border bg-card overflow-hidden">
+                    <div className="rounded-lg border border-border fi-surface overflow-hidden">
                       <div className="w-full overflow-x-auto">
                         <table className="w-full min-w-max text-left">
                           <thead className="bg-muted/30 border-b border-border">
                             <tr>
-                              <th className="px-4 py-3 text-xs uppercase tracking-wide text-muted-foreground sticky left-0 z-20 bg-card shadow-[1px_0_0_0_var(--border)] w-[100px] min-w-[100px] max-w-[100px]">
+                              <th className="px-4 py-3 text-xs uppercase tracking-wide fi-muted sticky left-0 z-20 fi-surface shadow-[1px_0_0_0_var(--border)] w-[100px] min-w-[100px] max-w-[100px]">
                                 Pick
                               </th>
-                              <th className="px-4 py-3 sticky left-[100px] z-20 bg-card shadow-[1px_0_0_0_var(--border)]">
+                              <th className="px-4 py-3 sticky left-[100px] z-20 fi-surface shadow-[1px_0_0_0_var(--border)]">
                                 <button
                                   type="button"
                                   onClick={() => handleSort("name")}
-                                  className="group flex items-center text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+                                  className="group flex items-center text-xs uppercase tracking-wide fi-muted hover:fi-ink transition-colors whitespace-nowrap"
                                 >
                                   Team
                                   <SortIcon field="name" />
                                 </button>
                               </th>
-                              <th className="px-4 py-3 text-xs uppercase tracking-wide text-muted-foreground whitespace-nowrap">
+                              <th className="px-4 py-3 text-xs uppercase tracking-wide fi-muted whitespace-nowrap">
                                 Track
                               </th>
                               <th className="px-4 py-3 whitespace-nowrap">
                                 <button
                                   type="button"
                                   onClick={() => handleSort("score")}
-                                  className="group flex items-center text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors"
+                                  className="group flex items-center text-xs uppercase tracking-wide fi-muted hover:fi-ink transition-colors"
                                 >
                                   Avg Score
                                   <SortIcon field="score" />
@@ -457,7 +457,7 @@ export function PrizeWinnerWizardPanel({
                                 <button
                                   type="button"
                                   onClick={() => handleSort("judges")}
-                                  className="group flex items-center text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors"
+                                  className="group flex items-center text-xs uppercase tracking-wide fi-muted hover:fi-ink transition-colors"
                                 >
                                   Judges
                                   <SortIcon field="judges" />
@@ -468,17 +468,17 @@ export function PrizeWinnerWizardPanel({
                                   <button
                                     type="button"
                                     onClick={() => handleSort(`cat_${catName}`)}
-                                    className="group flex items-center text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors"
+                                    className="group flex items-center text-xs uppercase tracking-wide fi-muted hover:fi-ink transition-colors"
                                   >
                                     {catName}
                                     <SortIcon field={`cat_${catName}`} />
                                   </button>
                                 </th>
                               ))}
-                              <th className="px-4 py-3 text-xs uppercase tracking-wide text-muted-foreground whitespace-nowrap">
+                              <th className="px-4 py-3 text-xs uppercase tracking-wide fi-muted whitespace-nowrap">
                                 Devpost
                               </th>
-                              <th className="px-4 py-3 text-xs uppercase tracking-wide text-muted-foreground whitespace-nowrap">
+                              <th className="px-4 py-3 text-xs uppercase tracking-wide fi-muted whitespace-nowrap">
                                 GitHub
                               </th>
                             </tr>
@@ -488,7 +488,7 @@ export function PrizeWinnerWizardPanel({
                               <tr>
                                 <td
                                   colSpan={8}
-                                  className="px-4 py-8 text-center text-sm text-muted-foreground"
+                                  className="px-4 py-8 text-center text-sm fi-muted"
                                 >
                                   No candidates match these filters.
                                 </td>
@@ -513,7 +513,7 @@ export function PrizeWinnerWizardPanel({
                                   className={`transition-colors ${isSelected ? "bg-emerald-500/10" : "hover:bg-muted/20"
                                     }`}
                                 >
-                                  <td className="px-4 py-3 sticky left-0 z-20 bg-card shadow-[1px_0_0_0_var(--border)] w-[100px] min-w-[100px] max-w-[100px]">
+                                  <td className="px-4 py-3 sticky left-0 z-20 fi-surface shadow-[1px_0_0_0_var(--border)] w-[100px] min-w-[100px] max-w-[100px]">
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -523,27 +523,27 @@ export function PrizeWinnerWizardPanel({
                                         }))
                                       }
                                       className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${isSelected
-                                        ? "border-emerald-500/40 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
-                                        : "border-border bg-background text-muted-foreground hover:text-foreground"
+                                        ? "border-emerald-500/40 bg-emerald-500/20 text-emerald-700 "
+                                        : "border-border fi-surface fi-muted hover:fi-ink"
                                         }`}
                                     >
                                       {isSelected ? "Selected" : "Select"}
                                     </button>
                                   </td>
-                                  <td className="px-4 py-3 text-sm font-semibold text-foreground sticky left-[100px] z-20 bg-card shadow-[1px_0_0_0_var(--border)] whitespace-nowrap">
+                                  <td className="px-4 py-3 text-sm font-semibold fi-ink sticky left-[100px] z-20 fi-surface shadow-[1px_0_0_0_var(--border)] whitespace-nowrap">
                                     {candidate.teamName}
                                   </td>
-                                  <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
+                                  <td className="px-4 py-3 text-sm fi-muted whitespace-nowrap">
                                     {candidate.track || "-"}
                                   </td>
-                                  <td className="px-4 py-3 text-sm font-mono text-foreground whitespace-nowrap">
+                                  <td className="px-4 py-3 text-sm font-mono fi-ink whitespace-nowrap">
                                     {Number(candidate.averageScore || 0).toFixed(2)}
                                   </td>
-                                  <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
+                                  <td className="px-4 py-3 text-sm fi-muted whitespace-nowrap">
                                     {candidate.judgeCount}
                                   </td>
                                   {scoreHintCategories.map((catName: string) => (
-                                    <td key={catName} className="px-4 py-3 text-sm font-mono text-muted-foreground whitespace-nowrap group-hover:text-foreground transition-colors">
+                                    <td key={catName} className="px-4 py-3 text-sm font-mono fi-muted whitespace-nowrap group-hover:fi-ink transition-colors">
                                       {categoryAverages[catName] !== undefined
                                         ? Number(categoryAverages[catName]).toFixed(2)
                                         : "-"}
@@ -555,12 +555,12 @@ export function PrizeWinnerWizardPanel({
                                         href={candidate.devpostUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                                        className="inline-flex items-center rounded-md border border-border fi-surface px-2 py-1 text-xs fi-muted hover:fi-ink"
                                       >
                                         Open
                                       </a>
                                     ) : (
-                                      <span className="text-xs text-muted-foreground">-</span>
+                                      <span className="text-xs fi-muted">-</span>
                                     )}
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap">
@@ -569,12 +569,12 @@ export function PrizeWinnerWizardPanel({
                                         href={github}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                                        className="inline-flex items-center rounded-md border border-border fi-surface px-2 py-1 text-xs fi-muted hover:fi-ink"
                                       >
                                         Open
                                       </a>
                                     ) : (
-                                      <span className="text-xs text-muted-foreground">-</span>
+                                      <span className="text-xs fi-muted">-</span>
                                     )}
                                   </td>
                                 </tr>
@@ -586,7 +586,7 @@ export function PrizeWinnerWizardPanel({
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">
+                      <label className="text-xs font-medium fi-muted">
                         Notes (optional)
                       </label>
                       <textarea
@@ -608,7 +608,7 @@ export function PrizeWinnerWizardPanel({
                         type="button"
                         onClick={() => setCurrentPrizeIndex((prev) => Math.max(0, prev - 1))}
                         disabled={currentPrizeIndex === 0}
-                        className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="fi-key disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Previous Prize
                       </button>
@@ -620,7 +620,7 @@ export function PrizeWinnerWizardPanel({
                           )
                         }
                         disabled={currentPrizeIndex >= visiblePrizes.length - 1}
-                        className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="fi-key disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Next Prize
                       </button>
@@ -628,7 +628,7 @@ export function PrizeWinnerWizardPanel({
                   </>
                 )}
                 {!currentEntry && (
-                  <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm fi-muted">
                     Select a sponsor filter with matching prizes to continue.
                   </div>
                 )}
@@ -637,17 +637,17 @@ export function PrizeWinnerWizardPanel({
           )}
         </div>
 
-        <div className="sticky bottom-0 z-20 shrink-0 border-t border-border bg-background/95 px-6 py-4 backdrop-blur flex justify-end gap-3">
+        <div className="sticky bottom-0 z-20 shrink-0 border-t border-border fi-surface/95 px-6 py-4 backdrop-blur flex justify-end gap-3">
           <button
             onClick={() => handleSave(false)}
-            className="btn-secondary disabled:opacity-60 disabled:cursor-not-allowed min-w-[100px]"
+            className="fi-key disabled:opacity-60 disabled:cursor-not-allowed min-w-[100px]"
             disabled={saving}
           >
             {saving ? "Saving..." : "Save"}
           </button>
           <button
             onClick={() => handleSave(true)}
-            className="btn-primary disabled:opacity-60 disabled:cursor-not-allowed min-w-[100px]"
+            className="fi-transport disabled:opacity-60 disabled:cursor-not-allowed min-w-[100px]"
             disabled={saving}
           >
             {saving ? "Submitting..." : "Submit"}
@@ -658,18 +658,18 @@ export function PrizeWinnerWizardPanel({
       {isFilterDrawerOpen && (
         <div className="fixed inset-0 z-[110] flex justify-end">
           <div
-            className="absolute inset-0 bg-background/40 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 fi-surface/40 backdrop-blur-sm transition-opacity"
             onClick={() => setIsFilterDrawerOpen(false)}
           />
-          <div className="relative w-full max-w-sm h-full bg-card shadow-2xl border-l border-border flex flex-col animate-in slide-in-from-right duration-300">
+          <div className="relative w-full max-w-sm h-full fi-surface fi-elevation-panel border-l border-border flex flex-col animate-in slide-in-from-right duration-300">
             <div className="flex items-center justify-between p-4 border-b border-border bg-muted/10">
               <div className="space-y-0.5">
-                <h3 className="text-lg font-heading font-bold text-foreground">Filters</h3>
-                <p className="text-xs text-muted-foreground">{activeFilterCount} active filters</p>
+                <h3 className="text-lg fi-zone font-bold fi-ink">Filters</h3>
+                <p className="text-xs fi-muted">{activeFilterCount} active filters</p>
               </div>
               <button
                 onClick={() => setIsFilterDrawerOpen(false)}
-                className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"
+                className="p-2 fi-muted hover:bg-muted rounded-full transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -684,7 +684,7 @@ export function PrizeWinnerWizardPanel({
                     <button
                       type="button"
                       onClick={() => setActiveFilters([])}
-                      className="text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      className="text-[13px] font-medium fi-muted hover:fi-ink transition-colors"
                     >
                       Clear all filters
                     </button>
@@ -704,7 +704,7 @@ export function PrizeWinnerWizardPanel({
                             const newFilters = activeFilters.filter((f) => f.id !== filter.id);
                             setActiveFilters(newFilters);
                           }}
-                          className="absolute -top-2 -right-2 p-1.5 bg-background border border-border rounded-full text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
+                          className="absolute -top-2 -right-2 p-1.5 fi-surface border border-border rounded-full fi-muted hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
                           title="Remove filter"
                         >
                           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -713,7 +713,7 @@ export function PrizeWinnerWizardPanel({
                         </button>
 
                         <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-muted-foreground">Field</label>
+                          <label className="text-xs font-medium fi-muted">Field</label>
                           <select
                             value={filter.field}
                             onChange={(e) => {
@@ -722,7 +722,7 @@ export function PrizeWinnerWizardPanel({
                               newFilters[index].value = "";
                               setActiveFilters(newFilters);
                             }}
-                            className="input w-full shadow-none bg-background py-1.5 text-sm"
+                            className="input w-full shadow-none fi-surface py-1.5 text-sm"
                           >
                             <option value="" disabled>Select filter...</option>
                             <option value="track">Track</option>
@@ -737,7 +737,7 @@ export function PrizeWinnerWizardPanel({
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-muted-foreground">Condition</label>
+                          <label className="text-xs font-medium fi-muted">Condition</label>
                           {filter.field === "track" ? (
                             <select
                               value={filter.value}
@@ -746,7 +746,7 @@ export function PrizeWinnerWizardPanel({
                                 newFilters[index].value = e.target.value;
                                 setActiveFilters(newFilters);
                               }}
-                              className="input w-full shadow-none bg-background py-1.5 text-sm"
+                              className="input w-full shadow-none fi-surface py-1.5 text-sm"
                             >
                               <option value="" disabled>Select track...</option>
                               {trackOptions.map((track) => (
@@ -764,7 +764,7 @@ export function PrizeWinnerWizardPanel({
                                 newFilters[index].value = e.target.value;
                                 setActiveFilters(newFilters);
                               }}
-                              className="input w-full shadow-none bg-background py-1.5 text-sm"
+                              className="input w-full shadow-none fi-surface py-1.5 text-sm"
                               min={1}
                               step={1}
                               placeholder="Enter min judges count..."
@@ -778,13 +778,13 @@ export function PrizeWinnerWizardPanel({
                                 newFilters[index].value = e.target.value;
                                 setActiveFilters(newFilters);
                               }}
-                              className="input w-full shadow-none bg-background py-1.5 text-sm"
+                              className="input w-full shadow-none fi-surface py-1.5 text-sm"
                               min={0}
                               step={0.1}
                               placeholder="Enter min score..."
                             />
                           ) : (
-                            <div className="w-full h-[34px] rounded-md border border-dashed border-border/50 bg-background/50 flex items-center px-3 text-sm text-muted-foreground/50">
+                            <div className="w-full h-[34px] rounded-md border border-dashed border-border/50 fi-surface/50 flex items-center px-3 text-sm fi-muted/50">
                               Select a field first
                             </div>
                           )}
@@ -792,7 +792,7 @@ export function PrizeWinnerWizardPanel({
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-8 border border-dashed text-sm text-muted-foreground bg-muted/10 rounded-xl border-border/60">
+                    <div className="text-center py-8 border border-dashed text-sm fi-muted bg-muted/10 rounded-xl border-border/60">
                       No active filters. Adjust your view to refine candidates.
                     </div>
                   )}
@@ -805,7 +805,7 @@ export function PrizeWinnerWizardPanel({
                         { id: crypto.randomUUID(), field: "", value: "" },
                       ]);
                     }}
-                    className="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors py-2.5 rounded-lg border border-emerald-500/20"
+                    className="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-emerald-600  bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors py-2.5 rounded-lg border border-emerald-500/20"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

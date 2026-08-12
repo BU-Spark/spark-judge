@@ -66,13 +66,13 @@ export function CodeAndTellWinnerPanel({
   };
 
   return (
-    <div className="w-full rounded-xl border border-border bg-background shadow-sm">
+    <div className="w-full rounded-xl border border-border fi-surface shadow-sm">
       <div className="border-b border-border p-6">
-        <h3 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
+        <h3 className="text-2xl fi-zone font-bold fi-ink flex items-center gap-2">
           <TrophyIcon className="h-6 w-6 text-amber-500" />
           Final Winner
         </h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm fi-muted">
           Ranked-vote totals are shown below. Admins can accept the default
           winner or override it before results are released.
         </p>
@@ -81,27 +81,27 @@ export function CodeAndTellWinnerPanel({
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm bg-muted/30 px-4 py-3 rounded-lg border border-border">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Default Winner:</span>
-            <span className="font-semibold text-foreground">
+            <span className="fi-muted">Default Winner:</span>
+            <span className="font-semibold fi-ink">
               {standings.find((row) => row.teamId === defaultWinnerId)?.name || "None yet"}
             </span>
           </div>
           <div className="w-px h-4 bg-border hidden sm:block"></div>
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Selected Winner:</span>
-            <span className="font-semibold text-foreground">
+            <span className="fi-muted">Selected Winner:</span>
+            <span className="font-semibold fi-ink">
               {standings.find((row) => row.teamId === winnerTeamId)?.name || "No selection"}
             </span>
           </div>
           <div className="w-px h-4 bg-border hidden sm:block"></div>
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Submitted Ballots:</span>
-            <span className="font-semibold text-foreground">{totalBallots}</span>
+            <span className="fi-muted">Submitted Ballots:</span>
+            <span className="font-semibold fi-ink">{totalBallots}</span>
           </div>
         </div>
 
         {standings.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
+          <div className="rounded-lg border border-dashed border-border bg-muted/20 p-6 text-sm fi-muted">
             No valid ballots have been submitted yet.
           </div>
         ) : (
@@ -109,9 +109,9 @@ export function CodeAndTellWinnerPanel({
             <div className="flex justify-end">
               <CodeAndTellScoringExplainer />
             </div>
-            <div className="overflow-x-auto rounded-xl border border-border bg-card">
+            <div className="overflow-x-auto rounded-xl border border-border fi-surface">
               <table className="min-w-[52rem] w-full text-left text-sm">
-                <thead className="border-b border-border bg-muted/20 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                <thead className="border-b border-border bg-muted/20 text-xs font-bold uppercase tracking-wide fi-muted">
                   <tr>
                     <th className="px-3 py-3 whitespace-nowrap">Rank</th>
                     <th className="px-3 py-3 min-w-[10rem]">Project</th>
@@ -141,7 +141,7 @@ export function CodeAndTellWinnerPanel({
                       }
                     >
                       <td className="px-3 py-3 align-middle">
-                        <label className="flex cursor-pointer items-center gap-2 font-semibold text-foreground">
+                        <label className="flex cursor-pointer items-center gap-2 font-semibold fi-ink">
                           <span>#{index + 1}</span>
                           {index < 3 && (
                             <MedalIcon className="h-4 w-4 text-amber-500" />
@@ -150,24 +150,24 @@ export function CodeAndTellWinnerPanel({
                       </td>
                       <td className="px-3 py-3 align-middle">
                         <label className="block min-w-0 cursor-pointer">
-                          <div className="truncate font-semibold text-foreground">
+                          <div className="truncate font-semibold fi-ink">
                             {row.name}
                           </div>
-                          <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                          <div className="mt-0.5 truncate text-xs fi-muted">
                             {row.description || "No description"}
                           </div>
                         </label>
                       </td>
-                      <td className="px-3 py-3 align-middle font-semibold text-foreground">
+                      <td className="px-3 py-3 align-middle font-semibold fi-ink">
                         {row.points}
                       </td>
-                      <td className="px-3 py-3 align-middle text-muted-foreground">
+                      <td className="px-3 py-3 align-middle fi-muted">
                         {row.ballotsCount}
                       </td>
                       {CODE_AND_TELL_RANK_HEADERS.map((_, rankIndex) => (
                         <td
                           key={rankIndex}
-                          className="px-2 py-3 text-center align-middle text-muted-foreground"
+                          className="px-2 py-3 text-center align-middle fi-muted"
                         >
                           {row.rankCounts[rankIndex] ?? 0}
                         </td>
@@ -194,7 +194,7 @@ export function CodeAndTellWinnerPanel({
           <button
             type="submit"
             disabled={submitting || standings.length === 0}
-            className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 fi-transport disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "Saving..." : "Save Winner"}
           </button>
@@ -202,7 +202,7 @@ export function CodeAndTellWinnerPanel({
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="flex-1 btn-secondary"
+            className="flex-1 fi-key"
           >
             Cancel
           </button>

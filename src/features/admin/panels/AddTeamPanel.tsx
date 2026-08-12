@@ -496,9 +496,9 @@ export function AddTeamPanel({
   const renderUrlFields = () => (
     <>
       <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
+        <label className="block text-sm font-medium fi-ink mb-2">
           Project URL{" "}
-          <span className="text-muted-foreground text-xs">(optional)</span>
+          <span className="fi-muted text-xs">(optional)</span>
         </label>
         <input
           type="url"
@@ -511,9 +511,9 @@ export function AddTeamPanel({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
+        <label className="block text-sm font-medium fi-ink mb-2">
           GitHub URL{" "}
-          <span className="text-muted-foreground text-xs">(optional)</span>
+          <span className="fi-muted text-xs">(optional)</span>
         </label>
         <input
           type="url"
@@ -530,7 +530,7 @@ export function AddTeamPanel({
 
   return (
     <div className="w-full h-full">
-      <div className="relative w-full h-full rounded-lg border border-border bg-card flex flex-col overflow-hidden">
+      <div className="relative w-full h-full rounded-lg border border-border fi-surface flex flex-col overflow-hidden">
         <div className="px-5 py-4 border-b border-border bg-muted/20 shrink-0">
           <button
             onClick={onClose}
@@ -550,14 +550,14 @@ export function AddTeamPanel({
               />
             </svg>
           </button>
-          <h3 className="text-xl font-heading font-bold text-foreground">
+          <h3 className="text-xl fi-zone font-bold fi-ink">
             {editingTeam
               ? `Edit ${entityLabel}`
               : isBulkImportMode
                 ? `Bulk Import ${entityLabel}s`
                 : `Create ${entityLabel}`}
           </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm fi-muted">
             {editingTeam
               ? `Editing existing ${entityLabel.toLowerCase()} details.`
               : isBulkImportMode
@@ -571,10 +571,10 @@ export function AddTeamPanel({
               <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-3">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-1">
-                    <h4 className="text-sm font-semibold text-foreground">
+                    <h4 className="text-sm font-semibold fi-ink">
                       Bulk Import From CSV
                     </h4>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm fi-muted">
                       Upload a spreadsheet instead of entering{" "}
                       {entityLabel.toLowerCase()}s one at a time.
                     </p>
@@ -582,7 +582,7 @@ export function AddTeamPanel({
                   <button
                     type="button"
                     onClick={handleDownloadTemplate}
-                    className="btn-secondary text-sm"
+                    className="fi-key text-sm"
                   >
                     Download Template
                   </button>
@@ -599,11 +599,11 @@ export function AddTeamPanel({
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={importingCsv || (isHackathon && !!prizesLoading)}
-                    className="btn-secondary"
+                    className="fi-key"
                   >
                     Choose CSV
                   </button>
-                  <div className="min-w-0 flex-1 text-sm text-muted-foreground">
+                  <div className="min-w-0 flex-1 text-sm fi-muted">
                     {csvImportPlan
                       ? `${csvImportPlan.fileName} loaded with ${csvImportPlan.rows.length} ${entityLabel.toLowerCase()}${csvImportPlan.rows.length === 1 ? "" : "s"}.`
                       : isDemoDay
@@ -620,7 +620,7 @@ export function AddTeamPanel({
                         disabled={
                           importingCsv || (isHackathon && !!prizesLoading)
                         }
-                        className="btn-primary"
+                        className="fi-transport"
                       >
                         {importingCsv
                           ? "Importing..."
@@ -630,14 +630,14 @@ export function AddTeamPanel({
                         type="button"
                         onClick={resetCsvImport}
                         disabled={importingCsv}
-                        className="btn-secondary"
+                        className="fi-key"
                       >
                         Clear
                       </button>
                     </>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs fi-muted">
                   {isDemoDay
                     ? "When provided, use semicolons inside the `members` cell, or provide separate `member1`, `member2`, ... columns."
                     : isCodeAndTell
@@ -645,7 +645,7 @@ export function AddTeamPanel({
                       : "When provided, use semicolons inside the `members` and `prizes` cells, or provide separate `member1`, `member2`, ... columns. Prize names must match this event's prize names exactly."}
                 </p>
                 {!!prizesLoading && isHackathon && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs fi-muted">
                     Waiting for prizes to load before imports can run.
                   </p>
                 )}
@@ -656,14 +656,14 @@ export function AddTeamPanel({
                         ? "border-red-500/30 bg-red-500/5"
                         : csvImportNotice.tone === "success"
                           ? "border-emerald-500/30 bg-emerald-500/5"
-                          : "border-border bg-card"
+                          : "border-border fi-surface"
                     }`}
                   >
-                    <p className="text-sm font-medium text-foreground">
+                    <p className="text-sm font-medium fi-ink">
                       {csvImportNotice.summary}
                     </p>
                     {csvImportNotice.details.length > 0 && (
-                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      <div className="mt-2 space-y-1 text-xs fi-muted">
                         {csvImportNotice.details
                           .slice(0, MAX_VISIBLE_IMPORT_DETAILS)
                           .map((detail) => (
@@ -692,7 +692,7 @@ export function AddTeamPanel({
             {!isBulkImportMode ? (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium fi-ink mb-2">
                     {entityLabel} Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -707,9 +707,9 @@ export function AddTeamPanel({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium fi-ink mb-2">
                     Description{" "}
-                    <span className="text-muted-foreground text-xs">
+                    <span className="fi-muted text-xs">
                       (optional)
                     </span>
                   </label>
@@ -724,9 +724,9 @@ export function AddTeamPanel({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium fi-ink mb-2">
                     Members (comma-separated){" "}
-                    <span className="text-muted-foreground text-xs">
+                    <span className="fi-muted text-xs">
                       (optional)
                     </span>
                   </label>
@@ -742,7 +742,7 @@ export function AddTeamPanel({
                 </div>
                 {isCodeAndTell && (
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
+                    <label className="block text-sm font-medium fi-ink mb-2">
                       Entrant Emails <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -758,7 +758,7 @@ export function AddTeamPanel({
                       className="input w-full"
                       placeholder="alice@example.com, bob@example.com"
                     />
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-xs fi-muted">
                       Users tied to these emails can sign in and vote, but they
                       cannot rank this project.
                     </p>
@@ -767,7 +767,7 @@ export function AddTeamPanel({
                 {isDemoDay ? (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <label className="block text-sm font-medium fi-ink mb-2">
                         Course <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -794,7 +794,7 @@ export function AddTeamPanel({
                 ) : isHackathon ? (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <label className="block text-sm font-medium fi-ink mb-2">
                         Track <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -815,11 +815,11 @@ export function AddTeamPanel({
                     </div>
                     {renderUrlFields()}
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <label className="block text-sm font-medium fi-ink mb-2">
                         Prize Submissions
                       </label>
                       <div className="mb-2">
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">
+                        <label className="block text-xs font-medium fi-muted mb-1">
                           Sponsor Filter
                         </label>
                         <select
@@ -835,30 +835,30 @@ export function AddTeamPanel({
                           ))}
                         </select>
                       </div>
-                      <div className="rounded-lg border border-border overflow-hidden bg-card max-h-56 overflow-y-auto">
+                      <div className="rounded-lg border border-border overflow-hidden fi-surface max-h-56 overflow-y-auto">
                         <div className="w-full">
                           {prizesLoading && (
-                            <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
+                            <div className="p-4 text-sm fi-muted border-t border-border first:border-t-0">
                               Loading prizes...
                             </div>
                           )}
                           {!prizesLoading &&
                             (eventPrizes?.length || 0) === 0 && (
-                              <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
+                              <div className="p-4 text-sm fi-muted border-t border-border first:border-t-0">
                                 No prizes configured for this event.
                               </div>
                             )}
                           {!prizesLoading &&
                             (eventPrizes?.length || 0) > 0 &&
                             eligiblePrizes.length === 0 && (
-                              <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
+                              <div className="p-4 text-sm fi-muted border-t border-border first:border-t-0">
                                 Select a track to see track-specific prizes.
                               </div>
                             )}
                           {!prizesLoading &&
                             eligiblePrizes.length > 0 &&
                             filteredPrizes.length === 0 && (
-                              <div className="p-4 text-sm text-muted-foreground border-t border-border first:border-t-0">
+                              <div className="p-4 text-sm fi-muted border-t border-border first:border-t-0">
                                 No prizes match this sponsor filter.
                               </div>
                             )}
@@ -895,10 +895,10 @@ export function AddTeamPanel({
                                   className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
                                 />
                                 <div className="flex-1">
-                                  <p className="text-sm font-medium text-foreground">
+                                  <p className="text-sm font-medium fi-ink">
                                     {prize.name}
                                   </p>
-                                  <p className="text-xs text-muted-foreground">
+                                  <p className="text-xs fi-muted">
                                     {prize.type === "general" &&
                                       "General prize"}
                                     {prize.type === "track" &&
@@ -918,7 +918,7 @@ export function AddTeamPanel({
                           })}
                         </div>
                       </div>
-                      <p className="mt-2 text-xs text-muted-foreground">
+                      <p className="mt-2 text-xs fi-muted">
                         Select every prize this team is applying for.
                       </p>
                     </div>
@@ -930,7 +930,7 @@ export function AddTeamPanel({
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 fi-transport disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {submitting ? (
                       <span className="flex items-center justify-center gap-2">
@@ -947,7 +947,7 @@ export function AddTeamPanel({
                     type="button"
                     onClick={onClose}
                     disabled={submitting}
-                    className="flex-1 btn-secondary"
+                    className="flex-1 fi-key"
                   >
                     Cancel
                   </button>
@@ -959,7 +959,7 @@ export function AddTeamPanel({
                   type="button"
                   onClick={onClose}
                   disabled={importingCsv}
-                  className="btn-secondary"
+                  className="fi-key"
                 >
                   Close
                 </button>

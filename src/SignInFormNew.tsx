@@ -13,7 +13,7 @@ export function SignInForm() {
     <div className="space-y-4">
       <button
         onClick={handleGoogleSignIn}
-        className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white text-gray-800 border border-gray-300 rounded-xl font-semibold transition-all duration-200 hover:bg-gray-50 hover:shadow-md active:scale-[0.98]"
+        className="fi-key w-full flex items-center justify-center gap-3 px-6 py-3"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
           <path
@@ -36,7 +36,7 @@ export function SignInForm() {
         <span>Sign in with Google</span>
       </button>
       
-      <p className="text-xs text-center text-muted-foreground">
+      <p className="text-xs text-center fi-muted">
         By signing in, you agree to our terms and privacy policy
       </p>
     </div>

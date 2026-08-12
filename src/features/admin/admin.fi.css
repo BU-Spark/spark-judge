@@ -1,0 +1,11 @@
+/* Organizer workbench: a denser expression of the Field Instrument chassis. */
+.fi-admin-shell { min-height: 100%; background: var(--fi-desk); color: var(--fi-ink); }
+.fi-admin-shell input, .fi-admin-shell textarea, .fi-admin-shell select {
+  border-color: var(--fi-hair); background: var(--fi-key-white); color: var(--fi-ink);
+}
+.fi-admin-shell input:focus, .fi-admin-shell textarea:focus, .fi-admin-shell select:focus {
+  outline: 2px solid var(--fi-teal); outline-offset: 2px;
+}
+.fi-admin-shell table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.fi-admin-shell th { font-family: var(--fi-font-mono); font-size: .625rem; letter-spacing: .13em; text-transform: uppercase; color: var(--fi-ink-dim); }
+.fi-admin-shell th, .fi-admin-shell td { border-bottom: 1px solid var(--fi-hair); }

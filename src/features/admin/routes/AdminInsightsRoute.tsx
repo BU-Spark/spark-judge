@@ -12,15 +12,15 @@ type InsightCardProps = {
 
 function InsightCard({ label, value, subtitle }: InsightCardProps) {
   return (
-    <article className="card-static p-5">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <article className="fi-panel p-5">
+      <h2 className="text-xs font-semibold uppercase tracking-wide fi-muted">
         {label}
       </h2>
-      <p className="mt-2 text-3xl font-heading font-bold text-foreground">
+      <p className="mt-2 text-3xl fi-zone font-bold fi-ink">
         {value.toLocaleString()}
       </p>
       {subtitle && (
-        <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
+        <p className="mt-2 text-sm fi-muted">{subtitle}</p>
       )}
     </article>
   );
@@ -55,17 +55,17 @@ export function AdminInsightsRoute() {
     <div className="h-full min-h-[24rem] flex flex-col p-4 sm:p-6 gap-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="space-y-1">
-          <h1 className="text-2xl font-heading font-bold text-foreground">
+          <h1 className="text-2xl fi-zone font-bold fi-ink">
             Platform Insights
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm fi-muted">
             Snapshot for {latestEvent.eventName}.
           </p>
         </div>
         <Link
           to="/admin"
           aria-label="Back to Workspace"
-          className="btn-ghost px-2 sm:px-3"
+          className="fi-key px-2 sm:px-3"
         >
           Back to Workspace
         </Link>

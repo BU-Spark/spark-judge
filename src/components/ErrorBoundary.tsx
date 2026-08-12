@@ -42,8 +42,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="max-w-md w-full space-y-4 text-center border border-border rounded-2xl bg-card p-8 shadow-lg">
+      <div className="min-h-screen flex items-center justify-center fi-app-shell px-4">
+        <div className="fi-panel max-w-md w-full space-y-4 text-center p-8">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -55,13 +55,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </svg>
           </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-heading font-bold text-foreground">Something went wrong</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="fi-zone">Something went wrong</h2>
+            <p className="text-sm fi-muted">
               {error?.message || "An unexpected error occurred. Please try again."}
             </p>
           </div>
           <div className="flex justify-center gap-3">
-            <button onClick={this.handleReload} className="btn-primary">
+            <button onClick={this.handleReload} className="fi-transport">
               Reload Page
             </button>
           </div>

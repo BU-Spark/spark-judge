@@ -26,9 +26,9 @@ export function PrizesTab({
 
     if (mode !== "hackathon") {
         return (
-            <div className="card-static p-6 bg-card space-y-4">
-                <h3 className="text-lg font-heading font-semibold text-foreground">Prize Catalog</h3>
-                <p className="text-sm text-muted-foreground">
+            <div className="fi-panel p-6 fi-surface space-y-4">
+                <h3 className="text-lg fi-zone font-semibold fi-ink">Prize Catalog</h3>
+                <p className="text-sm fi-muted">
                     {mode === "demo_day"
                       ? "Demo Day events use public appreciations instead of judged prizes."
                       : "Code & Tell events use one ranked-vote winner and do not use prizes."}
@@ -38,18 +38,18 @@ export function PrizesTab({
     }
 
     return (
-        <div className="card-static p-6 bg-card space-y-4">
+        <div className="fi-panel p-6 fi-surface space-y-4">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                 <div>
-                    <h3 className="text-lg font-heading font-semibold text-foreground">Prize Catalog</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="text-lg fi-zone font-semibold fi-ink">Prize Catalog</h3>
+                    <p className="text-sm fi-muted">
                         Define prize rules and scoring hints for award deliberation.
                     </p>
                 </div>
                 <button
                     onClick={handleSavePrizes}
                     disabled={savingPrizes || scoringLocked}
-                    className="btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="fi-transport disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     {savingPrizes ? "Saving..." : "Save Prize Catalog"}
                 </button>
@@ -62,7 +62,7 @@ export function PrizesTab({
                 disabled={scoringLocked}
             />
             {scoringLocked && (
-                <p className="text-xs text-amber-700 dark:text-amber-300">
+                <p className="text-xs text-amber-700 ">
                     Unlock scoring to edit the prize catalog.
                 </p>
             )}

@@ -1,3 +1,4 @@
+import "../admin.fi.css";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -16,9 +17,9 @@ export function AdminShell() {
   if (!loggedInUser) {
     return (
       <div className="max-w-md mx-auto mt-16 px-4">
-        <div className="card-static p-8 text-center bg-white dark:bg-zinc-900">
-          <h2 className="text-xl font-heading font-bold mb-2">Sign In Required</h2>
-          <p className="text-muted-foreground mb-6">
+        <div className="fi-panel p-8 text-center bg-white ">
+          <h2 className="text-xl fi-zone font-bold mb-2">Sign In Required</h2>
+          <p className="fi-muted mb-6">
             Please sign in to access the admin dashboard.
           </p>
         </div>
@@ -39,7 +40,7 @@ export function AdminShell() {
 
   return (
     <div className="mx-auto w-full max-w-[96rem] px-3 sm:px-4 lg:px-5 py-5">
-      <div className="min-h-[calc(100dvh-8rem)]">
+      <div className="fi-admin-shell min-h-[calc(100dvh-8rem)]">
         <section className="min-h-0 h-full flex flex-col">
           <Outlet />
         </section>

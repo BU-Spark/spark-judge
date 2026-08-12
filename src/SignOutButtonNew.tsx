@@ -5,7 +5,7 @@ type SignOutButtonProps = {
   onClick?: () => void;
 };
 
-export function SignOutButton({ className = "btn-ghost hover:text-red-500", onClick }: SignOutButtonProps) {
+export function SignOutButton({ className = "fi-key", onClick }: SignOutButtonProps) {
   const { signOut } = useAuthActions();
 
   return (

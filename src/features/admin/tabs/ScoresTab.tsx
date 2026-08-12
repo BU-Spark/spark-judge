@@ -147,7 +147,7 @@ export function ScoresTab({
 
   return (
     <>
-      <div className="flex flex-col md:flex-row md:items-center justify-between p-4 mb-6 rounded-lg border border-border bg-card shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between p-4 mb-6 rounded-lg border border-border fi-surface shadow-sm">
         <div className="flex items-center gap-3 mb-4 md:mb-0">
           <div
             className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
@@ -163,7 +163,7 @@ export function ScoresTab({
             }`}
           />
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
+            <h3 className="text-sm font-semibold fi-ink">
               {resultsReleased
                 ? "Event Complete"
                 : isDemoDay
@@ -176,7 +176,7 @@ export function ScoresTab({
                       ? "Scoring Locked"
                       : "Judging in Progress"}
             </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs fi-muted mt-0.5">
               {resultsReleased
                 ? "Results have been released."
                 : isDemoDay
@@ -198,7 +198,7 @@ export function ScoresTab({
           {eventStatus === "active" && (
             <button
               onClick={onFinishEvent}
-              className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-colors"
+              className="px-3 py-1.5 text-xs font-medium fi-muted hover:fi-ink hover:bg-muted/50 rounded-md transition-colors"
             >
               Finish Event
             </button>
@@ -208,7 +208,7 @@ export function ScoresTab({
             <button
               onClick={onToggleScoringLock}
               disabled={lockingScores}
-              className="px-3 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-md transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-medium text-amber-600  hover:bg-amber-50  rounded-md transition-colors disabled:opacity-50"
             >
               {lockingScores ? "Unlocking..." : "Unlock Scores"}
             </button>
@@ -241,7 +241,7 @@ export function ScoresTab({
             <button
               onClick={onOpenWinners}
               disabled={!canOpenWinners}
-              className="px-4 py-1.5 text-sm font-medium border border-border bg-card text-foreground hover:bg-muted/50 rounded-md transition-colors disabled:opacity-50 shadow-sm flex items-center gap-2"
+              className="px-4 py-1.5 text-sm font-medium border border-border fi-surface fi-ink hover:bg-muted/50 rounded-md transition-colors disabled:opacity-50 shadow-sm flex items-center gap-2"
             >
               <svg
                 className="w-4 h-4"
@@ -288,7 +288,7 @@ export function ScoresTab({
           )}
 
           {resultsReleased && (
-            <span className="px-4 py-1.5 text-sm font-medium border border-border bg-muted/30 text-muted-foreground rounded-md flex items-center gap-2">
+            <span className="px-4 py-1.5 text-sm font-medium border border-border bg-muted/30 fi-muted rounded-md flex items-center gap-2">
               <svg
                 className="w-4 h-4 text-green-500"
                 fill="none"
@@ -315,7 +315,7 @@ export function ScoresTab({
           <div className="space-y-6">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm bg-muted/30 px-4 py-3 rounded-lg border border-border">
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">
+                <span className="fi-muted">
                   Total Appreciations:
                 </span>
                 <span className="font-semibold text-pink-500">
@@ -324,23 +324,23 @@ export function ScoresTab({
               </div>
               <div className="w-px h-4 bg-border hidden sm:block"></div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Clean Count:</span>
-                <span className="font-semibold text-foreground">
+                <span className="fi-muted">Clean Count:</span>
+                <span className="font-semibold fi-ink">
                   {appreciationSummary.cleanAppreciations ??
                     appreciationSummary.totalAppreciations}
                 </span>
               </div>
               <div className="w-px h-4 bg-border hidden sm:block"></div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Unique Attendees:</span>
-                <span className="font-semibold text-foreground">
+                <span className="fi-muted">Unique Attendees:</span>
+                <span className="font-semibold fi-ink">
                   {appreciationSummary.uniqueAttendees}
                 </span>
               </div>
               <div className="w-px h-4 bg-border hidden sm:block"></div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Projects:</span>
-                <span className="font-semibold text-foreground">
+                <span className="fi-muted">Projects:</span>
+                <span className="font-semibold fi-ink">
                   {appreciationSummary.teams.length}
                 </span>
               </div>
@@ -375,7 +375,7 @@ export function ScoresTab({
             <div className="flex justify-end gap-3">
               <button
                 onClick={onExportAppreciationsCsv}
-                className="btn-secondary flex items-center gap-2"
+                className="fi-key flex items-center gap-2"
               >
                 <svg
                   className="w-4 h-4"
@@ -401,30 +401,30 @@ export function ScoresTab({
               </button>
             </div>
 
-            <div className="card-static p-6 bg-card">
-              <h4 className="text-xl font-heading font-bold text-foreground mb-4">
+            <div className="fi-panel p-6 fi-surface">
+              <h4 className="text-xl fi-zone font-bold fi-ink mb-4">
                 Project Rankings
               </h4>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left">
                   <thead className="bg-muted/20 border-b border-border">
                     <tr>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">
                         Rank
                       </th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">
                         Project
                       </th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">
                         Course
                       </th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">
                         Clean
                       </th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">
                         Raw
                       </th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">
                         Review
                       </th>
                     </tr>
@@ -436,7 +436,7 @@ export function ScoresTab({
                           key={team.teamId}
                           className="hover:bg-muted/20 transition-colors"
                         >
-                          <td className="px-4 py-3 text-sm font-bold text-foreground">
+                          <td className="px-4 py-3 text-sm font-bold fi-ink">
                             <span className="flex items-center gap-2">
                               #{index + 1}
                               {index === 0 && (
@@ -444,25 +444,25 @@ export function ScoresTab({
                               )}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-foreground">
+                          <td className="px-4 py-3 text-sm font-semibold fi-ink">
                             {team.teamName}
                           </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                          <td className="px-4 py-3 text-sm fi-muted">
                             {team.courseCode || "-"}
                           </td>
-                          <td className="px-4 py-3 text-sm text-foreground">
+                          <td className="px-4 py-3 text-sm fi-ink">
                             {team.cleanScore}
                           </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                          <td className="px-4 py-3 text-sm fi-muted">
                             {team.rawScore}
                           </td>
                           <td className="px-4 py-3 text-sm">
                             {team.flagged ? (
-                              <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                              <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 ">
                                 Flagged
                               </span>
                             ) : (
-                              <span className="text-muted-foreground">-</span>
+                              <span className="fi-muted">-</span>
                             )}
                           </td>
                         </tr>
@@ -485,7 +485,7 @@ export function ScoresTab({
           <div className="space-y-6">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm bg-muted/30 px-4 py-3 rounded-lg border border-border">
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">
+                <span className="fi-muted">
                   Valid ballots (scoring):
                 </span>
                 <span className="font-semibold text-amber-500">
@@ -494,15 +494,15 @@ export function ScoresTab({
               </div>
               <div className="w-px h-4 bg-border hidden sm:block"></div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Visible projects:</span>
-                <span className="font-semibold text-foreground">
+                <span className="fi-muted">Visible projects:</span>
+                <span className="font-semibold fi-ink">
                   {codeAndTellSummary.standings.length}
                 </span>
               </div>
               <div className="w-px h-4 bg-border hidden sm:block"></div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Winner status:</span>
-                <span className="font-semibold text-foreground">
+                <span className="fi-muted">Winner status:</span>
+                <span className="font-semibold fi-ink">
                   {codeAndTellSummary.selectedWinnerId
                     ? `Selected: ${codeAndTellSummary.standings.find((s) => s.teamId === codeAndTellSummary.selectedWinnerId)?.name || "Unknown"}`
                     : codeAndTellSummary.totalBallots > 0 &&
@@ -523,7 +523,7 @@ export function ScoresTab({
             />
 
             {typeof codeAndTellSummary.rankedVoteRowCount === "number" && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs fi-muted">
                 Ballot records stored: {codeAndTellSummary.rankedVoteRowCount}
                 {codeAndTellSummary.maxBallots != null
                   ? ` / cap ${codeAndTellSummary.maxBallots}${
@@ -539,9 +539,9 @@ export function ScoresTab({
               </p>
             )}
 
-            <div className="card-static p-6 bg-card">
+            <div className="fi-panel p-6 fi-surface">
               <div className="flex items-center gap-3 mb-4">
-                <h4 className="text-xl font-heading font-bold text-foreground">
+                <h4 className="text-xl fi-zone font-bold fi-ink">
                   Standings
                 </h4>
                 <CodeAndTellScoringExplainer />
@@ -550,22 +550,22 @@ export function ScoresTab({
                 <table className="min-w-[48rem] w-full text-left text-sm">
                   <thead className="bg-muted/20 border-b border-border">
                     <tr>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">
                         Rank
                       </th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">
                         Project
                       </th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">
                         Points
                       </th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">
                         Ballots
                       </th>
                       {CODE_AND_TELL_RANK_HEADERS.map((label) => (
                         <th
                           key={label}
-                          className="px-2 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide whitespace-nowrap"
+                          className="px-2 py-3 text-center text-xs font-bold fi-muted uppercase tracking-wide whitespace-nowrap"
                         >
                           {label}
                         </th>
@@ -578,22 +578,22 @@ export function ScoresTab({
                         key={row.teamId}
                         className="hover:bg-muted/20 transition-colors"
                       >
-                        <td className="px-4 py-3 text-sm font-bold text-foreground">
+                        <td className="px-4 py-3 text-sm font-bold fi-ink">
                           #{index + 1}
                         </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-foreground">
+                        <td className="px-4 py-3 text-sm font-semibold fi-ink">
                           {row.name}
                         </td>
-                        <td className="px-4 py-3 text-sm text-foreground">
+                        <td className="px-4 py-3 text-sm fi-ink">
                           {row.points}
                         </td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                        <td className="px-4 py-3 text-sm fi-muted">
                           {row.ballotsCount}
                         </td>
                         {CODE_AND_TELL_RANK_HEADERS.map((_, rankIndex) => (
                           <td
                             key={rankIndex}
-                            className="px-2 py-3 text-center text-sm text-muted-foreground"
+                            className="px-2 py-3 text-center text-sm fi-muted"
                           >
                             {row.rankCounts[rankIndex] ?? 0}
                           </td>
@@ -619,17 +619,17 @@ export function ScoresTab({
           setViewMode={setViewMode}
         />
       ) : (
-        <div className="card-static p-12 bg-card text-center">
+        <div className="fi-panel p-12 fi-surface text-center">
           <div className="mb-4 flex justify-center">
-            <BarChartIcon className="h-14 w-14 text-muted-foreground" />
+            <BarChartIcon className="h-14 w-14 fi-muted" />
           </div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-2">
+          <h3 className="text-2xl fi-zone font-bold fi-ink mb-2">
             No Scores Yet
           </h3>
-          <p className="text-muted-foreground mb-6">
+          <p className="fi-muted mb-6">
             Judges haven't submitted any scores for this event yet.
           </p>
-          <div className="max-w-md mx-auto text-left bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
+          <div className="max-w-md mx-auto text-left bg-muted/30 rounded-lg p-4 text-sm fi-muted">
             <p className="font-semibold mb-2 flex items-center gap-2">
               <LightbulbIcon className="h-4 w-4 text-amber-500" />
               To see demo scores:
@@ -672,13 +672,13 @@ function DemoDayIntegrityPanel({
   const rejected = integritySummary?.rejectedAppreciations ?? 0;
 
   return (
-    <div className="card-static bg-card border border-border rounded-lg overflow-hidden">
+    <div className="fi-panel fi-surface border border-border rounded-lg overflow-hidden">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-b border-border">
         <div>
-          <h4 className="text-lg font-heading font-bold text-foreground">
+          <h4 className="text-lg fi-zone font-bold fi-ink">
             Integrity Review
           </h4>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm fi-muted">
             Scanner findings are suggestions. Flagged votes keep counting until
             an admin rejects them.
           </p>
@@ -687,7 +687,7 @@ function DemoDayIntegrityPanel({
           type="button"
           onClick={onRunScan}
           disabled={isScanning}
-          className="btn-secondary whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
+          className="fi-key whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isScanning ? "Scanning..." : "Run Scan"}
         </button>
@@ -700,11 +700,11 @@ function DemoDayIntegrityPanel({
       </div>
 
       {integritySummary === undefined ? (
-        <div className="px-5 py-4 text-sm text-muted-foreground">
+        <div className="px-5 py-4 text-sm fi-muted">
           Loading integrity findings...
         </div>
       ) : findings.length === 0 ? (
-        <div className="px-5 py-4 text-sm text-muted-foreground">
+        <div className="px-5 py-4 text-sm fi-muted">
           No integrity findings yet.
         </div>
       ) : (
@@ -717,23 +717,23 @@ function DemoDayIntegrityPanel({
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
                         finding.status === "open"
-                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                          ? "bg-amber-500/10 text-amber-700 "
                           : finding.status === "rejected"
-                            ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
-                            : "bg-muted text-muted-foreground"
+                            ? "bg-rose-500/10 text-rose-700 "
+                            : "bg-muted fi-muted"
                       }`}
                     >
                       {finding.status}
                     </span>
-                    <span className="text-xs font-mono text-muted-foreground">
+                    <span className="text-xs font-mono fi-muted">
                       {finding.type.replaceAll("_", " ")} · risk{" "}
                       {finding.riskScore}
                     </span>
                   </div>
-                  <p className="text-sm font-medium text-foreground">
+                  <p className="text-sm font-medium fi-ink">
                     {finding.summary}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-xs fi-muted">
                     {finding.affectedCount} vote
                     {finding.affectedCount === 1 ? "" : "s"} ·{" "}
                     {finding.affectedTeamIds.length} project
@@ -742,7 +742,7 @@ function DemoDayIntegrityPanel({
                     {finding.affectedAttendeeIds.length === 1 ? "" : "s"}
                   </p>
                   {(finding.affectedTeams?.length ?? 0) > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-xs fi-muted">
                       Affected:{" "}
                       {finding.affectedTeams
                         ?.slice(0, 3)
@@ -759,7 +759,7 @@ function DemoDayIntegrityPanel({
                     <button
                       type="button"
                       onClick={() => onMarkReviewed(finding._id)}
-                      className="btn-secondary text-xs"
+                      className="fi-key text-xs"
                     >
                       Mark reviewed
                     </button>
@@ -788,7 +788,7 @@ function DemoDayIntegrityPanel({
                   {finding.reasons.slice(0, 5).map((reason) => (
                     <span
                       key={reason}
-                      className="rounded-md bg-muted px-2 py-1 text-[11px] font-mono text-muted-foreground"
+                      className="rounded-md bg-muted px-2 py-1 text-[11px] font-mono fi-muted"
                     >
                       {reason}
                     </span>
@@ -803,10 +803,10 @@ function DemoDayIntegrityPanel({
                       className="flex flex-col gap-2 border-b border-border px-3 py-2 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">
+                        <p className="truncate text-sm font-medium fi-ink">
                           {team.teamName}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs fi-muted">
                           {team.affectedVotes} affected vote
                           {team.affectedVotes === 1 ? "" : "s"} · projected
                           clean impact -{team.projectedCleanScoreImpact}
@@ -865,12 +865,12 @@ function IntegrityMetric({
 }) {
   return (
     <div className="px-4 py-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xs fi-muted">{label}</p>
       <p
         className={`mt-1 font-mono text-lg font-bold ${
           tone === "rose"
-            ? "text-rose-600 dark:text-rose-400"
-            : "text-amber-600 dark:text-amber-400"
+            ? "text-rose-600 "
+            : "text-amber-600 "
         }`}
       >
         {value}
@@ -889,12 +889,12 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="card-static p-12 bg-card text-center">
+    <div className="fi-panel p-12 fi-surface text-center">
       <div className="text-6xl mb-4">{icon}</div>
-      <h3 className="text-2xl font-heading font-bold text-foreground mb-2">
+      <h3 className="text-2xl fi-zone font-bold fi-ink mb-2">
         {title}
       </h3>
-      <p className="text-muted-foreground">{description}</p>
+      <p className="fi-muted">{description}</p>
     </div>
   );
 }
@@ -911,17 +911,17 @@ function ScoringBasisPanel({
   return (
     <div className="rounded-lg border border-border bg-muted/20 p-4">
       <div className="mb-3">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        <p className="text-sm font-semibold fi-ink">{title}</p>
+        <p className="mt-1 text-xs fi-muted">{description}</p>
       </div>
       <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {items.map((item) => (
           <div
             key={`${item.label}-${item.value}`}
-            className="rounded-md border border-border bg-background px-3 py-2"
+            className="rounded-md border border-border fi-surface px-3 py-2"
           >
-            <p className="text-xs text-muted-foreground">{item.label}</p>
-            <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+            <p className="text-xs fi-muted">{item.label}</p>
+            <p className="mt-1 font-mono text-sm font-semibold fi-ink">
               {item.value}
             </p>
           </div>

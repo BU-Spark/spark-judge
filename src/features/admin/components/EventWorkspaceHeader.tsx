@@ -15,8 +15,8 @@ export function EventWorkspaceHeader({
   return (
     <div className="space-y-3">
       <div>
-        <h1 className="text-2xl font-heading font-bold text-foreground">{title}</h1>
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
+        <h1 className="text-2xl fi-zone font-bold fi-ink">{title}</h1>
+        <p className="text-sm fi-muted">{subtitle}</p>
       </div>
       <EventTabs activeTab={activeTab} onTabChange={onTabChange} />
     </div>

@@ -131,7 +131,7 @@ export function DetailsTab({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(22rem,28rem)_1fr] xl:grid-cols-[minmax(24rem,32rem)_1fr] gap-6 items-start w-full">
       <div className="space-y-6 min-w-0">
-        <div className="card-static p-6 bg-card space-y-4">
+        <div className="fi-panel p-6 fi-surface space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <svg
@@ -148,10 +148,10 @@ export function DetailsTab({
                 />
               </svg>
               <div>
-                <h3 className="text-lg font-heading font-semibold text-foreground">
+                <h3 className="text-lg fi-zone font-semibold fi-ink">
                   Event Details
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm fi-muted">
                   Status updates automatically from the schedule
                 </p>
               </div>
@@ -159,10 +159,10 @@ export function DetailsTab({
             <span
               className={`badge ${
                 derivedStatus === "active"
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                  ? "bg-emerald-500/10 text-emerald-600  border-emerald-500/20"
                   : derivedStatus === "upcoming"
-                    ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20"
-                    : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20"
+                    ? "bg-sky-500/10 text-sky-600  border-sky-500/20"
+                    : "bg-zinc-500/10 text-zinc-600  border-zinc-500/20"
               }`}
             >
               {derivedStatus.charAt(0).toUpperCase() + derivedStatus.slice(1)}
@@ -171,7 +171,7 @@ export function DetailsTab({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
+              <label className="text-sm font-medium fi-ink">
                 Event Title <span className="text-red-500">*</span>
               </label>
               <input
@@ -183,9 +183,9 @@ export function DetailsTab({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
+              <label className="text-sm font-medium fi-ink">
                 Description{" "}
-                <span className="text-muted-foreground text-xs">
+                <span className="fi-muted text-xs">
                   (optional)
                 </span>
               </label>
@@ -198,7 +198,7 @@ export function DetailsTab({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
+              <label className="text-sm font-medium fi-ink">
                 Start Date &amp; Time <span className="text-red-500">*</span>
               </label>
               <DateTimePicker
@@ -209,7 +209,7 @@ export function DetailsTab({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
+              <label className="text-sm font-medium fi-ink">
                 End Date &amp; Time <span className="text-red-500">*</span>
               </label>
               <DateTimePicker
@@ -221,9 +221,9 @@ export function DetailsTab({
             </div>
             {isHackathon && (
               <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-foreground">
+                <label className="text-sm font-medium fi-ink">
                   Event Tracks{" "}
-                  <span className="text-muted-foreground text-xs">
+                  <span className="fi-muted text-xs">
                     (comma-separated)
                   </span>
                 </label>
@@ -234,7 +234,7 @@ export function DetailsTab({
                   className="input"
                   placeholder="AI/ML, Web Development, Hardware..."
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs fi-muted">
                   Tracks are used for team registration. If left empty, judging
                   categories will be used as tracks.
                 </p>
@@ -245,9 +245,9 @@ export function DetailsTab({
                 checked={eventHidden}
                 onCheckedChange={setEventHidden}
                 label="Admin-only event"
-                labelClassName="text-sm font-medium text-foreground"
+                labelClassName="text-sm font-medium fi-ink"
               />
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-xs fi-muted">
                 Hidden events stay out of the public event list and direct event
                 pages for non-admin users.
               </p>
@@ -256,7 +256,7 @@ export function DetailsTab({
               codeAndTellMaxBallotsInput !== undefined &&
               setCodeAndTellMaxBallotsInput && (
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium text-foreground">
+                  <label className="text-sm font-medium fi-ink">
                     Max ballot records (new voters)
                   </label>
                   <input
@@ -272,7 +272,7 @@ export function DetailsTab({
                     placeholder="No limit"
                     disabled={derivedStatus === "past"}
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs fi-muted">
                     Optional cap on how many distinct voters can save a ballot
                     (one row per voter). Leave empty for unlimited. Existing
                     voters can still update their ballot after the cap is
@@ -280,7 +280,7 @@ export function DetailsTab({
                     {typeof codeAndTellRankedVoteRowCount === "number" ? (
                       <>
                         Current records:{" "}
-                        <span className="font-medium text-foreground">
+                        <span className="font-medium fi-ink">
                           {codeAndTellRankedVoteRowCount}
                         </span>
                         .
@@ -298,7 +298,7 @@ export function DetailsTab({
             <button
               onClick={handleSaveDetails}
               disabled={savingDetails}
-              className="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="fi-transport flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {savingDetails ? (
                 <>
@@ -312,8 +312,8 @@ export function DetailsTab({
           </div>
         </div>
 
-        <div className="card-static p-6 bg-card">
-          <h3 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
+        <div className="fi-panel p-6 fi-surface">
+          <h3 className="text-lg fi-zone font-semibold fi-ink mb-4 flex items-center gap-2">
             <svg
               className="w-5 h-5"
               fill="none"
@@ -335,7 +335,7 @@ export function DetailsTab({
               className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                 isHackathon
                   ? "bg-primary text-white shadow-md"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  : "bg-muted fi-muted hover:bg-muted/80"
               }`}
             >
               <TrophyIcon className="h-4 w-4" />
@@ -346,7 +346,7 @@ export function DetailsTab({
               className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                 isDemoDay
                   ? "bg-pink-500 text-white shadow-md"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  : "bg-muted fi-muted hover:bg-muted/80"
               }`}
             >
               ❤️ Demo Day
@@ -356,13 +356,13 @@ export function DetailsTab({
               className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                 isCodeAndTell
                   ? "bg-amber-500 text-white shadow-md"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  : "bg-muted fi-muted hover:bg-muted/80"
               }`}
             >
               Code &amp; Tell
             </button>
           </div>
-          <p className="text-xs text-muted-foreground mt-3">
+          <p className="text-xs fi-muted mt-3">
             {mode === "hackathon"
               ? "Traditional judging with scores, tracks, prizes, and judge registration."
               : mode === "demo_day"
@@ -374,9 +374,9 @@ export function DetailsTab({
 
       <div className="space-y-6 min-w-0">
         {isHackathon && (
-          <div className="card-static p-6 bg-card space-y-4">
+          <div className="fi-panel p-6 fi-surface space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
+              <h3 className="text-lg fi-zone font-semibold fi-ink flex items-center gap-2">
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -402,16 +402,16 @@ export function DetailsTab({
             </div>
 
             {scoringLocked && scoringLockedLabel && (
-              <p className="text-xs text-amber-700 dark:text-amber-300">
+              <p className="text-xs text-amber-700 ">
                 Scores locked at {scoringLockedLabel}
               </p>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
+                <label className="text-sm font-medium fi-ink">
                   Judge Code{" "}
-                  <span className="text-muted-foreground text-xs">
+                  <span className="fi-muted text-xs">
                     (optional)
                   </span>
                 </label>
@@ -423,7 +423,7 @@ export function DetailsTab({
                   disabled={!canEditJudgeSettings}
                   placeholder="Enter code required for judges"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs fi-muted">
                   Leave empty to allow judges without a code.
                 </p>
               </div>
@@ -433,9 +433,9 @@ export function DetailsTab({
                   onCheckedChange={setEnableCohorts}
                   disabled={!canEditJudgeSettings}
                   label="Enable Multiple Judging Cohorts"
-                  labelClassName="text-sm font-medium text-foreground"
+                  labelClassName="text-sm font-medium fi-ink"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs fi-muted">
                   Judges pick their own teams (useful for large events).
                 </p>
               </div>
@@ -443,31 +443,31 @@ export function DetailsTab({
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-foreground">
+                <label className="text-sm font-medium fi-ink">
                   Judging Categories &amp; Rubric Percentages
                 </label>
                 {!scoresLoaded && (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs fi-muted">
                     Loading scores...
                   </span>
                 )}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/20 px-3 py-2">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs fi-muted">
                   Enter the percentages from the rubric. They must total 100%.
                 </p>
                 <span
                   className={`text-xs font-medium ${
                     rubricPercentTotalValid
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-amber-600 dark:text-amber-400"
+                      ? "text-emerald-600 "
+                      : "text-amber-600 "
                   }`}
                 >
                   {formatRubricPercent(rubricPercentTotal)} allocated
                 </span>
               </div>
-              <div className="rounded-lg border border-border overflow-hidden bg-card">
-                <div className="grid grid-cols-[1fr,110px,110px,40px] gap-2 px-4 py-3 border-b border-border bg-muted/20 text-xs text-muted-foreground uppercase tracking-wide">
+              <div className="rounded-lg border border-border overflow-hidden fi-surface">
+                <div className="grid grid-cols-[1fr,110px,110px,40px] gap-2 px-4 py-3 border-b border-border bg-muted/20 text-xs fi-muted uppercase tracking-wide">
                   <span>Category</span>
                   <span>Rubric %</span>
                   <span className="text-center">Opt-out allowed</span>
@@ -488,7 +488,7 @@ export function DetailsTab({
                           next[index].name = e.target.value;
                           setCategoriesEdit(next);
                         }}
-                        className="bg-transparent border-0 ring-1 ring-inset ring-border focus:ring-2 focus:ring-inset focus:ring-primary rounded-md px-3 py-1.5 text-sm w-full placeholder:text-muted-foreground"
+                        className="bg-transparent border-0 ring-1 ring-inset ring-border focus:ring-2 focus:ring-inset focus:ring-primary rounded-md px-3 py-1.5 text-sm w-full placeholder:fi-muted"
                         placeholder="e.g., Innovation"
                         disabled={!canEditJudgeSettings}
                       />
@@ -560,7 +560,7 @@ export function DetailsTab({
                       },
                     ])
                   }
-                  className="btn-ghost text-sm"
+                  className="fi-key text-sm"
                   disabled={!canEditJudgeSettings}
                 >
                   + Add Category
@@ -575,7 +575,7 @@ export function DetailsTab({
                 disabled={
                   savingJudgeSettings || !canEditJudgeSettings || !scoresLoaded
                 }
-                className="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="fi-transport flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {savingJudgeSettings ? (
                   <>
@@ -591,8 +591,8 @@ export function DetailsTab({
         )}
 
         {isHackathon && (
-          <div className="card-static p-6 bg-card space-y-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="fi-panel p-6 fi-surface space-y-4">
+            <p className="text-sm fi-muted">
               Prize configuration lives in the Prizes tab once the event is
               saved.
             </p>
@@ -600,9 +600,9 @@ export function DetailsTab({
         )}
 
         {isDemoDay && (
-          <div className="card-static p-6 bg-card space-y-4">
+          <div className="fi-panel p-6 fi-surface space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
+              <h3 className="text-lg fi-zone font-semibold fi-ink flex items-center gap-2">
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -621,7 +621,7 @@ export function DetailsTab({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
+                <label className="text-sm font-medium fi-ink">
                   Total appreciations per attendee
                 </label>
                 <StyledNumberInput
@@ -632,13 +632,13 @@ export function DetailsTab({
                   min={0}
                   step={1}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs fi-muted">
                   Limit of hearts each attendee can give across all teams.
                   Defaults to 100.
                 </p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
+                <label className="text-sm font-medium fi-ink">
                   Max per team
                 </label>
                 <StyledNumberInput
@@ -651,7 +651,7 @@ export function DetailsTab({
                   min={0}
                   step={1}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs fi-muted">
                   Limit of hearts each attendee can give to a single team.
                   Defaults to 10.
                 </p>
@@ -664,9 +664,9 @@ export function DetailsTab({
                     checked={captchaEnabled}
                     onCheckedChange={setCaptchaEnabled}
                     label="Require Turnstile verification"
-                    labelClassName="text-sm font-medium text-foreground"
+                    labelClassName="text-sm font-medium fi-ink"
                   />
-                  <p className="mt-2 text-xs text-muted-foreground">
+                  <p className="mt-2 text-xs fi-muted">
                     Attendees verify on first tap and again when activity looks
                     suspicious.
                   </p>
@@ -676,9 +676,9 @@ export function DetailsTab({
                     checked={venueLocationEnabled}
                     onCheckedChange={setVenueLocationEnabled}
                     label="Use venue location as a soft check"
-                    labelClassName="text-sm font-medium text-foreground"
+                    labelClassName="text-sm font-medium fi-ink"
                   />
-                  <p className="mt-2 text-xs text-muted-foreground">
+                  <p className="mt-2 text-xs fi-muted">
                     Denied, unavailable, inaccurate, or out-of-range location
                     requires verification and is recorded for review.
                   </p>
@@ -687,7 +687,7 @@ export function DetailsTab({
               {venueLocationEnabled && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
+                    <label className="text-sm font-medium fi-ink">
                       Venue latitude
                     </label>
                     <input
@@ -700,7 +700,7 @@ export function DetailsTab({
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
+                    <label className="text-sm font-medium fi-ink">
                       Venue longitude
                     </label>
                     <input
@@ -715,7 +715,7 @@ export function DetailsTab({
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
+                    <label className="text-sm font-medium fi-ink">
                       Radius (meters)
                     </label>
                     <StyledNumberInput
@@ -734,7 +734,7 @@ export function DetailsTab({
               <button
                 onClick={handleSaveAppreciationSettings}
                 disabled={savingAppreciationSettings}
-                className="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="fi-transport flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {savingAppreciationSettings ? (
                   <>
@@ -750,18 +750,18 @@ export function DetailsTab({
         )}
 
         {isCodeAndTell && (
-          <div className="card-static p-6 bg-card space-y-4">
+          <div className="fi-panel p-6 fi-surface space-y-4">
             <div>
-              <h3 className="text-lg font-heading font-semibold text-foreground">
+              <h3 className="text-lg fi-zone font-semibold fi-ink">
                 {getEventDisplayLabel(mode)} Voting
               </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-sm fi-muted">
                 Projects are managed by admins. Signed-in users submit one
                 ranked top-5 ballot, and any project linked to their email is
                 excluded from their ranking options.
               </p>
             </div>
-            <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground space-y-2">
+            <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm fi-muted space-y-2">
               <p>Ballots stay editable while the event is active.</p>
               <p>
                 Admins pick the final winner after the event ends, using Borda

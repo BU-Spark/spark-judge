@@ -87,7 +87,7 @@ function Layout() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col fi-app-shell">
       {/* Faceplate rail */}
       <header className="fi-rail sticky top-0 z-40">
         <div className="fi-rail-inner">
@@ -155,7 +155,7 @@ function Layout() {
             style={{ background: "color-mix(in srgb, var(--fi-ink) 55%, transparent)" }}
             onClick={() => setShowSignIn(false)}
           />
-          <div className="fi-panel relative p-8 max-w-md w-full slide-up">
+          <div className="fi-panel fi-signin-panel relative p-8 max-w-md w-full">
             <button
               onClick={() => setShowSignIn(false)}
               className="fi-key fi-key--sm absolute top-4 right-4"
@@ -298,12 +298,5 @@ function TeamRedirect() {
     // If eventId is undefined, we're still loading
   }, [eventId, teamId, navigate]);
 
-  return (
-    <div className="flex justify-center items-center min-h-[60vh]">
-      <div className="text-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-muted-foreground">Loading project...</p>
-      </div>
-    </div>
-  );
+  return <LoadingState label="Loading project…" />;
 }

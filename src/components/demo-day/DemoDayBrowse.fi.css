@@ -1,0 +1,3 @@
+.dd-fi-page { background: var(--fi-desk); color: var(--fi-ink); }
+.dd-fi-page input, .dd-fi-page select { background: var(--fi-key-white); border-color: var(--fi-hair); }
+.dd-fi-page button:focus-visible, .dd-fi-page a:focus-visible { outline: 2px solid var(--fi-teal); outline-offset: 3px; }

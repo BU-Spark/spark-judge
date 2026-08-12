@@ -1,0 +1,2 @@
+.ct-fi-page { background: var(--fi-desk); color: var(--fi-ink); }
+.ct-fi-page [data-rank] { background: var(--fi-key-white); border: 1px solid var(--fi-key-edge); box-shadow: var(--fi-shadow-key); }

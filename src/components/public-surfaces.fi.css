@@ -1,0 +1,17 @@
+/* Shared Field Instrument adapters for the remaining public work surfaces. */
+.fi-surface { background: var(--fi-chassis); color: var(--fi-ink); }
+.fi-muted { color: var(--fi-ink-dim); }
+.fi-ink { color: var(--fi-ink); }
+.fi-radius-panel { border-radius: var(--fi-r-xl); }
+.fi-radius-module { border-radius: var(--fi-r-module); }
+.fi-elevation-panel { box-shadow: var(--fi-shadow-unit); }
+.fi-accent-surface { background: var(--fi-screen); color: var(--fi-screen-ink); }
+.fi-field { width: 100%; border: 1px solid var(--fi-hair); border-radius: var(--fi-r-md); background: var(--fi-key-white); color: var(--fi-ink); padding: .75rem .9rem; }
+.fi-field:focus { outline: 2px solid var(--fi-teal); outline-offset: 2px; }
+.fi-loading { min-height: 40vh; display: grid; place-content: center; justify-items: center; gap: .8rem; color: var(--fi-ink-dim); }
+.fi-loading-steps { display: flex; gap: 5px; }
+.fi-loading-steps span { width: 8px; height: 8px; border-radius: 2px; background: var(--fi-hair); animation: fi-step 900ms ease-in-out infinite alternate; }
+.fi-loading-steps span:nth-child(2n) { animation-delay: 180ms; }
+.fi-loading-steps span:nth-child(3n) { animation-delay: 360ms; }
+@keyframes fi-step { to { background: var(--fi-teal); transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .fi-loading-steps span { animation: none; } }

@@ -1,3 +1,4 @@
+import "./CodeAndTellVoteView.fi.css";
 import { useMutation, useQuery } from "convex/react";
 import { useDeferredValue, useEffect, useMemo, useState, useRef } from "react";
 import { Reorder } from "framer-motion";
@@ -62,17 +63,17 @@ function BallotSlot({
 }) {
   if (!project) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-muted/15 p-4 transition-colors">
+      <div className="fi-radius-panel border border-dashed border-border bg-muted/15 p-4 transition-colors">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-current/15 bg-background text-sm font-bold text-amber-600 dark:text-amber-400">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-current/15 fi-surface text-sm font-bold text-amber-600 ">
               #{index + 1}
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="text-xs font-medium uppercase tracking-[0.18em] fi-muted">
                 Rank {index + 1}
               </div>
-              <div className="mt-2 text-sm text-muted-foreground">
+              <div className="mt-2 text-sm fi-muted">
                 Pick a project for this slot.
               </div>
             </div>
@@ -86,21 +87,21 @@ function BallotSlot({
     <Reorder.Item
       value={project._id}
       id={project._id}
-      className="rounded-2xl border border-border bg-card p-4 transition-colors shadow-sm cursor-grab active:cursor-grabbing"
+      className="fi-radius-panel border border-border fi-surface p-4 transition-colors shadow-sm cursor-grab active:cursor-grabbing"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-current/15 bg-background text-sm font-bold text-amber-600 dark:text-amber-400">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-current/15 fi-surface text-sm font-bold text-amber-600 ">
             #{index + 1}
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="text-xs font-medium uppercase tracking-[0.18em] fi-muted">
               Rank {index + 1}
             </div>
-            <div className="mt-1 truncate text-base font-semibold text-foreground">
+            <div className="mt-1 truncate text-base font-semibold fi-ink">
               {project.name}
             </div>
-            <div className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+            <div className="mt-1 line-clamp-2 text-sm fi-muted">
               {project.description || "No description"}
             </div>
           </div>
@@ -109,7 +110,7 @@ function BallotSlot({
           <button
             type="button"
             onClick={onRemove}
-            className="rounded-lg border border-red-500/20 px-2 py-1 text-xs text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
+            className="rounded-lg border border-red-500/20 px-2 py-1 text-xs text-red-600 transition-colors hover:bg-red-500/10 "
           >
             Remove
           </button>
@@ -139,37 +140,37 @@ function ResultsSection({
 
   return (
     <div className="space-y-8">
-      <div className="rounded-3xl border border-amber-500/25 bg-[linear-gradient(140deg,rgba(245,158,11,0.16),rgba(251,191,36,0.05),transparent_65%)] p-6 shadow-sm">
+      <div className="fi-radius-module border border-amber-500/25 bg-[linear-gradient(140deg,rgba(245,158,11,0.16),rgba(251,191,36,0.05),transparent_65%)] p-6 shadow-sm">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/25 bg-background/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/25 fi-surface/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700 ">
               <TrophyIcon className="h-4 w-4" />
               Results Released
             </div>
             <div>
-              <h2 className="text-3xl font-heading font-bold text-foreground">
+              <h2 className="text-3xl fi-zone font-bold fi-ink">
                 {winner?.name || "Winner"}
               </h2>
-              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              <p className="mt-2 max-w-2xl text-sm fi-muted">
                 {winner?.description ||
                   "Final Code & Tell winner selected from ranked ballots."}
               </p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-2xl border border-border bg-background/80 px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="fi-radius-panel border border-border fi-surface/80 px-4 py-3">
+              <div className="text-xs uppercase tracking-[0.16em] fi-muted">
                 Ballots
               </div>
-              <div className="mt-1 text-2xl font-bold text-foreground">
+              <div className="mt-1 text-2xl font-bold fi-ink">
                 {results.totalBallots}
               </div>
             </div>
-            <div className="rounded-2xl border border-border bg-background/80 px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="fi-radius-panel border border-border fi-surface/80 px-4 py-3">
+              <div className="text-xs uppercase tracking-[0.16em] fi-muted">
                 Published
               </div>
-              <div className="mt-1 text-sm font-semibold text-foreground">
+              <div className="mt-1 text-sm font-semibold fi-ink">
                 Ranked summary
               </div>
             </div>
@@ -177,18 +178,18 @@ function ResultsSection({
         </div>
       </div>
 
-      <div className="rounded-3xl border border-border bg-card shadow-sm">
+      <div className="fi-radius-module border border-border fi-surface shadow-sm">
         <div className="border-b border-border px-6 py-5">
-          <h3 className="text-xl font-heading font-bold text-foreground">
+          <h3 className="text-xl fi-zone font-bold fi-ink">
             Top Standings
           </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm fi-muted">
             Totals use K-Borda points per ballot (K for 1st, then K−1… down to 1).
             Ties use more 1st-place finishes, then 2nd, and so on, then name.
           </p>
         </div>
         {results.standings.length === 0 ? (
-          <div className="px-6 py-8 text-sm text-muted-foreground">
+          <div className="px-6 py-8 text-sm fi-muted">
             No valid ballots were counted for this event.
           </div>
         ) : (
@@ -199,45 +200,45 @@ function ResultsSection({
                 className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between"
               >
                 <div className="flex min-w-0 items-start gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/30 text-sm font-bold text-foreground">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center fi-radius-panel border border-border bg-muted/30 text-sm font-bold fi-ink">
                     #{index + 1}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <div className="truncate text-base font-semibold text-foreground">
+                      <div className="truncate text-base font-semibold fi-ink">
                         {row.name}
                       </div>
                       {index < 3 && (
                         <MedalIcon className="h-4 w-4 text-amber-500" />
                       )}
                     </div>
-                    <div className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                    <div className="mt-1 line-clamp-2 text-sm fi-muted">
                       {row.description || "No description"}
                     </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-sm md:min-w-[18rem]">
-                  <div className="rounded-xl border border-border bg-background px-3 py-2">
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  <div className="rounded-xl border border-border fi-surface px-3 py-2">
+                    <div className="text-[11px] uppercase tracking-[0.16em] fi-muted">
                       Points
                     </div>
-                    <div className="mt-1 font-semibold text-foreground">
+                    <div className="mt-1 font-semibold fi-ink">
                       {row.points}
                     </div>
                   </div>
-                  <div className="rounded-xl border border-border bg-background px-3 py-2">
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  <div className="rounded-xl border border-border fi-surface px-3 py-2">
+                    <div className="text-[11px] uppercase tracking-[0.16em] fi-muted">
                       Ballots
                     </div>
-                    <div className="mt-1 font-semibold text-foreground">
+                    <div className="mt-1 font-semibold fi-ink">
                       {row.ballotsCount}
                     </div>
                   </div>
-                  <div className="rounded-xl border border-border bg-background px-3 py-2">
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  <div className="rounded-xl border border-border fi-surface px-3 py-2">
+                    <div className="text-[11px] uppercase tracking-[0.16em] fi-muted">
                       1st Place
                     </div>
-                    <div className="mt-1 font-semibold text-foreground">
+                    <div className="mt-1 font-semibold fi-ink">
                       {row.rankCounts[0] || 0}
                     </div>
                   </div>
@@ -355,7 +356,7 @@ export function CodeAndTellVoteView({
   const renderBallot = () => (
     <div className="card p-5 bg-muted/30 h-full flex flex-col">
       <div className="border-b border-border pb-4 shrink-0">
-        <h2 className="text-xl font-heading font-bold text-foreground">
+        <h2 className="text-xl fi-zone font-bold fi-ink">
           Rank your top {requiredRankCount} project{requiredRankCount === 1 ? "" : "s"}
         </h2>
       </div>
@@ -379,7 +380,7 @@ export function CodeAndTellVoteView({
             );
           })}
         </Reorder.Group>
-        
+
         {Array.from({ length: Math.max(0, requiredRankCount - rankedTeamIds.length) }, (_, i) => {
           const index = rankedTeamIds.length + i;
           return (
@@ -394,9 +395,9 @@ export function CodeAndTellVoteView({
 
       <div className="shrink-0 pt-4 mt-auto">
         <div className={`rounded-lg border px-4 py-3 text-sm ${
-          isSaved 
-            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100" 
-            : "border-border bg-background text-muted-foreground"
+          isSaved
+            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 "
+            : "border-border fi-surface fi-muted"
         }`}>
           {isSaved
             ? "Your ballot is safely stored."
@@ -419,13 +420,13 @@ export function CodeAndTellVoteView({
           className={`mt-5 w-full py-2.5 rounded-lg font-semibold transition-colors ${
             isSaved
               ? "bg-emerald-500 text-white opacity-100"
-              : "btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              : "fi-transport disabled:opacity-50 disabled:cursor-not-allowed"
           }`}
         >
           {isSubmitting ? "Saving ballot..." : isSaved ? "✓ Ballot Submitted" : "Save Ballot"}
         </button>
 
-        <div className="mt-3 text-xs text-center text-muted-foreground">
+        <div className="mt-3 text-xs text-center fi-muted">
           {lastSavedAt
             ? `Last saved at ${new Date(lastSavedAt).toLocaleTimeString([], {
                 hour: "numeric",
@@ -484,10 +485,10 @@ export function CodeAndTellVoteView({
     }
 
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="ct-fi-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <button
           onClick={onBack}
-          className="mb-6 flex items-center gap-2 btn-ghost"
+          className="mb-6 flex items-center gap-2 fi-key"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -500,20 +501,20 @@ export function CodeAndTellVoteView({
           Back to Events
         </button>
 
-        <div className="mb-8 rounded-3xl border border-border bg-card px-6 py-6 shadow-sm">
+        <div className="mb-8 fi-radius-module border border-border fi-surface px-6 py-6 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 ">
                 Code &amp; Tell
               </div>
-              <h1 className="mt-3 text-3xl font-heading font-bold text-foreground">
+              <h1 className="mt-3 text-3xl fi-zone font-bold fi-ink">
                 {event.name}
               </h1>
-              <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+              <p className="mt-2 max-w-3xl text-sm fi-muted">
                 {event.description}
               </p>
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm fi-muted">
               {formatDateTime(event.startDate).split(',')[0]}
             </div>
           </div>
@@ -522,7 +523,7 @@ export function CodeAndTellVoteView({
         {publicResults ? (
           <ResultsSection event={event} results={publicResults} />
         ) : (
-          <div className="rounded-3xl border border-border bg-card px-6 py-8 text-sm text-muted-foreground">
+          <div className="fi-radius-module border border-border fi-surface px-6 py-8 text-sm fi-muted">
             Results have not been published yet.
           </div>
         )}
@@ -532,10 +533,10 @@ export function CodeAndTellVoteView({
 
   if (event.status === "upcoming") {
     return (
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="ct-fi-page max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <button
           onClick={onBack}
-          className="mb-6 flex items-center gap-2 btn-ghost"
+          className="mb-6 flex items-center gap-2 fi-key"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -547,14 +548,14 @@ export function CodeAndTellVoteView({
           </svg>
           Back to Events
         </button>
-        <div className="rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+        <div className="fi-radius-module border border-border fi-surface p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center fi-radius-panel bg-amber-500/10 text-amber-600 ">
             <TrophyIcon className="h-7 w-7" />
           </div>
-          <h1 className="mt-4 text-3xl font-heading font-bold text-foreground">
+          <h1 className="mt-4 text-3xl fi-zone font-bold fi-ink">
             {event.name}
           </h1>
-          <p className="mt-3 text-sm text-muted-foreground">
+          <p className="mt-3 text-sm fi-muted">
             Voting opens when the event becomes active. Projects are already managed by admins, and ranked ballots will unlock at the scheduled start time.
           </p>
         </div>
@@ -564,10 +565,10 @@ export function CodeAndTellVoteView({
 
   if (event.status === "past") {
     return (
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="ct-fi-page max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <button
           onClick={onBack}
-          className="mb-6 flex items-center gap-2 btn-ghost"
+          className="mb-6 flex items-center gap-2 fi-key"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -579,14 +580,14 @@ export function CodeAndTellVoteView({
           </svg>
           Back to Events
         </button>
-        <div className="rounded-3xl border border-border bg-card p-8 shadow-sm">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/30 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="fi-radius-module border border-border fi-surface p-8 shadow-sm">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/30 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] fi-muted">
             Code &amp; Tell
           </div>
-          <h1 className="mt-4 text-3xl font-heading font-bold text-foreground">
+          <h1 className="mt-4 text-3xl fi-zone font-bold fi-ink">
             Results Pending
           </h1>
-          <p className="mt-3 text-sm text-muted-foreground">
+          <p className="mt-3 text-sm fi-muted">
             Balloting is closed. Admins still need to confirm the final winner and release the ranked-vote results.
           </p>
         </div>
@@ -600,10 +601,10 @@ export function CodeAndTellVoteView({
 
   if (!loggedInUser) {
     return (
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="ct-fi-page max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <button
           onClick={onBack}
-          className="mb-6 flex items-center gap-2 btn-ghost"
+          className="mb-6 flex items-center gap-2 fi-key"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -616,22 +617,22 @@ export function CodeAndTellVoteView({
           Back to Events
         </button>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_24rem]">
-          <div className="rounded-3xl border border-amber-500/20 bg-[linear-gradient(135deg,rgba(245,158,11,0.12),transparent_72%)] p-8 shadow-sm">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-background/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+          <div className="fi-radius-module border border-amber-500/20 bg-[linear-gradient(135deg,rgba(245,158,11,0.12),transparent_72%)] p-8 shadow-sm">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 fi-surface/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 ">
               Code &amp; Tell Ballot
             </div>
-            <h1 className="mt-4 text-3xl font-heading font-bold text-foreground">
+            <h1 className="mt-4 text-3xl fi-zone font-bold fi-ink">
               Sign in to vote
             </h1>
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="mt-3 text-sm fi-muted">
               Code &amp; Tell uses one editable ranked ballot per signed-in voter. Your own projects stay visible, but they cannot be placed in your ranking.
             </p>
           </div>
-          <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="text-xl font-heading font-bold text-foreground">
+          <div className="fi-radius-module border border-border fi-surface p-6 shadow-sm">
+            <h2 className="text-xl fi-zone font-bold fi-ink">
               Sign In
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm fi-muted">
               Use your event account to unlock ballot editing.
             </p>
             <div className="mt-6">
@@ -648,7 +649,7 @@ export function CodeAndTellVoteView({
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <button
           onClick={onBack}
-          className="mb-6 flex items-center gap-2 btn-ghost"
+          className="mb-6 flex items-center gap-2 fi-key"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -660,7 +661,7 @@ export function CodeAndTellVoteView({
           </svg>
           Back to Events
         </button>
-        <div className="rounded-3xl border border-red-500/20 bg-red-500/5 p-8 text-sm text-red-700 dark:text-red-300 shadow-sm">
+        <div className="fi-radius-module border border-red-500/20 bg-red-500/5 p-8 text-sm text-red-700  shadow-sm">
           A verified account email is required to vote in Code &amp; Tell events.
         </div>
       </div>
@@ -672,10 +673,10 @@ export function CodeAndTellVoteView({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="ct-fi-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <button
         onClick={onBack}
-        className="mb-6 flex items-center gap-2 btn-ghost"
+        className="mb-6 flex items-center gap-2 fi-key"
       >
         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -691,17 +692,17 @@ export function CodeAndTellVoteView({
       <div className="mb-8 fade-in space-y-4">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-heading font-bold text-foreground">
+            <h1 className="text-3xl fi-zone font-bold fi-ink">
               {event.name}
             </h1>
-            <span className="badge bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+            <span className="badge bg-amber-500/10 text-amber-700  border border-amber-500/20">
               Code & Tell
             </span>
           </div>
-          <p className="max-w-3xl text-sm text-muted-foreground">
+          <p className="max-w-3xl text-sm fi-muted">
             {event.description}
           </p>
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground pt-1">
+          <div className="flex flex-wrap items-center gap-4 text-sm fi-muted pt-1">
             <span className="flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -713,7 +714,7 @@ export function CodeAndTellVoteView({
       </div>
 
       {votingContext && votingClosedToNewVoters && (
-        <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
+        <div className="mb-6 fi-radius-panel border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 ">
           This event has reached its voting limit for new voters (
           {votingContext.rankedVoteRowCount}
           {votingContext.maxBallots != null
@@ -725,8 +726,8 @@ export function CodeAndTellVoteView({
       )}
 
       {isSaved && (
-        <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100 flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+        <div className="mb-6 fi-radius-panel border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900  flex items-center gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 ">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
           <div>
@@ -741,10 +742,10 @@ export function CodeAndTellVoteView({
           <div className="card p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className="text-xl font-heading font-bold text-foreground">
+                <h2 className="text-xl fi-zone font-bold fi-ink">
                   Project Field
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-sm fi-muted">
                   Search all visible projects, then add eligible ones into your ranking.
                 </p>
               </div>
@@ -761,11 +762,11 @@ export function CodeAndTellVoteView({
           </div>
 
           {votingContext.eligibleProjectCount === 0 ? (
-            <div className="card p-8 border-dashed text-sm text-muted-foreground text-center">
+            <div className="card p-8 border-dashed text-sm fi-muted text-center">
               You do not have any eligible projects to rank in this event.
             </div>
           ) : filteredProjects.length === 0 ? (
-            <div className="card p-8 border-dashed text-sm text-muted-foreground text-center">
+            <div className="card p-8 border-dashed text-sm fi-muted text-center">
               No projects match that search.
             </div>
           ) : (
@@ -804,14 +805,14 @@ export function CodeAndTellVoteView({
         <div className="fixed bottom-0 inset-x-0 z-[60] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] pt-2 pointer-events-none">
           <button
             onClick={() => setIsMobileBallotOpen(true)}
-            className={`pointer-events-auto w-fit mx-auto border rounded-full shadow-[0_12px_28px_rgba(0,0,0,0.22)] dark:shadow-[0_12px_28px_rgba(0,0,0,0.32)] px-5 py-3 flex items-center justify-center gap-3 font-semibold text-sm transition-colors ${
+            className={`pointer-events-auto w-fit mx-auto border rounded-full shadow-[0_12px_28px_rgba(0,0,0,0.22)]  px-5 py-3 flex items-center justify-center gap-3 font-semibold text-sm transition-colors ${
               isSaved
                 ? "bg-emerald-500 text-white border-emerald-500"
                 : "bg-primary text-primary-foreground border-primary"
             }`}
           >
             <span>{isSaved ? "✓ Ballot Submitted" : "Your Ballot"}</span>
-            <span className="bg-background/20 px-2 py-0.5 rounded-full text-xs">
+            <span className="fi-surface/20 px-2 py-0.5 rounded-full text-xs">
               {rankedTeamIds.length} / {requiredRankCount}
             </span>
           </button>
@@ -827,24 +828,24 @@ export function CodeAndTellVoteView({
 
         {/* Drawer */}
         <div
-          className={`fixed inset-x-0 bottom-0 z-[80] bg-card rounded-t-2xl shadow-2xl border border-border p-4 max-h-[85vh] flex flex-col transition-transform duration-300 ease-out will-change-transform ${
+          className={`fixed inset-x-0 bottom-0 z-[80] fi-surface rounded-t-2xl fi-elevation-panel border border-border p-4 max-h-[85vh] flex flex-col transition-transform duration-300 ease-out will-change-transform ${
             isMobileBallotOpen ? "translate-y-0" : "translate-y-full"
           }`}
         >
           <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full mx-auto mb-3 shrink-0" />
           <div className="flex items-start justify-between mb-3 gap-2 shrink-0">
-            <h3 className="text-lg font-heading font-semibold text-foreground">
+            <h3 className="text-lg fi-zone font-semibold fi-ink">
               Your Ballot
             </h3>
             <button
               onClick={() => setIsMobileBallotOpen(false)}
-              className="text-muted-foreground hover:text-foreground text-2xl -mt-2 mr-2"
+              className="fi-muted hover:fi-ink text-2xl -mt-2 mr-2"
               aria-label="Close ballot"
             >
               ✕
             </button>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto custom-scrollbar -mx-4 px-4 pb-4">
             {renderBallot()}
           </div>
@@ -887,44 +888,44 @@ function ProjectListItem({
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <div 
+          <div
             className="flex justify-between items-start cursor-pointer sm:cursor-auto"
             onClick={() => setIsExpanded(!isExpanded)}
           >
             <div className="flex flex-wrap items-center gap-2 pr-4 sm:pr-0">
-              <h3 className="text-base font-semibold text-foreground">
+              <h3 className="text-base font-semibold fi-ink">
                 {project.name}
               </h3>
               {project.isOwned && (
-                <span className="badge bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                <span className="badge bg-amber-500/10 text-amber-700  border border-amber-500/20">
                   Your project
                 </span>
               )}
               {selectedIndex >= 0 && (
-                <span className="badge bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
+                <span className="badge bg-teal-500/10 text-teal-700  border border-teal-500/20">
                   Ranked #{selectedIndex + 1}
                 </span>
               )}
             </div>
             {/* Mobile expand icon */}
-            <button className="sm:hidden text-muted-foreground p-1 shrink-0">
-              <svg 
-                className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
-                fill="none" 
-                stroke="currentColor" 
+            <button className="sm:hidden fi-muted p-1 shrink-0">
+              <svg
+                className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
           </div>
-          
+
           <div className={`${isExpanded ? "block" : "hidden sm:block"}`}>
-            <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+            <p className="mt-1 text-sm fi-muted line-clamp-2">
               {project.description || "No description"}
             </p>
             {project.members.length > 0 && (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-xs fi-muted">
                 {project.members.join(" • ")}
               </p>
             )}
@@ -948,14 +949,14 @@ function ProjectListItem({
 
         <div className="flex shrink-0 items-center mt-2 sm:mt-0">
           {project.isOwned ? (
-            <div className="badge bg-muted text-muted-foreground border border-border">
+            <div className="badge bg-muted fi-muted border border-border">
               Ineligible
             </div>
           ) : selectedIndex >= 0 ? (
             <button
               type="button"
               onClick={() => removeProjectFromBallot(project._id)}
-              className="btn-ghost text-xs px-3 py-1.5"
+              className="fi-key text-xs px-3 py-1.5"
             >
               Remove
             </button>
@@ -968,7 +969,7 @@ function ProjectListItem({
                 rankedProjectSet.has(String(project._id)) ||
                 rankedTeamIdsLength >= requiredRankCount
               }
-              className="btn-secondary text-xs px-3 py-1.5"
+              className="fi-key text-xs px-3 py-1.5"
             >
               Add to ballot
             </button>

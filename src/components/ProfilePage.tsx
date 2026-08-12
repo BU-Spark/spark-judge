@@ -1,12 +1,41 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { formatDateTime } from "../lib/utils";
+import {
+  getEventDisplayLabel,
+  getEventMode,
+  type EventMode,
+} from "../lib/eventModes";
+import "./ProfilePage.fi.css";
 
 interface ProfilePageProps {
   onSelectEvent: (eventId: Id<"events">) => void;
   onBackToLanding: () => void;
+}
+
+const MODE_ACCENT: Record<EventMode, string> = {
+  hackathon: "var(--fi-teal)",
+  code_and_tell: "var(--fi-blue)",
+  demo_day: "var(--fi-green)",
+};
+
+function modeAccent(mode?: string | null): string {
+  return MODE_ACCENT[getEventMode(mode)];
+}
+
+function pad2(n: number): string {
+  return String(Math.max(0, n)).padStart(2, "0");
+}
+
+function tMinusLabel(startDate: number | string | Date): string {
+  const start = startDate instanceof Date ? startDate : new Date(startDate);
+  if (Number.isNaN(start.getTime())) return "T−?";
+  const now = new Date();
+  const days = Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (days <= 0) return "T−0 DAYS";
+  return `T−${days} DAY${days === 1 ? "" : "S"}`;
 }
 
 export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps) {
@@ -15,20 +44,31 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
 
   if (profile === undefined) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="pp-loading" role="status" aria-live="polite">
+        <div className="pp-spinner" aria-hidden="true" />
+        <span className="fi-sr">Loading profile</span>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16">
-        <div className="card text-center">
-          <h2 className="text-2xl font-heading font-bold mb-4">Not Signed In</h2>
-          <p className="text-muted-foreground mb-6">Please sign in to view your profile.</p>
-          <button onClick={onBackToLanding} className="btn-primary">
-            Back to Home
+      <div className="pp-page">
+        <div className="fi-panel pp-idle">
+          <div className="pp-idle-steps" aria-hidden="true">
+            <span className="pp-idle-step" />
+            <span className="pp-idle-step" />
+            <span className="pp-idle-step" />
+            <span className="pp-idle-step" />
+          </div>
+          <p className="fi-engraved pp-idle-copy">Not signed in · Sign in to view assignments</p>
+          <p className="pp-idle-body">Please sign in to view your profile.</p>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("hackjudge:open-signin"))}
+            className="fi-key"
+          >
+            Sign in
           </button>
         </div>
       </div>
@@ -38,130 +78,171 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
   const { user, pastEvents, activeEvents, upcomingEvents, stats } = profile;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Simple header with name and quick stats */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-heading font-bold mb-2">
-          {user.name || "Anonymous Judge"}
-        </h1>
-        <div className="flex gap-4 text-sm text-muted-foreground">
-          <span>{stats.totalEvents} events</span>
-          <span>{stats.totalTeamsScored} teams scored</span>
+    <div className="pp-page">
+      <header className="pp-header">
+        <h1 className="pp-header-name">{user.name || "Anonymous Judge"}</h1>
+        <div className="pp-header-stats">
+          <span className="fi-readout">{pad2(stats.totalEvents)} events</span>
+          <span className="fi-readout">{pad2(stats.totalTeamsScored)} teams scored</span>
         </div>
-      </div>
+      </header>
 
-      {/* Active judging - most important */}
       {activeEvents.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-xl font-heading font-semibold mb-4">Active Judging</h2>
-          <div className="space-y-3">
+        <section className="pp-zone" aria-labelledby="pp-active-h">
+          <div className="pp-zone-head">
+            <h2 className="fi-zone" id="pp-active-h">
+              Active judging
+            </h2>
+            <span className="fi-engraved">
+              {pad2(activeEvents.length)} live · resume scoring
+            </span>
+          </div>
+          <div className="pp-active-list">
             {activeEvents.map(({ event, teamsJudged, scoresSubmitted }) => {
-              const progressPercent = teamsJudged > 0 
-                ? Math.round((scoresSubmitted / teamsJudged) * 100)
-                : 0;
-              const isComplete = scoresSubmitted >= teamsJudged * 0.8; // 80% threshold
-              
+              const progressPercent =
+                teamsJudged > 0
+                  ? Math.round((scoresSubmitted / teamsJudged) * 100)
+                  : 0;
+              const isComplete = teamsJudged > 0 && scoresSubmitted >= teamsJudged * 0.8;
+              const modeStyle = {
+                ["--c" as string]: modeAccent(event.mode),
+              } as CSSProperties;
+
               return (
-                <div
+                <article
                   key={event._id}
-                  className="card flex items-center justify-between p-4 hover:shadow-md transition-shadow"
+                  className="fi-module pp-active-module"
+                  style={modeStyle}
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-foreground">{event.name}</h3>
-                      {isComplete && (
-                        <span className="text-emerald-500 text-sm font-medium">✓ Complete</span>
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Progress: {scoresSubmitted}/{teamsJudged} teams ({progressPercent}%)
-                    </div>
+                  <div className="pp-active-status">
+                    <span className="fi-chip pp-mode-chip">
+                      {getEventDisplayLabel(event.mode)}
+                    </span>
+                    {isComplete && (
+                      <span className="fi-chip pp-complete-chip">Complete</span>
+                    )}
                   </div>
+                  <h3 className="pp-active-name">{event.name}</h3>
+                  <p className="fi-readout pp-active-progress">
+                    {pad2(scoresSubmitted)} of {pad2(teamsJudged)}
+                    {teamsJudged > 0 ? ` · ${progressPercent}%` : ""}
+                  </p>
                   <button
+                    type="button"
                     onClick={() => onSelectEvent(event._id)}
-                    className="btn-primary"
+                    className="fi-transport"
                   >
-                    {scoresSubmitted > 0 ? "Continue" : "Start Scoring"}
+                    {scoresSubmitted > 0 ? "Resume scoring" : "Start scoring"}
                   </button>
-                </div>
+                </article>
               );
             })}
           </div>
         </section>
       )}
 
-      {/* Upcoming - minimal */}
       {upcomingEvents.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-xl font-heading font-semibold mb-4">Upcoming</h2>
-          <div className="space-y-2">
-            {upcomingEvents.map(({ event }) => (
-              <div
-                key={event._id}
-                className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
-              >
-                <div>
-                  <h3 className="font-medium text-foreground">{event.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDateTime(event.startDate)} - {formatDateTime(event.endDate)}
-                  </p>
-                </div>
-                <button
-                  onClick={() => onSelectEvent(event._id)}
-                  className="btn-ghost text-sm"
-                >
-                  View Details
-                </button>
-              </div>
-            ))}
+        <section className="pp-zone" aria-labelledby="pp-upcoming-h">
+          <div className="pp-zone-head">
+            <h2 className="fi-zone" id="pp-upcoming-h">
+              Upcoming
+            </h2>
+            <span className="fi-engraved">
+              Sequencer · {pad2(upcomingEvents.length)} tracks armed
+            </span>
           </div>
+          <ol className="pp-track-list">
+            {upcomingEvents.map(({ event }) => {
+              const modeStyle = {
+                ["--c" as string]: modeAccent(event.mode),
+              } as CSSProperties;
+
+              return (
+                <li key={event._id}>
+                  <div className="pp-track" style={modeStyle}>
+                    <span className="pp-track-led" aria-hidden="true" />
+                    <h3 className="pp-track-name">{event.name}</h3>
+                    <p className="fi-readout pp-track-dates">
+                      {formatDateTime(event.startDate)} – {formatDateTime(event.endDate)}
+                    </p>
+                    <span className="fi-readout pp-track-count">
+                      {tMinusLabel(event.startDate)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onSelectEvent(event._id)}
+                      className="fi-key fi-key--sm pp-track-action"
+                    >
+                      View details
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </section>
       )}
 
-      {/* Past - collapsed by default */}
       {pastEvents.length > 0 && (
-        <section>
-          <button
-            onClick={() => setExpandedPastEvents(!expandedPastEvents)}
-            className="flex items-center gap-2 mb-4 text-lg font-heading font-semibold hover:text-primary transition-colors"
-          >
-            <svg
-              className={`w-4 h-4 transition-transform ${expandedPastEvents ? "rotate-90" : ""}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <section className="pp-zone" aria-labelledby="pp-past-h">
+          <div className="pp-zone-head">
+            <button
+              type="button"
+              id="pp-past-h"
+              onClick={() => setExpandedPastEvents(!expandedPastEvents)}
+              className="pp-zone-toggle"
+              aria-expanded={expandedPastEvents}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            Completed ({pastEvents.length} events)
-          </button>
-          
+              <svg
+                className={`pp-zone-chevron${expandedPastEvents ? " is-open" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+              <span className="fi-zone">Completed</span>
+            </button>
+            <span className="fi-engraved">
+              Event log · {pad2(pastEvents.length)} records
+            </span>
+          </div>
+
           {expandedPastEvents && (
-            <div className="space-y-2">
+            <div className="pp-ledger">
               {pastEvents.map(({ event, teamsJudged, scoresSubmitted }) => {
-                const isComplete = scoresSubmitted >= teamsJudged * 0.8;
+                const isComplete = teamsJudged > 0 && scoresSubmitted >= teamsJudged * 0.8;
                 const skippedCount = teamsJudged - scoresSubmitted;
-                
+
                 return (
                   <div
                     key={event._id}
-                    className="flex items-center justify-between p-3 bg-muted/20 rounded-lg"
+                    className="pp-ledger-row"
+                    data-complete={isComplete ? "true" : "false"}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-emerald-500">✓</span>
-                      <div>
-                        <h3 className="font-medium text-foreground">{event.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {scoresSubmitted}/{teamsJudged} teams
-                          {skippedCount > 0 && ` (${skippedCount} skipped)`}
-                        </p>
-                      </div>
+                    <div>
+                      <h3 className="pp-ledger-name">{event.name}</h3>
+                      <p className="fi-readout pp-ledger-meta">
+                        {pad2(scoresSubmitted)}/{pad2(teamsJudged)} teams
+                        {skippedCount > 0 && ` · ${skippedCount} skipped`}
+                      </p>
                     </div>
+                    <span className="fi-engraved-sm">
+                      {getEventDisplayLabel(event.mode)}
+                    </span>
+                    <span className="fi-chip pp-closed-chip">Closed</span>
                     <button
+                      type="button"
                       onClick={() => onSelectEvent(event._id)}
-                      className="btn-ghost text-sm"
+                      className="fi-key fi-key--sm pp-ledger-action"
                     >
-                      View Results
+                      View results
                     </button>
                   </div>
                 );
@@ -171,17 +252,28 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
         </section>
       )}
 
-      {/* No events message */}
-      {activeEvents.length === 0 && upcomingEvents.length === 0 && pastEvents.length === 0 && (
-        <div className="card text-center py-12">
-          <p className="text-muted-foreground mb-4">
-            You haven't joined any events yet.
-          </p>
-          <button onClick={onBackToLanding} className="btn-primary">
-            Browse Events
-          </button>
-        </div>
-      )}
+      {activeEvents.length === 0 &&
+        upcomingEvents.length === 0 &&
+        pastEvents.length === 0 && (
+          <div className="fi-panel pp-idle">
+            <div className="pp-idle-steps" aria-hidden="true">
+              <span className="pp-idle-step" />
+              <span className="pp-idle-step" />
+              <span className="pp-idle-step" />
+              <span className="pp-idle-step" />
+              <span className="pp-idle-step" />
+              <span className="pp-idle-step" />
+              <span className="pp-idle-step" />
+              <span className="pp-idle-step" />
+            </div>
+            <p className="fi-engraved pp-idle-copy">
+              No assignments yet · Browse events
+            </p>
+            <button type="button" onClick={onBackToLanding} className="fi-key">
+              Browse events
+            </button>
+          </div>
+        )}
     </div>
   );
 }

@@ -1,247 +1,335 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@400;500;600;700;800;900&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ============ Field Instrument token layer (DESIGN.md, 2026-08-12) ============ */
+/* Canonical instrument tokens. Unmigrated screens keep their legacy styles in
+   legacy.css (loaded after this file); migrated surfaces use fi-* only.
+   Light-chassis world: no dark variant. */
 :root {
-  --logo-color: #0a4942; /* dark teal for light mode */
-  --background: #fafafa; /* Zinc 50 */
-  --foreground: #18181b; /* Zinc 900 */
-  --card: #ffffff;
-  --card-foreground: #18181b;
-  --border: #e4e4e7; /* Zinc 200 */
-  --primary: #0d9488; /* Teal 600 */
-  --primary-foreground: #ffffff;
-  --secondary: #71717a; /* Zinc 500 */
-  --secondary-foreground: #ffffff;
-  --accent: #14b8a6; /* Teal 500 */
-  --accent-foreground: #ffffff;
-  --muted: #f4f4f5; /* Zinc 100 */
-  --muted-foreground: #71717a; /* Zinc 500 */
+  --fi-desk: #ddd9d0;
+  --fi-chassis: #eceae4;
+  --fi-panel: #e3e0d7;
+  --fi-hair: #cfccc0;
+  --fi-hair-lit: #f7f5ee;
+  --fi-ink: #1a1c1e;
+  --fi-ink-soft: #42443e;
+  --fi-ink-dim: #5b5d55;
+  --fi-screen: #12181d;
+  --fi-screen-edge: #080c0f;
+  --fi-screen-deep: #0b1115;
+  --fi-screen-ink: #e8edee;
+  --fi-screen-dim: #9fb0b5;
+  --fi-key-white: #fbfaf6;
+  --fi-orange: #ff6b2c;
+  --fi-orange-hot: #ff7d45;
+  --fi-orange-edge: #d14d16;
+  --fi-orange-shadow: #c74e17;
+  --fi-transport-ink: #14100c;
+  --fi-blue: #3d7bff;
+  --fi-green: #2fbf71;
+  --fi-teal: #0d9488;
+  --fi-teal-deep: #0a6e63;
+  --fi-teal-phosphor: #2dd4bf;
+  --fi-blue-deep: #1d4ed8;
+  --fi-blue-lit: #7fa8ff;
+  --fi-green-deep: #14713f;
+  --fi-green-lit: #4ade80;
+
+  /* Machining tones: machined seams, key edges, pressed states, ledger ink, screen internals */
+  --fi-chassis-edge: #c4c1b6;
+  --fi-key-edge: #b9b6ab;
+  --fi-rule: #b3b0a4;
+  --fi-step-past: #a8a599;
+  --fi-step-past-edge: #8f8c81;
+  --fi-key-pressed: #f2f0e9;
+  --fi-row-hover: #efede6;
+  --fi-ledger-name: #43453f;
+  --fi-stamp-ink: #4e5048;
+  --fi-stamp-edge: #b3afa2;
+  --fi-screen-hair: #2a383f;
+  --fi-screen-bezel: #1e2a30;
+  --fi-screen-tag: #6b7f86;
+  --fi-select-dim: #7d9198;
+  --fi-scope-grid: #1b262c;
+
+  --fi-font-ui: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  --fi-font-mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+
+  --fi-r-pip: 2px;
+  --fi-r-xs: 3px;
+  --fi-r-sm: 6px;
+  --fi-r-md: 8px;
+  --fi-r-lg: 10px;
+  --fi-r-xl: 12px;
+  --fi-r-module: 16px;
+  --fi-r-unit: 22px;
+
+  --fi-pad-x: clamp(1rem, 3.5vw, 2.75rem);
+  --fi-zone-y: clamp(1.5rem, 3.5vw, 2.5rem);
 }
 
-.dark {
-  /* Deep Muted Teal Theme (Professional) */
-  --logo-color: var(--foreground); /* use light text in dark mode */
-  --background: #0b1215; /* Charcoal Teal (More neutral) */
-  --foreground: #f1f5f9; /* Slate 100 */
-  --card: #141c21; /* Slightly lighter charcoal teal */
-  --card-foreground: #f1f5f9;
-  --border: #233038; /* Muted border */
-  --primary: #0d9488; /* Teal 600 - Professional, saturated but not neon */
-  --primary-foreground: #ffffff; /* White text is crisp on Teal 600 */
-  --secondary: #1e2930; /* Dark slate-teal for secondary buttons */
-  --secondary-foreground: #e2e8f0; /* Slate 200 */
-  --accent: #115e59; /* Teal 800 */
-  --accent-foreground: #ffffff;
-  --muted: #1a242a; /* Card hover / Muted bg */
-  --muted-foreground: #94a3b8; /* Slate 400 - Classic muted text */
-}
-
-html {
-  scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: var(--background);
-}
-
+/* The world sits on the workbench: desk under everything, chassis units on top.
+   (index.css loads after legacy.css, so this wins the body background tie.) */
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--fi-desk);
 }
 
-/* Typography Overrides */
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  letter-spacing: -0.025em; /* tracking-tight */
+::selection {
+  background: var(--fi-teal);
+  color: var(--fi-key-white);
+}
+
+/* Type roles */
+.fi-engraved {
+  font-family: var(--fi-font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fi-ink-dim);
+  text-shadow: 0 1px 0 var(--fi-hair-lit);
+}
+.fi-engraved-sm {
+  font-family: var(--fi-font-mono);
+  font-size: 0.5625rem;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--fi-ink-dim);
+  text-shadow: 0 1px 0 var(--fi-hair-lit);
+}
+.fi-readout {
+  font-family: var(--fi-font-mono);
+  font-size: 0.6875rem;
   font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fi-ink-soft);
+  font-variant-numeric: tabular-nums;
 }
 
-.font-heading {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  letter-spacing: -0.025em;
+/* Component primitives */
+.fi-panel {
+  background: var(--fi-panel);
+  border: 1px solid var(--fi-hair);
+  border-radius: var(--fi-r-xl);
+}
+.fi-module {
+  background: linear-gradient(180deg, var(--fi-screen) 0%, var(--fi-screen-deep) 100%);
+  border: 1px solid var(--fi-screen-edge);
+  border-radius: var(--fi-r-module);
+  color: var(--fi-screen-ink);
+}
+.fi-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  background: var(--fi-key-white);
+  border: 1px solid var(--fi-hair);
+  border-radius: var(--fi-r-md);
+  box-shadow: 0 2px 0 var(--fi-hair), 0 1px 2px rgba(26, 28, 30, 0.06);
+  font-family: var(--fi-font-mono);
+  font-size: 0.6875rem;
   font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fi-ink);
+  padding: 0.55em 0.9em;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 160ms ease;
+}
+.fi-key:hover { background: #ffffff; }
+.fi-key:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--fi-hair);
+}
+.fi-key:focus-visible {
+  outline: 2px solid var(--fi-teal);
+  outline-offset: 2px;
+}
+.fi-key[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+.fi-transport {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  background: var(--fi-orange);
+  border: 1px solid var(--fi-orange-edge);
+  border-radius: var(--fi-r-lg);
+  box-shadow: 0 3px 0 var(--fi-orange-shadow), 0 1px 3px rgba(26, 28, 30, 0.12);
+  font-family: var(--fi-font-mono);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fi-transport-ink);
+  padding: 0.85em 1.3em;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 160ms ease;
+}
+.fi-transport:hover { background: var(--fi-orange-hot); }
+.fi-transport:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--fi-orange-shadow);
+}
+.fi-transport:focus-visible {
+  outline: 2px solid var(--fi-teal);
+  outline-offset: 2px;
+}
+.fi-transport[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+.fi-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  border: 1px solid var(--fi-hair);
+  border-radius: var(--fi-r-sm);
+  padding: 0.3em 0.6em;
+  font-family: var(--fi-font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fi-ink-dim);
+}
+.fi-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fi-hair);
+  flex: none;
+}
+.fi-led--lit { background: var(--c, var(--fi-teal)); box-shadow: 0 0 4px var(--c, var(--fi-teal)); }
+
+@keyframes fi-livepulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.fi-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c, var(--fi-teal-phosphor));
+  animation: fi-livepulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fi-live-dot { animation: none; }
 }
 
-.font-logo {
-  font-family: 'Noto Sans Mono', system-ui, monospace;
-  font-weight: 800;
+.fi-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- shell: faceplate rail ---------- */
+.fi-zone {
+  font-family: var(--fi-font-ui);
+  font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--fi-ink);
+}
+.fi-title {
+  font-family: var(--fi-font-ui);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.15;
   letter-spacing: -0.01em;
+  color: var(--fi-ink);
+}
+.fi-key--sm {
+  padding: 0.35em 0.6em;
+  font-size: 0.625rem;
+  border-radius: var(--fi-r-sm);
+}
+.fi-rail {
+  background: var(--fi-chassis);
+  border-bottom: 1px solid var(--fi-hair);
+  box-shadow: inset 0 1px 0 var(--fi-hair-lit);
+}
+.fi-rail-inner {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 1468px;
+  margin: 0 auto;
+  padding: 0 var(--fi-pad-x);
+}
+.fi-rail-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.fi-brand-link {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--fi-r-sm);
+  text-decoration: none;
+}
+.fi-brand-link:focus-visible {
+  outline: 2px solid var(--fi-teal);
+  outline-offset: 2px;
+}
+.fi-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  line-height: 1;
+}
+.fi-brand-mark {
+  width: 30px;
+  height: 25px;
+  flex: none;
+}
+.fi-brand-wordmark {
+  font-family: var(--fi-font-ui);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fi-ink);
+  transition: color 160ms ease-out;
+}
+.fi-brand-link:hover .fi-brand-wordmark {
+  color: var(--fi-teal-deep);
 }
 
-.logo-color {
-  color: var(--logo-color);
-}
-
-.font-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-}
-
-code, pre, kbd, samp {
-  font-family: 'Fira Code', monospace;
-}
-
-/* Utility Classes */
-.card {
-  @apply bg-card border border-border rounded-lg shadow-sm transition-shadow duration-200;
-}
-
-.card:hover {
-  @apply shadow-md;
-}
-
-.card-static {
-  @apply bg-card border border-border rounded-lg shadow-sm;
-}
-
-/* Replaces old glass cards with clean solid cards */
-.card-glass {
-  @apply bg-card border border-border rounded-lg shadow-sm transition-shadow duration-200;
-}
-
-.card-glass:hover {
-  @apply shadow-md;
-}
-
-.card-glass.no-card-hover:hover {
-  @apply shadow-sm cursor-default;
-}
-
-/* Buttons */
-.btn-primary {
-  @apply inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium shadow-sm transition-colors duration-200 hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed;
-  height: 2.5rem; /* h-10 */
-}
-
-.btn-secondary {
-  @apply inline-flex items-center justify-center px-4 py-2 bg-white dark:bg-zinc-800 border border-border text-foreground rounded-md font-medium shadow-sm transition-colors duration-200 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed;
-  height: 2.5rem; /* h-10 */
-}
-
-.btn-ghost {
-  @apply inline-flex items-center justify-center px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md font-medium transition-colors duration-200;
-  height: 2.5rem;
-}
-
-/* Inputs */
-.input {
-  @apply flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
-}
-
-/* Native control polish (excluding date/time pickers) */
-input[type="checkbox"] {
-  accent-color: var(--primary);
-}
-
-input[type="number"] {
-  -moz-appearance: textfield;
-}
-
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-select {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  padding-right: 2rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 0.75rem;
-}
-
-/* Badges */
-.badge {
-  @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 whitespace-nowrap;
-}
-
-/* Animations - Minimal/None */
-.fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Deprecated/Legacy support mapped to nothing or simple styles */
-.text-reveal {
-  /* No animation */
-}
-
-.slide-up {
-  /* No animation or very subtle */
-  animation: fadeIn 0.3s ease-out;
-}
-
-.header-depth {
-  @apply border-b border-border bg-background backdrop-blur;
-}
-
-.gradient-text {
-  @apply text-foreground; /* Remove gradient text */
-}
-
-/* Scrollbar */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--secondary);
-}
-
-/* Scrollbar that stays hidden until interaction */
-.scrollbar-auto-hide {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-}
-
-.scrollbar-auto-hide:hover,
-.scrollbar-auto-hide:focus,
-.scrollbar-auto-hide:active {
-  scrollbar-color: var(--border) transparent;
-}
-
-.scrollbar-auto-hide::-webkit-scrollbar {
-  height: 6px;
-  width: 6px;
-}
-
-.scrollbar-auto-hide::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollbar-auto-hide::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 3px;
-}
-
-.scrollbar-auto-hide:hover::-webkit-scrollbar-thumb,
-.scrollbar-auto-hide:focus::-webkit-scrollbar-thumb,
-.scrollbar-auto-hide:active::-webkit-scrollbar-thumb {
-  background: var(--border);
+@media (max-width: 767px) {
+  .fi-rail-inner {
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+    row-gap: 0.5rem;
+  }
+  .fi-brand-mark {
+    width: 26px;
+    height: 22px;
+  }
 }

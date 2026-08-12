@@ -1,13 +1,5 @@
-<svg width="256" height="256" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="6" y="6" width="52" height="52" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2.5" />
-  <rect x="15" y="15" width="10" height="10" rx="3" fill="#0f172a" />
-  <rect x="27" y="15" width="10" height="10" rx="3" fill="#0d9488" />
-  <rect x="39" y="15" width="10" height="10" rx="3" fill="#ccfbf1" />
-  <rect x="15" y="27" width="10" height="10" rx="3" fill="#cbd5e1" />
-  <rect x="27" y="27" width="10" height="10" rx="3" fill="#0f172a" />
-  <rect x="39" y="27" width="10" height="10" rx="3" fill="#0d9488" />
-  <rect x="15" y="39" width="10" height="10" rx="3" fill="#e2e8f0" />
-  <rect x="27" y="39" width="10" height="10" rx="3" fill="#cbd5e1" />
-  <rect x="39" y="39" width="10" height="10" rx="3" fill="#0f172a" />
-  <path d="M17 39l8 8 22-24" stroke="#f59e0b" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+<svg width="54" height="44" viewBox="0 0 54 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path fill="#29D3CC" d="M0 7h7v7H0V7Zm0 7h5v16H0V14Zm0 16h7v7H0v-7ZM7 0h13v6H7V0Zm0 38h13v6H7v-6ZM47 7h7v7h-7V7Zm2 7h5v16h-5V14Zm-2 16h7v7h-7v-7ZM34 0h13v6H34V0Zm0 38h13v6H34v-6Z"/>
+  <path fill="#29D3CC" d="M22 18h10v10H22z"/>
+  <path fill="#0B6968" d="M29 13h7v7h-7zM17 25h7v7h-7z"/>
 </svg>

@@ -1,17 +1,8 @@
-<svg width="640" height="180" viewBox="0 0 320 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="8" y="14" width="52" height="52" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2.5" />
-  <rect x="18" y="24" width="10" height="10" rx="3" fill="#0f172a" />
-  <rect x="30" y="24" width="10" height="10" rx="3" fill="#0d9488" />
-  <rect x="42" y="24" width="10" height="10" rx="3" fill="#ccfbf1" />
-  <rect x="18" y="36" width="10" height="10" rx="3" fill="#cbd5e1" />
-  <rect x="30" y="36" width="10" height="10" rx="3" fill="#0f172a" />
-  <rect x="42" y="36" width="10" height="10" rx="3" fill="#0d9488" />
-  <rect x="18" y="48" width="10" height="10" rx="3" fill="#e2e8f0" />
-  <rect x="30" y="48" width="10" height="10" rx="3" fill="#cbd5e1" />
-  <rect x="42" y="48" width="10" height="10" rx="3" fill="#0f172a" />
-  <path d="M20 47l8 8 22-25" stroke="#f59e0b" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
-  <text x="78" y="49" fill="#0f172a" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="28" font-weight="800" letter-spacing="-0.04em">HackJudge</text>
-  <rect x="78" y="58" width="44" height="6" rx="3" fill="#0f172a" opacity="0.12" />
-  <rect x="78" y="68" width="60" height="6" rx="3" fill="#0d9488" opacity="0.28" />
-  <rect x="78" y="78" width="30" height="6" rx="3" fill="#0f172a" opacity="0.12" />
+<svg width="260" height="52" viewBox="0 0 260 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(0 4)">
+    <path fill="#29D3CC" d="M0 7h7v7H0V7Zm0 7h5v16H0V14Zm0 16h7v7H0v-7ZM7 0h13v6H7V0Zm0 38h13v6H7v-6ZM47 7h7v7h-7V7Zm2 7h5v16h-5V14Zm-2 16h7v7h-7v-7ZM34 0h13v6H34V0Zm0 38h13v6H34v-6Z"/>
+    <path fill="#29D3CC" d="M22 18h10v10H22z"/>
+    <path fill="#0B6968" d="M29 13h7v7h-7zM17 25h7v7h-7z"/>
+  </g>
+  <text x="69" y="37" fill="#F8FAFC" font-family="Source Sans 3, system-ui, sans-serif" font-size="32" font-weight="700" letter-spacing="-0.7">HackJudge</text>
 </svg>

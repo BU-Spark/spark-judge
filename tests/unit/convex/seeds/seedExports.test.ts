@@ -12,10 +12,12 @@ describe('seed module exports', () => {
       'seedEvents',
       'seedEverything',
       'seedJudgeScores',
+      'seedLiveHackathon',
       'seedPrizeJudgingFlowCohortsDemo',
       'seedPrizeJudgingFlowDemo',
       'seedPrizeJudgingFlowLockedDemo',
       'seedRegularJudgingDemo',
+      'seedSemester',
       'seedCodeAndTellDemo',
     ].sort());
   });

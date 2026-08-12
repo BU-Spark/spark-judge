@@ -6,6 +6,8 @@ import {
   makeUserAdminByEmailHandler,
 } from "./seeds/admin/adminAccess";
 import { seedEventsHandler } from "./seeds/core/seedEvents";
+import { seedSemesterHandler } from "./seeds/core/seedSemester";
+import { seedLiveHackathonHandler } from "./seeds/core/seedLiveHackathon";
 import { seedEverythingHandler } from "./seeds/core/seedEverything";
 import { seedJudgeScoresHandler } from "./seeds/core/seedJudgeScores";
 import { seedCohortJudgingDemoHandler } from "./seeds/demos/cohortJudging";
@@ -21,6 +23,27 @@ import {
 export const seedEvents = internalMutation({
   args: {},
   handler: seedEventsHandler,
+});
+
+export const seedSemester = internalMutation({
+  args: {},
+  returns: v.object({
+    message: v.string(),
+    created: v.array(v.string()),
+    skipped: v.array(v.string()),
+  }),
+  handler: seedSemesterHandler,
+});
+
+export const seedLiveHackathon = internalMutation({
+  args: {},
+  returns: v.object({
+    message: v.string(),
+    eventId: v.id("events"),
+    teamsCreated: v.number(),
+    judgeCode: v.union(v.string(), v.null()),
+  }),
+  handler: seedLiveHackathonHandler,
 });
 
 export const seedJudgeScores = internalMutation({

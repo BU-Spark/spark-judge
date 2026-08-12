@@ -15,7 +15,6 @@ import { AdminInsightsRoute } from "./features/admin/routes/AdminInsightsRoute";
 import { DesignPreview } from "./features/design-preview/DesignPreview";
 import { useState, useEffect } from "react";
 import { Id } from "../convex/_generated/dataModel";
-import { ThemeToggle } from "./components/ThemeToggle";
 import { BrandLogo } from "./components/ui/BrandLogo";
 import {
   BrowserRouter,
@@ -60,11 +59,9 @@ export default function App() {
  */
 function Layout() {
   const [showSignIn, setShowSignIn] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const isAdmin = useQuery(api.events.isUserAdmin);
   const navigate = useNavigate();
-  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   useEffect(() => {
     const updateIsMobile = () => setIsMobile(window.matchMedia("(max-width: 768px)").matches);
@@ -73,110 +70,60 @@ function Layout() {
     return () => window.removeEventListener("resize", updateIsMobile);
   }, []);
 
-  const renderNavActions = (variant: "desktop" | "mobile") => {
-    const baseGhostClass =
-      variant === "desktop"
-        ? "btn-ghost"
-        : "btn-ghost w-full justify-start";
-    const signOutClass =
-      variant === "desktop"
-        ? "btn-ghost hover:text-red-500"
-        : "btn-ghost w-full justify-start hover:text-red-500";
-    const signInClass =
-      variant === "desktop"
-        ? "btn-primary"
-        : "btn-primary w-full justify-center";
+  useEffect(() => {
+    if (!showSignIn) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowSignIn(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showSignIn]);
 
-    return (
-      <>
-        <Authenticated>
-          <button
-            onClick={() => {
-              void navigate("/profile");
-              closeMobileMenu();
-            }}
-            className={baseGhostClass}
-          >
-            Profile
-          </button>
-          {isAdmin && (
-            <button
-              onClick={() => {
-                void navigate("/admin");
-                closeMobileMenu();
-              }}
-              className={baseGhostClass}
-            >
-              Admin
-            </button>
-          )}
-          <SignOutButton
-            className={signOutClass}
-            onClick={variant === "mobile" ? closeMobileMenu : undefined}
-          />
-        </Authenticated>
-        <Unauthenticated>
-          <button
-            onClick={() => {
-              setShowSignIn(true);
-              closeMobileMenu();
-            }}
-            className={signInClass}
-          >
-            Sign In
-          </button>
-        </Unauthenticated>
-      </>
-    );
-  };
+  /* Pages surface sign-in through one channel so the modal stays single-surface */
+  useEffect(() => {
+    const open = () => setShowSignIn(true);
+    window.addEventListener("hackjudge:open-signin", open);
+    return () => window.removeEventListener("hackjudge:open-signin", open);
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-          <div className="flex justify-between items-center">
-            <Link
-              to="/"
-              onClick={closeMobileMenu}
-              aria-label="HackJudge home"
-              className="group inline-flex items-center rounded-md transition-opacity hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
-            >
-              <BrandLogo />
-            </Link>
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              <div className="hidden md:flex gap-4 items-center">
-                {renderNavActions("desktop")}
-              </div>
+      {/* Faceplate rail */}
+      <header className="fi-rail sticky top-0 z-40">
+        <div className="fi-rail-inner">
+          <Link to="/" aria-label="HackJudge home" className="fi-brand-link">
+            <BrandLogo />
+          </Link>
+          <nav className="fi-rail-nav" aria-label="Primary">
+            <Authenticated>
               <button
                 type="button"
-                aria-label="Toggle navigation menu"
-                aria-expanded={isMobileMenuOpen}
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden inline-flex items-center justify-center p-2 rounded-lg hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+                onClick={() => void navigate("/profile")}
+                className="fi-key"
               >
-                {isMobileMenuOpen ? (
-                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                )}
+                <ProfileIcon />
+                Profile
               </button>
-            </div>
-          </div>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => void navigate("/admin")}
+                  className="fi-key"
+                >
+                  <AdminIcon />
+                  Admin
+                </button>
+              )}
+              <SignOutButton className="fi-key" />
+            </Authenticated>
+            <Unauthenticated>
+              <button type="button" onClick={() => setShowSignIn(true)} className="fi-key">
+                <SignInArrowIcon />
+                Sign in
+              </button>
+            </Unauthenticated>
+          </nav>
         </div>
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-border bg-background">
-            <div className="fixed inset-0 z-30 bg-transparent" onClick={closeMobileMenu} />
-            <div className="relative z-40 px-4 py-6 space-y-2">
-              {renderNavActions("mobile")}
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Main Content */}
@@ -186,13 +133,15 @@ function Layout() {
 
       {/* Toast Notifications - hidden on mobile */}
       {!isMobile && (
-        <Toaster 
+        <Toaster
           position="bottom-right"
           toastOptions={{
             style: {
-              background: 'var(--card)',
-              color: 'var(--card-foreground)',
-              border: '1px solid var(--border)',
+              background: "var(--fi-panel)",
+              color: "var(--fi-ink)",
+              border: "1px solid var(--fi-hair)",
+              borderRadius: "var(--fi-r-xl)",
+              fontFamily: "var(--fi-font-ui)",
             },
           }}
         />
@@ -201,25 +150,54 @@ function Layout() {
       {/* Sign In Modal */}
       {showSignIn && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          <div
+            className="absolute inset-0"
+            style={{ background: "color-mix(in srgb, var(--fi-ink) 55%, transparent)" }}
             onClick={() => setShowSignIn(false)}
           />
-          <div className="relative bg-background rounded-xl p-8 max-w-md w-full shadow-2xl border border-border slide-up">
+          <div className="fi-panel relative p-8 max-w-md w-full slide-up">
             <button
               onClick={() => setShowSignIn(false)}
-              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
+              className="fi-key fi-key--sm absolute top-4 right-4"
+              aria-label="Close sign in"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              Esc
             </button>
-            <h2 className="text-2xl font-heading font-bold mb-6 text-foreground">Sign In</h2>
+            <p className="fi-engraved" style={{ marginBottom: "0.5rem" }}>HackJudge console</p>
+            <h2 className="fi-zone" style={{ marginBottom: "1.5rem" }}>
+              Sign in
+            </h2>
             <SignInForm />
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function ProfileIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <circle cx="8" cy="5.5" r="2.5" />
+      <path d="M2.5 14c.8-2.4 2.7-3.5 5.5-3.5s4.7 1.1 5.5 3.5" />
+    </svg>
+  );
+}
+
+function AdminIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <path d="M8 1.5L2.5 3.5v4c0 3.4 2.4 5.4 5.5 6.5 3.1-1.1 5.5-3.1 5.5-6.5v-4L8 1.5z" />
+    </svg>
+  );
+}
+
+function SignInArrowIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <path d="M6 3h7v10H6" />
+      <path d="M9 8H2.5M6.5 5.5L9 8l-2.5 2.5" />
+    </svg>
   );
 }
 

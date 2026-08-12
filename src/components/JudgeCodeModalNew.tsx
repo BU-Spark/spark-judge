@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import "./JudgeCodeModal.fi.css";
 
 interface JudgeCodeModalProps {
   isOpen: boolean;
@@ -17,11 +18,21 @@ export function JudgeCodeModal({ isOpen, onClose, eventId, onSuccess }: JudgeCod
   const [isSubmitting, setIsSubmitting] = useState(false);
   const verifyCode = useMutation(api.events.verifyJudgeCodeAndStartJudging);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!judgeCode.trim()) {
-      setError("Please enter a judge code");
+      setError("Enter the 6-character code");
       return;
     }
 
@@ -30,7 +41,7 @@ export function JudgeCodeModal({ isOpen, onClose, eventId, onSuccess }: JudgeCod
 
     try {
       await verifyCode({ eventId, judgeCode: judgeCode.trim() });
-      toast.success("Code verified! Starting judging...");
+      toast.success("Code verified — seat assigned");
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -51,59 +62,63 @@ export function JudgeCodeModal({ isOpen, onClose, eventId, onSuccess }: JudgeCod
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      <div
+        className="absolute inset-0"
+        style={{ background: "color-mix(in srgb, var(--fi-ink) 55%, transparent)" }}
         onClick={handleClose}
       />
-      <div className="relative bg-background rounded-2xl p-8 max-w-md w-full shadow-2xl slide-up border border-border">
+      <div className="fi-panel fi-jc-card relative slide-up" role="dialog" aria-modal="true" aria-labelledby="fi-jc-title">
         <button
+          type="button"
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
+          className="fi-key fi-key--sm absolute top-4 right-4"
+          aria-label="Close"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          Esc
         </button>
-        
-        <h2 className="text-2xl font-heading font-bold mb-2 text-foreground">Enter Judge Code</h2>
-        <p className="text-sm text-muted-foreground mb-6">
-          Please enter the judge code to start scoring teams for this event.
+
+        <p className="fi-engraved" style={{ marginBottom: "0.5rem" }}>
+          Judge access
+        </p>
+        <h2 id="fi-jc-title" className="fi-zone" style={{ marginBottom: "0.375rem" }}>
+          Enter judge code
+        </h2>
+        <p className="fi-jc-hint">
+          The 6-character code from the event desk unlocks your scoring seat.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="judgeCode" className="block text-sm font-medium mb-2">
-              Judge Code
+        <form onSubmit={handleSubmit} className="fi-jc-form">
+          <div className={`fi-jc-screen${error ? " fi-jc-screen--error" : ""}`}>
+            <label htmlFor="judgeCode" className="fi-engraved-sm fi-jc-screen-tag">
+              Code
             </label>
             <input
               id="judgeCode"
               type="text"
               value={judgeCode}
               onChange={(e) => {
-                setJudgeCode(e.target.value);
+                setJudgeCode(e.target.value.toUpperCase().slice(0, 8));
                 setError("");
               }}
-              placeholder="Enter code..."
-              className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              placeholder="······"
+              className="fi-jc-input"
               autoFocus
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              maxLength={8}
             />
-            {error && (
-              <p className="mt-2 text-sm text-red-500">{error}</p>
-            )}
           </div>
+          {error && <p className="fi-jc-error">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="btn-primary w-full"
-          >
+          <button type="submit" disabled={isSubmitting} className="fi-transport fi-jc-submit">
             {isSubmitting ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                Verifying...
+              <span className="fi-jc-spinner-wrap">
+                <span className="fi-jc-spinner" />
+                Verifying
               </span>
             ) : (
-              "Verify & Start Judging"
+              "Verify & start judging"
             )}
           </button>
         </form>
@@ -111,7 +126,3 @@ export function JudgeCodeModal({ isOpen, onClose, eventId, onSuccess }: JudgeCod
     </div>
   );
 }
-
-
-
-

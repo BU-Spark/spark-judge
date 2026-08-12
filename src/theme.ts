@@ -44,8 +44,8 @@ const theme = extendTheme({
     },
   },
   fonts: {
-    heading: `'Geist Sans', 'Inter', sans-serif`,
-    body: `'Inter', 'Geist Sans', sans-serif`,
+    heading: `'Source Sans 3', system-ui, sans-serif`,
+    body: `'Source Sans 3', system-ui, sans-serif`,
   },
   radii: {
     sm: "6px",

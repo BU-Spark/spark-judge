@@ -1,0 +1,367 @@
+/* ProfilePage — Field Instrument page styles (tokens from index.css) */
+
+.pp-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--fi-zone-y) var(--fi-pad-x);
+  font-family: var(--fi-font-ui);
+  color: var(--fi-ink);
+}
+
+.pp-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.pp-spinner {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 3px solid var(--fi-hair);
+  border-top-color: var(--fi-teal);
+  border-radius: 50%;
+  animation: pp-spin 0.8s linear infinite;
+}
+
+@keyframes pp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-spinner {
+    animation: none;
+    border-top-color: var(--fi-hair);
+    opacity: 0.7;
+  }
+}
+
+/* ---- header ---- */
+.pp-header {
+  margin-bottom: var(--fi-zone-y);
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--fi-hair);
+  box-shadow: 0 1px 0 var(--fi-hair-lit);
+}
+
+.pp-header-name {
+  margin: 0 0 0.55rem;
+  font-family: var(--fi-font-ui);
+  font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--fi-ink);
+}
+
+.pp-header-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}
+
+.pp-header-stats .fi-readout {
+  color: var(--fi-ink-dim);
+}
+
+/* ---- zones ---- */
+.pp-zone {
+  margin-bottom: var(--fi-zone-y);
+}
+
+.pp-zone-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.pp-zone-head .fi-zone {
+  margin: 0;
+}
+
+.pp-zone-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--fi-ink);
+}
+
+.pp-zone-toggle:focus-visible {
+  outline: 2px solid var(--fi-teal);
+  outline-offset: 3px;
+  border-radius: var(--fi-r-xs);
+}
+
+.pp-zone-chevron {
+  width: 0.8125rem;
+  height: 0.8125rem;
+  flex: none;
+  transition: transform 160ms ease;
+  color: var(--fi-ink-dim);
+}
+
+.pp-zone-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+/* ---- active: small display modules ---- */
+.pp-active-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 700px) {
+  .pp-active-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.pp-active-module {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.15rem 1.25rem;
+  box-shadow:
+    inset 0 2px 10px color-mix(in srgb, var(--fi-screen-edge) 85%, transparent),
+    0 1px 0 var(--fi-hair-lit);
+}
+
+.pp-active-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pp-mode-chip {
+  border-color: color-mix(in srgb, var(--c, var(--fi-teal)) 45%, transparent);
+  color: var(--c, var(--fi-teal));
+}
+
+.pp-complete-chip {
+  border-color: color-mix(in srgb, var(--fi-green) 35%, transparent);
+  color: var(--fi-green);
+}
+
+.pp-active-name {
+  margin: 0;
+  font-family: var(--fi-font-ui);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--fi-screen-ink);
+  text-wrap: balance;
+}
+
+.pp-active-progress {
+  margin: 0;
+  color: var(--fi-screen-dim);
+}
+
+.pp-active-module .fi-transport {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 699px) {
+  .pp-active-module .fi-transport {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ---- upcoming: sequencer rows ---- */
+.pp-track-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pp-track {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.35rem 1rem;
+  align-items: center;
+  padding: 1rem 0.55rem;
+  border-top: 1px solid var(--fi-hair);
+}
+
+.pp-track:last-child {
+  border-bottom: 1px solid var(--fi-hair);
+}
+
+.pp-track:hover {
+  background: color-mix(in srgb, var(--fi-panel) 70%, var(--fi-chassis));
+}
+
+@media (min-width: 760px) {
+  .pp-track {
+    grid-template-columns: 26px minmax(0, 1.35fr) minmax(0, 1fr) auto auto;
+    gap: 0 1.25rem;
+    padding: 1rem 0.75rem;
+  }
+}
+
+.pp-track-led {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--fi-r-xs);
+  background: var(--c, var(--fi-teal));
+  border: 1px solid color-mix(in srgb, var(--fi-ink) 25%, transparent);
+  flex: none;
+}
+
+.pp-track-name {
+  margin: 0;
+  font-family: var(--fi-font-ui);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fi-ink);
+  min-width: 0;
+}
+
+.pp-track-dates {
+  grid-column: 2;
+  margin: 0;
+}
+
+@media (min-width: 760px) {
+  .pp-track-dates {
+    grid-column: auto;
+  }
+}
+
+.pp-track-count {
+  grid-column: 2;
+  color: var(--fi-ink);
+  white-space: nowrap;
+}
+
+@media (min-width: 760px) {
+  .pp-track-count {
+    grid-column: auto;
+  }
+}
+
+.pp-track-action {
+  grid-column: 2;
+  justify-self: start;
+}
+
+@media (min-width: 760px) {
+  .pp-track-action {
+    grid-column: auto;
+    justify-self: end;
+  }
+}
+
+/* ---- completed: engraved ledger ---- */
+.pp-ledger {
+  background: var(--fi-panel);
+  border: 1px solid var(--fi-hair);
+  border-radius: var(--fi-r-xl);
+  padding: 0.35rem 0;
+}
+
+.pp-ledger-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.35rem 1rem;
+  align-items: baseline;
+  padding: 0.85rem 1.25rem;
+}
+
+.pp-ledger-row + .pp-ledger-row {
+  border-top: 1px solid var(--fi-hair);
+}
+
+@media (min-width: 700px) {
+  .pp-ledger-row {
+    grid-template-columns: minmax(0, 1.6fr) auto auto auto;
+    gap: 0 1.25rem;
+  }
+}
+
+.pp-ledger-name {
+  margin: 0;
+  font-family: var(--fi-font-ui);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fi-ink-soft);
+}
+
+.pp-ledger-meta {
+  margin: 0;
+}
+
+.pp-closed-chip {
+  justify-self: start;
+  border-color: var(--fi-hair);
+  color: var(--fi-ink-dim);
+  font-weight: 600;
+}
+
+@media (min-width: 700px) {
+  .pp-closed-chip {
+    justify-self: end;
+  }
+}
+
+.pp-ledger-action {
+  justify-self: start;
+}
+
+@media (min-width: 700px) {
+  .pp-ledger-action {
+    justify-self: end;
+  }
+}
+
+/* ---- idle / empty / signed-out panels ---- */
+.pp-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem;
+}
+
+.pp-idle-steps {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.pp-idle-step {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--fi-r-pip);
+  border: 1px solid var(--fi-hair);
+  background: transparent;
+}
+
+.pp-idle-copy {
+  margin: 0;
+}
+
+.pp-idle-body {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--fi-ink-soft);
+  max-width: 48ch;
+}

@@ -1,25 +1,48 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { ScoringWizard } from "./ScoringWizard";
 import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
-import { MedalIcon, TrophyIcon } from "./ui/AppIcons";
 import { CodeAndTellVoteView } from "./code-and-tell/CodeAndTellVoteView";
 import { DemoDayBrowse } from "./demo-day";
-import { getEventMode } from "../lib/eventModes";
+import { JudgeCodeModal } from "./JudgeCodeModalNew";
+import { getEventDisplayLabel, getEventMode } from "../lib/eventModes";
 import { formatDateTime } from "../lib/utils";
+import { MODE_THEME } from "./home/modeTheme";
 import { toast } from "sonner";
+import "./EventView.fi.css";
+
+function pad2(n: number): string {
+  return String(Math.max(0, n)).padStart(2, "0");
+}
+
+function requestSignIn() {
+  window.dispatchEvent(new CustomEvent("hackjudge:open-signin"));
+}
+
+function IdleSteps({ count = 8 }: { count?: number }) {
+  return (
+    <div className="fi-ev-idle-steps" aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <span key={i} className="fi-ev-idle-step" />
+      ))}
+    </div>
+  );
+}
 
 export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: () => void }) {
   const event = useQuery(api.events.getEvent, { eventId });
   const judgeStatus = useQuery(api.events.getJudgeStatus, { eventId });
   const myScores = useQuery(api.scores.getMyScores, { eventId });
   const myAssignments = useQuery(api.judgeAssignments.getMyAssignments, { eventId });
+  const loggedInUser = useQuery(api.auth.loggedInUser);
   const addTeamToAssignment = useMutation(api.judgeAssignments.addTeamToAssignment);
   const addMultipleTeamsToAssignment = useMutation(api.judgeAssignments.addMultipleTeamsToAssignment);
   const removeTeamFromAssignment = useMutation(api.judgeAssignments.removeTeamFromAssignment);
+  const joinAsJudge = useMutation(api.events.joinAsJudge);
   const [showWizard, setShowWizard] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [draftCompletedCount, setDraftCompletedCount] = useState(0);
@@ -28,6 +51,11 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
   const [trackFilter, setTrackFilter] = useState("");
   const [sponsorFilter, setSponsorFilter] = useState("");
   const [prizeFilter, setPrizeFilter] = useState("");
+  const [myQueueOnly, setMyQueueOnly] = useState(false);
+  const [hoveredTeam, setHoveredTeam] = useState<{ name: string; line: string } | null>(null);
+  const [judgeCodeOpen, setJudgeCodeOpen] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const eventPrizes = useQuery(api.prizes.listEventPrizes, { eventId }) || [];
   const eventPrizeSubmissions = useQuery(api.prizes.getEventPrizeSubmissions, { eventId }) || [];
@@ -35,12 +63,6 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
   const storageKey = judgeStatus
     ? `scoring_draft_${eventId}_${judgeStatus.userId}`
     : null;
-
-  const statusStyles: Record<string, string> = {
-    active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-    upcoming: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
-    past: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
-  };
 
   useEffect(() => {
     if (!storageKey) {
@@ -54,7 +76,6 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       if (raw) {
         setHasDraft(true);
         const parsed = JSON.parse(raw);
-        // Completed teams array from the draft payload
         if (parsed.completed && Array.isArray(parsed.completed)) {
           setDraftCompletedCount(parsed.completed.length);
         } else {
@@ -70,7 +91,6 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     }
   }, [storageKey, showWizard, myScores?.length]);
 
-  // Check if cohorts are enabled
   const enableCohorts = event?.enableCohorts || false;
   const scoringLocked = !!event?.scoringLockedAt;
 
@@ -79,7 +99,6 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     [event?.teams]
   );
 
-  // Get assigned teams if cohorts enabled, otherwise all visible teams
   const teamsToJudge = useMemo(() => {
     if (!enableCohorts || !myAssignments) return visibleTeams;
     return visibleTeams.filter((team: any) => myAssignments.includes(team._id));
@@ -91,14 +110,10 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
   );
 
   const totalTeams = teamsToJudge.length;
-  // If we have a draft, rely on its completion count since it includes unsubmitted work.
-  // Otherwise, fallback to the database committed scores length.
   const completedCount = hasDraft
     ? draftCompletedCount
     : (myScores?.filter((score: any) => relevantTeamIds.has(String(score.teamId))).length ?? 0);
 
-  const progressPercent =
-    totalTeams === 0 ? 0 : Math.round((completedCount / totalTeams) * 100);
   const scoringComplete = totalTeams > 0 && completedCount >= totalTeams;
 
   const trackOptions = useMemo(
@@ -111,7 +126,6 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     [eventPrizes]
   );
 
-  // Filter teams by search query and new filters
   const filteredTeams = useMemo(() => {
     let baseTeams = visibleTeams;
 
@@ -150,17 +164,74 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       baseTeams = baseTeams.filter((team: any) => teamIdsWithPrize.has(team._id));
     }
 
-    // Always filter out teams already in the judge's queue
     return baseTeams.filter((team: any) => !myAssignments?.includes(team._id));
   }, [visibleTeams, searchQuery, trackFilter, sponsorFilter, prizeFilter, myAssignments, eventPrizes, eventPrizeSubmissions]);
 
-  // Get assigned teams (for the "My Queue" section)
   const assignedTeams = useMemo(() => {
     return visibleTeams.filter((team: any) => myAssignments?.includes(team._id));
   }, [visibleTeams, myAssignments]);
 
-  // Check if judge has submitted scores (to lock queue)
-  const hasSubmittedScores = myScores && myScores.length > 0;
+  const keyboardTeams = useMemo(() => {
+    if (enableCohorts) return assignedTeams;
+    let base = visibleTeams;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      base = base.filter((team: any) =>
+        team.name.toLowerCase().includes(q) ||
+        (typeof team.description === "string" && team.description.toLowerCase().includes(q))
+      );
+    }
+    if (trackFilter) {
+      base = base.filter((team: any) => team.track === trackFilter);
+    }
+    if (sponsorFilter) {
+      const matchingPrizeIds = new Set(
+        eventPrizes
+          .filter((p: any) => p.sponsorName === sponsorFilter)
+          .map((p: any) => p._id)
+      );
+      const teamIdsWithSponsor = new Set(
+        eventPrizeSubmissions
+          .filter((s: any) => matchingPrizeIds.has(s.prizeId))
+          .map((s: any) => s.teamId)
+      );
+      base = base.filter((team: any) => teamIdsWithSponsor.has(team._id));
+    }
+    if (prizeFilter) {
+      const teamIdsWithPrize = new Set(
+        eventPrizeSubmissions
+          .filter((s: any) => s.prizeId === prizeFilter)
+          .map((s: any) => s.teamId)
+      );
+      base = base.filter((team: any) => teamIdsWithPrize.has(team._id));
+    }
+    return base;
+  }, [enableCohorts, assignedTeams, visibleTeams, searchQuery, trackFilter, sponsorFilter, prizeFilter, eventPrizes, eventPrizeSubmissions]);
+
+  const teamParam = searchParams.get("team");
+  const initialTeamId = useMemo(() => {
+    if (!teamParam) return null;
+    const match = teamsToJudge.find((team: any) => String(team._id) === teamParam);
+    return match ? (match._id as Id<"teams">) : null;
+  }, [teamParam, teamsToJudge]);
+
+  useEffect(() => {
+    if (initialTeamId && !scoringLocked) {
+      setShowWizard(true);
+    }
+  }, [initialTeamId, scoringLocked]);
+
+  const clearTeamParam = () => {
+    if (!searchParams.has("team")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("team");
+    setSearchParams(next, { replace: true });
+  };
+
+  const closeWizard = () => {
+    setShowWizard(false);
+    clearTeamParam();
+  };
 
   const handleToggleTeam = async (teamId: Id<"teams">, isAssigned: boolean) => {
     if (scoringLocked) {
@@ -168,7 +239,6 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       return;
     }
 
-    // Prevent removing a team that already has a submitted score
     if (isAssigned) {
       const teamHasBeenScored = myScores?.some((s: any) => s.teamId === teamId);
       if (teamHasBeenScored) {
@@ -214,9 +284,34 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     setShowWizard(false);
     setHasDraft(false);
     setJustSubmitted(true);
+    clearTeamParam();
   };
 
-  // Loading state - for Demo Day mode, we only need the event
+  const handleJoinAsJudge = async () => {
+    if (!loggedInUser) {
+      requestSignIn();
+      return;
+    }
+    if (joining) return;
+    setJoining(true);
+    try {
+      await joinAsJudge({ eventId });
+      toast.success("Successfully joined as judge!");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to join as judge");
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  const openJudgeCode = () => {
+    if (!loggedInUser) {
+      requestSignIn();
+      return;
+    }
+    setJudgeCodeOpen(true);
+  };
+
   if (event === undefined) {
     return <LoadingState label="Loading event details..." />;
   }
@@ -234,7 +329,6 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
   const eventMode = getEventMode(event.mode);
 
-  // Demo Day Mode - render the browse experience (no judge auth required)
   if (eventMode === "demo_day") {
     return <DemoDayBrowse eventId={eventId} event={event} onBack={onBack} />;
   }
@@ -245,53 +339,177 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     );
   }
 
-  // Hackathon Mode - requires judge authentication
   if (judgeStatus === undefined || myScores === undefined || myAssignments === undefined) {
-    return <LoadingState label="Loading judge details..." />;
-  }
-
-  if (!judgeStatus) {
     return (
-      <ErrorState
-        title="Not registered"
-        description="You are not registered as a judge for this event."
-        actionLabel="Back to events"
-        onAction={onBack}
-      />
+      <div className="fi-ev-loading" role="status" aria-live="polite">
+        <div className="fi-ev-spinner" aria-hidden="true" />
+        <span className="fi-sr">Loading judge details...</span>
+      </div>
     );
   }
 
+  const theme = MODE_THEME.hackathon;
+  const modeStyle = {
+    ["--c" as string]: theme.lit,
+    ["--c-deep" as string]: theme.deep,
+  } as CSSProperties;
+
+  if (!judgeStatus) {
+    return (
+      <div className="fi-ev-page">
+        <button type="button" onClick={onBack} className="fi-key fi-key--sm fi-ev-back">
+          Back to events
+        </button>
+        <div className="fi-panel fi-ev-idle">
+          <IdleSteps />
+          <p className="fi-engraved fi-ev-idle-copy">
+            Not registered · {event.name}
+          </p>
+          <p className="fi-ev-idle-body">
+            You are not registered as a judge for this event.
+          </p>
+          <div className="fi-ev-idle-actions">
+            {!loggedInUser ? (
+              <button type="button" className="fi-key" onClick={requestSignIn}>
+                Sign in
+              </button>
+            ) : (
+              <>
+                <button type="button" className="fi-transport" onClick={openJudgeCode}>
+                  Enter judge code
+                </button>
+                <button
+                  type="button"
+                  className="fi-key"
+                  onClick={() => void handleJoinAsJudge()}
+                  disabled={joining}
+                >
+                  {joining ? "Joining..." : "Join as judge"}
+                </button>
+              </>
+            )}
+            <button type="button" className="fi-key fi-key--sm" onClick={onBack}>
+              Back to events
+            </button>
+          </div>
+        </div>
+        <JudgeCodeModal
+          isOpen={judgeCodeOpen}
+          onClose={() => setJudgeCodeOpen(false)}
+          eventId={eventId}
+          onSuccess={() => setJudgeCodeOpen(false)}
+        />
+      </div>
+    );
+  }
+
+  const canStart = (!enableCohorts || myAssignments.length > 0) && totalTeams > 0 && !scoringLocked;
+  const transportLabel = scoringLocked
+    ? "Scoring locked"
+    : scoringComplete
+      ? "Review scores"
+      : hasDraft
+        ? "Continue scoring"
+        : completedCount > 0
+          ? "Resume scoring"
+          : enableCohorts && myAssignments.length === 0
+            ? "Select teams first"
+            : "Start scoring";
+
+  const statusLabel =
+    scoringLocked ? "Locked" : event.status === "active" ? "Live" : event.status;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 btn-ghost mb-6 fade-in"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        Back to Events
+    <div className="fi-ev-page">
+      <button type="button" onClick={onBack} className="fi-key fi-key--sm fi-ev-back">
+        Back to events
       </button>
 
-      <div className="mb-8 fade-in space-y-2">
-        <h1 className="text-3xl font-heading font-bold text-foreground">{event.name}</h1>
-        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            {formatDateTime(event.startDate)} - {formatDateTime(event.endDate)}
-          </span>
-          <span className={`badge ${statusStyles[event.status] || statusStyles.upcoming}`}>
-            {event.status}
-          </span>
-        </div>
-      </div>
+      <section className="fi-ev-face" aria-labelledby="fi-ev-event-name">
+        <div className="fi-module fi-ev-module" style={modeStyle}>
+          <div className="fi-ev-status">
+            {event.status === "active" && !scoringLocked ? (
+              <span className="fi-ev-live">
+                <span className="fi-live-dot" aria-hidden="true" />
+                Live
+              </span>
+            ) : (
+              <span className="fi-ev-chip">{statusLabel}</span>
+            )}
+            <span className="fi-ev-chip fi-ev-chip--mode">
+              Mode · {getEventDisplayLabel(event.mode)}
+            </span>
+          </div>
 
-      {event.status === "active" && enableCohorts && myAssignments && (
+          <h1 className="fi-ev-name" id="fi-ev-event-name">
+            {event.name}
+          </h1>
+          {event.description ? <p className="fi-ev-desc">{event.description}</p> : null}
+
+          <p className="fi-ev-meta">
+            <span>
+              Dates <b>{formatDateTime(event.startDate)} – {formatDateTime(event.endDate)}</b>
+            </span>
+            <span>
+              Seat <b>Judge</b>
+            </span>
+            <span>
+              Status <b>{event.status}</b>
+            </span>
+          </p>
+
+          {event.status === "active" && (
+            <p className="fi-ev-progress">
+              <b>{pad2(completedCount)}</b> of {pad2(totalTeams)} scored
+              {justSubmitted ? " · submitted" : hasDraft ? " · draft saved" : ""}
+            </p>
+          )}
+
+          <p className="fi-ev-select" aria-live="polite">
+            {hoveredTeam ? (
+              <>
+                Select · <b>{hoveredTeam.name}</b> — {hoveredTeam.line}
+              </>
+            ) : (
+              "Select · no project key pressed"
+            )}
+          </p>
+
+          {event.status === "active" && (
+            <div className="fi-ev-actions">
+              <button
+                type="button"
+                className="fi-transport"
+                onClick={() => setShowWizard(true)}
+                disabled={!canStart}
+              >
+                {transportLabel}
+              </button>
+              {scoringComplete && (
+                <button type="button" className="fi-ev-ghost" onClick={onBack}>
+                  Return to dashboard
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {event.status === "active" && scoringLocked && (
+        <div className="fi-panel fi-ev-lock">
+          <p className="fi-engraved">Scoring locked</p>
+          <p className="fi-ev-lock-copy">
+            Scoring is locked for this event. Judges can view scores, but edits are disabled until an admin unlocks scoring.
+          </p>
+        </div>
+      )}
+
+      {event.status === "active" && (
         <TeamSelectionSection
+          eventId={eventId}
+          enableCohorts={enableCohorts}
           teams={filteredTeams}
-          assignedTeams={assignedTeams}
+          assignedTeams={keyboardTeams}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           trackFilter={trackFilter}
@@ -300,6 +518,8 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
           setSponsorFilter={setSponsorFilter}
           prizeFilter={prizeFilter}
           setPrizeFilter={setPrizeFilter}
+          myQueueOnly={myQueueOnly}
+          setMyQueueOnly={setMyQueueOnly}
           trackOptions={trackOptions as string[]}
           sponsorOptions={sponsorOptions as string[]}
           eventPrizes={eventPrizes}
@@ -307,152 +527,33 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
             void handleToggleTeam(teamId, isAssigned);
           }}
           onAddAllTeams={handleAddAllTeams}
-          onStartScoring={() => {
-            if (scoringLocked) return;
-            if (myAssignments && myAssignments.length > 0) {
-              setShowWizard(true);
-            }
-          }}
-          canStart={(myAssignments?.length ?? 0) > 0}
           locked={scoringLocked}
           myScores={myScores}
+          activeTeamId={initialTeamId}
+          onHover={setHoveredTeam}
         />
       )}
 
-      {event.status === "active" && scoringLocked && (
-        <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-700 dark:text-amber-300">
-          Scoring is locked for this event. Judges can view scores, but edits are disabled until an admin unlocks scoring.
-        </div>
+      {event.status === "past" && event.resultsReleased && (
+        <ResultsView eventId={eventId} />
       )}
 
-      {event.status === "active" && (
-        <div className="card p-4 md:px-6 mb-6 fade-in sticky bottom-4 z-40 shadow-xl border-primary/20 backdrop-blur-md bg-card/95">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="space-y-2">
-              <h2 className="text-xl font-heading font-bold text-foreground">
-                {scoringLocked
-                  ? "Scoring Locked"
-                  : scoringComplete
-                    ? "Scoring Complete!"
-                    : completedCount > 0
-                      ? "Keep Scoring"
-                      : "Ready to Score?"}
-              </h2>
-              {scoringLocked ? (
-                <p className="text-amber-700 dark:text-amber-300">
-                  Score updates are disabled while deliberation is in progress.
-                </p>
-              ) : scoringComplete ? (
-                <p className="text-emerald-600 dark:text-emerald-400">
-                  Thank you for judging. All teams have been scored.
-                </p>
-              ) : (
-                <p className="text-muted-foreground">
-                  {hasDraft
-                    ? "You have a saved scoring session. Continue where you left off."
-                    : `Score ${totalTeams} team${totalTeams === 1 ? "" : "s"} across ${event.categories.length
-                    } categories.`}
-                </p>
-              )}
-              <p className={`text-sm ${scoringComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
-                Progress: {completedCount} / {totalTeams} teams scored
-              </p>
-              {justSubmitted && (
-                <p className="text-xs text-muted-foreground mt-1">Your scores were submitted successfully.</p>
-              )}
-            </div>
-            {!scoringLocked && (
-              <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-0 items-center">
-                {scoringComplete ? (
-                  <>
-                    <button
-                      onClick={() => window.location.href = '/'}
-                      className="btn-primary whitespace-nowrap"
-                    >
-                      Return to Dashboard
-                    </button>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setShowWizard(true)}
-                        className="btn-secondary whitespace-nowrap text-sm px-3 py-1.5"
-                        disabled={(enableCohorts && myAssignments.length === 0) || totalTeams === 0 || scoringLocked}
-                      >
-                        Review Scores
-                      </button>
-                      <button
-                        onClick={() => {
-                          window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
-                        }}
-                        className="btn-ghost whitespace-nowrap text-sm px-3 py-1.5"
-                        disabled={scoringLocked}
-                      >
-                        Add More Teams
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setShowWizard(true)}
-                    className="btn-primary whitespace-nowrap"
-                    disabled={(enableCohorts && myAssignments.length === 0) || totalTeams === 0 || scoringLocked}
-                  >
-                    {hasDraft
-                      ? "Continue Scoring"
-                      : completedCount > 0
-                        ? "Resume Scoring"
-                        : enableCohorts && myAssignments.length === 0
-                          ? "Select Teams First"
-                          : "Start Scoring"}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="space-y-2 mt-4 md:mt-0">
-            <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 ${scoringLocked
-                  ? "bg-amber-500"
-                  : scoringComplete
-                    ? "bg-emerald-500"
-                    : "bg-primary"
-                  }`}
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Completed: {completedCount}</span>
-              <span>Remaining: {Math.max(totalTeams - completedCount, 0)}</span>
-            </div>
-          </div>
-        </div>
+      {showWizard && judgeStatus && !scoringLocked && (
+        <ScoringWizard
+          eventId={eventId}
+          teams={teamsToJudge}
+          categories={event.categories.map((c: any) => ({
+            name: c.name,
+            optOutAllowed: c.optOutAllowed,
+          }))}
+          existingScores={myScores ?? []}
+          storageKey={storageKey}
+          onClose={closeWizard}
+          onSubmitted={handleWizardSubmitted}
+          initialTeamId={initialTeamId}
+        />
       )}
-
-
-
-      {
-        event.status === "past" && event.resultsReleased && (
-          <ResultsView eventId={eventId} />
-        )
-      }
-
-      {
-        showWizard && judgeStatus && !scoringLocked && (
-          <ScoringWizard
-            eventId={eventId}
-            teams={teamsToJudge}
-            categories={event.categories.map((c: any) => ({
-              name: c.name,
-              optOutAllowed: c.optOutAllowed,
-            }))}
-            existingScores={myScores ?? []}
-            storageKey={storageKey}
-            onClose={() => setShowWizard(false)}
-            onSubmitted={handleWizardSubmitted}
-          />
-        )
-      }
-    </div >
+    </div>
   );
 }
 
@@ -464,7 +565,7 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
   if (!event || !eventScores || prizeWinners === undefined) return null;
 
   const overallWinnerTeam = event.overallWinner
-    ? event.teams.find((t) => t._id === event.overallWinner)
+    ? event.teams.find((t: any) => t._id === event.overallWinner)
     : null;
   const hasPrizeWinners = prizeWinners.length > 0;
   const groupedPrizeWinners = hasPrizeWinners
@@ -477,144 +578,107 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
     : {};
 
   return (
-    <div className="space-y-8">
+    <div className="fi-ev-results">
       {hasPrizeWinners ? (
-        <div className="fade-in space-y-4">
-          <div>
-            <h2 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
-              <TrophyIcon className="h-6 w-6 text-primary" />
-              Prize Winners
+        <section className="fi-ev-zone" aria-labelledby="fi-ev-prizes-h">
+          <div className="fi-ev-zone-head">
+            <h2 className="fi-zone" id="fi-ev-prizes-h">
+              Prize winners
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Final placements after judge deliberation.
-            </p>
+            <span className="fi-engraved">
+              Final placements · {pad2(Object.keys(groupedPrizeWinners).length)} prizes
+            </span>
           </div>
-
-          <div className="card overflow-hidden">
-            <div className="divide-y divide-border">
-              {Object.values(groupedPrizeWinners).map((winnerRows: any[]) => {
-                const first = winnerRows[0];
-                const prizeName = first?.prize?.name || "Prize";
-                return (
-                  <div key={first.prizeId} className="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-muted/30 transition-colors bg-card">
-                    <div className="sm:w-1/3 flex items-center gap-3">
-                      <MedalIcon className="h-5 w-5 text-primary shrink-0" />
-                      <h3 className="font-medium text-foreground leading-tight">
-                        {prizeName}
-                      </h3>
-                    </div>
-                    <div className="sm:w-2/3 flex flex-wrap gap-2">
-                      {winnerRows
-                        .sort((a: any, b: any) => (a.placement ?? 999) - (b.placement ?? 999))
-                        .map((row: any) => (
-                          <div key={row._id} className="inline-flex flex-col bg-background border border-border rounded-md px-3 py-2 flex-1 min-w-[140px] max-w-[200px]">
-                            <span className="font-semibold text-sm text-foreground truncate">{row.team?.name || "Unknown Team"}</span>
-                            {typeof row.placement === "number" ? (
-                              <span className="text-xs text-muted-foreground mt-0.5">Placement: {row.placement}</span>
-                            ) : row.notes ? (
-                              <span className="text-xs text-muted-foreground mt-0.5 truncate">{row.notes}</span>
-                            ) : null}
-                          </div>
-                        ))}
-                    </div>
+          <div className="fi-ev-prize-list">
+            {Object.values(groupedPrizeWinners).map((winnerRows: any[]) => {
+              const first = winnerRows[0];
+              const prizeName = first?.prize?.name || "Prize";
+              return (
+                <div key={first.prizeId} className="fi-ev-prize-row">
+                  <h3 className="fi-ev-prize-name">{prizeName}</h3>
+                  <div className="fi-ev-prize-teams">
+                    {winnerRows
+                      .sort((a: any, b: any) => (a.placement ?? 999) - (b.placement ?? 999))
+                      .map((row: any) => (
+                        <div key={row._id} className="fi-ev-prize-team">
+                          <span className="fi-ev-prize-team-name">
+                            {row.team?.name || "Unknown Team"}
+                          </span>
+                          {typeof row.placement === "number" ? (
+                            <span className="fi-engraved-sm">Placement {row.placement}</span>
+                          ) : row.notes ? (
+                            <span className="fi-engraved-sm">{row.notes}</span>
+                          ) : null}
+                        </div>
+                      ))}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        </section>
       ) : (
-        <div className="flex flex-col md:flex-row gap-6 fade-in">
-          <div className="card p-6 flex-1 flex flex-col justify-center items-center text-center border-primary/20 bg-primary/5">
-            <TrophyIcon className="h-10 w-10 text-primary mb-3" />
-            <h2 className="text-sm font-medium text-primary uppercase tracking-wider mb-2">Overall Winner</h2>
-            {overallWinnerTeam ? (
-              <p className="text-2xl font-bold text-foreground">{overallWinnerTeam.name}</p>
-            ) : (
-              <p className="text-2xl font-bold text-muted-foreground">TBD</p>
+        <section className="fi-ev-zone" aria-labelledby="fi-ev-overall-h">
+          <div className="fi-ev-zone-head">
+            <h2 className="fi-zone" id="fi-ev-overall-h">
+              Winners
+            </h2>
+            <span className="fi-engraved">Released results</span>
+          </div>
+          <div className="fi-ev-winners">
+            <article className="fi-module fi-ev-winner-module">
+              <span className="fi-ev-chip">Overall winner</span>
+              <p className="fi-ev-winner-name">
+                {overallWinnerTeam ? overallWinnerTeam.name : "TBD"}
+              </p>
+            </article>
+            {event.categoryWinners && event.categoryWinners.length > 0 && (
+              <div className="fi-ev-ledger">
+                {event.categoryWinners.map((winner: { category: string; teamId: Id<"teams"> }) => {
+                  const team = event.teams.find((t: any) => t._id === winner.teamId);
+                  return (
+                    <div key={winner.category} className="fi-ev-ledger-row">
+                      <span className="fi-ev-ledger-rank">{winner.category}</span>
+                      <span className="fi-ev-ledger-name">{team?.name || "Unknown"}</span>
+                      <span className="fi-ev-stamp">Winner</span>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
-
-          {event.categoryWinners && event.categoryWinners.length > 0 && (
-            <div className="card flex-[2] overflow-hidden">
-              <div className="bg-muted/50 px-5 py-4 border-b border-border">
-                <h2 className="font-heading font-semibold text-foreground flex items-center gap-2">
-                  <MedalIcon className="h-5 w-5 text-primary" />
-                  Category Winners
-                </h2>
-              </div>
-              <div className="divide-y divide-border">
-                {event.categoryWinners.map((winner, index) => {
-                  const team = event.teams.find((t) => t._id === winner.teamId);
-                  return (
-                    <div key={winner.category} className="px-5 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors bg-card">
-                      <span className="text-sm font-medium text-muted-foreground">{winner.category}</span>
-                      <span className="font-semibold text-foreground">{team?.name || "Unknown"}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+        </section>
       )}
 
-      <div className="fade-in" style={{ animationDelay: "0.3s" }}>
-        <h2 className="text-xl font-heading font-bold mb-6 text-foreground">All Scores</h2>
-        <div className="card overflow-hidden p-0">
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
-                    Rank
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
-                    Team
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
-                    Average Score
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
-                    Judges
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {eventScores.map((teamScore, index) => {
-                  return (
-                    <tr
-                      key={teamScore.team._id}
-                      className="transition-colors hover:bg-muted/50"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-foreground">
-                        <span className="flex items-center gap-2">
-                          #{index + 1}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">
-                        {teamScore.team.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                        <span className="font-mono font-bold">{teamScore.averageScore.toFixed(2)}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                        {teamScore.judgeCount} {teamScore.judgeCount === 1 ? 'judge' : 'judges'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      <section className="fi-ev-zone" aria-labelledby="fi-ev-scores-h">
+        <div className="fi-ev-zone-head">
+          <h2 className="fi-zone" id="fi-ev-scores-h">
+            All scores
+          </h2>
+          <span className="fi-engraved">
+            Event log · {pad2(eventScores.length)} records
+          </span>
         </div>
-      </div>
+        <div className="fi-ev-ledger">
+          {eventScores.map((teamScore: any, index: number) => (
+            <div key={teamScore.team._id} className="fi-ev-ledger-row">
+              <span className="fi-ev-ledger-rank">#{pad2(index + 1)}</span>
+              <span className="fi-ev-ledger-name">{teamScore.team.name}</span>
+              <span className="fi-readout">{teamScore.averageScore.toFixed(2)}</span>
+              <span className="fi-ev-stamp">
+                {teamScore.judgeCount} {teamScore.judgeCount === 1 ? "judge" : "judges"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
 
-
 function TeamSelectionSection({
+  eventId,
+  enableCohorts,
   teams,
   assignedTeams,
   searchQuery,
@@ -625,16 +689,20 @@ function TeamSelectionSection({
   setSponsorFilter,
   prizeFilter,
   setPrizeFilter,
+  myQueueOnly,
+  setMyQueueOnly,
   trackOptions,
   sponsorOptions,
   eventPrizes,
   onToggleTeam,
   onAddAllTeams,
-  onStartScoring,
-  canStart,
   locked,
   myScores,
+  activeTeamId,
+  onHover,
 }: {
+  eventId: Id<"events">;
+  enableCohorts: boolean;
   teams: Array<any>;
   assignedTeams: Array<any>;
   searchQuery: string;
@@ -645,177 +713,229 @@ function TeamSelectionSection({
   setSponsorFilter: (f: string) => void;
   prizeFilter: string;
   setPrizeFilter: (f: string) => void;
+  myQueueOnly: boolean;
+  setMyQueueOnly: (v: boolean) => void;
   trackOptions: string[];
   sponsorOptions: string[];
   eventPrizes: Array<any>;
   onToggleTeam: (teamId: Id<"teams">, isAssigned: boolean) => void;
   onAddAllTeams: () => void;
-  onStartScoring: () => void;
-  canStart: boolean;
   locked: boolean;
   myScores?: Array<any>;
+  activeTeamId: Id<"teams"> | null;
+  onHover: (team: { name: string; line: string } | null) => void;
 }) {
   const getTeamScoreStatus = (teamId: Id<"teams">) => {
     if (!myScores) return null;
     return myScores.find((score: any) => String(score.teamId) === String(teamId));
   };
-  return (
-    <div className="card p-6 mb-8 fade-in">
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-xl font-heading font-bold text-foreground">
-            Select Your Teams to Judge
-          </h2>
-          <p className="text-muted-foreground">
-            {locked
-              ? "Scoring is locked. Team assignments are currently read-only."
-              : "Choose which teams you'll score. You can change this later if needed."}
-          </p>
-        </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            placeholder="Search teams..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input flex-1"
-          />
-          <select
-            value={trackFilter}
-            onChange={(e) => setTrackFilter(e.target.value)}
-            className="input sm:w-48"
-          >
-            <option value="">All Tracks</option>
-            {trackOptions.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <select
-            value={sponsorFilter}
-            onChange={(e) => setSponsorFilter(e.target.value)}
-            className="input sm:w-48"
-          >
-            <option value="">All Sponsors</option>
-            {sponsorOptions.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          {eventPrizes.filter(p => ["track", "sponsor", "track_sponsor"].includes(p.type)).length > 0 && (
+  const prizeSelectOptions = eventPrizes.filter((p: any) =>
+    ["track", "sponsor", "track_sponsor"].includes(p.type)
+  );
+
+  const showFilters = enableCohorts || assignedTeams.length > 0 || searchQuery || trackFilter || sponsorFilter || prizeFilter;
+  const showBrowse = enableCohorts && !myQueueOnly && (teams.length > 0 || searchQuery || trackFilter || sponsorFilter || prizeFilter);
+
+  return (
+    <div>
+      {showFilters && (
+        <div className="fi-ev-filters">
+          <label className="fi-ev-control fi-ev-control--grow">
+            <span className="fi-engraved">Search</span>
+            <input
+              type="search"
+              placeholder="Find a team"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </label>
+          <label className="fi-ev-control">
+            <span className="fi-engraved">Track</span>
             <select
-              value={prizeFilter}
-              onChange={(e) => setPrizeFilter(e.target.value)}
-              className="input sm:w-48"
+              value={trackFilter}
+              onChange={(e) => setTrackFilter(e.target.value)}
             >
-              <option value="">All Prizes</option>
-              {eventPrizes
-                .filter(p => ["track", "sponsor", "track_sponsor"].includes(p.type))
-                .map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+              <option value="">All tracks</option>
+              {trackOptions.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
+          </label>
+          <label className="fi-ev-control">
+            <span className="fi-engraved">Sponsor</span>
+            <select
+              value={sponsorFilter}
+              onChange={(e) => setSponsorFilter(e.target.value)}
+            >
+              <option value="">All sponsors</option>
+              {sponsorOptions.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+          {prizeSelectOptions.length > 0 && (
+            <label className="fi-ev-control">
+              <span className="fi-engraved">Prize</span>
+              <select
+                value={prizeFilter}
+                onChange={(e) => setPrizeFilter(e.target.value)}
+              >
+                <option value="">All prizes</option>
+                {prizeSelectOptions.map((p: any) => (
+                  <option key={p._id} value={p._id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {enableCohorts && (
+            <div className="fi-ev-chips">
+              <button
+                type="button"
+                className="fi-ev-toggle"
+                aria-pressed={myQueueOnly}
+                onClick={() => setMyQueueOnly(!myQueueOnly)}
+              >
+                My queue
+              </button>
+            </div>
           )}
         </div>
+      )}
 
-        {/* My Queue Section */}
-        {assignedTeams.length > 0 && (
-          <div>
-            <h3 className="text-lg font-heading font-semibold text-foreground mb-3">
-              My Queue ({assignedTeams.length} teams)
-            </h3>
-            <div className="divide-y divide-border bg-muted/30 rounded-lg overflow-hidden border border-border max-h-[400px] overflow-y-auto custom-scrollbar">
-              {assignedTeams.map((team: any) => {
-                const score = getTeamScoreStatus(team._id);
-                return (
-                  <div
-                    key={team._id}
-                    className="px-4 py-3 flex items-center justify-between hover:bg-muted/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      {score && (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
-                      )}
-                      <div>
-                        <span className="font-medium text-foreground">{team.name}</span>
-                        {score && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Scored: {Number(score.totalScore.toFixed(2))} points
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {!locked && (
-                      <button
-                        onClick={() => onToggleTeam(team._id, true)}
-                        className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+      <section className="fi-ev-zone" aria-labelledby="fi-ev-keys-h">
+        <div className="fi-ev-zone-head">
+          <h2 className="fi-zone" id="fi-ev-keys-h">
+            {enableCohorts ? "My queue" : "Projects"}
+          </h2>
+          <span className="fi-engraved">
+            {enableCohorts
+              ? `Matrix · ${pad2(assignedTeams.length)} assigned`
+              : `Keys 01–${pad2(Math.max(assignedTeams.length, 1))} · ${pad2(assignedTeams.length)} teams`}
+          </span>
+        </div>
 
-        {/* Add Teams Section */}
-        {(teams.length > 0 || searchQuery) && (
-          <div>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
-              <h3 className="text-lg font-heading font-semibold text-foreground">Browse Teams</h3>
-              {teams.length > 0 && !locked && (
-                <button
-                  onClick={onAddAllTeams}
-                  className="btn-secondary text-sm py-1.5 px-3 whitespace-nowrap"
-                >
-                  Add All {teams.length} Filtered {teams.length === 1 ? 'Team' : 'Teams'}
-                </button>
-              )}
-            </div>
-
-            {teams.length === 0 ? (
-              <p className="text-center text-sm text-muted-foreground py-2">
-                No teams match your search
+        {assignedTeams.length === 0 ? (
+          enableCohorts ? (
+            <div className="fi-panel fi-ev-idle">
+              <IdleSteps count={4} />
+              <p className="fi-engraved fi-ev-idle-copy">
+                {locked
+                  ? "Scoring is locked · Team assignments are read-only"
+                  : "No teams queued · Browse below to add"}
               </p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-1 custom-scrollbar">
-                {teams.map((team: any) => {
-                  return (
-                    <div
-                      key={team._id}
-                      className="border border-border rounded-lg p-4 transition-all hover:shadow-md bg-background flex flex-col gap-2"
+            </div>
+          ) : (
+            <p className="fi-engraved">No teams match these filters</p>
+          )
+        ) : (
+          <ul className="fi-ev-keys">
+            {assignedTeams.map((team: any, i: number) => {
+              const score = getTeamScoreStatus(team._id);
+              const line = score
+                ? `Scored · ${Number(score.totalScore.toFixed(2))} pts`
+                : team.track || "Untracked";
+              const isActive = activeTeamId != null && String(activeTeamId) === String(team._id);
+              return (
+                <li key={team._id} className="fi-ev-key-wrap">
+                  <Link
+                    to={`/event/${eventId}?team=${team._id}`}
+                    className="fi-ev-key"
+                    aria-label={`Score ${team.name}${score ? ", already scored" : ""}`}
+                    aria-current={isActive ? "page" : undefined}
+                    onMouseEnter={() => onHover({ name: team.name, line })}
+                    onMouseLeave={() => onHover(null)}
+                    onFocus={() => onHover({ name: team.name, line })}
+                    onBlur={() => onHover(null)}
+                  >
+                    <span className="fi-ev-key-top">
+                      <span
+                        className={`fi-ev-key-led${score ? " is-lit" : ""}`}
+                        aria-hidden="true"
+                      />
+                      <span className="fi-ev-key-num">K{pad2(i + 1)}</span>
+                    </span>
+                    <span>
+                      <span className="fi-ev-key-name">{team.name}</span>
+                      <span className="fi-ev-key-team">{line}</span>
+                    </span>
+                  </Link>
+                  {enableCohorts && !locked && !score && (
+                    <button
+                      type="button"
+                      className="fi-ev-key-x"
+                      aria-label={`Remove ${team.name} from queue`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onToggleTeam(team._id, true);
+                      }}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <h3 className="font-semibold text-foreground">{team.name}</h3>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {team.description}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => onToggleTeam(team._id, false)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted/70 text-foreground hover:bg-muted transition-colors shadow-sm shrink-0"
-                          disabled={locked}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth={2} d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {showBrowse && (
+        <section className="fi-ev-zone" aria-labelledby="fi-ev-browse-h">
+          <div className="fi-ev-zone-head">
+            <h2 className="fi-zone" id="fi-ev-browse-h">
+              Browse teams
+            </h2>
+            {teams.length > 0 && !locked ? (
+              <button type="button" className="fi-key fi-key--sm" onClick={onAddAllTeams}>
+                Add all {teams.length} filtered {teams.length === 1 ? "team" : "teams"}
+              </button>
+            ) : (
+              <span className="fi-engraved">
+                {locked ? "Read-only" : `${pad2(teams.length)} available`}
+              </span>
             )}
           </div>
-        )}
-      </div>
+
+          {teams.length === 0 ? (
+            <p className="fi-engraved">No teams match your search</p>
+          ) : (
+            <div className="fi-ev-browse">
+              {teams.map((team: any) => (
+                <div key={team._id} className="fi-ev-browse-row">
+                  <div>
+                    <h3 className="fi-ev-browse-name">{team.name}</h3>
+                    {team.description ? (
+                      <p className="fi-ev-browse-desc">{team.description}</p>
+                    ) : null}
+                    {team.track ? (
+                      <p className="fi-engraved-sm fi-ev-browse-meta">{team.track}</p>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    className="fi-key fi-key--sm"
+                    onClick={() => onToggleTeam(team._id, false)}
+                    disabled={locked}
+                    aria-label={`Add ${team.name} to queue`}
+                  >
+                    Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

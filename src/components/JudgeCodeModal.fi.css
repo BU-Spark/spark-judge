@@ -1,0 +1,108 @@
+/* JudgeCodeModal — Field Instrument skin. Code entry as a dark display-module
+   readout: engraved tag, phosphor mono glyphs, orange transport to commit. */
+
+.fi-jc-card {
+  width: 100%;
+  max-width: 26rem;
+  padding: 2rem;
+}
+
+.fi-jc-hint {
+  font-family: var(--fi-font-ui);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--fi-ink-dim);
+  margin: 0 0 1.5rem;
+}
+
+.fi-jc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+/* Dark display module holding the code readout */
+.fi-jc-screen {
+  background: linear-gradient(180deg, var(--fi-screen) 0%, var(--fi-screen-deep) 100%);
+  border: 1px solid var(--fi-screen-edge);
+  border-radius: var(--fi-r-module);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.45),
+    0 1px 0 var(--fi-hair-lit);
+  padding: 0.65rem 0.9rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.fi-jc-screen:focus-within {
+  outline: 2px solid var(--fi-teal);
+  outline-offset: 2px;
+}
+
+.fi-jc-screen--error {
+  border-color: var(--fi-orange-edge);
+}
+
+.fi-jc-screen-tag {
+  color: var(--fi-screen-tag);
+  text-shadow: none;
+}
+
+.fi-jc-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--fi-font-mono);
+  font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--fi-teal-phosphor);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--fi-teal-phosphor) 45%, transparent);
+  caret-color: var(--fi-teal-phosphor);
+  padding: 0.1em 0;
+}
+
+.fi-jc-input::placeholder {
+  color: var(--fi-screen-hair);
+  letter-spacing: 0.42em;
+  text-shadow: none;
+}
+
+.fi-jc-error {
+  font-family: var(--fi-font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--fi-orange-edge);
+  margin: -0.2rem 0 0;
+}
+
+.fi-jc-submit {
+  width: 100%;
+}
+
+.fi-jc-spinner-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+}
+
+.fi-jc-spinner {
+  width: 0.9em;
+  height: 0.9em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 9999px;
+  animation: fi-jc-spin 0.8s linear infinite;
+}
+
+@keyframes fi-jc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

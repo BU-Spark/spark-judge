@@ -1,36 +1,102 @@
-import { useQuery, useMutation } from "convex/react";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { toast } from "sonner";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { toast } from "sonner";
-import { SignInForm } from "../SignInFormNew";
-import { useState } from "react";
 import { JudgeCodeModal } from "./JudgeCodeModalNew";
 import { TeamSubmissionModal } from "./TeamSubmissionModalNew";
 import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
-import { TrophyIcon } from "./ui/AppIcons";
-import { getEventMode } from "../lib/eventModes";
-import { formatDateTime, formatDateRange, formatDateRangeSimple } from "../lib/utils";
+import { getEventDisplayLabel, getEventMode, type EventMode } from "../lib/eventModes";
+import { formatDateRangeSimple } from "../lib/utils";
+import { HOMEPAGE_DEMO } from "../lib/homepageDemo";
+import { selectFocalHomepage, type HomepageEvent, type HomepagePhase } from "../lib/homepagePhase";
+import { DisplayModule } from "./home/DisplayModule";
+import { SemesterRail, type RailEvent } from "./home/SemesterRail";
+import { EventLedger, type LedgerPast, type LedgerUpcoming } from "./home/EventLedger";
+import { ProjectKeyboard, KEY_GLYPHS, KEY_HUES, type KeyProject } from "./home/ProjectKeyboard";
+import "./home/homepage-fi.css";
 
-const withEllipsis = (text: string | undefined, maxLength = 100) => {
-  if (!text) return "";
-  if (text.length <= maxLength) return text;
-
-  const truncated = text.slice(0, maxLength);
-  const lastSpace = truncated.lastIndexOf(" ");
-  const safeCut =
-    lastSpace > maxLength - 40 ? truncated.slice(0, lastSpace) : truncated;
-
-  return `${safeCut.trimEnd()}...`;
+type LandingEvent = HomepageEvent & {
+  description?: string;
+  teamCount?: number;
+  userRole?: { role?: string } | null;
+  judgeProgress?: { completedTeams: number; totalTeams: number };
+  requiresJudgeCode?: boolean;
+  hasRankedVote?: boolean;
+  resultsReleased?: boolean;
+  tracks?: string[];
+  categories?: Array<string | { name: string }>;
+  courseCodes?: string[];
 };
 
+/** Broadcast channel to the shell's single sign-in surface (Layout owns the modal). */
+export function requestSignIn() {
+  window.dispatchEvent(new CustomEvent("hackjudge:open-signin"));
+}
+
+function useDemoMode() {
+  return useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("demo") === "1";
+  }, []);
+}
+
+/** Preview affordance: ?demo=1&phase=pre|post|standby pins the demo to a phase. */
+function useDemoPhase(): "pre" | "post" | "standby" | null {
+  return useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const p = new URLSearchParams(window.location.search).get("phase");
+    return p === "pre" || p === "post" || p === "standby" ? p : null;
+  }, []);
+}
+
+const DAY_MS = 24 * 3600_000;
+
+/** "24-05-25" — machined date stamp used by module meta. */
+function fmtStamp(ms: number) {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getUTCDate())}-${pad(d.getUTCMonth() + 1)}-${String(d.getUTCFullYear()).slice(2)}`;
+}
+
+/** "May 25" / "Now · May 25" — step labels on the semester rail. */
+function fmtStepDay(ms: number, prefix = "") {
+  const d = new Date(ms);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${prefix}${months[d.getUTCMonth()]} ${d.getUTCDate()}`;
+}
+
+function daysUntilLabel(target: number, now: number) {
+  const days = Math.max(0, Math.ceil((target - now) / DAY_MS));
+  if (days === 0) return "T−0 · today";
+  return `T−${days} day${days === 1 ? "" : "s"}`;
+}
+
+function primaryLabelFor(event: LandingEvent) {
+  const mode = getEventMode(event.mode);
+  if (event.status === "past") return "View results";
+  if (mode === "demo_day") return "Browse & Appreciate";
+  if (mode === "code_and_tell") return event.hasRankedVote ? "Edit Ballot" : "Vote";
+  if (event.userRole?.role === "participant") return "Open event";
+  return "Start Scoring";
+}
+
 export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"events">) => void }) {
-  const events = useQuery(api.events.listEvents);
-  const isAdmin = useQuery(api.events.isUserAdmin);
-  const loggedInUser = useQuery(api.auth.loggedInUser);
+  const demoMode = useDemoMode();
+  const demoPhase = useDemoPhase();
+  const events = useQuery(api.events.listEvents, demoMode ? "skip" : undefined);
+  const isAdmin = useQuery(api.events.isUserAdmin, demoMode ? "skip" : undefined);
+  const loggedInUser = useQuery(api.auth.loggedInUser, demoMode ? "skip" : undefined);
   const joinAsJudge = useMutation(api.events.joinAsJudge);
-  
-  const [showSignIn, setShowSignIn] = useState(false);
+
+  /* Readouts change at day/hour granularity — a 30s beat is plenty. */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const [joiningEvents, setJoiningEvents] = useState<Set<Id<"events">>>(new Set());
   const [judgeCodeModal, setJudgeCodeModal] = useState<{
     isOpen: boolean;
@@ -41,27 +107,88 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
     eventId: Id<"events"> | null;
     tracks: string[];
     courseCodes: string[];
-    eventMode: "hackathon" | "demo_day" | "code_and_tell";
-    existingTeam: any;
-  }>({ isOpen: false, eventId: null, tracks: [], courseCodes: [], eventMode: "hackathon", existingTeam: null });
+    eventMode: EventMode;
+    existingTeam: null;
+  }>({
+    isOpen: false,
+    eventId: null,
+    tracks: [],
+    courseCodes: [],
+    eventMode: "hackathon",
+    existingTeam: null,
+  });
+  const [selectedKey, setSelectedKey] = useState<KeyProject | null>(null);
+
+  const effectiveNow = demoMode ? HOMEPAGE_DEMO.nowMs : now;
+
+  const focal = useMemo((): { event: LandingEvent; phase: Exclude<HomepagePhase, "idle"> } | null => {
+    if (demoMode) {
+      const f = HOMEPAGE_DEMO.focal as LandingEvent;
+      const dur = f.endDate - f.startDate;
+      const active: LandingEvent[] = demoPhase ? [] : [f];
+      let upcoming = HOMEPAGE_DEMO.upcoming as LandingEvent[];
+      let past = HOMEPAGE_DEMO.past as LandingEvent[];
+      if (demoPhase === "pre") {
+        upcoming = [
+          {
+            ...f,
+            status: "upcoming",
+            startDate: effectiveNow + 3 * 24 * 3600_000,
+            endDate: effectiveNow + 3 * 24 * 3600_000 + dur,
+          },
+          ...upcoming,
+        ];
+      } else if (demoPhase === "post") {
+        past = [
+          {
+            ...f,
+            status: "past",
+            startDate: effectiveNow - 12 * 3600_000 - dur,
+            endDate: effectiveNow - 12 * 3600_000,
+          },
+          ...past,
+        ];
+      }
+      return selectFocalHomepage({ active, upcoming, past }, effectiveNow);
+    }
+    if (!events) return null;
+    return selectFocalHomepage(
+      {
+        active: events.active as LandingEvent[],
+        upcoming: events.upcoming as LandingEvent[],
+        past: events.past as LandingEvent[],
+      },
+      now
+    );
+  }, [demoMode, demoPhase, events, now, effectiveNow]);
+
+  const teams = useQuery(
+    api.teams.listTeams,
+    !demoMode && focal ? { eventId: focal.event._id as Id<"events"> } : "skip"
+  );
+
+  const openEvent = (id: string) => {
+    if (demoMode) {
+      toast.message("Demo data — open / for live");
+      return;
+    }
+    onSelectEvent(id as Id<"events">);
+  };
 
   const handleJoinAsJudge = async (eventId: Id<"events">) => {
     if (!loggedInUser) {
-      setShowSignIn(true);
+      requestSignIn();
       return;
     }
-
     if (joiningEvents.has(eventId)) return;
-
-    setJoiningEvents(prev => new Set(prev).add(eventId));
-
+    setJoiningEvents((prev) => new Set(prev).add(eventId));
     try {
       await joinAsJudge({ eventId });
       toast.success("Successfully joined as judge!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to join as judge");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to join as judge");
     } finally {
-      setJoiningEvents(prev => {
+      setJoiningEvents((prev) => {
         const next = new Set(prev);
         next.delete(eventId);
         return next;
@@ -69,85 +196,61 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
     }
   };
 
-  const handleJoinAsJudgeSafe = (eventId: Id<"events">) => {
-    void handleJoinAsJudge(eventId);
-  };
-
-  const handleStartScoring = (event: any) => {
+  const handleStartScoring = (event: LandingEvent) => {
+    if (demoMode) {
+      toast.message("Demo data — open / for live");
+      return;
+    }
     const eventMode = getEventMode(event.mode);
-
-    if (event.status === "past") {
-      onSelectEvent(event._id);
+    if (event.status === "past" || eventMode === "demo_day") {
+      onSelectEvent(event._id as Id<"events">);
       return;
     }
-
-    if (eventMode === "demo_day") {
-      onSelectEvent(event._id);
-      return;
-    }
-
     if (eventMode === "code_and_tell") {
       if (event.status === "active" && !loggedInUser) {
-        setShowSignIn(true);
+        requestSignIn();
         return;
       }
-      onSelectEvent(event._id);
+      onSelectEvent(event._id as Id<"events">);
       return;
     }
-
     if (!loggedInUser) {
-      setShowSignIn(true);
+      requestSignIn();
       return;
     }
-
-    // If event requires judge code, show modal
     if (event.requiresJudgeCode) {
-      setJudgeCodeModal({ isOpen: true, eventId: event._id });
+      setJudgeCodeModal({ isOpen: true, eventId: event._id as Id<"events"> });
     } else {
-      // No code required, go directly to event
-      onSelectEvent(event._id);
+      onSelectEvent(event._id as Id<"events">);
     }
   };
 
-  // Demo Day events can be browsed without signing in
-  const handleBrowseDemoDay = (eventId: Id<"events">) => {
-    onSelectEvent(eventId);
-  };
-
-  const handleJudgeCodeSuccess = () => {
-    if (judgeCodeModal.eventId) {
-      onSelectEvent(judgeCodeModal.eventId);
-    }
-  };
-
-  const handleAddTeam = (event: { _id: any; tracks: any; categories: any; courseCodes?: string[]; mode?: "hackathon" | "demo_day" | "code_and_tell"; }) => {
+  const handleAddTeam = (event: LandingEvent) => {
     if (!loggedInUser) {
-      setShowSignIn(true);
+      requestSignIn();
       return;
     }
-
     const derivedTracks =
       event.tracks && event.tracks.length > 0
         ? event.tracks
-        : (event.categories || []).map((category: any) =>
+        : (event.categories || []).map((category) =>
             typeof category === "string" ? category : category.name
           );
-
     setTeamSubmissionModal({
       isOpen: true,
-      eventId: event._id,
+      eventId: event._id as Id<"events">,
       tracks: derivedTracks,
       courseCodes: event.courseCodes || [],
       eventMode: getEventMode(event.mode),
-      existingTeam: null, // Modal will fetch team itself
+      existingTeam: null,
     });
   };
 
-  if (events === undefined) {
+  if (!demoMode && events === undefined) {
     return <LoadingState label="Loading events..." />;
   }
 
-  if (!events) {
+  if (!demoMode && !events) {
     return (
       <ErrorState
         title="Unable to load events"
@@ -158,85 +261,294 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
     );
   }
 
+  const upcomingSource = demoMode
+    ? (HOMEPAGE_DEMO.upcoming as LandingEvent[])
+    : ((events?.upcoming ?? []) as LandingEvent[]);
+  const pastSource = demoMode
+    ? (HOMEPAGE_DEMO.past as LandingEvent[])
+    : ((events?.past ?? []) as LandingEvent[]);
+
+  const upcomingList = upcomingSource.filter((e) => !focal || e._id !== focal.event._id);
+  const pastList = pastSource.filter((e) => !focal || e._id !== focal.event._id);
+
+  /* ---------- rail: every event is a step; the focal one is patched ---------- */
+  const nowStep: RailEvent[] = focal
+    ? []
+    : [
+        {
+          id: "__now",
+          name: "Today",
+          mode: "hackathon" as EventMode,
+          modeLabel: "—",
+          startDate: effectiveNow,
+          endDate: effectiveNow,
+          relation: "focal" as const,
+          dateLabel: fmtStepDay(effectiveNow, "Now · "),
+          dateRangeLabel: fmtStamp(effectiveNow),
+          statusLabel: "Standby",
+          ariaLabel: `Today — ${fmtStamp(effectiveNow)} — no event patched`,
+        },
+      ];
+  const railEvents: RailEvent[] = [
+    ...nowStep,
+    ...pastList.map((e): RailEvent => {
+      return {
+        id: e._id,
+        name: e.name,
+        mode: getEventMode(e.mode),
+        modeLabel: getEventDisplayLabel(e.mode),
+        startDate: e.startDate,
+        endDate: e.endDate,
+        relation: "past",
+        dateLabel: fmtStepDay(e.startDate),
+        dateRangeLabel: formatDateRangeSimple(e.startDate, e.endDate),
+        statusLabel: "Closed",
+        ariaLabel: `${e.name} — ${formatDateRangeSimple(e.startDate, e.endDate)} — past event`,
+      };
+    }),
+    ...(focal
+      ? [
+          {
+            id: focal.event._id,
+            name: focal.event.name,
+            mode: getEventMode(focal.event.mode),
+            startDate: focal.event.startDate,
+            endDate: focal.event.endDate,
+            relation: "focal" as const,
+            dateLabel: fmtStepDay(focal.event.startDate),
+            dateRangeLabel: formatDateRangeSimple(focal.event.startDate, focal.event.endDate),
+            modeLabel: getEventDisplayLabel(focal.event.mode),
+            statusLabel:
+              focal.phase === "live" ? "Live now" : focal.phase === "pre" ? "Armed" : "Replay",
+            ariaLabel: `${focal.event.name} — started ${formatDateRangeSimple(focal.event.startDate, focal.event.endDate)} — ${
+              focal.phase === "live" ? "live now" : focal.phase === "pre" ? "next up" : "recently ended"
+            }`,
+            focalTag: focal.phase === "live" ? "Live" : focal.phase === "pre" ? "Next" : "Ended",
+          },
+        ]
+      : []),
+    ...upcomingList.map((e): RailEvent => {
+      return {
+        id: e._id,
+        name: e.name,
+        mode: getEventMode(e.mode),
+        modeLabel: getEventDisplayLabel(e.mode),
+        startDate: e.startDate,
+        endDate: e.endDate,
+        relation: "next",
+        dateLabel: fmtStepDay(e.startDate),
+        dateRangeLabel: formatDateRangeSimple(e.startDate, e.endDate),
+        statusLabel: daysUntilLabel(e.startDate, effectiveNow),
+        ariaLabel: `${e.name} — ${formatDateRangeSimple(e.startDate, e.endDate)} — upcoming, ${daysUntilLabel(e.startDate, effectiveNow)}`,
+      };
+    }),
+  ];
+
+  /* ---------- keyboard: teams of the focal event (demo fixture in demo mode) ---------- */
+  const keyProjects: KeyProject[] = demoMode
+    ? HOMEPAGE_DEMO.projects
+    : (teams ?? []).slice(0, 8).map((t: { _id: string; name: string; track?: string }, i: number) => ({
+        id: t._id,
+        name: t.name,
+        team: t.track ?? "Team",
+        hue: KEY_HUES[i % KEY_HUES.length]!,
+        glyph: KEY_GLYPHS[i % KEY_GLYPHS.length]!,
+      }));
+
+  /* ---------- ledger rows ---------- */
+  const ledgerUpcoming: LedgerUpcoming[] = [...upcomingList]
+    .sort((a, b) => a.startDate - b.startDate)
+    .map((e) => {
+      const days = Math.max(0, Math.ceil((e.startDate - effectiveNow) / DAY_MS));
+      return {
+        id: e._id,
+        name: e.name,
+        mode: getEventMode(e.mode),
+        modeLabel: getEventDisplayLabel(e.mode),
+        dateLabel: formatDateRangeSimple(e.startDate, e.endDate),
+        tMinus: daysUntilLabel(e.startDate, effectiveNow),
+        stepsLit: Math.max(0, Math.min(8, Math.round(days / 7))),
+        ariaLabel: `View event "${e.name}" — ${daysUntilLabel(e.startDate, effectiveNow)}`,
+      };
+    });
+  const ledgerPast: LedgerPast[] = [...pastList]
+    .sort((a, b) => b.endDate - a.endDate)
+    .map((e) => ({
+      id: e._id,
+      name: e.name,
+      modeLabel: getEventDisplayLabel(e.mode),
+      dateLabel: formatDateRangeSimple(e.startDate, e.endDate),
+      ariaLabel: `View event "${e.name}" — closed`,
+    }));
+
+  /* ---------- module readouts ---------- */
+  const focalEvent = focal?.event ?? null;
+  const focalMode = focalEvent ? getEventMode(focalEvent.mode) : "hackathon";
+  const seatLabel = demoMode
+    ? HOMEPAGE_DEMO.focal.seatLabel
+    : focalEvent?.userRole?.role
+      ? focalEvent.userRole.role === "judge"
+        ? "Judge"
+        : "Participant"
+      : loggedInUser
+        ? "Guest"
+        : "Visitor";
+
+  const moduleMeta: Array<[string, string]> = focal
+    ? focal.phase === "live"
+      ? [
+          ["Started", fmtStamp(focal.event.startDate)],
+          ["Closes in", `${Math.max(0, Math.ceil((focal.event.endDate - effectiveNow) / 3600_000))} h`],
+          ["Seat", seatLabel],
+        ]
+      : focal.phase === "pre"
+        ? [
+            ["Opens", fmtStamp(focal.event.startDate)],
+            ["Opens in", daysUntilLabel(focal.event.startDate, effectiveNow)],
+            ["Seat", seatLabel],
+          ]
+        : [
+            ["Ended", fmtStamp(focal.event.endDate)],
+            ["Seat", seatLabel],
+          ]
+    : [];
+
+  const formatLabel = focal
+    ? `${Math.max(1, Math.round((focal.event.endDate - focal.event.startDate) / 3600_000))}h format`
+    : undefined;
+
+  const hasRail = railEvents.length > 0;
+
+  const moduleActions: Array<{ label: string; onClick: () => void; disabled?: boolean }> = [];
+  if (focal && focalMode === "hackathon" && focal.phase !== "post" && !focal.event.userRole) {
+    const fid = focal.event._id as Id<"events">;
+    moduleActions.push({
+      label: joiningEvents.has(fid) ? "Joining..." : "Join as judge",
+      onClick: () => void handleJoinAsJudge(fid),
+      disabled: joiningEvents.has(fid),
+    });
+  }
+  if (focal && isAdmin && focalMode === "hackathon") {
+    moduleActions.push({
+      label: "Add teams",
+      onClick: () => handleAddTeam(focal.event),
+    });
+  }
+
   return (
-    <>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <ActiveEventSection
-          title="Active Events"
-          events={events.active}
-          isAdmin={Boolean(isAdmin)}
-          onJoinAsJudge={handleJoinAsJudgeSafe}
-          onStartScoring={handleStartScoring}
-          onBrowseDemoDay={handleBrowseDemoDay}
-          onAddTeam={handleAddTeam}
-          joiningEvents={joiningEvents}
-          emptyMessage="No active events at the moment"
-        />
-
-        <CompactEventSection
-          title="Upcoming Events"
-          events={events.upcoming}
-          isAdmin={Boolean(isAdmin)}
-          onJoinAsJudge={handleJoinAsJudgeSafe}
-          onStartScoring={handleStartScoring}
-          onBrowseDemoDay={handleBrowseDemoDay}
-          onAddTeam={handleAddTeam}
-          joiningEvents={joiningEvents}
-          emptyMessage="No upcoming events scheduled"
-          isPastSection={false}
-        />
-
-        <CompactEventSection
-          title="Past Events"
-          events={events.past}
-          isAdmin={Boolean(isAdmin)}
-          onJoinAsJudge={handleJoinAsJudgeSafe}
-          onStartScoring={handleStartScoring}
-          onBrowseDemoDay={handleBrowseDemoDay}
-          onAddTeam={handleAddTeam}
-          joiningEvents={joiningEvents}
-          emptyMessage="No past events"
-          isPastSection={true}
-        />
-      </div>
-
-      {/* Sign In Modal */}
-      {showSignIn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowSignIn(false)}
-          />
-          <div className="relative bg-background rounded-lg p-8 max-w-md w-full shadow-pop border border-border">
-            <button
-              onClick={() => setShowSignIn(false)}
-              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <h2 className="text-2xl font-heading font-bold mb-6 text-foreground">Sign In</h2>
-            <SignInForm />
-          </div>
-        </div>
+    <div className="fi-home">
+      {focal && keyProjects.length > 0 && (
+        <a className="fi-h-skip" href="#fi-h-projects">
+          Skip to projects to score
+        </a>
       )}
 
-      {/* Judge Code Modal */}
+      <div className="fi-h-unit">
+        {focal ? (
+          <>
+            <DisplayModule
+              name={focal.event.name}
+              description={focal.event.description || "Judging is open. Enter when you're ready."}
+              mode={focalMode}
+              modeLabel={getEventDisplayLabel(focal.event.mode)}
+              phase={focal.phase}
+              formatLabel={formatLabel}
+              meta={moduleMeta}
+              selectLine={
+                selectedKey ? (
+                  <>
+                    Select · <b>{selectedKey.name}</b> — {selectedKey.team} · ready to score
+                  </>
+                ) : (
+                  "Select · no project key pressed"
+                )
+              }
+              transportLabel={primaryLabelFor(focal.event)}
+              onTransport={() => handleStartScoring(focal.event)}
+              extraActions={moduleActions}
+              onAllEvents={hasRail ? () => document.getElementById("fi-h-upcoming")?.scrollIntoView({ behavior: "smooth" }) : undefined}
+            />
+          </>
+        ) : (
+          <DisplayModule
+            name="No events programmed"
+            description="The instrument has no events patched in right now. When a hackathon, demo day, or code & tell is scheduled, it appears here."
+            mode="hackathon"
+            modeLabel="—"
+            phase={null}
+            meta={[]}
+            selectLine="Select · no event patched"
+            transportLabel="Enter"
+            onTransport={() => undefined}
+            onAllEvents={hasRail ? () => document.getElementById("fi-h-upcoming")?.scrollIntoView({ behavior: "smooth" }) : undefined}
+          />
+        )}
+
+        {hasRail && (
+          <SemesterRail
+            events={railEvents}
+            focalId={focal?.event._id ?? null}
+            phase={focal?.phase ?? null}
+            now={effectiveNow}
+            onOpen={openEvent}
+          />
+        )}
+
+        {focal && hasRail && <div className="fi-h-grille" aria-hidden="true" />}
+
+        {focal && keyProjects.length > 0 && (
+          <ProjectKeyboard
+            projects={keyProjects}
+            onOpen={() => handleStartScoring(focal.event)}
+            onReport={setSelectedKey}
+          />
+        )}
+
+        <EventLedger upcoming={ledgerUpcoming} past={ledgerPast} onOpen={openEvent} />
+
+        <footer className="fi-h-footer">
+          <p className="fi-h-blurb">
+            One workspace for hackathons, demo days, and code &amp; tells — scoring, rubrics, and
+            results.
+          </p>
+          {!loggedInUser && !demoMode && (
+            <button type="button" className="fi-h-footlink" onClick={requestSignIn}>
+              Judges &amp; admins
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" aria-hidden="true">
+                <path d="M3 12h17M13 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+        </footer>
+      </div>
+
+      {demoMode && (
+        <p className="fi-h-badge" role="status">
+          Preview · Field Instrument · synthetic data — / for live
+        </p>
+      )}
+
       {judgeCodeModal.eventId && (
         <JudgeCodeModal
           isOpen={judgeCodeModal.isOpen}
           onClose={() => setJudgeCodeModal({ isOpen: false, eventId: null })}
           eventId={judgeCodeModal.eventId}
-          onSuccess={handleJudgeCodeSuccess}
+          onSuccess={() => judgeCodeModal.eventId && onSelectEvent(judgeCodeModal.eventId)}
         />
       )}
-
-      {/* Team Submission Modal */}
       {teamSubmissionModal.eventId && (
         <TeamSubmissionModal
           isOpen={teamSubmissionModal.isOpen}
-          onClose={() => setTeamSubmissionModal({ isOpen: false, eventId: null, tracks: [], courseCodes: [], eventMode: "hackathon", existingTeam: null })}
+          onClose={() =>
+            setTeamSubmissionModal({
+              isOpen: false,
+              eventId: null,
+              tracks: [],
+              courseCodes: [],
+              eventMode: "hackathon",
+              existingTeam: null,
+            })
+          }
           eventId={teamSubmissionModal.eventId}
           tracks={teamSubmissionModal.tracks}
           courseCodes={teamSubmissionModal.courseCodes}
@@ -244,572 +556,6 @@ export function LandingPage({ onSelectEvent }: { onSelectEvent: (eventId: Id<"ev
           existingTeam={teamSubmissionModal.existingTeam}
         />
       )}
-    </>
-  );
-}
-
-function ActiveEventSection({
-  title,
-  events,
-  isAdmin,
-  onJoinAsJudge,
-  onStartScoring,
-  onBrowseDemoDay,
-  onAddTeam,
-  joiningEvents,
-  emptyMessage,
-}: {
-  title: string;
-  events: Array<any>;
-  isAdmin: boolean;
-  onJoinAsJudge: (eventId: Id<"events">) => void;
-  onStartScoring: (event: any) => void;
-  onBrowseDemoDay: (eventId: Id<"events">) => void;
-  onAddTeam: (event: any) => void;
-  joiningEvents: Set<Id<"events">>;
-  emptyMessage: string;
-}) {
-  return (
-    <section className="mb-12">
-      <h2 className="text-xl font-heading font-bold mb-6 text-foreground flex items-center gap-3">
-        {title}
-        {events.length > 0 && <span className="text-xs font-medium text-primary-foreground bg-primary px-2 py-0.5 rounded-full">{events.length}</span>}
-      </h2>
-      {events.length === 0 ? (
-        <div className="text-muted-foreground text-center py-12 bg-card rounded-lg border border-border shadow-sm">
-          {emptyMessage}
-        </div>
-      ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4 px-5 snap-x snap-mandatory flex-nowrap md:px-0">
-          {events.map((event) => (
-            <EventCard
-              key={event._id}
-              event={event}
-              isAdmin={isAdmin}
-              onJoinAsJudge={onJoinAsJudge}
-              onStartScoring={onStartScoring}
-              onBrowseDemoDay={onBrowseDemoDay}
-              onAddTeam={onAddTeam}
-              isJoining={joiningEvents.has(event._id)}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function CompactEventSection({
-  title,
-  events,
-  isAdmin,
-  onJoinAsJudge,
-  onStartScoring,
-  onBrowseDemoDay,
-  onAddTeam,
-  joiningEvents,
-  emptyMessage,
-  isPastSection,
-}: {
-  title: string;
-  events: Array<any>;
-  isAdmin: boolean;
-  onJoinAsJudge: (eventId: Id<"events">) => void;
-  onStartScoring: (event: any) => void;
-  onBrowseDemoDay: (eventId: Id<"events">) => void;
-  onAddTeam: (event: any) => void;
-  joiningEvents: Set<Id<"events">>;
-  emptyMessage: string;
-  isPastSection?: boolean;
-}) {
-  return (
-    <section className="mb-12">
-      <h2 className="text-lg font-heading font-semibold mb-6 text-foreground flex items-center gap-3">
-        {title}
-        {events.length > 0 && <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{events.length}</span>}
-      </h2>
-      {events.length === 0 ? (
-        <div className="text-muted-foreground text-sm py-6 border-b border-border">
-          {emptyMessage}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {events.map((event) => (
-            <EventRow
-              key={event._id}
-              event={event}
-              isAdmin={isAdmin}
-              onJoinAsJudge={onJoinAsJudge}
-              onStartScoring={onStartScoring}
-              onBrowseDemoDay={onBrowseDemoDay}
-              onAddTeam={onAddTeam}
-              isJoining={joiningEvents.has(event._id)}
-              isPastSection={isPastSection}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function EventCard({
-  event,
-  isAdmin,
-  onJoinAsJudge,
-  onStartScoring,
-  onBrowseDemoDay,
-  onAddTeam,
-  isJoining,
-}: {
-  event: any;
-  isAdmin: boolean;
-  onJoinAsJudge: (eventId: Id<"events">) => void;
-  onStartScoring: (event: any) => void;
-  onBrowseDemoDay: (eventId: Id<"events">) => void;
-  onAddTeam: (event: any) => void;
-  isJoining: boolean;
-}) {
-  const userRole = event.userRole?.role;
-  const isJudge = userRole === "judge";
-  const isParticipant = userRole === "participant";
-  const eventMode = getEventMode(event.mode);
-  const isHackathon = eventMode === "hackathon";
-  const isDemoDay = eventMode === "demo_day";
-  const isCodeAndTell = eventMode === "code_and_tell";
-  const judgeProgress = event.judgeProgress as { completedTeams: number; totalTeams: number } | undefined;
-  const hasCompletedScoring = Boolean(
-    judgeProgress && judgeProgress.totalTeams > 0 && judgeProgress.completedTeams >= judgeProgress.totalTeams
-  );
-  const showSideBySide = isHackathon && !userRole && isAdmin;
-  const truncatedDescription = withEllipsis(event.description, 100);
-
-  return (
-    <div className="card-static flex flex-col overflow-hidden w-[320px] sm:w-[360px] flex-shrink-0 snap-start h-[360px]">
-      <div className="p-5 pb-4 flex flex-col h-full">
-        <div className="flex justify-between items-start gap-3 mb-4">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Live</span>
-            </div>
-            <h3 className="text-xl font-heading font-bold text-foreground leading-snug line-clamp-2 break-words">
-              {event.name}
-            </h3>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            {isDemoDay && (
-              <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">
-                Demo Day
-              </span>
-            )}
-            {isCodeAndTell && (
-              <span className="badge bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 font-medium">
-                Code &amp; Tell
-              </span>
-            )}
-            {userRole && (
-              <span className={`badge flex-shrink-0 ${
-                isJudge ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20" : 
-                "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-              }`}>
-                {isJudge ? "Judge" : "Participant"}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <p
-          className="text-base text-muted-foreground line-clamp-3 mb-6 flex-grow leading-relaxed"
-          title={event.description}
-        >
-          {truncatedDescription}
-        </p>
-        
-        <div className="flex justify-between text-xs text-muted-foreground mb-6 items-center border-t border-border pt-4">
-          <span className="flex items-center gap-1.5 font-medium">
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span>{formatDateRangeSimple(event.startDate, event.endDate)}</span>
-          </span>
-          <span className="bg-muted/50 px-2.5 py-1 rounded-md text-xs font-semibold text-muted-foreground">
-            {event.teamCount} {isHackathon ? "teams" : "projects"}
-          </span>
-        </div>
-
-        <div className="mt-auto flex flex-col gap-2 justify-end pb-0">
-          {isDemoDay && (
-            <button
-              onClick={() => onBrowseDemoDay(event._id)}
-              className="w-full h-12 px-4 rounded-md text-sm font-medium flex items-center justify-center shadow-md transition-all bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 hover:shadow-lg"
-            >
-              <span className="flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                Browse & Appreciate
-              </span>
-            </button>
-          )}
-
-          {isCodeAndTell && (
-            <button
-              onClick={() => onStartScoring(event)}
-              className="w-full h-12 px-4 rounded-md text-sm font-medium flex items-center justify-center shadow-md transition-all bg-amber-500 text-white hover:bg-amber-600 hover:shadow-lg"
-            >
-              <span className="flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-                </svg>
-                {event.hasRankedVote ? "Edit Ballot" : "Vote"}
-              </span>
-            </button>
-          )}
-
-          {showSideBySide ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  void onJoinAsJudge(event._id);
-                }}
-                disabled={isJoining}
-                className="flex-1 h-12 px-3 rounded-md text-sm font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                {isJoining ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    Joining...
-                  </span>
-                ) : (
-                  "Join as Judge"
-                )}
-              </button>
-              <button
-                onClick={() => onAddTeam(event)}
-                className="flex-1 h-12 px-3 rounded-md text-sm font-medium transition-all flex items-center justify-center bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
-              >
-                Add Teams
-              </button>
-            </div>
-          ) : (
-            <>
-              {isHackathon && !isParticipant && (
-                <>
-                  {!isJudge ? (
-                    <button
-                      onClick={() => {
-                        void onJoinAsJudge(event._id);
-                      }}
-                      disabled={isJoining}
-                    className="w-full h-12 px-4 rounded-md text-sm font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                    >
-                      {isJoining ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                          Joining...
-                        </span>
-                      ) : (
-                        "Join as Judge"
-                      )}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => onStartScoring(event)}
-                      className={`w-full h-12 px-4 rounded-md text-sm font-medium btn-primary shadow-md hover:shadow-lg transition-all ${hasCompletedScoring ? 'opacity-90' : ''} flex items-center justify-center`}
-                    >
-                      <span className="flex items-center justify-center gap-2">
-                        {hasCompletedScoring ? (
-                          <>
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                            Scoring Complete
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                            {judgeProgress && judgeProgress.completedTeams > 0
-                              ? `Resume (${judgeProgress.completedTeams}/${judgeProgress.totalTeams})`
-                              : "Start Scoring"}
-                          </>
-                        )}
-                      </span>
-                    </button>
-                  )}
-                </>
-              )}
-
-              {isAdmin && isHackathon && !isJudge && (
-                <button
-                  onClick={() => onAddTeam(event)}
-                  className={`w-full h-12 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
-                    isParticipant
-                      ? "bg-primary text-primary-foreground hover:bg-teal-700 dark:hover:bg-teal-500 shadow-sm hover:shadow-md"
-                      : "bg-muted text-foreground border border-border hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:shadow-sm"
-                  }`}
-                >
-                  Add Teams
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EventRow({
-  event,
-  isAdmin,
-  onJoinAsJudge,
-  onStartScoring,
-  onBrowseDemoDay,
-  onAddTeam,
-  isJoining,
-  isPastSection,
-}: {
-  event: any;
-  isAdmin: boolean;
-  onJoinAsJudge: (eventId: Id<"events">) => void;
-  onStartScoring: (event: any) => void;
-  onBrowseDemoDay: (eventId: Id<"events">) => void;
-  onAddTeam: (event: any) => void;
-  isJoining: boolean;
-  isPastSection?: boolean;
-}) {
-  const userRole = event.userRole?.role;
-  const isJudge = userRole === "judge";
-  const isParticipant = userRole === "participant";
-  const eventMode = getEventMode(event.mode);
-  const isHackathon = eventMode === "hackathon";
-  const isDemoDay = eventMode === "demo_day";
-  const isCodeAndTell = eventMode === "code_and_tell";
-  const [isExpanded, setIsExpanded] = useState(false);
-  return (
-    <div className="card-static bg-card transition-colors hover:bg-muted/50">
-      {/* Mobile Layout */}
-      <div className="md:hidden p-4">
-        <div 
-          className="flex justify-between items-start cursor-pointer"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <div className="flex-1 min-w-0 pr-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-bold text-muted-foreground">
-                {formatDateRangeSimple(event.startDate, event.endDate)}
-              </span>
-            </div>
-            <h3 className="font-bold text-foreground truncate">
-              {event.name}
-            </h3>
-            <div className="text-xs text-muted-foreground mt-1">
-              {event.teamCount} {isHackathon ? "teams" : "projects"}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {isDemoDay && (
-              <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20 text-[10px] px-1.5 py-0.5 h-5">
-                Demo Day
-              </span>
-            )}
-            {isCodeAndTell && (
-              <span className="badge bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 text-[10px] px-1.5 py-0.5 h-5">
-                Code &amp; Tell
-              </span>
-            )}
-            <button className="text-muted-foreground p-1">
-              <svg 
-                className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {isExpanded && (
-          <div className="mt-4 pt-4 border-t border-border space-y-3">
-            <div className="flex flex-col gap-2">
-              {isPastSection ? (
-                <button
-                  onClick={() => onStartScoring(event)}
-                  className="w-full text-sm font-semibold text-primary px-4 py-2 rounded-md transition-all hover:bg-primary hover:text-primary-foreground border border-teal-500/20"
-                >
-                  View Results
-                </button>
-              ) : isDemoDay ? (
-                <button
-                  onClick={() => onBrowseDemoDay(event._id)}
-                  className="w-full py-2 px-4 text-sm rounded-md font-medium bg-primary text-primary-foreground shadow-sm transition-all hover:bg-teal-700 dark:hover:bg-teal-500 hover:shadow-md"
-                >
-                  Browse
-                </button>
-              ) : isCodeAndTell ? (
-                <button
-                  onClick={() => onStartScoring(event)}
-                  className="w-full py-2 px-4 text-sm rounded-md font-medium bg-amber-500 text-white shadow-sm transition-all hover:bg-amber-600 hover:shadow-md"
-                >
-                  {event.status === "active"
-                    ? event.hasRankedVote
-                      ? "Edit Ballot"
-                      : "Vote"
-                    : "View Event"}
-                </button>
-              ) : (
-                <>
-                  {isAdmin && isHackathon && !isJudge && !isPastSection && (
-                    <button
-                      onClick={() => onAddTeam(event)}
-                      className={`w-full text-sm font-semibold px-4 py-2 rounded-md transition-all ${
-                        isParticipant 
-                          ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm border border-border"
-                      }`}
-                    >
-                      Add Teams
-                    </button>
-                  )}
-                  
-                  {!userRole ? (
-                    <button
-                      onClick={() => void onJoinAsJudge(event._id)}
-                      disabled={isJoining}
-                      className="w-full py-2 px-4 text-sm rounded-md font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isJoining ? "Joining..." : "Join as Judge"}
-                    </button>
-                  ) : isHackathon ? (
-                    <div className={`w-full text-center text-sm font-bold px-4 py-2 rounded-md border ${
-                      isJudge 
-                        ? "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/20" 
-                        : "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20"
-                    }`}>
-                      Registered as {userRole === 'judge' ? 'Judge' : 'Participant'}
-                    </div>
-                  ) : null}
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Desktop Layout */}
-      <div className="hidden md:flex p-4 items-center gap-6">
-        <div className="flex-shrink-0 w-32 text-sm">
-          <div className="font-bold text-foreground">{formatDateRangeSimple(event.startDate, event.endDate)}</div>
-        </div>
-
-        <div className="flex-grow min-w-0">
-          <div className="flex items-center gap-3 mb-1.5">
-            <h3 className="text-base font-bold text-foreground truncate">
-              {event.name}
-            </h3>
-          </div>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
-            <span>{event.teamCount} {isHackathon ? "teams" : "projects"}</span>
-            {isPastSection && event.resultsReleased && (
-              <span className="text-amber-600 dark:text-amber-500 flex items-center gap-1 font-bold">
-                <TrophyIcon className="h-4 w-4" />
-                Winner announced
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isDemoDay && (
-            <span className="badge bg-pink-500/10 text-pink-400 border border-pink-500/20 flex-shrink-0">
-              Demo Day
-            </span>
-          )}
-          {isCodeAndTell && (
-            <span className="badge bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 flex-shrink-0">
-              Code &amp; Tell
-            </span>
-          )}
-          {userRole && isHackathon && (
-            <span className={`badge flex-shrink-0 ${
-              isJudge ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20" : 
-              "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-            }`}>
-              {isJudge ? "Judge" : "Participant"}
-            </span>
-          )}
-        </div>
-
-        <div className="flex-shrink-0 flex items-center gap-3">
-          {isPastSection ? (
-            <button
-              onClick={() => onStartScoring(event)}
-              className="text-sm font-semibold text-primary px-4 py-2 rounded-md transition-all hover:bg-primary hover:text-primary-foreground"
-            >
-              View Results
-            </button>
-          ) : isDemoDay ? (
-            <button
-              onClick={() => onBrowseDemoDay(event._id)}
-              className="py-2 px-4 text-sm h-9 rounded-md font-medium bg-primary text-primary-foreground shadow-sm transition-all hover:bg-teal-700 dark:hover:bg-teal-500 hover:shadow-md"
-            >
-              Browse
-            </button>
-          ) : isCodeAndTell ? (
-            <button
-              onClick={() => onStartScoring(event)}
-              className="py-2 px-4 text-sm h-9 rounded-md font-medium bg-amber-500 text-white shadow-sm transition-all hover:bg-amber-600 hover:shadow-md"
-            >
-              {event.status === "active"
-                ? event.hasRankedVote
-                  ? "Edit Ballot"
-                  : "Vote"
-                : "View Event"}
-            </button>
-          ) : (
-            <>
-              {isAdmin && isHackathon && !isJudge && !isPastSection && (
-                <button
-                  onClick={() => onAddTeam(event)}
-                  className={`text-sm font-semibold px-4 py-2 rounded-md transition-all ${
-                    isParticipant 
-                      ? "text-primary bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:shadow-sm" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-sm"
-                  }`}
-                >
-                  Add Teams
-                </button>
-              )}
-              
-              {!userRole ? (
-                <button
-                  onClick={() => void onJoinAsJudge(event._id)}
-                  disabled={isJoining}
-                  className="py-2 px-4 text-sm h-9 rounded-md font-medium border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:border-primary hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isJoining ? "Joining..." : "Join as Judge"}
-                </button>
-              ) : isHackathon ? (
-                <div className={`text-sm font-bold px-4 py-1.5 rounded-full border ${
-                  isJudge
-                    ? "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/20"
-                    : "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20"
-                }`}>
-                  Registered
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

@@ -11,7 +11,7 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
     <ConvexAuthProvider client={convex}>
-      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <App />
       </ThemeProvider>
     </ConvexAuthProvider>

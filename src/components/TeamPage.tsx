@@ -1,3 +1,4 @@
+import "./TeamPage.fi.css";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -77,11 +78,11 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
     typeof team.githubUrl === "string" ? team.githubUrl.trim() : "";
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="team-fi-page max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Back Link */}
       <Link
         to={`/event/${eventId}`}
-        className="inline-flex items-center gap-2 btn-ghost mb-6 text-sm"
+        className="inline-flex items-center gap-2 fi-key mb-6 text-sm"
       >
         <svg
           className="w-4 h-4"
@@ -100,9 +101,9 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
       </Link>
 
       {/* Main Card */}
-      <div className="card-static bg-card overflow-hidden">
+      <div className="fi-panel fi-surface overflow-hidden">
         {/* Header with appreciation count */}
-        <div className="bg-gradient-to-r from-pink-500 to-rose-500 px-6 py-8 text-white">
+        <div className="fi-accent-surface   px-6 py-8 text-white">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               {team.courseCode && (
@@ -112,7 +113,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
                   </span>
                 </div>
               )}
-              <h1 className="text-2xl sm:text-3xl font-heading font-bold mb-2">
+              <h1 className="text-2xl sm:text-3xl fi-zone font-bold mb-2">
                 {team.name}
               </h1>
               <p className="text-white/80 text-sm">{team.event.name}</p>
@@ -131,10 +132,10 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
         <div className="p-6 space-y-6">
           {/* Description */}
           <div>
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            <h2 className="text-sm font-semibold fi-muted uppercase tracking-wide mb-2">
               About This Project
             </h2>
-            <p className="text-foreground leading-relaxed">
+            <p className="fi-ink leading-relaxed">
               {team.description}
             </p>
           </div>
@@ -142,14 +143,14 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
           {/* Team Members */}
           {team.members.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              <h2 className="text-sm font-semibold fi-muted uppercase tracking-wide mb-2">
                 Team Members
               </h2>
               <div className="flex flex-wrap gap-2">
                 {team.members.map((member, index) => (
                   <span
                     key={index}
-                    className="inline-flex items-center px-3 py-1.5 bg-muted text-foreground text-sm rounded-full"
+                    className="inline-flex items-center px-3 py-1.5 bg-muted fi-ink text-sm rounded-full"
                   >
                     {member}
                   </span>
@@ -161,7 +162,7 @@ export function TeamPage({ eventId, teamId }: TeamPageProps) {
           {/* GitHub Link */}
           {githubUrl !== "" && (
             <div>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              <h2 className="text-sm font-semibold fi-muted uppercase tracking-wide mb-2">
                 Project Link
               </h2>
               <a
@@ -270,16 +271,16 @@ function AppreciationSection({
 
   return (
     <div className="text-center">
-      <h2 className="text-lg font-heading font-semibold text-foreground mb-2">
+      <h2 className="text-lg fi-zone font-semibold fi-ink mb-2">
         Show Your Appreciation
       </h2>
-      <p className="text-sm text-muted-foreground mb-4">
+      <p className="text-sm fi-muted mb-4">
         You can give up to {maxPerTeam} appreciations to this project. You have{" "}
-        <span className="font-semibold text-foreground">{remainingBudget}</span>{" "}
+        <span className="font-semibold fi-ink">{remainingBudget}</span>{" "}
         of {maxPerAttendee} remaining overall.
       </p>
       {!isEventLive && (
-        <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mb-3">
+        <p className="text-sm text-amber-600  font-medium mb-3">
           Appreciations open once the event is live.
         </p>
       )}
@@ -292,7 +293,7 @@ function AppreciationSection({
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
               i < attendeeCount
                 ? "bg-pink-500 text-white scale-110"
-                : "bg-muted text-muted-foreground"
+                : "bg-muted fi-muted"
             }`}
           >
             ❤️
@@ -307,8 +308,8 @@ function AppreciationSection({
           inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl text-lg font-semibold transition-all shadow-lg
           ${
             canAppreciate
-              ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white hover:shadow-xl hover:scale-105 active:scale-100"
-              : "bg-muted text-muted-foreground cursor-not-allowed shadow-none"
+              ? "fi-accent-surface     text-white hover:shadow-xl hover:scale-105 active:scale-100"
+              : "bg-muted fi-muted cursor-not-allowed shadow-none"
           }
           ${isLoading ? "opacity-70" : ""}
         `}

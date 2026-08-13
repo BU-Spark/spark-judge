@@ -20,9 +20,9 @@ export function TeamsTab({
   addTeamPanel: ReactNode;
 }) {
   return (
-    <div className="card-static p-6 bg-card">
+    <div className="fi-panel p-6 fi-surface">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
+        <h3 className="text-lg fi-zone font-semibold fi-ink flex items-center gap-2">
           <svg
             className="w-5 h-5"
             fill="none"
@@ -42,7 +42,7 @@ export function TeamsTab({
           <button
             type="button"
             onClick={onOpenBulkImport}
-            className="btn-secondary text-sm flex items-center gap-2"
+            className="fi-key text-sm flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -61,7 +61,7 @@ export function TeamsTab({
           </button>
           <button
             onClick={onOpenCreateTeam}
-            className="btn-primary text-sm flex items-center gap-2"
+            className="fi-transport text-sm flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -83,9 +83,9 @@ export function TeamsTab({
       {isPageLayout ? (
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(18rem,22rem)_1fr] gap-4">
           <div className="min-w-0">
-            <div className="rounded-lg border border-border bg-card overflow-hidden">
+            <div className="rounded-lg border border-border fi-surface overflow-hidden">
               <div className="px-4 py-3 border-b border-border bg-muted/20">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs uppercase tracking-wide fi-muted">
                   {entityLabel} List
                 </p>
               </div>
@@ -98,22 +98,22 @@ export function TeamsTab({
             {showAddTeam ? (
               addTeamPanel
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center h-full min-h-[300px] rounded-lg border border-border bg-card p-4">
-                <p className="text-sm text-muted-foreground mb-4">
+              <div className="flex flex-col items-center justify-center py-12 text-center h-full min-h-[300px] rounded-lg border border-border fi-surface p-4">
+                <p className="text-sm fi-muted mb-4">
                   Select a {entityLabel.toLowerCase()} to edit or create a new one.
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={onOpenBulkImport}
-                    className="btn-secondary"
+                    className="fi-key"
                   >
                     Bulk Import
                   </button>
                   <button
                     type="button"
                     onClick={onOpenCreateTeam}
-                    className="btn-primary"
+                    className="fi-transport"
                   >
                     Create {entityLabel}
                   </button>

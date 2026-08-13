@@ -13,7 +13,7 @@ export function ErrorState({
 }: ErrorStateProps) {
   return (
     <div className="min-h-[40vh] flex items-center justify-center px-4">
-      <div className="max-w-md w-full space-y-4 text-center border border-border rounded-2xl bg-card p-6 shadow-sm">
+      <div className="fi-panel max-w-md w-full space-y-4 text-center p-6">
         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10 text-destructive">
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -25,11 +25,11 @@ export function ErrorState({
           </svg>
         </div>
         <div className="space-y-2">
-          <h3 className="text-lg font-heading font-semibold text-foreground">{title}</h3>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <h3 className="fi-zone">{title}</h3>
+          <p className="text-sm fi-muted">{description}</p>
         </div>
         {onAction && (
-          <button onClick={onAction} className="btn-secondary">
+          <button onClick={onAction} className="fi-key">
             {actionLabel}
           </button>
         )}

@@ -169,12 +169,12 @@ function CountPill({
 }) {
   const className =
     tone === "good"
-      ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+      ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 "
       : tone === "warn"
-        ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+        ? "border-amber-500/25 bg-amber-500/10 text-amber-700 "
         : tone === "pink"
-          ? "border-pink-500/25 bg-pink-500/10 text-pink-700 dark:text-pink-300"
-          : "border-border bg-muted/30 text-foreground";
+          ? "border-pink-500/25 bg-pink-500/10 text-pink-700 "
+          : "border-border bg-muted/30 fi-ink";
 
   return (
     <div className={`rounded-lg border px-3 py-2 ${className}`}>
@@ -193,8 +193,8 @@ function PreviewList({
 }) {
   if (items.length === 0) return null;
   return (
-    <div className="rounded-lg border border-border bg-background">
-      <div className="border-b border-border px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="rounded-lg border border-border fi-surface">
+      <div className="border-b border-border px-3 py-2 text-xs font-semibold uppercase tracking-wide fi-muted">
         {title}
       </div>
       <div className="divide-y divide-border">
@@ -204,24 +204,24 @@ function PreviewList({
             className="px-3 py-2"
           >
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium text-foreground">{item.name}</span>
+              <span className="font-medium fi-ink">{item.name}</span>
               {item.courseCode && (
-                <span className="rounded bg-pink-500/10 px-2 py-0.5 text-xs text-pink-600 dark:text-pink-300">
+                <span className="rounded bg-pink-500/10 px-2 py-0.5 text-xs text-pink-600 ">
                   {item.courseCode}
                 </span>
               )}
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs fi-muted">
                 {item.memberCount} member{item.memberCount === 1 ? "" : "s"}
               </span>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs fi-muted">
               {item.projectInstance}
               {item.changes.length > 0 ? ` · ${item.changes.join(", ")}` : ""}
             </p>
           </div>
         ))}
         {items.length > 5 && (
-          <div className="px-3 py-2 text-xs text-muted-foreground">
+          <div className="px-3 py-2 text-xs fi-muted">
             {items.length - 5} more not shown
           </div>
         )}
@@ -279,14 +279,14 @@ function TeamMatchPicker({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <label className="text-xs font-semibold uppercase tracking-wide fi-muted">
           Match to app team
         </label>
         {selectedTeam && (
           <button
             type="button"
             onClick={() => onSelect("")}
-            className="text-xs font-medium text-muted-foreground hover:text-foreground"
+            className="text-xs font-medium fi-muted hover:fi-ink"
           >
             Clear
           </button>
@@ -298,9 +298,9 @@ function TeamMatchPicker({
         className="input h-9 w-full text-sm"
         placeholder="Search imported teams..."
       />
-      <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-background">
+      <div className="max-h-48 overflow-y-auto rounded-lg border border-border fi-surface">
         {candidates.length === 0 ? (
-          <div className="px-3 py-3 text-xs text-muted-foreground">
+          <div className="px-3 py-3 text-xs fi-muted">
             No imported teams match that search.
           </div>
         ) : (
@@ -312,14 +312,14 @@ function TeamMatchPicker({
                 type="button"
                 onClick={() => onSelect(team._id)}
                 className={`flex w-full items-start justify-between gap-3 border-b border-border px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-pink-500/40 ${
-                  selected ? "bg-pink-500/10" : "bg-background"
+                  selected ? "bg-pink-500/10" : "fi-surface"
                 }`}
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-medium text-foreground">
+                  <span className="block truncate font-medium fi-ink">
                     {team.name}
                   </span>
-                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                  <span className="mt-0.5 block truncate text-xs fi-muted">
                     {[
                       team.courseCode,
                       team.demoDayProjectInstance,
@@ -334,10 +334,10 @@ function TeamMatchPicker({
                 <span
                   className={`rounded px-2 py-0.5 text-[11px] font-medium ${
                     selected
-                      ? "bg-pink-500/15 text-pink-700 dark:text-pink-300"
+                      ? "bg-pink-500/15 text-pink-700 "
                       : score > 0
-                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                        : "bg-muted text-muted-foreground"
+                        ? "bg-emerald-500/10 text-emerald-700 "
+                        : "bg-muted fi-muted"
                   }`}
                 >
                   {selected ? "selected" : score > 0 ? "suggested" : "manual"}
@@ -699,16 +699,16 @@ export function DemoDaySetupPanel({
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border border-border bg-card p-5">
+      <section className="rounded-lg border border-border fi-surface p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-pink-500">
               Demo Day Setup
             </p>
-            <h3 className="mt-1 text-xl font-heading font-bold text-foreground">
+            <h3 className="mt-1 text-xl fi-zone font-bold fi-ink">
               Import teams, assign boards, print QR codes
             </h3>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            <p className="mt-2 max-w-2xl text-sm fi-muted">
               This workflow is built for repeat semester setup. Airtable is the
               primary source when configured; CSV uploads use the same preview
               and apply path.
@@ -739,13 +739,13 @@ export function DemoDaySetupPanel({
         </div>
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-5">
+      <section className="rounded-lg border border-border fi-surface p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h4 className="text-lg font-heading font-semibold text-foreground">
+            <h4 className="text-lg fi-zone font-semibold fi-ink">
               Course Roster
             </h4>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            <p className="mt-1 max-w-2xl text-sm fi-muted">
               These course codes drive admin team forms and Demo Day filtering.
               Imports and board previews can detect courses, but admins can add
               a missing course directly.
@@ -755,7 +755,7 @@ export function DemoDaySetupPanel({
             type="button"
             onClick={handleSyncDetectedCourses}
             disabled={courseBusy || missingDetectedCourseCodes.length === 0}
-            className="btn-secondary text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            className="fi-key text-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
             Sync Detected
           </button>
@@ -768,10 +768,10 @@ export function DemoDaySetupPanel({
                 configuredCourseCodes.map((code) => (
                   <div
                     key={code}
-                    className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    className="flex items-center gap-2 rounded-lg border border-border fi-surface px-3 py-2 text-sm"
                   >
-                    <span className="font-medium text-foreground">{code}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="font-medium fi-ink">{code}</span>
+                    <span className="text-xs fi-muted">
                       {teamCountByCourse.get(code) || 0} project
                       {(teamCountByCourse.get(code) || 0) === 1 ? "" : "s"}
                     </span>
@@ -779,7 +779,7 @@ export function DemoDaySetupPanel({
                       type="button"
                       onClick={() => void handleRemoveCourseCode(code)}
                       disabled={courseBusy}
-                      className="ml-1 rounded px-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                      className="ml-1 rounded px-1.5 fi-muted hover:bg-muted hover:fi-ink disabled:cursor-not-allowed disabled:opacity-50"
                       aria-label={`Remove ${code}`}
                     >
                       x
@@ -787,7 +787,7 @@ export function DemoDaySetupPanel({
                   </div>
                 ))
               ) : (
-                <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2 text-sm fi-muted">
                   No course codes configured yet.
                 </div>
               )}
@@ -795,7 +795,7 @@ export function DemoDaySetupPanel({
 
             {missingDetectedCourseCodes.length > 0 && (
               <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 ">
                   Detected but not configured
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -810,7 +810,7 @@ export function DemoDaySetupPanel({
                         )
                       }
                       disabled={courseBusy}
-                      className="rounded-md border border-amber-500/25 bg-background px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:text-amber-200"
+                      className="rounded-md border border-amber-500/25 fi-surface px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-50 "
                     >
                       Add {code}
                     </button>
@@ -820,8 +820,8 @@ export function DemoDaySetupPanel({
             )}
           </div>
 
-          <div className="rounded-lg border border-border bg-background p-3">
-            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className="rounded-lg border border-border fi-surface p-3">
+            <label className="text-xs font-semibold uppercase tracking-wide fi-muted">
               Add Course
             </label>
             <div className="mt-2 flex gap-2">
@@ -841,25 +841,25 @@ export function DemoDaySetupPanel({
                 type="button"
                 onClick={() => void handleAddCourseCode()}
                 disabled={courseBusy}
-                className="btn-primary h-9 px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                className="fi-transport h-9 px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Add
               </button>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-2 text-xs fi-muted">
               Codes are saved uppercase and can include slashes, like DS488/688.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-5">
+      <section className="rounded-lg border border-border fi-surface p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h4 className="text-lg font-heading font-semibold text-foreground">
+            <h4 className="text-lg fi-zone font-semibold fi-ink">
               1. Team Import
             </h4>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm fi-muted">
               Select the Airtable semester, or upload Assignments.csv and
               Projects.csv if Airtable env vars are unavailable. Project
               Instances.csv can be added to preserve instance-level metadata.
@@ -869,7 +869,7 @@ export function DemoDaySetupPanel({
             type="button"
             onClick={() => void loadSemesters()}
             disabled={loadingSemesters}
-            className="btn-secondary text-sm"
+            className="fi-key text-sm"
           >
             {loadingSemesters ? "Refreshing..." : "Refresh Semesters"}
           </button>
@@ -878,7 +878,7 @@ export function DemoDaySetupPanel({
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(16rem,24rem)_1fr]">
           <div className="space-y-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
+              <label className="text-sm font-medium fi-ink">
                 Semester
               </label>
               {semesterStatus?.semesters.length ? (
@@ -910,12 +910,12 @@ export function DemoDaySetupPanel({
             </div>
 
             <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm">
-              <div className="font-medium text-foreground">
+              <div className="font-medium fi-ink">
                 {semesterStatus?.configured
                   ? "Airtable API configured"
                   : "CSV fallback"}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs fi-muted">
                 {semesterStatus?.error ||
                   "Airtable data will be fetched server-side from Convex."}
               </p>
@@ -924,11 +924,11 @@ export function DemoDaySetupPanel({
 
           <div className="space-y-3">
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-              <div className="rounded-lg border border-border bg-background p-3">
-                <p className="text-sm font-medium text-foreground">
+              <div className="rounded-lg border border-border fi-surface p-3">
+                <p className="text-sm font-medium fi-ink">
                   Assignments.csv
                 </p>
-                <p className="mt-1 truncate text-xs text-muted-foreground">
+                <p className="mt-1 truncate text-xs fi-muted">
                   {assignmentsFileName || "No file selected"}
                 </p>
                 <input
@@ -946,16 +946,16 @@ export function DemoDaySetupPanel({
                 <button
                   type="button"
                   onClick={() => assignmentsInputRef.current?.click()}
-                  className="btn-secondary mt-3 text-sm"
+                  className="fi-key mt-3 text-sm"
                 >
                   Choose File
                 </button>
               </div>
-              <div className="rounded-lg border border-border bg-background p-3">
-                <p className="text-sm font-medium text-foreground">
+              <div className="rounded-lg border border-border fi-surface p-3">
+                <p className="text-sm font-medium fi-ink">
                   Project Instances.csv
                 </p>
-                <p className="mt-1 truncate text-xs text-muted-foreground">
+                <p className="mt-1 truncate text-xs fi-muted">
                   {projectInstancesFileName || "Optional, but recommended"}
                 </p>
                 <input
@@ -973,16 +973,16 @@ export function DemoDaySetupPanel({
                 <button
                   type="button"
                   onClick={() => projectInstancesInputRef.current?.click()}
-                  className="btn-secondary mt-3 text-sm"
+                  className="fi-key mt-3 text-sm"
                 >
                   Choose File
                 </button>
               </div>
-              <div className="rounded-lg border border-border bg-background p-3">
-                <p className="text-sm font-medium text-foreground">
+              <div className="rounded-lg border border-border fi-surface p-3">
+                <p className="text-sm font-medium fi-ink">
                   Projects.csv
                 </p>
-                <p className="mt-1 truncate text-xs text-muted-foreground">
+                <p className="mt-1 truncate text-xs fi-muted">
                   {projectsFileName || "No file selected"}
                 </p>
                 <input
@@ -1000,7 +1000,7 @@ export function DemoDaySetupPanel({
                 <button
                   type="button"
                   onClick={() => projectsInputRef.current?.click()}
-                  className="btn-secondary mt-3 text-sm"
+                  className="fi-key mt-3 text-sm"
                 >
                   Choose File
                 </button>
@@ -1012,7 +1012,7 @@ export function DemoDaySetupPanel({
                 type="button"
                 onClick={handlePreviewImport}
                 disabled={importBusy || !canPreviewImport}
-                className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                className="fi-key disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {importBusy ? "Working..." : "Preview Import"}
               </button>
@@ -1020,7 +1020,7 @@ export function DemoDaySetupPanel({
                 type="button"
                 onClick={handleApplyImport}
                 disabled={importBusy || !importPreview?.success}
-                className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+                className="fi-transport disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Apply Import
               </button>
@@ -1060,12 +1060,12 @@ export function DemoDaySetupPanel({
                 <CountPill label="Source" value={importPreview.source} />
               </div>
               {importPreview.error && (
-                <p className="mt-3 text-sm text-red-600 dark:text-red-300">
+                <p className="mt-3 text-sm text-red-600 ">
                   {importPreview.error}
                 </p>
               )}
               {importPreview.duplicateNames.length > 0 && (
-                <p className="mt-3 text-sm text-amber-700 dark:text-amber-300">
+                <p className="mt-3 text-sm text-amber-700 ">
                   Duplicate project names:{" "}
                   {importPreview.duplicateNames.join(", ")}
                 </p>
@@ -1078,10 +1078,10 @@ export function DemoDaySetupPanel({
             </div>
             {importPreview.skipped.length > 0 && (
               <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3">
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-sm font-medium fi-ink">
                   Skipped rows
                 </p>
-                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                <div className="mt-2 space-y-1 text-xs fi-muted">
                   {importPreview.skipped.slice(0, 6).map((row, index) => (
                     <p key={`${row.projectInstance}-${index}`}>
                       {row.projectInstance || "Missing project"}: {row.reason}
@@ -1094,13 +1094,13 @@ export function DemoDaySetupPanel({
         )}
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-5">
+      <section className="rounded-lg border border-border fi-surface p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h4 className="text-lg font-heading font-semibold text-foreground">
+            <h4 className="text-lg fi-zone font-semibold fi-ink">
               2. Board Assignments
             </h4>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm fi-muted">
               Upload the board assignment export as-is. Rows match by project
               instance when present, otherwise by project/team or sign name plus
               course.
@@ -1124,14 +1124,14 @@ export function DemoDaySetupPanel({
           <button
             type="button"
             onClick={() => boardInputRef.current?.click()}
-            className="btn-secondary text-sm"
+            className="fi-key text-sm"
           >
             Choose Board CSV
           </button>
         </div>
 
         <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <p className="truncate text-sm text-muted-foreground">
+          <p className="truncate text-sm fi-muted">
             {boardFileName || "No board assignment file selected"}
           </p>
           <div className="flex flex-wrap justify-end gap-2">
@@ -1139,7 +1139,7 @@ export function DemoDaySetupPanel({
               type="button"
               onClick={handlePreviewBoardCsv}
               disabled={boardBusy || !boardCsv}
-              className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
+              className="fi-key disabled:cursor-not-allowed disabled:opacity-50"
             >
               {boardBusy ? "Working..." : "Preview Boards"}
             </button>
@@ -1147,7 +1147,7 @@ export function DemoDaySetupPanel({
               type="button"
               onClick={handleApplyBoardCsv}
               disabled={boardBusy || !canApplyBoards}
-              className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="fi-transport disabled:cursor-not-allowed disabled:opacity-50"
             >
               Apply Boards
             </button>
@@ -1195,7 +1195,7 @@ export function DemoDaySetupPanel({
                 />
               </div>
               {boardPreview.unmatched.length > 0 && (
-                <p className="mt-3 text-sm text-muted-foreground">
+                <p className="mt-3 text-sm fi-muted">
                   If a course has Project Instance rows but no Assignment rows,
                   rerun Team Import first. Project Instances can now create
                   zero-member teams, then the remaining name mismatches can be
@@ -1205,13 +1205,13 @@ export function DemoDaySetupPanel({
               )}
             </div>
             {boardPreview.matched.length > 0 && (
-              <div className="rounded-lg border border-border bg-background">
+              <div className="rounded-lg border border-border fi-surface">
                 <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <div className="text-xs font-semibold uppercase tracking-wide fi-muted">
                     Matched assignments
                   </div>
                   {boardPreview.matched.length > 6 && (
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs fi-muted">
                       showing 6 of {boardPreview.matched.length}
                     </div>
                   )}
@@ -1219,10 +1219,10 @@ export function DemoDaySetupPanel({
                 <div className="divide-y divide-border">
                   {boardPreview.matched.slice(0, 6).map((row) => (
                     <div key={row.matchKey} className="px-3 py-2">
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-sm font-medium fi-ink">
                         {row.signName || row.teamName}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs fi-muted">
                         {row.projectInstance || row.projectName || row.matchKey}{" "}
                         · Round {row.round} · Board {row.boardNumber}
                         {row.time ? ` · ${row.time}` : ""}
@@ -1237,15 +1237,15 @@ export function DemoDaySetupPanel({
               <div className="rounded-lg border border-amber-500/25 bg-amber-500/5">
                 <div className="flex flex-col gap-1 border-b border-amber-500/20 px-4 py-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">
+                    <p className="text-sm font-semibold fi-ink">
                       Reconciliation workbench
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-xs fi-muted">
                       Match each board-row slip to an imported app team, or
                       create a zero-member team directly from the board row.
                     </p>
                   </div>
-                  <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                  <p className="text-xs font-medium text-amber-700 ">
                     {unresolvedBoardRows.length} remaining
                   </p>
                 </div>
@@ -1258,32 +1258,32 @@ export function DemoDaySetupPanel({
                         key={row.matchKey}
                         className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(22rem,1.2fr)]"
                       >
-                        <div className="min-w-0 rounded-lg border border-amber-500/20 bg-background/80 p-3">
+                        <div className="min-w-0 rounded-lg border border-amber-500/20 fi-surface/80 p-3">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                            <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 ">
                               Board {row.boardNumber}
                             </span>
-                            <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                            <span className="rounded bg-muted px-2 py-0.5 text-xs fi-muted">
                               Round {row.round}
                             </span>
                             {row.courseCode && (
-                              <span className="rounded bg-pink-500/10 px-2 py-0.5 text-xs text-pink-700 dark:text-pink-300">
+                              <span className="rounded bg-pink-500/10 px-2 py-0.5 text-xs text-pink-700 ">
                                 {row.courseCode}
                               </span>
                             )}
                           </div>
-                          <p className="mt-3 break-words text-sm font-semibold text-foreground">
+                          <p className="mt-3 break-words text-sm font-semibold fi-ink">
                             {getBoardRowTitle(row)}
                           </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
+                          <p className="mt-1 text-xs fi-muted">
                             {getBoardRowMeta(row)}
                           </p>
                           {row.fullSignName && (
-                            <p className="mt-2 break-words text-xs text-muted-foreground">
+                            <p className="mt-2 break-words text-xs fi-muted">
                               Sign: {row.fullSignName}
                             </p>
                           )}
-                          <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+                          <p className="mt-3 text-xs text-amber-700 ">
                             {row.reason}
                           </p>
                         </div>
@@ -1322,15 +1322,15 @@ export function DemoDaySetupPanel({
                             className={`rounded-lg border p-3 ${
                               shouldCreateTeam
                                 ? "border-emerald-500/30 bg-emerald-500/10"
-                                : "border-border bg-background"
+                                : "border-border fi-surface"
                             }`}
                           >
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-foreground">
+                                <p className="text-sm font-medium fi-ink">
                                   Create a new team from this board row
                                 </p>
-                                <p className="mt-1 text-xs text-muted-foreground">
+                                <p className="mt-1 text-xs fi-muted">
                                   {getBoardRowTitle(row)}
                                   {row.courseCode ? ` · ${row.courseCode}` : ""}
                                 </p>
@@ -1351,8 +1351,8 @@ export function DemoDaySetupPanel({
                                 }}
                                 className={
                                   shouldCreateTeam
-                                    ? "btn-secondary text-sm"
-                                    : "btn-primary text-sm"
+                                    ? "fi-key text-sm"
+                                    : "fi-transport text-sm"
                                 }
                               >
                                 {shouldCreateTeam ? "Do Not Create" : "Create"}
@@ -1370,10 +1370,10 @@ export function DemoDaySetupPanel({
             {(boardPreview.invalidRows.length > 0 ||
               boardPreview.duplicateProjectInstances.length > 0) && (
               <div className="rounded-lg border border-red-500/25 bg-red-500/5 p-3 text-sm">
-                <p className="font-medium text-foreground">
+                <p className="font-medium fi-ink">
                   Blocking CSV issues
                 </p>
-                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                <div className="mt-2 space-y-1 text-xs fi-muted">
                   {boardPreview.invalidRows.slice(0, 5).map((row) => (
                     <p key={`invalid-${row.rowNumber}`}>
                       Row {row.rowNumber}: {row.reason}
@@ -1392,17 +1392,17 @@ export function DemoDaySetupPanel({
         )}
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-5">
+      <section className="rounded-lg border border-border fi-surface p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h4 className="text-lg font-heading font-semibold text-foreground">
+            <h4 className="text-lg fi-zone font-semibold fi-ink">
               3. QR Code Package
             </h4>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm fi-muted">
               Generates labeled SVG files, print-by-course, print-by-board, and
               the projects manifest CSV.
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-2 text-xs fi-muted">
               Event window: {formatDateTime(event.startDate)} to{" "}
               {formatDateTime(event.endDate)}
             </p>
@@ -1411,7 +1411,7 @@ export function DemoDaySetupPanel({
             type="button"
             onClick={onDownloadQrCodes}
             disabled={isGeneratingQr || visibleTeams.length === 0}
-            className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+            className="fi-transport disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isGeneratingQr ? "Generating..." : "Download QR ZIP"}
           </button>

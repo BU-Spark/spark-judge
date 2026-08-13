@@ -1,0 +1,2 @@
+.tsm-dialog { max-height: calc(100vh - 2rem); overflow: auto; background: var(--fi-chassis); border: 1px solid var(--fi-chassis-edge); border-radius: var(--fi-r-module); box-shadow: var(--fi-shadow-unit); }
+.tsm-dialog label { font-family: var(--fi-font-mono); letter-spacing: .08em; text-transform: uppercase; font-size: .68rem; }

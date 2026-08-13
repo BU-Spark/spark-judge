@@ -72,7 +72,7 @@ function SortButton({
           direction: isActive && sortConfig.direction === "asc" ? "desc" : "asc",
         })
       }
-      className="flex items-center gap-1 hover:text-foreground transition-colors group"
+      className="flex items-center gap-1 hover:fi-ink transition-colors group"
     >
       {label}
       <span className="flex flex-col ml-1">
@@ -80,7 +80,7 @@ function SortButton({
           className={`w-2 h-2 -mb-0.5 ${
             isActive && sortConfig.direction === "asc"
               ? "text-primary"
-              : "text-muted-foreground/30 group-hover:text-muted-foreground"
+              : "fi-muted/30 group-hover:fi-muted"
           }`}
           fill="currentColor"
           viewBox="0 0 24 24"
@@ -91,7 +91,7 @@ function SortButton({
           className={`w-2 h-2 ${
             isActive && sortConfig.direction === "desc"
               ? "text-primary"
-              : "text-muted-foreground/30 group-hover:text-muted-foreground"
+              : "fi-muted/30 group-hover:fi-muted"
           }`}
           fill="currentColor"
           viewBox="0 0 24 24"
@@ -136,9 +136,9 @@ export function EventsList({
   const allEvents = [...events.active, ...events.upcoming, ...events.past];
 
   const statusStyles: Record<"upcoming" | "active" | "past", string> = {
-    active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-    upcoming: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
-    past: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
+    active: "bg-emerald-500/10 text-emerald-600  border-emerald-500/20",
+    upcoming: "bg-sky-500/10 text-sky-600  border-sky-500/20",
+    past: "bg-zinc-500/10 text-zinc-600  border-zinc-500/20",
   };
 
   const handleRemoveEvent = async (eventId: Id<"events">, name: string) => {
@@ -177,38 +177,38 @@ export function EventsList({
 
   if (sortedEvents.length === 0) {
     return (
-      <div className="card-static text-center py-12 fade-in">
+      <div className="fi-panel text-center py-12 fade-in">
         <div className="mb-4 flex justify-center">
-          <CalendarIcon className="h-14 w-14 text-muted-foreground" />
+          <CalendarIcon className="h-14 w-14 fi-muted" />
         </div>
-        <h3 className="text-xl font-heading font-semibold text-foreground mb-2">No Events Yet</h3>
-        <p className="text-muted-foreground">Create your first event to get started!</p>
+        <h3 className="text-xl fi-zone font-semibold fi-ink mb-2">No Events Yet</h3>
+        <p className="fi-muted">Create your first event to get started!</p>
       </div>
     );
   }
 
   return (
-    <div className="card-static overflow-hidden fade-in p-0 bg-card shadow-sm border border-border rounded-lg max-w-full">
+    <div className="fi-panel overflow-hidden fade-in p-0 fi-surface shadow-sm border border-border rounded-lg max-w-full">
       <div className="max-w-full overflow-x-auto">
         <table className="min-w-full table-fixed md:table-auto">
           <thead className="bg-muted border-b border-border">
             <tr>
-              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold fi-muted uppercase tracking-wider">
                 <SortButton field="name" label="Event Name" sortConfig={sortConfig} onSort={setSortConfig} />
               </th>
-              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold fi-muted uppercase tracking-wider">
                 <SortButton field="status" label="Status" sortConfig={sortConfig} onSort={setSortConfig} />
               </th>
-              <th className="hidden sm:table-cell px-4 sm:px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <th className="hidden sm:table-cell px-4 sm:px-6 py-3 text-left text-xs font-semibold fi-muted uppercase tracking-wider">
                 <SortButton field="type" label="Event Type" sortConfig={sortConfig} onSort={setSortConfig} />
               </th>
-              <th className="hidden md:table-cell px-4 sm:px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <th className="hidden md:table-cell px-4 sm:px-6 py-3 text-left text-xs font-semibold fi-muted uppercase tracking-wider">
                 <SortButton field="teamCount" label="Teams" sortConfig={sortConfig} onSort={setSortConfig} />
               </th>
-              <th className="hidden lg:table-cell px-4 sm:px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <th className="hidden lg:table-cell px-4 sm:px-6 py-3 text-left text-xs font-semibold fi-muted uppercase tracking-wider">
                 <SortButton field="startDate" label="Date" sortConfig={sortConfig} onSort={setSortConfig} />
               </th>
-              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold fi-muted uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -222,11 +222,11 @@ export function EventsList({
               >
                 <td className="px-4 sm:px-6 py-4">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="text-sm font-medium text-foreground break-words">
+                    <span className="text-sm font-medium fi-ink break-words">
                       {event.name}
                     </span>
                     {event.hidden && (
-                      <span className="shrink-0 px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/15 text-xs font-medium text-amber-600 dark:text-amber-400">
+                      <span className="shrink-0 px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/15 text-xs font-medium text-amber-600 ">
                         Admin only
                       </span>
                     )}
@@ -238,12 +238,12 @@ export function EventsList({
                   </span>
                 </td>
                 <td className="hidden sm:table-cell px-4 sm:px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm fi-muted">
                     {getEventDisplayLabel(event.mode)}
                   </span>
                 </td>
                 <td className="hidden md:table-cell px-4 sm:px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm fi-muted">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -255,7 +255,7 @@ export function EventsList({
                     {event.teamCount}
                   </div>
                 </td>
-                <td className="hidden lg:table-cell px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                <td className="hidden lg:table-cell px-4 sm:px-6 py-4 whitespace-nowrap text-sm fi-muted">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path

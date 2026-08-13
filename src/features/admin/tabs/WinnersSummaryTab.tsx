@@ -45,15 +45,15 @@ export function WinnersSummaryTab({
 
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
-        <div className="flex items-center justify-between bg-card p-6 rounded-xl border border-border shadow-sm">
+        <div className="flex items-center justify-between fi-surface p-6 rounded-xl border border-border shadow-sm">
           <div>
-            <h2 className="text-2xl font-heading font-bold text-foreground flex items-center gap-3">
+            <h2 className="text-2xl fi-zone font-bold fi-ink flex items-center gap-3">
               <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
               Code &amp; Tell Results
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm fi-muted mt-1">
               {codeAndTellSummary?.totalBallots || 0} valid ballot
               {(codeAndTellSummary?.totalBallots || 0) === 1 ? "" : "s"} in the
               score tally
@@ -66,46 +66,46 @@ export function WinnersSummaryTab({
             </p>
           </div>
           {winningTeam ? (
-            <span className="px-4 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium text-sm rounded-full border border-amber-500/20">
+            <span className="px-4 py-1.5 bg-amber-500/10 text-amber-600  font-medium text-sm rounded-full border border-amber-500/20">
               Winner selected
             </span>
           ) : (
-            <span className="px-4 py-1.5 bg-muted text-muted-foreground font-medium text-sm rounded-full border border-border">
+            <span className="px-4 py-1.5 bg-muted fi-muted font-medium text-sm rounded-full border border-border">
               Winner pending
             </span>
           )}
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(18rem,24rem)_1fr]">
-          <div className="card-static p-6 bg-card border border-border">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2">
+          <div className="fi-panel p-6 fi-surface border border-border">
+            <h3 className="text-sm font-bold uppercase tracking-wider fi-muted mb-2">
               Final Winner
             </h3>
             {winningTeam ? (
               <>
-                <div className="text-2xl font-heading font-bold text-foreground">
+                <div className="text-2xl fi-zone font-bold fi-ink">
                   {winningTeam.name}
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-2 text-sm fi-muted">
                   {winningTeam.description || "No description"}
                 </p>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm fi-muted">
                 No winner selected yet.
               </p>
             )}
           </div>
 
-          <div className="card-static p-6 bg-card border border-border">
+          <div className="fi-panel p-6 fi-surface border border-border">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              <h3 className="text-sm font-bold uppercase tracking-wider fi-muted">
                 Top Standings
               </h3>
               <CodeAndTellScoringExplainer />
             </div>
             {standings.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm fi-muted">
                 No valid ballots have been submitted yet.
               </p>
             ) : (
@@ -113,14 +113,14 @@ export function WinnersSummaryTab({
                 <table className="min-w-[44rem] w-full text-left text-sm">
                   <thead className="bg-muted/20 border-b border-border">
                     <tr>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Rank</th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Project</th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Points</th>
-                      <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Ballots</th>
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">Rank</th>
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">Project</th>
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">Points</th>
+                      <th className="px-4 py-3 text-xs font-bold fi-muted uppercase tracking-wide">Ballots</th>
                       {CODE_AND_TELL_RANK_HEADERS.map((label) => (
                         <th
                           key={label}
-                          className="px-2 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide whitespace-nowrap"
+                          className="px-2 py-3 text-center text-xs font-bold fi-muted uppercase tracking-wide whitespace-nowrap"
                         >
                           {label}
                         </th>
@@ -130,14 +130,14 @@ export function WinnersSummaryTab({
                   <tbody className="divide-y divide-border">
                     {standings.slice(0, 5).map((row, index) => (
                       <tr key={row.teamId} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-4 py-3 text-sm font-bold text-foreground">#{index + 1}</td>
-                        <td className="px-4 py-3 text-sm font-semibold text-foreground">{row.name}</td>
-                        <td className="px-4 py-3 text-sm text-foreground">{row.points}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{row.ballotsCount}</td>
+                        <td className="px-4 py-3 text-sm font-bold fi-ink">#{index + 1}</td>
+                        <td className="px-4 py-3 text-sm font-semibold fi-ink">{row.name}</td>
+                        <td className="px-4 py-3 text-sm fi-ink">{row.points}</td>
+                        <td className="px-4 py-3 text-sm fi-muted">{row.ballotsCount}</td>
                         {CODE_AND_TELL_RANK_HEADERS.map((_, rankIndex) => (
                           <td
                             key={rankIndex}
-                            className="px-2 py-3 text-center text-sm text-muted-foreground"
+                            className="px-2 py-3 text-center text-sm fi-muted"
                           >
                             {row.rankCounts[rankIndex] ?? 0}
                           </td>
@@ -159,42 +159,42 @@ export function WinnersSummaryTab({
 
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
-        <div className="card-static p-6 bg-card border border-border">
-          <h2 className="text-2xl font-heading font-bold text-foreground">Demo Day Winners</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+        <div className="fi-panel p-6 fi-surface border border-border">
+          <h2 className="text-2xl fi-zone font-bold fi-ink">Demo Day Winners</h2>
+          <p className="mt-1 text-sm fi-muted">
             {winningTeam ? "Winner selections are saved for this event." : "Winners have not been recorded yet."}
           </p>
         </div>
 
         {winningTeam ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(18rem,24rem)_1fr]">
-            <div className="card-static p-6 bg-card border border-border">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2">
+            <div className="fi-panel p-6 fi-surface border border-border">
+              <h3 className="text-sm font-bold uppercase tracking-wider fi-muted mb-2">
                 Overall Winner
               </h3>
-              <div className="text-2xl font-heading font-bold text-foreground">
+              <div className="text-2xl fi-zone font-bold fi-ink">
                 {winningTeam.name}
               </div>
             </div>
-            <div className="card-static p-6 bg-card border border-border">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">
+            <div className="fi-panel p-6 fi-surface border border-border">
+              <h3 className="text-sm font-bold uppercase tracking-wider fi-muted mb-4">
                 Category Winners
               </h3>
               {categoryWinners && categoryWinners.length > 0 ? (
                 <div className="space-y-3">
                   {categoryWinners.map((winner) => (
                     <div key={winner.category} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-                      <span className="text-sm font-medium text-muted-foreground">
+                      <span className="text-sm font-medium fi-muted">
                         {winner.category}
                       </span>
-                      <span className="text-sm font-semibold text-foreground">
+                      <span className="text-sm font-semibold fi-ink">
                         {teamMap.get(String(winner.teamId))?.name || "Unknown"}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm fi-muted">
                   No category winners selected yet.
                 </p>
               )}
@@ -207,8 +207,8 @@ export function WinnersSummaryTab({
 
   if (!eventPrizes || !prizeWinners) {
     return (
-      <div className="card-static p-8 text-center bg-card border-dashed">
-        <p className="text-muted-foreground">Winners have not been recorded yet.</p>
+      <div className="fi-panel p-8 text-center fi-surface border-dashed">
+        <p className="fi-muted">Winners have not been recorded yet.</p>
       </div>
     );
   }
@@ -233,20 +233,20 @@ export function WinnersSummaryTab({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      <div className="flex items-center justify-between bg-card p-6 rounded-xl border border-border shadow-sm">
+      <div className="flex items-center justify-between fi-surface p-6 rounded-xl border border-border shadow-sm">
         <div>
-          <h2 className="text-2xl font-heading font-bold text-foreground flex items-center gap-3">
+          <h2 className="text-2xl fi-zone font-bold fi-ink flex items-center gap-3">
             <svg className="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
             </svg>
             Prize Winners Summary
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm fi-muted mt-1">
             {assignedCount} of {eventPrizes.length} prizes awarded. {isComplete ? "All winners selected!" : ""}
           </p>
         </div>
         {isComplete && (
-          <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium text-sm rounded-full border border-emerald-500/20">
+          <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-600  font-medium text-sm rounded-full border border-emerald-500/20">
             Selections Complete
           </span>
         )}
@@ -255,15 +255,15 @@ export function WinnersSummaryTab({
       <div className="space-y-10">
         {groups.map((group) => (
           <div key={group.type} className="space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b border-border pb-2">
+            <h3 className="text-sm font-bold uppercase tracking-wider fi-muted border-b border-border pb-2">
               {group.title}
             </h3>
-            <div className="divide-y divide-border border border-border rounded-xl bg-card overflow-hidden">
+            <div className="divide-y divide-border border border-border rounded-xl fi-surface overflow-hidden">
               {group.items.map(({ prize, winningTeam, notes }) => (
                 <div key={prize._id} className="flex flex-col md:flex-row md:items-center p-4 gap-4 hover:bg-muted/10 transition-colors">
                   <div className="flex-1 min-w-[200px]">
-                    <h4 className="font-bold text-foreground">{prize.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <h4 className="font-bold fi-ink">{prize.name}</h4>
+                    <p className="text-xs fi-muted mt-0.5">
                       {prize.type === "track" && prize.track ? `Track: ${prize.track}` :
                         prize.type === "sponsor" ? `Sponsor: ${prize.sponsorName}` :
                           prize.type === "track_sponsor" ? `${prize.sponsorName} • ${prize.track}` :
@@ -275,17 +275,17 @@ export function WinnersSummaryTab({
                     {winningTeam ? (
                       <>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">Winner</span>
-                          <span className="text-base font-bold text-foreground">{winningTeam.name}</span>
+                          <span className="text-sm font-semibold text-emerald-600  bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">Winner</span>
+                          <span className="text-base font-bold fi-ink">{winningTeam.name}</span>
                         </div>
                         {notes && (
-                          <p className="text-xs text-muted-foreground italic pl-3 border-l-2 border-border/50">
+                          <p className="text-xs fi-muted italic pl-3 border-l-2 border-border/50">
                             "{notes}"
                           </p>
                         )}
                       </>
                     ) : (
-                      <span className="text-sm text-muted-foreground bg-muted/20 px-2 py-1 rounded border border-dashed border-border w-fit">
+                      <span className="text-sm fi-muted bg-muted/20 px-2 py-1 rounded border border-dashed border-border w-fit">
                         No winner selected yet
                       </span>
                     )}
@@ -297,7 +297,7 @@ export function WinnersSummaryTab({
         ))}
 
         {prizesWithWinners.length === 0 && (
-          <div className="card-static py-12 text-center text-muted-foreground border-dashed">
+          <div className="fi-panel py-12 text-center fi-muted border-dashed">
             No prizes are configured for this event.
           </div>
         )}

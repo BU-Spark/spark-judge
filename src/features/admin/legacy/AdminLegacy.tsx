@@ -158,7 +158,7 @@ function StyledCheckbox({
       />
       <span
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background ${
-          checked ? "border-primary bg-primary" : "border-border bg-background"
+          checked ? "border-primary bg-primary" : "border-border fi-surface"
         }`}
       >
         <svg
@@ -245,7 +245,7 @@ function StyledNumberInput({
         <button
           type="button"
           onClick={() => applyValue(value + step)}
-          className="flex-1 border-b border-border text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex-1 border-b border-border fi-muted transition-colors hover:bg-muted/70 hover:fi-ink disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Increase value"
           disabled={disabled || atMax}
         >
@@ -266,7 +266,7 @@ function StyledNumberInput({
         <button
           type="button"
           onClick={() => applyValue(value - step)}
-          className="flex-1 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex-1 fi-muted transition-colors hover:bg-muted/70 hover:fi-ink disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Decrease value"
           disabled={disabled || atMin}
         >
@@ -319,13 +319,13 @@ function PrizeCatalogEditor({
 
   const typeBadgeClass: Record<PrizeType, string> = {
     general:
-      "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
+      "bg-teal-500/15 text-teal-700  border-teal-500/30",
     track:
-      "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30",
+      "bg-indigo-500/15 text-indigo-700  border-indigo-500/30",
     sponsor:
-      "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+      "bg-amber-500/15 text-amber-700  border-amber-500/30",
     track_sponsor:
-      "bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-500/30",
+      "bg-fuchsia-500/15 text-fuchsia-700  border-fuchsia-500/30",
   };
 
   const prizeDescriptor = (prize: PrizeDraft) => {
@@ -392,17 +392,17 @@ function PrizeCatalogEditor({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm fi-muted">
             Configure the prizes teams can submit to.
           </p>
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
-            <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-1 text-muted-foreground">
+            <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-1 fi-muted">
               {prizes.length} total
             </span>
-            <span className="inline-flex items-center rounded-full border border-teal-500/30 bg-teal-500/10 px-2.5 py-1 text-teal-700 dark:text-teal-300">
+            <span className="inline-flex items-center rounded-full border border-teal-500/30 bg-teal-500/10 px-2.5 py-1 text-teal-700 ">
               {activePrizeCount} active
             </span>
-            <span className="inline-flex items-center rounded-full border border-zinc-500/30 bg-zinc-500/10 px-2.5 py-1 text-zinc-700 dark:text-zinc-300">
+            <span className="inline-flex items-center rounded-full border border-zinc-500/30 bg-zinc-500/10 px-2.5 py-1 text-zinc-700 ">
               {Math.max(prizes.length - activePrizeCount, 0)} inactive
             </span>
           </div>
@@ -411,23 +411,23 @@ function PrizeCatalogEditor({
           type="button"
           onClick={addPrize}
           disabled={disabled}
-          className="btn-secondary text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          className="fi-key text-sm disabled:opacity-60 disabled:cursor-not-allowed"
         >
           + Add Prize
         </button>
       </div>
 
       {prizes.length === 0 && (
-        <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm fi-muted">
           No prizes yet. Add at least one prize to run award-based judging.
         </div>
       )}
 
       {prizes.length > 0 && (
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(24rem,28rem)_1fr] gap-4">
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="rounded-lg border border-border fi-surface overflow-hidden">
             <div className="px-4 py-3 border-b border-border bg-muted/20">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs uppercase tracking-wide fi-muted">
                 Prize List
               </p>
             </div>
@@ -447,11 +447,11 @@ function PrizeCatalogEditor({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="font-medium text-foreground truncate">
+                        <p className="font-medium fi-ink truncate">
                           {index + 1}.{" "}
                           {prize.name.trim() || `Untitled Prize ${index + 1}`}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        <p className="text-xs fi-muted mt-0.5 truncate">
                           {prizeDescriptor(prize)}
                         </p>
                       </div>
@@ -462,7 +462,7 @@ function PrizeCatalogEditor({
                           {PRIZE_TYPE_LABELS[prize.type]}
                         </span>
                         {!prize.isActive && (
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-[11px] fi-muted">
                             Inactive
                           </span>
                         )}
@@ -474,20 +474,20 @@ function PrizeCatalogEditor({
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+          <div className="rounded-lg border border-border fi-surface p-4 space-y-4">
             {!selectedPrize ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm fi-muted">
                 Select a prize to edit details.
               </p>
             ) : (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">
+                    <p className="text-sm font-semibold fi-ink">
                       {selectedPrize.name.trim() ||
                         `Prize ${selectedPrizeIndex + 1}`}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs fi-muted">
                       Order #{selectedPrize.sortOrder + 1}
                     </p>
                   </div>
@@ -498,7 +498,7 @@ function PrizeCatalogEditor({
                         movePrize(selectedPrizeIndex, selectedPrizeIndex - 1)
                       }
                       disabled={disabled || selectedPrizeIndex === 0}
-                      className="btn-ghost text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="fi-key text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Up
                     </button>
@@ -510,7 +510,7 @@ function PrizeCatalogEditor({
                       disabled={
                         disabled || selectedPrizeIndex === prizes.length - 1
                       }
-                      className="btn-ghost text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="fi-key text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Down
                     </button>
@@ -518,7 +518,7 @@ function PrizeCatalogEditor({
                       type="button"
                       onClick={() => removePrize(selectedPrizeIndex)}
                       disabled={disabled}
-                      className="btn-ghost text-xs text-red-500 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="fi-key text-xs text-red-500 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Delete
                     </button>
@@ -527,7 +527,7 @@ function PrizeCatalogEditor({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">
+                    <label className="text-xs font-medium fi-muted">
                       Name
                     </label>
                     <input
@@ -545,7 +545,7 @@ function PrizeCatalogEditor({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">
+                    <label className="text-xs font-medium fi-muted">
                       Type
                     </label>
                     <select
@@ -572,7 +572,7 @@ function PrizeCatalogEditor({
                   {(selectedPrize.type === "track" ||
                     selectedPrize.type === "track_sponsor") && (
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">
+                      <label className="text-xs font-medium fi-muted">
                         Track
                       </label>
                       <select
@@ -599,7 +599,7 @@ function PrizeCatalogEditor({
                   {(selectedPrize.type === "sponsor" ||
                     selectedPrize.type === "track_sponsor") && (
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">
+                      <label className="text-xs font-medium fi-muted">
                         Sponsor
                       </label>
                       <input
@@ -619,7 +619,7 @@ function PrizeCatalogEditor({
                   )}
 
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">
+                    <label className="text-xs font-medium fi-muted">
                       Score Hint
                     </label>
                     <select
@@ -650,7 +650,7 @@ function PrizeCatalogEditor({
 
                 {selectedPrize.scoreBasis === "categories" && (
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">
+                    <p className="text-xs font-medium fi-muted">
                       Use categories for this prize
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -673,7 +673,7 @@ function PrizeCatalogEditor({
                             }}
                             disabled={disabled}
                             className="rounded-md border border-border px-3 py-1.5"
-                            labelClassName="text-xs text-foreground"
+                            labelClassName="text-xs fi-ink"
                             label={category}
                           />
                         );
@@ -683,7 +683,7 @@ function PrizeCatalogEditor({
                 )}
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">
+                  <label className="text-xs font-medium fi-muted">
                     Description
                   </label>
                   <textarea
@@ -711,7 +711,7 @@ function PrizeCatalogEditor({
                   }
                   disabled={disabled}
                   label="Prize is active"
-                  labelClassName="text-sm text-foreground"
+                  labelClassName="text-sm fi-ink"
                 />
               </>
             )}
@@ -755,7 +755,7 @@ export function AdminDashboard({
           <button
             type="button"
             onClick={() => setIsCreateOpen(false)}
-            className="flex items-center gap-2 btn-ghost"
+            className="flex items-center gap-2 fi-key"
           >
             <svg
               className="w-5 h-5"
@@ -773,7 +773,7 @@ export function AdminDashboard({
             Back to Dashboard
           </button>
           <div>
-            <h1 className="text-3xl font-heading font-bold text-foreground">
+            <h1 className="text-3xl fi-zone font-bold fi-ink">
               Create Event
             </h1>
           </div>
@@ -784,7 +784,7 @@ export function AdminDashboard({
         <>
           <button
             onClick={onBackToLanding}
-            className="flex items-center gap-2 btn-ghost mb-6 fade-in"
+            className="flex items-center gap-2 fi-key mb-6 fade-in"
           >
             <svg
               className="w-5 h-5"
@@ -804,16 +804,16 @@ export function AdminDashboard({
 
           <div className="flex justify-between items-center mb-8 fade-in">
             <div>
-              <h1 className="text-3xl font-heading font-bold text-foreground mb-2">
+              <h1 className="text-3xl fi-zone font-bold fi-ink mb-2">
                 Admin Dashboard
               </h1>
-              <p className="text-muted-foreground">
+              <p className="fi-muted">
                 Manage your hackathon events and teams
               </p>
             </div>
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="btn-primary flex items-center gap-2"
+              className="fi-transport flex items-center gap-2"
             >
               <svg
                 className="w-5 h-5"
@@ -944,7 +944,7 @@ export function AdminPrizeWinnersPage({
       <button
         type="button"
         onClick={onBackToEvent}
-        className="flex items-center gap-2 btn-ghost shrink-0"
+        className="flex items-center gap-2 fi-key shrink-0"
       >
         <svg
           className="w-5 h-5"
@@ -973,7 +973,7 @@ export function AdminPrizeWinnersPage({
               onSubmit={setWinners}
             />
           ) : (
-            <div className="card-static p-6 bg-card text-muted-foreground">
+            <div className="fi-panel p-6 fi-surface fi-muted">
               Add teams first, then select winners.
             </div>
           )
@@ -1107,7 +1107,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
       case "upcoming":
         return "bg-blue-500/15 text-blue-500 border-blue-500/30";
       default:
-        return "bg-muted text-muted-foreground border-border";
+        return "bg-muted fi-muted border-border";
     }
   }, [derivedStatus]);
 
@@ -1339,15 +1339,15 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 fade-in">
-      <div className="card-static border border-border bg-card">
+      <div className="fi-panel border border-border fi-surface">
         <div className="flex gap-1 border-b border-border px-5 pt-5">
           <button
             type="button"
             onClick={() => setActiveTab("details")}
             className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
               activeTab === "details"
-                ? "bg-background text-foreground border-t border-x border-border"
-                : "text-muted-foreground hover:text-foreground"
+                ? "fi-surface fi-ink border-t border-x border-border"
+                : "fi-muted hover:fi-ink"
             }`}
           >
             Details
@@ -1357,8 +1357,8 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
             onClick={() => setActiveTab("teams")}
             className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
               activeTab === "teams"
-                ? "bg-background text-foreground border-t border-x border-border"
-                : "text-muted-foreground hover:text-foreground"
+                ? "fi-surface fi-ink border-t border-x border-border"
+                : "fi-muted hover:fi-ink"
             }`}
           >
             Teams
@@ -1369,8 +1369,8 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
               onClick={() => setActiveTab("prizes")}
               className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
                 activeTab === "prizes"
-                  ? "bg-background text-foreground border-t border-x border-border"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "fi-surface fi-ink border-t border-x border-border"
+                  : "fi-muted hover:fi-ink"
               }`}
             >
               Prizes
@@ -1381,8 +1381,8 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
             onClick={() => setActiveTab("scores")}
             className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
               activeTab === "scores"
-                ? "bg-background text-foreground border-t border-x border-border"
-                : "text-muted-foreground hover:text-foreground"
+                ? "fi-surface fi-ink border-t border-x border-border"
+                : "fi-muted hover:fi-ink"
             }`}
           >
             Scores
@@ -1392,8 +1392,8 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
         <div className="space-y-5 p-5">
           {activeTab === "details" && (
             <>
-              <section className="rounded-lg border border-border bg-background p-5 space-y-4">
-                <h2 className="text-lg font-heading font-semibold text-foreground">
+              <section className="rounded-lg border border-border fi-surface p-5 space-y-4">
+                <h2 className="text-lg fi-zone font-semibold fi-ink">
                   Event Mode
                 </h2>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1406,7 +1406,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                     className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
                       isHackathonMode
                         ? "bg-primary text-white"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        : "bg-muted fi-muted hover:bg-muted/80"
                     }`}
                   >
                     <TrophyIcon className="h-4 w-4" />
@@ -1421,7 +1421,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                     className={`px-4 py-2.5 rounded-lg font-medium transition-all ${
                       isDemoDayMode
                         ? "bg-pink-500 text-white"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        : "bg-muted fi-muted hover:bg-muted/80"
                     }`}
                   >
                     ❤️ Demo Day
@@ -1445,13 +1445,13 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                     className={`px-4 py-2.5 rounded-lg font-medium transition-all ${
                       isCodeAndTellMode
                         ? "bg-amber-500 text-white"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        : "bg-muted fi-muted hover:bg-muted/80"
                     }`}
                   >
                     Code &amp; Tell
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs fi-muted">
                   {isHackathonMode
                     ? "Judges score teams by category. Configure tracks in Teams and scoring in Scores."
                     : isDemoDayMode
@@ -1460,9 +1460,9 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                 </p>
               </section>
 
-              <section className="rounded-lg border border-border bg-background p-5 space-y-4">
+              <section className="rounded-lg border border-border fi-surface p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                  <h2 className="text-lg fi-zone font-semibold fi-ink">
                     Event Basics
                   </h2>
                   {statusBadgeLabel && (
@@ -1473,7 +1473,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-foreground">
+                  <label className="block text-sm font-medium fi-ink">
                     Event Name
                   </label>
                   <input
@@ -1496,9 +1496,9 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-foreground">
+                  <label className="block text-sm font-medium fi-ink">
                     Description{" "}
-                    <span className="text-muted-foreground text-xs">
+                    <span className="fi-muted text-xs">
                       (optional)
                     </span>
                   </label>
@@ -1515,7 +1515,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
 
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-foreground">
+                    <label className="block text-sm font-medium fi-ink">
                       Start Date &amp; Time
                     </label>
                     <DateTimePicker
@@ -1526,7 +1526,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-foreground">
+                    <label className="block text-sm font-medium fi-ink">
                       End Date &amp; Time
                     </label>
                     <DateTimePicker
@@ -1552,19 +1552,19 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
           {activeTab === "teams" && (
             <>
               {isHackathonMode ? (
-                <section className="rounded-lg border border-border bg-background p-5 space-y-4">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                <section className="rounded-lg border border-border fi-surface p-5 space-y-4">
+                  <h2 className="text-lg fi-zone font-semibold fi-ink">
                     Track Configuration
                   </h2>
                   <StyledCheckbox
                     checked={useTracksAsAwards}
                     onCheckedChange={setUseTracksAsAwards}
                     label="Use judging categories as tracks"
-                    labelClassName="text-sm text-foreground"
+                    labelClassName="text-sm fi-ink"
                   />
                   {!useTracksAsAwards && (
                     <div className="space-y-2">
-                      <label className="block text-sm font-medium text-foreground">
+                      <label className="block text-sm font-medium fi-ink">
                         Custom Tracks
                       </label>
                       <input
@@ -1579,7 +1579,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                       />
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs fi-muted">
                     Current tracks:{" "}
                     {derivedTracks.length > 0
                       ? derivedTracks.join(", ")
@@ -1587,21 +1587,21 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                   </p>
                 </section>
               ) : isDemoDayMode ? (
-                <section className="rounded-lg border border-border bg-background p-5 space-y-4">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                <section className="rounded-lg border border-border fi-surface p-5 space-y-4">
+                  <h2 className="text-lg fi-zone font-semibold fi-ink">
                     Demo Day Course Codes
                   </h2>
                   <div className="flex flex-wrap gap-2">
                     {courseCodes.map((code) => (
                       <span
                         key={code}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-pink-500/10 px-3 py-1.5 text-sm font-medium text-pink-600 dark:text-pink-400"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-pink-500/10 px-3 py-1.5 text-sm font-medium text-pink-600 "
                       >
                         {code}
                         <button
                           type="button"
                           onClick={() => handleRemoveCourseCode(code)}
-                          className="transition-colors hover:text-pink-800 dark:hover:text-pink-200"
+                          className="transition-colors hover:text-pink-800 "
                         >
                           <svg
                             className="w-4 h-4"
@@ -1620,7 +1620,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                       </span>
                     ))}
                     {courseCodes.length === 0 && (
-                      <span className="text-sm italic text-muted-foreground">
+                      <span className="text-sm italic fi-muted">
                         No course codes added yet.
                       </span>
                     )}
@@ -1650,11 +1650,11 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                   </div>
                 </section>
               ) : (
-                <section className="rounded-lg border border-border bg-background p-5 space-y-4">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                <section className="rounded-lg border border-border fi-surface p-5 space-y-4">
+                  <h2 className="text-lg fi-zone font-semibold fi-ink">
                     Code &amp; Tell Projects
                   </h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm fi-muted">
                     Projects are managed after event creation. Voters will see a
                     ranked-ballot experience, and admins will select a single
                     final winner from the Borda standings once the event is
@@ -1664,7 +1664,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
               )}
 
               <section className="rounded-lg border border-dashed border-border bg-muted/20 p-4">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm fi-muted">
                   Team roster management happens after event creation in the
                   event details page.
                 </p>
@@ -1676,8 +1676,8 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
             <>
               {isHackathonMode ? (
                 <>
-                  <section className="rounded-lg border border-border bg-background p-5 space-y-4">
-                    <h2 className="text-lg font-heading font-semibold text-foreground">
+                  <section className="rounded-lg border border-border fi-surface p-5 space-y-4">
+                    <h2 className="text-lg fi-zone font-semibold fi-ink">
                       Judge Access
                     </h2>
                     <StyledCheckbox
@@ -1686,12 +1686,12 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                         setFormData({ ...formData, enableCohorts: checked })
                       }
                       label="Enable multiple judging cohorts"
-                      labelClassName="text-sm text-foreground"
+                      labelClassName="text-sm fi-ink"
                     />
                     <div className="space-y-2">
-                      <label className="block text-sm font-medium text-foreground">
+                      <label className="block text-sm font-medium fi-ink">
                         Judge Code{" "}
-                        <span className="text-muted-foreground text-xs">
+                        <span className="fi-muted text-xs">
                           (optional)
                         </span>
                       </label>
@@ -1710,22 +1710,22 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                     </div>
                   </section>
 
-                  <section className="rounded-lg border border-border bg-background p-5 space-y-4">
+                  <section className="rounded-lg border border-border fi-surface p-5 space-y-4">
                     <div className="flex items-center justify-between gap-2">
-                      <h2 className="text-lg font-heading font-semibold text-foreground">
+                      <h2 className="text-lg fi-zone font-semibold fi-ink">
                         Judging Categories
                       </h2>
                       <span
                         className={`text-xs font-medium ${
                           categoryRubricTotalValid
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-amber-600 dark:text-amber-400"
+                            ? "text-emerald-600 "
+                            : "text-amber-600 "
                         }`}
                       >
                         {formatRubricPercent(categoryRubricTotal)} allocated
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm fi-muted">
                       Enter the rubric percentages exactly as judges receive
                       them. HackJudge converts these to internal weights when
                       the event is saved.
@@ -1734,7 +1734,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                     <div className="rounded-lg border border-border overflow-hidden">
                       <div className="overflow-x-auto">
                         <div className="min-w-[42rem]">
-                          <div className="grid grid-cols-[1fr,110px,110px,40px] gap-2 border-b border-border bg-muted/20 px-3 py-2 text-xs uppercase tracking-wide text-muted-foreground">
+                          <div className="grid grid-cols-[1fr,110px,110px,40px] gap-2 border-b border-border bg-muted/20 px-3 py-2 text-xs uppercase tracking-wide fi-muted">
                             <span>Category</span>
                             <span>Rubric %</span>
                             <span className="text-center">Opt-out allowed</span>
@@ -1821,53 +1821,53 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                           },
                         ])
                       }
-                      className="btn-ghost text-sm"
+                      className="fi-key text-sm"
                     >
                       + Add Category
                     </button>
                   </section>
                 </>
               ) : isDemoDayMode ? (
-                <section className="rounded-lg border border-border bg-background p-6 space-y-4">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                <section className="rounded-lg border border-border fi-surface p-6 space-y-4">
+                  <h2 className="text-lg fi-zone font-semibold fi-ink">
                     Scoring (Demo Day)
                   </h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm fi-muted">
                     Demo Day events use attendee appreciations (hearts) instead
                     of judge score categories. No additional score setup is
                     required at creation time.
                   </p>
                   <div className="grid gap-2 sm:grid-cols-3">
                     <div className="rounded-md border border-border bg-muted/20 px-3 py-2">
-                      <p className="text-xs text-muted-foreground">Weighting</p>
-                      <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                      <p className="text-xs fi-muted">Weighting</p>
+                      <p className="mt-1 font-mono text-sm font-semibold fi-ink">
                         1 heart = 1 vote
                       </p>
                     </div>
                     <div className="rounded-md border border-border bg-muted/20 px-3 py-2">
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs fi-muted">
                         Attendee budget
                       </p>
-                      <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                      <p className="mt-1 font-mono text-sm font-semibold fi-ink">
                         100 hearts
                       </p>
                     </div>
                     <div className="rounded-md border border-border bg-muted/20 px-3 py-2">
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs fi-muted">
                         Per-project cap
                       </p>
-                      <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                      <p className="mt-1 font-mono text-sm font-semibold fi-ink">
                         3 hearts
                       </p>
                     </div>
                   </div>
                 </section>
               ) : (
-                <section className="rounded-lg border border-border bg-background p-6 space-y-4">
-                  <h2 className="text-lg font-heading font-semibold text-foreground">
+                <section className="rounded-lg border border-border fi-surface p-6 space-y-4">
+                  <h2 className="text-lg fi-zone font-semibold fi-ink">
                     Ranked Voting
                   </h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm fi-muted">
                     Code &amp; Tell uses ranked ballots instead of judge
                     scoring. No cohorts, judge code, or category setup is
                     required.
@@ -1878,8 +1878,8 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                         key={label}
                         className="rounded-md border border-border bg-muted/20 px-3 py-2"
                       >
-                        <p className="text-xs text-muted-foreground">{label}</p>
-                        <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                        <p className="text-xs fi-muted">{label}</p>
+                        <p className="mt-1 font-mono text-sm font-semibold fi-ink">
                           {CODE_AND_TELL_MAX_RANKS - index} pts
                         </p>
                       </div>
@@ -1891,8 +1891,8 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
           )}
 
           {activeTab === "prizes" && isHackathonMode && (
-            <section className="rounded-lg border border-border bg-background p-5 space-y-3">
-              <h2 className="text-lg font-heading font-semibold text-foreground">
+            <section className="rounded-lg border border-border fi-surface p-5 space-y-3">
+              <h2 className="text-lg fi-zone font-semibold fi-ink">
                 Prize Catalog
               </h2>
               <PrizeCatalogEditor
@@ -1907,20 +1907,20 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      <div className="sticky bottom-4 z-20 rounded-lg border border-border bg-background/95 px-4 py-3 shadow-sm backdrop-blur">
+      <div className="sticky bottom-4 z-20 rounded-lg border border-border fi-surface/95 px-4 py-3 shadow-sm backdrop-blur">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="btn-secondary w-full sm:w-auto"
+            className="fi-key w-full sm:w-auto"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="btn-primary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
+            className="fi-transport w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? (
               <span className="flex items-center justify-center gap-2">
@@ -2243,7 +2243,7 @@ export function EventManagementModal({
   const teamListContent = (
     <>
       {event.teams.length === 0 ? (
-        <div className="p-4 text-sm text-muted-foreground">
+        <div className="p-4 text-sm fi-muted">
           No {entityLabel.toLowerCase()}s added yet
         </div>
       ) : (
@@ -2262,26 +2262,26 @@ export function EventManagementModal({
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-foreground">
+                      <h4 className="font-semibold fi-ink">
                         {team.name}
                       </h4>
                       {(team as any).hidden && (
-                        <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-xs rounded-full">
+                        <span className="px-2 py-0.5 bg-yellow-100  text-yellow-700  text-xs rounded-full">
                           Hidden
                         </span>
                       )}
                       {isDemoDayMode && (team as any).courseCode && (
-                        <span className="px-2 py-0.5 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 text-xs rounded-full">
+                        <span className="px-2 py-0.5 bg-pink-100  text-pink-700  text-xs rounded-full">
                           {(team as any).courseCode}
                         </span>
                       )}
                       {!isDemoDayMode && (team as any).sponsorName && (
-                        <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs rounded-full">
+                        <span className="px-2 py-0.5 bg-amber-100  text-amber-700  text-xs rounded-full">
                           {(team as any).sponsorName}
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm fi-muted">
                       {isCodeAndTellMode
                         ? ((team as any).entrantEmails || []).length > 0
                           ? (team as any).entrantEmails.join(", ")
@@ -2297,7 +2297,7 @@ export function EventManagementModal({
                           teamMenuOpen === team._id ? null : team._id,
                         );
                       }}
-                      className="p-1 rounded-md hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
+                      className="p-1 rounded-md hover:bg-muted/80 fi-muted hover:fi-ink transition-colors"
                     >
                       <svg
                         className="w-4 h-4"
@@ -2313,7 +2313,7 @@ export function EventManagementModal({
                           className="fixed inset-0 z-10"
                           onClick={() => setTeamMenuOpen(null)}
                         />
-                        <div className="absolute right-0 top-8 z-20 bg-background border border-border rounded-lg shadow-xl py-1 min-w-[150px]">
+                        <div className="absolute right-0 top-8 z-20 fi-surface border border-border rounded-lg shadow-xl py-1 min-w-[150px]">
                           <button
                             onClick={() => {
                               setEditingTeam(team);
@@ -2362,7 +2362,7 @@ export function EventManagementModal({
                                 }
                               }
                             }}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50  transition-colors"
                           >
                             Remove {entityLabel}
                           </button>
@@ -2836,7 +2836,7 @@ export function EventManagementModal({
             <div>
               <button
                 onClick={onClose}
-                className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground mb-3 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-medium fi-muted hover:fi-ink mb-3 transition-colors"
                 aria-label="Back to Admin Dashboard"
               >
                 <svg
@@ -2855,7 +2855,7 @@ export function EventManagementModal({
                 Back to Admin Dashboard
               </button>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-3xl font-heading font-bold text-foreground">
+                <h1 className="text-3xl fi-zone font-bold fi-ink">
                   {event.name}
                 </h1>
                 {!isHackathonMode && (
@@ -2863,19 +2863,19 @@ export function EventManagementModal({
                     className={`badge ${
                       isDemoDayMode
                         ? "bg-pink-500/20 text-pink-500 border-pink-500/30"
-                        : "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                        : "bg-amber-500/20 text-amber-600  border-amber-500/30"
                     }`}
                   >
                     {getEventDisplayLabel(eventMode)}
                   </span>
                 )}
                 {(event as any).hidden && (
-                  <span className="badge bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                  <span className="badge bg-amber-500/15 text-amber-600  border-amber-500/30">
                     Admin only
                   </span>
                 )}
               </div>
-              <p className="text-muted-foreground">
+              <p className="fi-muted">
                 Manage event settings and teams
               </p>
             </div>
@@ -2938,14 +2938,14 @@ export function EventManagementModal({
         className={`relative w-full ${
           isPageLayout
             ? "min-h-0 flex flex-col"
-            : "bg-background rounded-2xl shadow-2xl max-w-4xl border border-border slide-up max-h-[90vh] overflow-auto"
+            : "fi-surface fi-radius-panel fi-elevation-panel max-w-4xl border border-border fi-panel-enter max-h-[90vh] overflow-auto"
         }`}
       >
         <div
           className={
             isPageLayout
               ? "flex-shrink-0"
-              : "border-b border-border bg-background sticky top-0 z-10"
+              : "border-b border-border fi-surface sticky top-0 z-10"
           }
         >
           {!isPageLayout && (
@@ -2971,7 +2971,7 @@ export function EventManagementModal({
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between pr-12">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-3xl font-heading font-bold text-foreground">
+                    <h2 className="text-3xl fi-zone font-bold fi-ink">
                       {event.name}
                     </h2>
                     {!isHackathonMode && (
@@ -2979,19 +2979,19 @@ export function EventManagementModal({
                         className={`badge ${
                           isDemoDayMode
                             ? "bg-pink-500/20 text-pink-500 border-pink-500/30"
-                            : "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                            : "bg-amber-500/20 text-amber-600  border-amber-500/30"
                         }`}
                       >
                         {getEventDisplayLabel(eventMode)}
                       </span>
                     )}
                     {(event as any).hidden && (
-                      <span className="badge bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                      <span className="badge bg-amber-500/15 text-amber-600  border-amber-500/30">
                         Admin only
                       </span>
                     )}
                   </div>
-                  <p className="text-muted-foreground">
+                  <p className="fi-muted">
                     Manage event settings and teams
                   </p>
                 </div>
@@ -3055,7 +3055,7 @@ export function EventManagementModal({
           <div
             className={
               isPageLayout
-                ? "inline-flex w-fit gap-1 rounded-lg border border-border bg-card/70 p-1"
+                ? "inline-flex w-fit gap-1 rounded-lg border border-border fi-surface/70 p-1"
                 : "flex gap-1 px-6 mt-4"
             }
           >
@@ -3065,11 +3065,11 @@ export function EventManagementModal({
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   isPageLayout
                     ? activeTab === "setup"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                      ? "fi-surface fi-ink shadow-sm"
+                      : "fi-muted hover:fi-ink hover:bg-muted/40"
                     : activeTab === "setup"
-                      ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "fi-surface fi-ink border-t border-x border-border rounded-t-lg rounded-b-none"
+                      : "fi-muted hover:fi-ink"
                 }`}
               >
                 Setup
@@ -3080,11 +3080,11 @@ export function EventManagementModal({
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 isPageLayout
                   ? activeTab === "details"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    ? "fi-surface fi-ink shadow-sm"
+                    : "fi-muted hover:fi-ink hover:bg-muted/40"
                   : activeTab === "details"
-                    ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "fi-surface fi-ink border-t border-x border-border rounded-t-lg rounded-b-none"
+                    : "fi-muted hover:fi-ink"
               }`}
             >
               Details
@@ -3094,11 +3094,11 @@ export function EventManagementModal({
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 isPageLayout
                   ? activeTab === "teams"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    ? "fi-surface fi-ink shadow-sm"
+                    : "fi-muted hover:fi-ink hover:bg-muted/40"
                   : activeTab === "teams"
-                    ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "fi-surface fi-ink border-t border-x border-border rounded-t-lg rounded-b-none"
+                    : "fi-muted hover:fi-ink"
               }`}
             >
               Teams
@@ -3109,11 +3109,11 @@ export function EventManagementModal({
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   isPageLayout
                     ? activeTab === "prizes"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                      ? "fi-surface fi-ink shadow-sm"
+                      : "fi-muted hover:fi-ink hover:bg-muted/40"
                     : activeTab === "prizes"
-                      ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "fi-surface fi-ink border-t border-x border-border rounded-t-lg rounded-b-none"
+                      : "fi-muted hover:fi-ink"
                 }`}
               >
                 Prizes
@@ -3124,11 +3124,11 @@ export function EventManagementModal({
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 isPageLayout
                   ? activeTab === "scores"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    ? "fi-surface fi-ink shadow-sm"
+                    : "fi-muted hover:fi-ink hover:bg-muted/40"
                   : activeTab === "scores"
-                    ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "fi-surface fi-ink border-t border-x border-border rounded-t-lg rounded-b-none"
+                    : "fi-muted hover:fi-ink"
               }`}
             >
               Scores
@@ -3138,11 +3138,11 @@ export function EventManagementModal({
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 isPageLayout
                   ? activeTab === "winners"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    ? "fi-surface fi-ink shadow-sm"
+                    : "fi-muted hover:fi-ink hover:bg-muted/40"
                   : activeTab === "winners"
-                    ? "bg-background text-foreground border-t border-x border-border rounded-t-lg rounded-b-none"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "fi-surface fi-ink border-t border-x border-border rounded-t-lg rounded-b-none"
+                    : "fi-muted hover:fi-ink"
               }`}
             >
               Winners
@@ -3315,7 +3315,7 @@ export function EventManagementModal({
                         onSubmit={setWinners}
                       />
                     ) : (
-                      <div className="card-static p-6 bg-card text-muted-foreground">
+                      <div className="fi-panel p-6 fi-surface fi-muted">
                         Add teams first, then select winners.
                       </div>
                     )

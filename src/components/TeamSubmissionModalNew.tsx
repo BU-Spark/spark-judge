@@ -1,3 +1,4 @@
+import "./TeamSubmissionModal.fi.css";
 import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -269,7 +270,7 @@ export function TeamSubmissionModal({
           className="absolute inset-0 bg-black/50 backdrop-blur-sm"
           onClick={handleClose}
         />
-        <div className="relative bg-background rounded-2xl p-8 max-w-lg w-full shadow-2xl slide-up border border-border my-8">
+        <div className="tsm-dialog relative fi-surface fi-radius-panel p-8 max-w-lg w-full fi-elevation-panel fi-panel-enter border border-border my-8">
           <button
             onClick={handleClose}
             className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
@@ -278,10 +279,10 @@ export function TeamSubmissionModal({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-          <h2 className="text-2xl font-heading font-bold mb-4 text-foreground">
+          <h2 className="text-2xl fi-zone font-bold mb-4 fi-ink">
             Code &amp; Tell Projects
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm fi-muted">
             Code &amp; Tell projects are managed by admins from the event workspace. Participant self-submission is disabled for this mode.
           </p>
         </div>
@@ -295,7 +296,7 @@ export function TeamSubmissionModal({
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       />
-      <div className="relative bg-background rounded-2xl p-8 max-w-2xl w-full shadow-2xl slide-up border border-border my-8">
+      <div className="tsm-dialog relative fi-surface fi-radius-panel p-8 max-w-2xl w-full fi-elevation-panel fi-panel-enter border border-border my-8">
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
@@ -305,13 +306,13 @@ export function TeamSubmissionModal({
           </svg>
         </button>
 
-        <h2 className="text-2xl font-heading font-bold mb-6 text-foreground">
+        <h2 className="text-2xl fi-zone font-bold mb-6 fi-ink">
           {isEditMode ? "Edit Team" : "Submit Your Team"}
         </h2>
 
         {!isEditMode && (
-          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+          <div className="mb-6 p-4 bg-yellow-50  border border-yellow-200  rounded-xl">
+            <p className="text-sm text-yellow-800 ">
               ⚠️ Team name is permanent and must match your DevPost submission!
             </p>
           </div>
@@ -332,7 +333,7 @@ export function TeamSubmissionModal({
                   setErrors({ ...errors, name: "" });
                 }}
                 placeholder="Enter team name..."
-                className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               />
               {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
             </div>
@@ -340,7 +341,7 @@ export function TeamSubmissionModal({
 
           <div>
             <label htmlFor="description" className="block text-sm font-medium mb-2">
-              Description <span className="text-muted-foreground text-xs">(optional)</span>
+              Description <span className="fi-muted text-xs">(optional)</span>
             </label>
             <textarea
               id="description"
@@ -350,7 +351,7 @@ export function TeamSubmissionModal({
               }}
               placeholder="Describe your project..."
               rows={4}
-              className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
+              className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
             />
           </div>
 
@@ -366,13 +367,13 @@ export function TeamSubmissionModal({
                     value={member}
                     onChange={(e) => updateMember(index, e.target.value)}
                     placeholder="Member name..."
-                    className="flex-1 px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                    className="flex-1 px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                   />
                   {members.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeMember(index)}
-                      className="px-4 py-3 rounded-xl border border-border hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-700 transition-colors text-red-600 dark:text-red-400"
+                      className="px-4 py-3 rounded-xl border border-border hover:bg-red-50  hover:border-red-300  transition-colors text-red-600 "
                     >
                       −
                     </button>
@@ -393,7 +394,7 @@ export function TeamSubmissionModal({
           <div>
             <label htmlFor="githubUrl" className="block text-sm font-medium mb-2">
               GitHub URL {!isDemoDay && <span className="text-red-500">*</span>}
-              {isDemoDay && <span className="text-muted-foreground text-xs ml-1">(optional)</span>}
+              {isDemoDay && <span className="fi-muted text-xs ml-1">(optional)</span>}
             </label>
             <input
               id="githubUrl"
@@ -404,7 +405,7 @@ export function TeamSubmissionModal({
                 setErrors({ ...errors, githubUrl: "" });
               }}
               placeholder="https://github.com/..."
-              className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
             />
             {errors.githubUrl && <p className="mt-1 text-sm text-red-500">{errors.githubUrl}</p>}
           </div>
@@ -412,7 +413,7 @@ export function TeamSubmissionModal({
           {!isDemoDay && (
             <div>
               <label htmlFor="devpostUrl" className="block text-sm font-medium mb-2">
-                Devpost URL <span className="text-muted-foreground text-xs">(recommended)</span>
+                Devpost URL <span className="fi-muted text-xs">(recommended)</span>
               </label>
               <input
                 id="devpostUrl"
@@ -423,7 +424,7 @@ export function TeamSubmissionModal({
                   setErrors({ ...errors, devpostUrl: "" });
                 }}
                 placeholder="https://devpost.com/software/..."
-                className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               />
               {errors.devpostUrl && <p className="mt-1 text-sm text-red-500">{errors.devpostUrl}</p>}
             </div>
@@ -442,7 +443,7 @@ export function TeamSubmissionModal({
                   setCourseCode(e.target.value);
                   setErrors({ ...errors, courseCode: "" });
                 }}
-                className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all"
               >
                 <option value="">Select course...</option>
                 {courseCodes.map((code) => (
@@ -465,7 +466,7 @@ export function TeamSubmissionModal({
                   setTrack(e.target.value);
                   setErrors({ ...errors, track: "" });
                 }}
-                className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               >
                 <option value="">Select track...</option>
                 {tracks.map((trackOption) => (
@@ -489,7 +490,7 @@ export function TeamSubmissionModal({
                 type="file"
                 accept="image/*"
                 onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-500/10 file:text-primary hover:file:bg-teal-500/20"
+                className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-500/10 file:text-primary hover:file:bg-teal-500/20"
               />
             </div>
           )}
@@ -500,13 +501,13 @@ export function TeamSubmissionModal({
                 Prize Submissions
               </label>
               <div className="mb-2">
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label className="block text-xs font-medium fi-muted mb-1">
                   Sponsor Filter
                 </label>
                 <select
                   value={sponsorFilter}
                   onChange={(e) => setSponsorFilter(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                 >
                   <option value="">All sponsors</option>
                   {sponsorOptions.map((sponsorName) => (
@@ -516,22 +517,22 @@ export function TeamSubmissionModal({
                   ))}
                 </select>
               </div>
-              <div className="rounded-xl border border-border bg-card/60 p-3 space-y-2 max-h-56 overflow-auto">
+              <div className="rounded-xl border border-border fi-surface/60 p-3 space-y-2 max-h-56 overflow-auto">
                 {availablePrizes === undefined && (
-                  <p className="text-sm text-muted-foreground">Loading prizes...</p>
+                  <p className="text-sm fi-muted">Loading prizes...</p>
                 )}
                 {availablePrizes && availablePrizes.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm fi-muted">
                     No prizes configured yet for this event.
                   </p>
                 )}
                 {availablePrizes && eligiblePrizes.length === 0 && availablePrizes.length > 0 && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm fi-muted">
                     Select a track to see track-specific prizes.
                   </p>
                 )}
                 {availablePrizes && eligiblePrizes.length > 0 && filteredPrizes.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm fi-muted">
                     No prizes match this sponsor filter.
                   </p>
                 )}
@@ -540,7 +541,7 @@ export function TeamSubmissionModal({
                   return (
                     <label
                       key={prize._id}
-                      className="flex items-start gap-3 rounded-lg border border-border/70 bg-background px-3 py-2 hover:bg-muted/30 transition-colors"
+                      className="flex items-start gap-3 rounded-lg border border-border/70 fi-surface px-3 py-2 hover:bg-muted/30 transition-colors"
                     >
                       <input
                         type="checkbox"
@@ -560,10 +561,10 @@ export function TeamSubmissionModal({
                         className="mt-1 w-4 h-4 text-primary border-border rounded"
                       />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-foreground">
+                        <p className="text-sm font-medium fi-ink">
                           {prize.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs fi-muted">
                           {prize.type === "general" && "General prize"}
                           {prize.type === "track" && `Track prize${prize.track ? ` · ${prize.track}` : ""}`}
                           {prize.type === "sponsor" && `Sponsor prize${prize.sponsorName ? ` · ${prize.sponsorName}` : ""}`}
@@ -575,7 +576,7 @@ export function TeamSubmissionModal({
                   );
                 })}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-xs fi-muted">
                 You can update prize submissions any time before admin locks scoring.
               </p>
             </div>
@@ -584,7 +585,7 @@ export function TeamSubmissionModal({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="btn-primary w-full mt-6"
+            className="fi-transport w-full mt-6"
           >
             {isSubmitting ? (
               <span className="flex items-center justify-center gap-2">

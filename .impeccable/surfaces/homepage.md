@@ -26,3 +26,9 @@ Existing event data, auth, judge codes, scoring locks, project navigation, and p
 
 ## Verification and remaining scope
 Build and 26 targeted tests pass. Desktop and 390px phone screenshots cover all modes, overlap selection, and recap. Finish reviewer disposition: ship; all three findings resolved. Global TypeScript check retains 26 baseline errors and introduces none. No production deployment or backend writes. Preview `/?demo=1&mode=demo_day`; normal `/` uses live data. Future work would extend this visual system into event participation pages after review.
+
+### Code & Tell color exploration — September 23, 2026
+
+The user rejected both the original lilac and the subsequent coral experiment. Three preview-only alternatives now share the same layout: Sky & navy (`palette=pool`), Berry & rose (`palette=berry`), and Chartreuse & olive (`palette=citron`). Open `/?demo=1&mode=code_and_tell&phase=live&palette=pool` and use the color-study buttons to compare. No replacement palette has been selected for the live homepage yet. The coral experiment was removed.
+
+All three desktop variants and the shared 390px phone layout were visually reviewed; the phone has no horizontal overflow. Text contrast across canvas, secondary text, project rows, and ballot panels ranges from 5.43:1 to 11.13:1. Vite production build passes. The palette switcher is restricted to the Code & Tell sample preview.

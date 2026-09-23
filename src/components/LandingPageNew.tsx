@@ -188,6 +188,7 @@ export function LandingPage({
   return (
     <>
       <EventStage
+        previewPalette={demoMode ? params.get("palette") ?? undefined : undefined}
         focal={focal}
         events={groups}
         projects={projects}

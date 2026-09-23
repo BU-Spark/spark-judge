@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-23T14:24:16.752801+00:00",
+  "generatedAt": "2026-09-23T14:57:22.001149+00:00",
   "title": "Design System: HackJudge",
   "extensions": {
     "colorMeta": {
@@ -60,46 +60,32 @@
           "oklch(95.00% 0.13174 85.84)"
         ]
       },
-      "lilac": {
+      "sky": {
         "role": "secondary",
-        "displayName": "Lilac",
+        "displayName": "Sky",
         "tonalRamp": [
-          "oklch(15.00% 0.05841 292.75)",
-          "oklch(26.43% 0.05841 292.75)",
-          "oklch(37.86% 0.05841 292.75)",
-          "oklch(49.29% 0.05841 292.75)",
-          "oklch(60.71% 0.05841 292.75)",
-          "oklch(72.14% 0.05841 292.75)",
-          "oklch(83.57% 0.05841 292.75)",
-          "oklch(95.00% 0.05841 292.75)"
+          "oklch(15.00% 0.07922 229.49)",
+          "oklch(26.43% 0.07922 229.49)",
+          "oklch(37.86% 0.07922 229.49)",
+          "oklch(49.29% 0.07922 229.49)",
+          "oklch(60.71% 0.07922 229.49)",
+          "oklch(72.14% 0.07922 229.49)",
+          "oklch(83.57% 0.07922 229.49)",
+          "oklch(95.00% 0.07922 229.49)"
         ]
       },
-      "cobalt": {
-        "role": "tertiary",
-        "displayName": "Cobalt",
+      "navy": {
+        "role": "secondary",
+        "displayName": "Navy",
         "tonalRamp": [
-          "oklch(15.00% 0.21928 265.69)",
-          "oklch(26.43% 0.21928 265.69)",
-          "oklch(37.86% 0.21928 265.69)",
-          "oklch(49.29% 0.21928 265.69)",
-          "oklch(60.71% 0.21928 265.69)",
-          "oklch(72.14% 0.21928 265.69)",
-          "oklch(83.57% 0.21928 265.69)",
-          "oklch(95.00% 0.21928 265.69)"
-        ]
-      },
-      "blue-ink": {
-        "role": "tertiary",
-        "displayName": "Blue Ink",
-        "tonalRamp": [
-          "oklch(15.00% 0.15876 265.13)",
-          "oklch(26.43% 0.15876 265.13)",
-          "oklch(37.86% 0.15876 265.13)",
-          "oklch(49.29% 0.15876 265.13)",
-          "oklch(60.71% 0.15876 265.13)",
-          "oklch(72.14% 0.15876 265.13)",
-          "oklch(83.57% 0.15876 265.13)",
-          "oklch(95.00% 0.15876 265.13)"
+          "oklch(15.00% 0.07782 255.26)",
+          "oklch(26.43% 0.07782 255.26)",
+          "oklch(37.86% 0.07782 255.26)",
+          "oklch(49.29% 0.07782 255.26)",
+          "oklch(60.71% 0.07782 255.26)",
+          "oklch(72.14% 0.07782 255.26)",
+          "oklch(83.57% 0.07782 255.26)",
+          "oklch(95.00% 0.07782 255.26)"
         ]
       },
       "lagoon-muted": {
@@ -130,32 +116,32 @@
           "oklch(95.00% 0.05856 138.78)"
         ]
       },
-      "lilac-muted": {
+      "sky-muted": {
         "role": "neutral",
-        "displayName": "Lilac Muted",
+        "displayName": "Sky Muted",
         "tonalRamp": [
-          "oklch(15.00% 0.09103 271.95)",
-          "oklch(26.43% 0.09103 271.95)",
-          "oklch(37.86% 0.09103 271.95)",
-          "oklch(49.29% 0.09103 271.95)",
-          "oklch(60.71% 0.09103 271.95)",
-          "oklch(72.14% 0.09103 271.95)",
-          "oklch(83.57% 0.09103 271.95)",
-          "oklch(95.00% 0.09103 271.95)"
+          "oklch(15.00% 0.07114 252.05)",
+          "oklch(26.43% 0.07114 252.05)",
+          "oklch(37.86% 0.07114 252.05)",
+          "oklch(49.29% 0.07114 252.05)",
+          "oklch(60.71% 0.07114 252.05)",
+          "oklch(72.14% 0.07114 252.05)",
+          "oklch(83.57% 0.07114 252.05)",
+          "oklch(95.00% 0.07114 252.05)"
         ]
       },
-      "lilac-panel": {
+      "sky-panel": {
         "role": "secondary",
-        "displayName": "Lilac Panel",
+        "displayName": "Sky Panel",
         "tonalRamp": [
-          "oklch(15.00% 0.03841 295.44)",
-          "oklch(26.43% 0.03841 295.44)",
-          "oklch(37.86% 0.03841 295.44)",
-          "oklch(49.29% 0.03841 295.44)",
-          "oklch(60.71% 0.03841 295.44)",
-          "oklch(72.14% 0.03841 295.44)",
-          "oklch(83.57% 0.03841 295.44)",
-          "oklch(95.00% 0.03841 295.44)"
+          "oklch(15.00% 0.04783 227.58)",
+          "oklch(26.43% 0.04783 227.58)",
+          "oklch(37.86% 0.04783 227.58)",
+          "oklch(49.29% 0.04783 227.58)",
+          "oklch(60.71% 0.04783 227.58)",
+          "oklch(72.14% 0.04783 227.58)",
+          "oklch(83.57% 0.04783 227.58)",
+          "oklch(95.00% 0.04783 227.58)"
         ]
       },
       "gallery-caption": {
@@ -170,6 +156,34 @@
           "oklch(72.14% 0.10302 86.52)",
           "oklch(83.57% 0.10302 86.52)",
           "oklch(95.00% 0.10302 86.52)"
+        ]
+      },
+      "sky-light": {
+        "role": "secondary",
+        "displayName": "Sky Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.03006 232.42)",
+          "oklch(26.43% 0.03006 232.42)",
+          "oklch(37.86% 0.03006 232.42)",
+          "oklch(49.29% 0.03006 232.42)",
+          "oklch(60.71% 0.03006 232.42)",
+          "oklch(72.14% 0.03006 232.42)",
+          "oklch(83.57% 0.03006 232.42)",
+          "oklch(95.00% 0.03006 232.42)"
+        ]
+      },
+      "citron-light": {
+        "role": "primary",
+        "displayName": "Citron Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.08021 117.04)",
+          "oklch(26.43% 0.08021 117.04)",
+          "oklch(37.86% 0.08021 117.04)",
+          "oklch(49.29% 0.08021 117.04)",
+          "oklch(60.71% 0.08021 117.04)",
+          "oklch(72.14% 0.08021 117.04)",
+          "oklch(83.57% 0.08021 117.04)",
+          "oklch(95.00% 0.08021 117.04)"
         ]
       }
     },
@@ -201,6 +215,10 @@
       "metadata": {
         "displayName": "Metadata",
         "purpose": "Homepage tracks, dates, and counts."
+      },
+      "participation-display": {
+        "displayName": "Participation display",
+        "purpose": "Event titles on participation pages."
       }
     },
     "shadows": [],
@@ -223,15 +241,23 @@
     ],
     "breakpoints": [
       {
-        "name": "working-layout-stack",
-        "value": "1100px"
+        "name": "demo-phone",
+        "value": "600px"
       },
       {
-        "name": "mobile",
+        "name": "homepage-phone",
         "value": "720px"
       },
       {
-        "name": "wide-calendar-alignment",
+        "name": "participation-stack",
+        "value": "850px"
+      },
+      {
+        "name": "working-grid",
+        "value": "1100px"
+      },
+      {
+        "name": "wide-homepage",
         "value": "1600px"
       }
     ]
@@ -242,27 +268,27 @@
       "kind": "button",
       "refersTo": "button-hackathon",
       "description": "Homepage primary action in its event-mode color pair.",
-      "html": "<button class=\"ds-button\">Start judging<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"M4 12h15m-6-6 6 6-6 6\"/></svg></button>",
-      "css": ".ds-button{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;display:inline-flex;align-items:center;justify-content:space-between;gap:1.5rem;min-height:52px;padding:.9rem 1.15rem;background:#d7ea83;color:#076b60;border:0;border-radius:7px;font-size:1rem;font-weight:700;cursor:pointer}.ds-button svg{width:22px;height:22px}.ds-button:hover{filter:brightness(1.08)}.ds-button:active{transform:translateY(1px)}.ds-button:focus-visible{outline:3px solid #d7ea83;outline-offset:5px}"
+      "html": "<button class=\"ds-button-hackathon\">Start judging<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"M4 12h15m-6-6 6 6-6 6\"/></svg></button>",
+      "css": ".ds-button-hackathon{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;display:inline-flex;align-items:center;justify-content:space-between;gap:1.5rem;min-height:52px;padding:.9rem 1.15rem;background:#d7ea83;color:#076b60;border:0;border-radius:7px;font-size:1rem;font-weight:700;cursor:pointer}.ds-button-hackathon svg{width:22px;height:22px}.ds-button-hackathon:hover{filter:brightness(1.08)}.ds-button-hackathon:active{transform:translateY(1px)}.ds-button-hackathon:focus-visible{outline:3px solid #d7ea83;outline-offset:5px}"
     },
     {
       "name": "Demo Day primary action",
       "kind": "button",
       "refersTo": "button-demo-day",
       "description": "Homepage primary action in its event-mode color pair.",
-      "html": "<button class=\"ds-button\">Browse & appreciate<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"M4 12h15m-6-6 6 6-6 6\"/></svg></button>",
-      "css": ".ds-button{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;display:inline-flex;align-items:center;justify-content:space-between;gap:1.5rem;min-height:52px;padding:.9rem 1.15rem;background:#073e39;color:#f4c75f;border:0;border-radius:7px;font-size:1rem;font-weight:700;cursor:pointer}.ds-button svg{width:22px;height:22px}.ds-button:hover{filter:brightness(1.08)}.ds-button:active{transform:translateY(1px)}.ds-button:focus-visible{outline:3px solid #073e39;outline-offset:5px}"
+      "html": "<button class=\"ds-button-demo\">Browse & appreciate<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"M4 12h15m-6-6 6 6-6 6\"/></svg></button>",
+      "css": ".ds-button-demo{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;display:inline-flex;align-items:center;justify-content:space-between;gap:1.5rem;min-height:52px;padding:.9rem 1.15rem;background:#073e39;color:#f4c75f;border:0;border-radius:7px;font-size:1rem;font-weight:700;cursor:pointer}.ds-button-demo svg{width:22px;height:22px}.ds-button-demo:hover{filter:brightness(1.08)}.ds-button-demo:active{transform:translateY(1px)}.ds-button-demo:focus-visible{outline:3px solid #073e39;outline-offset:5px}"
     },
     {
       "name": "Code & Tell primary action",
       "kind": "button",
       "refersTo": "button-code-and-tell",
       "description": "Homepage primary action in its event-mode color pair.",
-      "html": "<button class=\"ds-button\">Start your ballot<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"M4 12h15m-6-6 6 6-6 6\"/></svg></button>",
-      "css": ".ds-button{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;display:inline-flex;align-items:center;justify-content:space-between;gap:1.5rem;min-height:52px;padding:.9rem 1.15rem;background:#163593;color:#cdc6f0;border:0;border-radius:7px;font-size:1rem;font-weight:700;cursor:pointer}.ds-button svg{width:22px;height:22px}.ds-button:hover{filter:brightness(1.08)}.ds-button:active{transform:translateY(1px)}.ds-button:focus-visible{outline:3px solid #163593;outline-offset:5px}"
+      "html": "<button class=\"ds-button-code\">Start your ballot<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"M4 12h15m-6-6 6 6-6 6\"/></svg></button>",
+      "css": ".ds-button-code{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;display:inline-flex;align-items:center;justify-content:space-between;gap:1.5rem;min-height:52px;padding:.9rem 1.15rem;background:#102f55;color:#88c9e8;border:0;border-radius:7px;font-size:1rem;font-weight:700;cursor:pointer}.ds-button-code svg{width:22px;height:22px}.ds-button-code:hover{filter:brightness(1.08)}.ds-button-code:active{transform:translateY(1px)}.ds-button-code:focus-visible{outline:3px solid #102f55;outline-offset:5px}"
     },
     {
-      "name": "Homepage navigation",
+      "name": "Open House navigation",
       "kind": "nav",
       "refersTo": "button-navigation",
       "description": "Evergreen account navigation, scoped to the homepage.",
@@ -277,14 +303,6 @@
       "css": ".ds-selection{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;display:flex;flex-wrap:wrap;gap:.75rem;padding:1rem;background:#073e39;color:#d7ea83}.ds-selection button{font:inherit;color:inherit;background:transparent;border:1px solid #a8c2ac;border-radius:6px;padding:.7rem 1rem;cursor:pointer}.ds-selection button[aria-pressed=true]{background:#d7ea83;color:#073e39;border-color:#d7ea83}.ds-selection button:focus-visible{outline:3px solid #d7ea83;outline-offset:5px}"
     },
     {
-      "name": "Project row",
-      "kind": "card",
-      "refersTo": "project-row-hackathon",
-      "description": "Flat row with decorative art and project text; example content is illustrative.",
-      "html": "<button class=\"ds-row\"><svg class=\"ds-art\" viewBox=\"0 0 400 240\" preserveAspectRatio=\"xMidYMid slice\" aria-hidden=\"true\"><path fill=\"#073e39\" d=\"M0 0h400v240H0z\"/><circle cx=\"115\" cy=\"120\" r=\"112\" fill=\"#d7ea83\"/><path fill=\"#254edb\" d=\"M100 240 340 0h60v240Z\"/><path fill=\"#076b60\" d=\"M0 135h115v105H0z\"/></svg><span><strong>Project name</strong><span>Project description</span></span><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"M4 12h15m-6-6 6 6-6 6\"/></svg></button>",
-      "css": ".ds-row{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;display:flex;align-items:center;gap:.9rem;width:100%;min-height:92px;padding:.85rem;background:#d7ea83;color:#073e39;border:0;border-radius:7px;text-align:left;cursor:pointer}.ds-row .ds-art{width:56px;height:62px;flex-shrink:0;border-radius:4px}.ds-row>span{display:flex;flex-direction:column;gap:.3rem}.ds-row strong{font-size:1.15rem;font-weight:750;line-height:1.2}.ds-row span span{font-size:.8rem}.ds-row>svg:last-child{width:22px;height:22px;margin-left:auto}.ds-row:hover{filter:brightness(1.05)}.ds-row:focus-visible{outline:3px solid #d7ea83;outline-offset:5px}"
-    },
-    {
       "name": "Gallery card",
       "kind": "card",
       "refersTo": "gallery-card",
@@ -293,54 +311,81 @@
       "css": ".ds-gallery{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;display:block;width:100%;overflow:hidden;border:0;border-radius:8px;background:#f8d689;color:#073e39;padding:0;text-align:left;cursor:pointer}.ds-gallery>.ds-art{display:block;width:100%;height:auto;aspect-ratio:5/3}.ds-caption{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.8rem 1rem;transition:background-color 140ms ease-out}.ds-caption>span{display:grid;gap:.2rem}.ds-caption strong{font-size:1.25rem;line-height:1.2;font-weight:750}.ds-caption span span{font-size:.8rem}.ds-caption svg{width:22px;height:22px}.ds-gallery:hover .ds-caption{background:#d7ea83}.ds-gallery:focus-visible{outline:3px solid #073e39;outline-offset:5px}@media(prefers-reduced-motion:reduce){.ds-caption{transition:none}}"
     },
     {
-      "name": "Judging guidance",
-      "kind": "card",
-      "refersTo": "guide",
-      "description": "Contrasting explanation panel beside project rows.",
-      "html": "<aside class=\"ds-guide\"><h3>A closer look</h3><p>Get to know each project before you score.</p><button>View event details <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"M4 12h15m-6-6 6 6-6 6\"/></svg></button></aside>",
-      "css": ".ds-guide{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;background:#073e39;color:#d7ea83;padding:1.4rem;border-radius:8px}.ds-guide h3{margin:0;font-size:1.35rem;line-height:1.15;font-weight:700;letter-spacing:-.02em}.ds-guide p{margin:.9rem 0 0;color:#d0e6d2;font-size:.9rem;line-height:1.5}.ds-guide button{display:inline-flex;align-items:center;gap:.75rem;margin-top:1.75rem;font:inherit;font-size:.85rem;background:transparent;color:inherit;border:0;padding:0;cursor:pointer}.ds-guide svg{width:22px;height:22px}.ds-guide button:focus-visible{outline:3px solid #d7ea83;outline-offset:5px}"
+      "name": "Participation search",
+      "kind": "input",
+      "refersTo": "participation-search",
+      "description": "Labeled project search on the Code & Tell field.",
+      "html": "<label class=\"ds-search\"><span>Find a project</span><input placeholder=\"Search projects by name or description...\"></label>",
+      "css": ".ds-search{display:block;color:#102f55;font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;}.ds-search span{display:block;font-size:.85rem;font-weight:600;margin-bottom:.45rem}.ds-search input{width:100%;min-height:48px;padding:.75rem 1rem;border:1px solid #4b7994;border-radius:6px;background:#b7def0;color:#102f55;font:inherit}.ds-search input::placeholder{color:#254568;opacity:1}.ds-search input:focus-visible{outline:3px solid #102f55;outline-offset:4px}"
+    },
+    {
+      "name": "Score choices",
+      "kind": "custom",
+      "refersTo": "score-choice",
+      "description": "Flat rubric choices with explicit selected state.",
+      "html": "<div class=\"ds-score\" role=\"group\" aria-label=\"Project score\"><button aria-pressed=\"false\">1</button><button aria-pressed=\"false\">2</button><button aria-pressed=\"true\">3</button><button aria-pressed=\"false\">4</button><button aria-pressed=\"false\">5</button></div>",
+      "css": ".ds-score{display:flex;gap:.5rem;background:#d7ea83;padding:1rem;font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;}.ds-score button{flex:1;min-width:0;min-height:54px;border:1px solid #6c8146;border-radius:6px;background:#e1edb0;color:#073e39;font:inherit;font-size:1.2rem;cursor:pointer}.ds-score button:hover{background:#edf4d1;border-color:#073e39}.ds-score button[aria-pressed=true]{background:#073e39;color:#d7ea83;border-color:#073e39}.ds-score button:focus-visible{outline:3px solid #073e39;outline-offset:4px}"
+    },
+    {
+      "name": "Ranked ballot",
+      "kind": "custom",
+      "refersTo": "ballot-board",
+      "description": "Ordered ballot with empty slots and a clear save action.",
+      "html": "<section class=\"ds-ballot\"><h2>Your ballot</h2><ol><li><strong>1</strong><span>Project name</span><button aria-label=\"Remove project from ballot\">Remove</button></li><li class=\"ds-empty\">2 &nbsp; Choose a project</li></ol><button class=\"ds-save\">Save ballot</button></section>",
+      "css": ".ds-ballot{background:#102f55;color:#d6edfa;padding:1.6rem;border-radius:8px;font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;}.ds-ballot h2{font-size:1.8rem;font-weight:750;letter-spacing:-.025em;margin:0 0 1.5rem}.ds-ballot ol{padding:0;margin:0;list-style:none;display:grid;gap:.6rem}.ds-ballot li{display:flex;align-items:center;gap:.75rem;min-height:83px;padding:.8rem;border-radius:6px;background:#d6edfa;color:#102f55}.ds-ballot li strong{font-size:1.5rem}.ds-ballot li button{background:transparent;border:0;color:inherit;font:inherit;font-size:.8rem;text-decoration:underline;min-height:32px;cursor:pointer}.ds-ballot .ds-empty{background:transparent;border:1px dashed #89a7c3;color:#d6edfa}.ds-save{margin-top:1rem;min-height:44px;width:100%;padding:.7rem 1rem;border:0;border-radius:6px;background:#d6edfa;color:#102f55;font:inherit;font-weight:650;cursor:pointer}.ds-ballot button:hover{filter:brightness(1.05)}.ds-ballot button:focus-visible{outline:3px solid #d6edfa;outline-offset:4px}.ds-ballot li button:focus-visible{outline-color:#102f55}"
+    },
+    {
+      "name": "Love Tap budget",
+      "kind": "custom",
+      "refersTo": "love-tap-budget",
+      "description": "Remaining appreciation and both limits are readable together.",
+      "html": "<div class=\"ds-budget\"><div><strong>12</strong><span>Love Taps left</span></div><p>Up to 3 per project.<br>20 to share across the event.</p></div>",
+      "css": ".ds-budget{display:flex;align-items:center;flex-wrap:wrap;gap:.85rem;background:#073e39;color:#f8d689;padding:1.25rem;border-radius:8px;font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;}.ds-budget strong{font-size:2rem;font-weight:750;line-height:1;display:inline-block;margin-right:.5rem}.ds-budget span{font-size:.9rem}.ds-budget p{font-size:.8rem;margin:0;width:100%}"
     }
   ],
   "narrative": {
     "northStar": "Open House",
-    "overview": "Open House uses large colored regions, broad Bricolage Grotesque headings, and flat geometric project art. The shared evergreen navigation holds the identity steady while lagoon, yellow, and lilac distinguish the event formats. Project names and participation controls stay readable in busy, brightly lit event rooms.\n\nThis is the approved authority for the homepage and event entry only. The frontmatter tokens describe that scope. Event details, scoring, project pages, profiles, admin, and the shared sign-in dialog retain Field Instrument until separately redesigned. Homepage rules must not be applied globally through the Field Instrument tokens. The homepage shell is scoped to the root route in `src/AppNew.tsx`.\n\nThe built sources are `src/components/home/event-stage.css` and `EventStage.tsx`. `src/index.css` remains the canonical Field Instrument token source. Homepage lifecycle, event selection, and content ordering belong in `.impeccable/surfaces/homepage.md`, not in this visual system.",
+    "overview": "Open House uses broad colored fields, strong Bricolage Grotesque headings, and flat geometric project art. Evergreen navigation holds the identity steady while lagoon, yellow, and sky distinguish event formats. Project names and participation controls remain readable in busy event rooms.\n\nThe user-approved expansion covers the homepage, event entry and judging queue, rubric scoring and review, Code & Tell ranked ballots, and Demo Day appreciation browsing. It extends the same visual identity. Admin, profiles, full project pages, event configuration, and authentication retain Field Instrument. Do not change their global tokens to implement participation styling.\n\nThe implemented sources are `src/components/home/event-stage.css`, `EventStage.tsx`, `src/components/participation/participation.css`, `ParticipationChrome.tsx`, `ScoringWizard.tsx`, `code-and-tell/CodeAndTellVoteView.tsx`, and `demo-day/DemoDayBrowse.tsx`. The participation contract is `.impeccable/surfaces/participation.md`. Historical color exploration in the homepage brief does not override the current sky/navy implementation. `src/index.css` remains the Field Instrument source outside this scope.",
     "keyCharacteristics": [
       "Colored page fields with contrasting text and working panels",
       "One expressive sans family for headings, controls, and metadata",
       "Flat, lightly rounded panels and geometric SVG covers",
-      "Mode-specific content layouts within shared navigation",
-      "An explicit boundary between homepage and downstream styling"
+      "Distinct project-and-rubric, exhibition, and list-and-ballot layouts",
+      "Compact phone controls with reachable scoring, ballot, and budget information",
+      "A scoped extension that preserves Field Instrument on untouched pages"
     ],
     "rules": [
       {
         "name": "The Mode Field Rule",
-        "body": "Use the event mode to select the page field and its contrasting text pair. Carry that pair through the heading, primary action, and working content.",
+        "body": "Use the event mode to select the page field and its contrasting text pair. Carry that pair through headings, controls, and working content.",
         "section": "colors"
       },
       {
         "name": "The Plain Label Rule",
-        "body": "Use readable sentence-case labels. Event metadata is information, not an engraved decoration or an invented eyebrow.",
+        "body": "Use readable sentence-case labels. Event metadata is information, not engraved decoration or an invented eyebrow.",
         "section": "typography"
       },
       {
         "name": "The Flat Surface Rule",
-        "body": "Separate homepage regions with color, spacing, or thin rules. Do not add hardware bevels, inset glass, offset block shadows, or decorative gradients.",
+        "body": "Separate Open House regions with color, spacing, or thin rules. Do not add hardware bevels, inset glass, offset block shadows, or decorative gradients.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "Do keep evergreen navigation consistent across homepage modes.",
-      "Do use the mode field and its matching foreground, muted text, and panel colors together.",
-      "Do keep project names and action labels visible alongside decorative art.",
-      "Do preserve visible keyboard focus and the reduced-motion behavior.",
-      "Do keep Field Instrument styling on downstream pages until an explicit redesign changes that scope."
+      "Do keep evergreen navigation consistent across homepage and event participation.",
+      "Do use each mode's field, foreground, muted text, and panel colors together.",
+      "Do preserve the project-and-rubric, exhibition, and list-and-ballot layouts.",
+      "Do keep project names, action labels, draft states, and remaining budgets readable.",
+      "Do preserve visible keyboard focus, explicit reorder controls, and reduced-motion behavior.",
+      "Do keep Field Instrument on admin, profiles, full project pages, and authentication until separately redesigned."
     ],
     "donts": [
-      "Don't make white the primary homepage canvas.",
-      "Don't import the hardware chassis, engraved micro-labels, project keycaps, or sequencer into Open House.",
-      "Don't present the abstract covers as project screenshots, logos, or evidence about a project.",
-      "Don't create one generic card layout for all three event modes.",
-      "Don't turn homepage composition or lifecycle choices into app-wide visual rules."
+      "Don't make white the primary Open House canvas.",
+      "Don't reintroduce lilac or a color preview switcher as the Code & Tell direction.",
+      "Don't import hardware chassis, engraved micro-labels, keycap shadows, or decorative sequencers into Open House.",
+      "Don't present abstract covers as screenshots, logos, or evidence about a project.",
+      "Don't let fixed phone controls obscure the final content or primary action.",
+      "Don't canonize inherited results decoration or leftover hardware class names as new design rules."
     ]
   }
 }

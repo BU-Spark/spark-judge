@@ -1,6 +1,12 @@
 import "./CodeAndTellVoteView.fi.css";
 import { useMutation, useQuery } from "convex/react";
 import { useDeferredValue, useEffect, useMemo, useState, useRef } from "react";
+import type { FunctionReturnType } from "convex/server";
+import {
+  ParticipationFrame,
+  ParticipationHeader,
+  DirectionIcon,
+} from "../participation/ParticipationChrome";
 import { Reorder } from "framer-motion";
 import { toast } from "sonner";
 
@@ -56,65 +62,50 @@ function BallotSlot({
   index,
   project,
   onRemove,
+  onMove,
+  last,
 }: {
   index: number;
   project?: Project;
   onRemove: () => void;
+  onMove?: (direction: -1 | 1) => void;
+  last?: boolean;
 }) {
-  if (!project) {
+  if (!project)
     return (
-      <div className="fi-radius-panel border border-dashed border-border bg-muted/15 p-4 transition-colors">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-current/15 fi-surface text-sm font-bold text-amber-600 ">
-              #{index + 1}
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-medium uppercase tracking-[0.18em] fi-muted">
-                Rank {index + 1}
-              </div>
-              <div className="mt-2 text-sm fi-muted">
-                Pick a project for this slot.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <li className="ballot-slot ballot-slot--empty">
+        <span className="ballot-rank">{index + 1}</span>
+        <span>Choose your #{index + 1} project</span>
+      </li>
     );
-  }
-
   return (
-    <Reorder.Item
-      value={project._id}
-      id={project._id}
-      className="fi-radius-panel border border-border fi-surface p-4 transition-colors shadow-sm cursor-grab active:cursor-grabbing"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-current/15 fi-surface text-sm font-bold text-amber-600 ">
-            #{index + 1}
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-medium uppercase tracking-[0.18em] fi-muted">
-              Rank {index + 1}
-            </div>
-            <div className="mt-1 truncate text-base font-semibold fi-ink">
-              {project.name}
-            </div>
-            <div className="mt-1 line-clamp-2 text-sm fi-muted">
-              {project.description || "No description"}
-            </div>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={onRemove}
-            className="rounded-lg border border-red-500/20 px-2 py-1 text-xs text-red-600 transition-colors hover:bg-red-500/10 "
-          >
-            Remove
-          </button>
-        </div>
+    <Reorder.Item value={project._id} className="ballot-slot">
+      <span className="ballot-rank">{index + 1}</span>
+      <div className="ballot-slot-content">
+        <strong>{project.name}</strong>
+        <button
+          className="ballot-remove"
+          onClick={onRemove}
+          aria-label={`Remove ${project.name} from ballot`}
+        >
+          Remove
+        </button>
+      </div>
+      <div className="ballot-move">
+        <button
+          onClick={() => onMove?.(-1)}
+          disabled={index === 0}
+          aria-label={`Move ${project.name} up`}
+        >
+          <DirectionIcon direction="up" />
+        </button>
+        <button
+          onClick={() => onMove?.(1)}
+          disabled={last}
+          aria-label={`Move ${project.name} down`}
+        >
+          <DirectionIcon direction="down" />
+        </button>
       </div>
     </Reorder.Item>
   );
@@ -180,12 +171,11 @@ function ResultsSection({
 
       <div className="fi-radius-module border border-border fi-surface shadow-sm">
         <div className="border-b border-border px-6 py-5">
-          <h3 className="text-xl fi-zone font-bold fi-ink">
-            Top Standings
-          </h3>
+          <h3 className="text-xl fi-zone font-bold fi-ink">Top Standings</h3>
           <p className="mt-1 text-sm fi-muted">
-            Totals use K-Borda points per ballot (K for 1st, then K−1… down to 1).
-            Ties use more 1st-place finishes, then 2nd, and so on, then name.
+            Totals use K-Borda points per ballot (K for 1st, then K−1… down to
+            1). Ties use more 1st-place finishes, then 2nd, and so on, then
+            name.
           </p>
         </div>
         {results.standings.length === 0 ? (
@@ -252,22 +242,59 @@ function ResultsSection({
   );
 }
 
-export function CodeAndTellVoteView({
-  eventId,
-  event,
-  onBack,
-}: {
+type BallotProps = {
   eventId: Id<"events">;
   event: CodeAndTellEvent;
   onBack: () => void;
-}) {
+};
+export type VotingContext = FunctionReturnType<
+  typeof api.codeAndTell.getVotingContext
+>;
+export function CodeAndTellVoteView(props: BallotProps) {
+  const { eventId, event } = props;
   const loggedInUser = useQuery(api.auth.loggedInUser);
   const publicResults = useQuery(
     api.codeAndTell.getPublicResults,
     event.resultsReleased ? { eventId } : "skip",
   );
   const saveBallot = useMutation(api.codeAndTell.saveBallot);
+  const votingContext = useQuery(
+    api.codeAndTell.getVotingContext,
+    event.status === "active" && loggedInUser?.email?.trim()
+      ? { eventId }
+      : "skip",
+  );
+  return (
+    <ParticipationFrame mode="code_and_tell">
+      <CodeAndTellBallotView
+        key={props.eventId}
+        {...props}
+        loggedInUser={loggedInUser}
+        publicResults={publicResults}
+        votingContext={votingContext}
+        saveBallot={saveBallot}
+      />
+    </ParticipationFrame>
+  );
+}
 
+export function CodeAndTellBallotView({
+  eventId,
+  event,
+  onBack,
+  loggedInUser,
+  publicResults,
+  votingContext,
+  saveBallot,
+}: BallotProps & {
+  loggedInUser: { _id: string; email?: string } | null | undefined;
+  publicResults: PublicResults | null | undefined;
+  votingContext: VotingContext | undefined;
+  saveBallot: (args: {
+    eventId: Id<"events">;
+    rankedTeamIds: Id<"teams">[];
+  }) => Promise<unknown>;
+}) {
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [rankedTeamIds, setRankedTeamIds] = useState<Id<"teams">[]>([]);
@@ -275,13 +302,6 @@ export function CodeAndTellVoteView({
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   const hasVerifiedEmail = Boolean(loggedInUser?.email?.trim());
-  const votingContext = useQuery(
-    api.codeAndTell.getVotingContext,
-    event.status === "active" && loggedInUser && hasVerifiedEmail
-      ? { eventId }
-      : "skip",
-  );
-
   const ballotSignature = useMemo(
     () => (votingContext?.currentBallotTeamIds || []).join(":"),
     [votingContext?.currentBallotTeamIds],
@@ -306,7 +326,10 @@ export function CodeAndTellVoteView({
 
   const projectById = useMemo(() => {
     return new Map(
-      (votingContext?.projects || []).map((project) => [String(project._id), project]),
+      (votingContext?.projects || []).map((project) => [
+        String(project._id),
+        project,
+      ]),
     );
   }, [votingContext?.projects]);
 
@@ -337,10 +360,13 @@ export function CodeAndTellVoteView({
 
   const currentSignature = useMemo(
     () => rankedTeamIds.join(":"),
-    [rankedTeamIds]
+    [rankedTeamIds],
   );
   const hasUnsavedChanges = currentSignature !== ballotSignature;
-  const isSaved = ballotComplete && !hasUnsavedChanges && (votingContext?.currentBallotTeamIds?.length === requiredRankCount);
+  const isSaved =
+    ballotComplete &&
+    !hasUnsavedChanges &&
+    votingContext?.currentBallotTeamIds?.length === requiredRankCount;
 
   const addProjectToBallot = (teamId: Id<"teams">) => {
     setRankedTeamIds((current) => {
@@ -351,93 +377,82 @@ export function CodeAndTellVoteView({
     });
   };
 
-  const [isMobileBallotOpen, setIsMobileBallotOpen] = useState(false);
-
   const renderBallot = () => (
-    <div className="card p-5 bg-muted/30 h-full flex flex-col">
-      <div className="border-b border-border pb-4 shrink-0">
-        <h2 className="text-xl fi-zone font-bold fi-ink">
-          Rank your top {requiredRankCount} project{requiredRankCount === 1 ? "" : "s"}
-        </h2>
+    <aside
+      className="ballot-board"
+      id="your-ballot"
+      aria-labelledby="ballot-heading"
+    >
+      <div className="ballot-board-heading">
+        <h2 id="ballot-heading">Your ballot</h2>
+        <span>
+          {rankedTeamIds.length} / {requiredRankCount}
+        </span>
       </div>
-
-      <div className="mt-5 space-y-3 flex-1 overflow-y-auto min-h-[200px] custom-scrollbar pr-2">
-        <Reorder.Group
-          axis="y"
-          values={rankedTeamIds}
-          onReorder={setRankedTeamIds}
-          className="space-y-3"
-        >
-          {rankedTeamIds.map((teamId, index) => {
-            const project = projectById.get(String(teamId));
-            return (
-              <BallotSlot
-                key={teamId}
-                index={index}
-                project={project}
-                onRemove={() => removeProjectFromBallot(teamId)}
-              />
-            );
-          })}
-        </Reorder.Group>
-
-        {Array.from({ length: Math.max(0, requiredRankCount - rankedTeamIds.length) }, (_, i) => {
-          const index = rankedTeamIds.length + i;
-          return (
-            <BallotSlot
-              key={`empty-${index}`}
-              index={index}
-              onRemove={() => {}}
-            />
-          );
-        })}
+      <p>
+        Rank your top {requiredRankCount} projects. Your favorite goes first.
+      </p>
+      <Reorder.Group
+        axis="y"
+        values={rankedTeamIds}
+        onReorder={setRankedTeamIds}
+        className="ballot-slots"
+      >
+        {rankedTeamIds.map((teamId, index) => (
+          <BallotSlot
+            key={teamId}
+            index={index}
+            project={projectById.get(String(teamId))}
+            onRemove={() => removeProjectFromBallot(teamId)}
+            onMove={(direction) => moveBallotProject(index, direction)}
+            last={index === rankedTeamIds.length - 1}
+          />
+        ))}
+      </Reorder.Group>
+      <ol className="ballot-slots" start={rankedTeamIds.length + 1}>
+        {Array.from({ length: remainingSlots }, (_, i) => (
+          <BallotSlot
+            key={i}
+            index={rankedTeamIds.length + i}
+            onRemove={() => {}}
+          />
+        ))}
+      </ol>
+      <p className="ballot-help">
+        Drag to reorder, or use the up and down buttons.
+      </p>
+      <div className="ballot-state" role="status">
+        {isSaved
+          ? "Your ballot is safely stored."
+          : ballotComplete
+            ? "Ready to submit. Check your order before saving."
+            : `${remainingSlots} slot${remainingSlots === 1 ? "" : "s"} still open.`}
       </div>
-
-      <div className="shrink-0 pt-4 mt-auto">
-        <div className={`rounded-lg border px-4 py-3 text-sm ${
-          isSaved
-            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 "
-            : "border-border fi-surface fi-muted"
-        }`}>
-          {isSaved
-            ? "Your ballot is safely stored."
-            : ballotComplete
-              ? hasUnsavedChanges && votingContext?.currentBallotTeamIds?.length === requiredRankCount
-                ? "You have unsaved changes."
-                : "Your ballot is complete and ready to save."
-              : `${remainingSlots} slot${remainingSlots === 1 ? "" : "s"} still open.`}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => void handleSaveBallot()}
-          disabled={
-            !ballotComplete ||
-            isSubmitting ||
-            votingClosedToNewVoters ||
-            !hasUnsavedChanges
-          }
-          className={`mt-5 w-full py-2.5 rounded-lg font-semibold transition-colors ${
-            isSaved
-              ? "bg-emerald-500 text-white opacity-100"
-              : "fi-transport disabled:opacity-50 disabled:cursor-not-allowed"
-          }`}
-        >
-          {isSubmitting ? "Saving ballot..." : isSaved ? "✓ Ballot Submitted" : "Save Ballot"}
-        </button>
-
-        <div className="mt-3 text-xs text-center fi-muted">
-          {lastSavedAt
-            ? `Last saved at ${new Date(lastSavedAt).toLocaleTimeString([], {
-                hour: "numeric",
-                minute: "2-digit",
-              })}`
-            : votingContext?.currentBallotTeamIds && votingContext.currentBallotTeamIds.length > 0
-              ? "Existing ballot loaded. You can replace it until the event ends."
-              : "No ballot saved yet."}
-        </div>
-      </div>
-    </div>
+      <button
+        className="participation-primary ballot-submit"
+        onClick={() => void handleSaveBallot()}
+        disabled={
+          !ballotComplete ||
+          isSubmitting ||
+          votingClosedToNewVoters ||
+          !hasUnsavedChanges
+        }
+      >
+        {isSubmitting
+          ? "Saving ballot..."
+          : isSaved
+            ? "Ballot submitted"
+            : "Save Ballot"}
+        <DirectionIcon />
+      </button>
+      <p className="ballot-saved-note">
+        {lastSavedAt
+          ? `Last saved at ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+          : votingContext?.currentBallotTeamIds?.length
+            ? "Existing ballot loaded. You can replace it until the event ends."
+            : "Your picks are not submitted until you save."}
+      </p>
+    </aside>
   );
 
   const removeProjectFromBallot = (teamId: Id<"teams">) => {
@@ -490,7 +505,12 @@ export function CodeAndTellVoteView({
           onClick={onBack}
           className="mb-6 flex items-center gap-2 fi-key"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -515,7 +535,7 @@ export function CodeAndTellVoteView({
               </p>
             </div>
             <div className="text-sm fi-muted">
-              {formatDateTime(event.startDate).split(',')[0]}
+              {formatDateTime(event.startDate).split(",")[0]}
             </div>
           </div>
         </div>
@@ -538,7 +558,12 @@ export function CodeAndTellVoteView({
           onClick={onBack}
           className="mb-6 flex items-center gap-2 fi-key"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -556,7 +581,9 @@ export function CodeAndTellVoteView({
             {event.name}
           </h1>
           <p className="mt-3 text-sm fi-muted">
-            Voting opens when the event becomes active. Projects are already managed by admins, and ranked ballots will unlock at the scheduled start time.
+            Voting opens when the event becomes active. Projects are already
+            managed by admins, and ranked ballots will unlock at the scheduled
+            start time.
           </p>
         </div>
       </div>
@@ -570,7 +597,12 @@ export function CodeAndTellVoteView({
           onClick={onBack}
           className="mb-6 flex items-center gap-2 fi-key"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -588,7 +620,8 @@ export function CodeAndTellVoteView({
             Results Pending
           </h1>
           <p className="mt-3 text-sm fi-muted">
-            Balloting is closed. Admins still need to confirm the final winner and release the ranked-vote results.
+            Balloting is closed. Admins still need to confirm the final winner
+            and release the ranked-vote results.
           </p>
         </div>
       </div>
@@ -606,7 +639,12 @@ export function CodeAndTellVoteView({
           onClick={onBack}
           className="mb-6 flex items-center gap-2 fi-key"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -625,13 +663,13 @@ export function CodeAndTellVoteView({
               Sign in to vote
             </h1>
             <p className="mt-3 text-sm fi-muted">
-              Code &amp; Tell uses one editable ranked ballot per signed-in voter. Your own projects stay visible, but they cannot be placed in your ranking.
+              Code &amp; Tell uses one editable ranked ballot per signed-in
+              voter. Your own projects stay visible, but they cannot be placed
+              in your ranking.
             </p>
           </div>
           <div className="fi-radius-module border border-border fi-surface p-6 shadow-sm">
-            <h2 className="text-xl fi-zone font-bold fi-ink">
-              Sign In
-            </h2>
+            <h2 className="text-xl fi-zone font-bold fi-ink">Sign In</h2>
             <p className="mt-2 text-sm fi-muted">
               Use your event account to unlock ballot editing.
             </p>
@@ -651,7 +689,12 @@ export function CodeAndTellVoteView({
           onClick={onBack}
           className="mb-6 flex items-center gap-2 fi-key"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -662,320 +705,139 @@ export function CodeAndTellVoteView({
           Back to Events
         </button>
         <div className="fi-radius-module border border-red-500/20 bg-red-500/5 p-8 text-sm text-red-700  shadow-sm">
-          A verified account email is required to vote in Code &amp; Tell events.
+          A verified account email is required to vote in Code &amp; Tell
+          events.
         </div>
       </div>
     );
   }
 
-  if (votingContext === undefined) {
+  if (votingContext == null) {
     return <LoadingState label="Loading ballot..." />;
   }
 
   return (
-    <div className="ct-fi-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <button
-        onClick={onBack}
-        className="mb-6 flex items-center gap-2 fi-key"
-      >
-        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M10 19l-7-7m0 0l7-7m-7 7h18"
-          />
-        </svg>
-        Back to Events
-      </button>
-
-      <div className="mb-8 fade-in space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl fi-zone font-bold fi-ink">
-              {event.name}
-            </h1>
-            <span className="badge bg-amber-500/10 text-amber-700  border border-amber-500/20">
-              Code & Tell
-            </span>
-          </div>
-          <p className="max-w-3xl text-sm fi-muted">
-            {event.description}
-          </p>
-          <div className="flex flex-wrap items-center gap-4 text-sm fi-muted pt-1">
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              {formatDateTime(event.startDate).split(',')[0]}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {votingContext && votingClosedToNewVoters && (
-        <div className="mb-6 fi-radius-panel border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 ">
-          This event has reached its voting limit for new voters (
-          {votingContext.rankedVoteRowCount}
-          {votingContext.maxBallots != null
-            ? ` / ${votingContext.maxBallots}`
-            : ""}
-          ). If you already had a ballot, you can still update it; otherwise
-          contact an organizer.
-        </div>
+    <div className="participation-content ballot-page">
+      <ParticipationHeader
+        title={event.name}
+        description="Explore the projects. Pick your favorites. Put them in order."
+        onBack={onBack}
+        aside={
+          <span className="participation-status">
+            Voting open · {formatDateTime(event.startDate).split(",")[0]}
+          </span>
+        }
+      />
+      {votingClosedToNewVoters && (
+        <p className="participation-notice" role="status">
+          This event has reached its voting limit for new voters. Existing
+          voters can still update their ballot. Contact an organizer if you need
+          help.
+        </p>
       )}
-
       {isSaved && (
-        <div className="mb-6 fi-radius-panel border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900  flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 ">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-          </div>
-          <div>
-            <div className="font-semibold">You're all set!</div>
-            <div>Your ballot is submitted. You can still make changes until the event ends.</div>
-          </div>
-        </div>
+        <p className="participation-notice" role="status">
+          Your ballot is submitted. You can still make changes until the event
+          ends.
+        </p>
       )}
-
-      <div className="flex flex-col xl:flex-row gap-6 pb-24 xl:pb-0">
-        <div className="flex-1 space-y-5">
-          <div className="card p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-xl fi-zone font-bold fi-ink">
-                  Project Field
-                </h2>
-                <p className="mt-1 text-sm fi-muted">
-                  Search all visible projects, then add eligible ones into your ranking.
-                </p>
-              </div>
-              <div className="lg:w-80">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search projects, descriptions, or members..."
-                  className="input w-full"
-                />
-              </div>
-            </div>
+      <div className="ballot-layout">
+        <section aria-labelledby="ballot-projects-heading">
+          <div className="participation-section-title">
+            <h2 id="ballot-projects-heading">Find your favorites</h2>
+            <span>{filteredProjects.length} projects</span>
           </div>
-
+          <label className="participation-search">
+            <span>Search projects</span>
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Project, description, or member"
+            />
+          </label>
           {votingContext.eligibleProjectCount === 0 ? (
-            <div className="card p-8 border-dashed text-sm fi-muted text-center">
+            <p className="participation-empty">
               You do not have any eligible projects to rank in this event.
-            </div>
+            </p>
           ) : filteredProjects.length === 0 ? (
-            <div className="card p-8 border-dashed text-sm fi-muted text-center">
+            <p className="participation-empty">
               No projects match that search.
-            </div>
+            </p>
           ) : (
-            <div className="space-y-3">
+            <div className="ballot-projects">
               {filteredProjects.map((project) => {
-                const selectedIndex = rankedTeamIds.findIndex(
-                  (teamId) => String(teamId) === String(project._id),
-                );
-
+                const rank = rankedTeamIds.indexOf(project._id);
                 return (
-                  <ProjectListItem
+                  <article
                     key={project._id}
-                    project={project}
-                    selectedIndex={selectedIndex}
-                    votingClosedToNewVoters={votingClosedToNewVoters}
-                    rankedProjectSet={rankedProjectSet}
-                    rankedTeamIdsLength={rankedTeamIds.length}
-                    requiredRankCount={requiredRankCount}
-                    removeProjectFromBallot={removeProjectFromBallot}
-                    addProjectToBallot={addProjectToBallot}
-                  />
+                    className={`ballot-project${rank >= 0 ? " is-picked" : ""}`}
+                  >
+                    <div className="ballot-project-heading">
+                      <h3>{project.name}</h3>
+                      {rank >= 0 && (
+                        <span className="participation-badge">
+                          Ranked #{rank + 1}
+                        </span>
+                      )}
+                      {project.isOwned && (
+                        <span className="participation-badge">
+                          Your project
+                        </span>
+                      )}
+                    </div>
+                    <p>{project.description || "No description"}</p>
+                    {project.members.length > 0 && (
+                      <p className="ballot-members">
+                        {project.members.join(" · ")}
+                      </p>
+                    )}
+                    <div className="ballot-project-actions">
+                      {project.projectUrl && (
+                        <a
+                          href={project.projectUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          View project <DirectionIcon />
+                        </a>
+                      )}
+                      {project.isOwned || !project.isEligible ? (
+                        <span className="participation-badge">Ineligible</span>
+                      ) : rank >= 0 ? (
+                        <button
+                          className="participation-secondary"
+                          onClick={() => removeProjectFromBallot(project._id)}
+                        >
+                          Remove from ballot
+                        </button>
+                      ) : (
+                        <button
+                          className="participation-secondary"
+                          onClick={() => addProjectToBallot(project._id)}
+                          disabled={
+                            votingClosedToNewVoters ||
+                            rankedTeamIds.length >= requiredRankCount
+                          }
+                        >
+                          Add to ballot
+                        </button>
+                      )}
+                    </div>
+                  </article>
                 );
               })}
             </div>
           )}
-        </div>
-
-        <div className="hidden xl:block w-96 shrink-0 sticky top-24 h-fit">
-          {renderBallot()}
-        </div>
+        </section>
+        {renderBallot()}
       </div>
-
-      {/* Mobile Ballot Floating Button & Drawer */}
-      <div className="xl:hidden">
-        {/* Floating Button */}
-        <div className="fixed bottom-0 inset-x-0 z-[60] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] pt-2 pointer-events-none">
-          <button
-            onClick={() => setIsMobileBallotOpen(true)}
-            className={`pointer-events-auto w-fit mx-auto border rounded-full shadow-[0_12px_28px_rgba(0,0,0,0.22)]  px-5 py-3 flex items-center justify-center gap-3 font-semibold text-sm transition-colors ${
-              isSaved
-                ? "bg-emerald-500 text-white border-emerald-500"
-                : "bg-primary text-primary-foreground border-primary"
-            }`}
-          >
-            <span>{isSaved ? "✓ Ballot Submitted" : "Your Ballot"}</span>
-            <span className="fi-surface/20 px-2 py-0.5 rounded-full text-xs">
-              {rankedTeamIds.length} / {requiredRankCount}
-            </span>
-          </button>
-        </div>
-
-        {/* Backdrop */}
-        {isMobileBallotOpen && (
-          <div
-            className="fixed inset-0 bg-black/40 z-[70]"
-            onClick={() => setIsMobileBallotOpen(false)}
-          />
-        )}
-
-        {/* Drawer */}
-        <div
-          className={`fixed inset-x-0 bottom-0 z-[80] fi-surface rounded-t-2xl fi-elevation-panel border border-border p-4 max-h-[85vh] flex flex-col transition-transform duration-300 ease-out will-change-transform ${
-            isMobileBallotOpen ? "translate-y-0" : "translate-y-full"
-          }`}
-        >
-          <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full mx-auto mb-3 shrink-0" />
-          <div className="flex items-start justify-between mb-3 gap-2 shrink-0">
-            <h3 className="text-lg fi-zone font-semibold fi-ink">
-              Your Ballot
-            </h3>
-            <button
-              onClick={() => setIsMobileBallotOpen(false)}
-              className="fi-muted hover:fi-ink text-2xl -mt-2 mr-2"
-              aria-label="Close ballot"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto custom-scrollbar -mx-4 px-4 pb-4">
-            {renderBallot()}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProjectListItem({
-  project,
-  selectedIndex,
-  votingClosedToNewVoters,
-  rankedProjectSet,
-  rankedTeamIdsLength,
-  requiredRankCount,
-  removeProjectFromBallot,
-  addProjectToBallot,
-}: {
-  project: any;
-  selectedIndex: number;
-  votingClosedToNewVoters: boolean;
-  rankedProjectSet: Set<string>;
-  rankedTeamIdsLength: number;
-  requiredRankCount: number;
-  removeProjectFromBallot: (id: Id<"teams">) => void;
-  addProjectToBallot: (id: Id<"teams">) => void;
-}) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  return (
-    <div
-      className={`card p-4 transition-colors ${
-        project.isOwned
-          ? "border-amber-500/20 bg-amber-500/5"
-          : selectedIndex >= 0
-            ? "border-teal-500/25 bg-teal-500/5"
-            : "hover:border-amber-500/20"
-      }`}
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1">
-          <div
-            className="flex justify-between items-start cursor-pointer sm:cursor-auto"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
-            <div className="flex flex-wrap items-center gap-2 pr-4 sm:pr-0">
-              <h3 className="text-base font-semibold fi-ink">
-                {project.name}
-              </h3>
-              {project.isOwned && (
-                <span className="badge bg-amber-500/10 text-amber-700  border border-amber-500/20">
-                  Your project
-                </span>
-              )}
-              {selectedIndex >= 0 && (
-                <span className="badge bg-teal-500/10 text-teal-700  border border-teal-500/20">
-                  Ranked #{selectedIndex + 1}
-                </span>
-              )}
-            </div>
-            {/* Mobile expand icon */}
-            <button className="sm:hidden fi-muted p-1 shrink-0">
-              <svg
-                className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          </div>
-
-          <div className={`${isExpanded ? "block" : "hidden sm:block"}`}>
-            <p className="mt-1 text-sm fi-muted line-clamp-2">
-              {project.description || "No description"}
-            </p>
-            {project.members.length > 0 && (
-              <p className="mt-2 text-xs fi-muted">
-                {project.members.join(" • ")}
-              </p>
-            )}
-            {project.projectUrl && project.projectUrl.trim() !== "" && (
-              <a
-                href={project.projectUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                View project
-                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7m0 0v7m0-7L10 14" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5v14h14" />
-                </svg>
-              </a>
-            )}
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center mt-2 sm:mt-0">
-          {project.isOwned ? (
-            <div className="badge bg-muted fi-muted border border-border">
-              Ineligible
-            </div>
-          ) : selectedIndex >= 0 ? (
-            <button
-              type="button"
-              onClick={() => removeProjectFromBallot(project._id)}
-              className="fi-key text-xs px-3 py-1.5"
-            >
-              Remove
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => addProjectToBallot(project._id)}
-              disabled={
-                votingClosedToNewVoters ||
-                rankedProjectSet.has(String(project._id)) ||
-                rankedTeamIdsLength >= requiredRankCount
-              }
-              className="fi-key text-xs px-3 py-1.5"
-            >
-              Add to ballot
-            </button>
-          )}
-        </div>
-      </div>
+      <a className="ballot-mobile-jump" href="#your-ballot">
+        Your ballot{" "}
+        <span>
+          {rankedTeamIds.length} / {requiredRankCount}
+        </span>
+        <DirectionIcon direction="down" />
+      </a>
     </div>
   );
 }

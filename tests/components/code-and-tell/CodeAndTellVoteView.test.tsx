@@ -132,10 +132,7 @@ describe("CodeAndTellVoteView", () => {
     });
     queryResults.set("codeAndTell:getVotingContext", {
       ...(queryResults.get("codeAndTell:getVotingContext") as object),
-      currentBallotTeamIds: [
-        "team-2" as Id<"teams">,
-        "team-3" as Id<"teams">,
-      ],
+      currentBallotTeamIds: ["team-2" as Id<"teams">, "team-3" as Id<"teams">],
     });
 
     render(
@@ -213,5 +210,61 @@ describe("CodeAndTellVoteView", () => {
     expect(screen.getByText("Results Released")).toBeInTheDocument();
     expect(screen.getAllByText("Project Two").length).toBeGreaterThan(0);
     expect(screen.getByText("Top Standings")).toBeInTheDocument();
+  });
+  it("saves the order chosen with accessible move buttons", async () => {
+    queryResults.set("auth:loggedInUser", {
+      _id: "user-1",
+      email: "voter@example.com",
+    });
+    render(
+      <CodeAndTellVoteView
+        eventId={eventId}
+        event={baseEvent}
+        onBack={vi.fn()}
+      />,
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Add to ballot" })[0],
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add to ballot" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Move Project Three up" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save Ballot" }));
+    await waitFor(() =>
+      expect(saveBallotMock).toHaveBeenCalledWith({
+        eventId,
+        rankedTeamIds: ["team-3", "team-2"],
+      }),
+    );
+  });
+
+  it("keeps ballot choices available for retry after a failed save", async () => {
+    queryResults.set("auth:loggedInUser", {
+      _id: "user-1",
+      email: "voter@example.com",
+    });
+    saveBallotMock.mockRejectedValueOnce(new Error("Offline"));
+    render(
+      <CodeAndTellVoteView
+        eventId={eventId}
+        event={baseEvent}
+        onBack={vi.fn()}
+      />,
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Add to ballot" })[0],
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add to ballot" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save Ballot" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Save Ballot" })).toBeEnabled(),
+    );
+    expect(
+      screen.getByRole("button", { name: "Move Project Three up" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Your ballot is safely stored."),
+    ).not.toBeInTheDocument();
   });
 });

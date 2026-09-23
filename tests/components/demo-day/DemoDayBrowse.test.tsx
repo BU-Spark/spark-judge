@@ -79,7 +79,11 @@ describe("DemoDayBrowse", () => {
     });
 
     mockUseAppreciation.mockReturnValue({
-      appreciate: vi.fn().mockResolvedValue({ success: true }),
+      appreciate: vi.fn().mockResolvedValue({
+        success: true,
+        remainingForTeam: 7,
+        remainingTotal: 12,
+      }),
       isLoading: false,
       error: null,
       clearError: vi.fn(),
@@ -108,7 +112,7 @@ describe("DemoDayBrowse", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getAllByText("Demo Day Fall 2024")).toHaveLength(2);
+    expect(screen.getAllByText("Demo Day Fall 2024")).toHaveLength(1);
     expect(screen.getByText("Annual demo day event")).toBeInTheDocument();
   });
 
@@ -123,7 +127,9 @@ describe("DemoDayBrowse", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByLabelText(/back to events/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /back to events/i }),
+    ).toBeInTheDocument();
   });
 
   it("should render back button and call onBack when clicked", () => {
@@ -137,7 +143,7 @@ describe("DemoDayBrowse", () => {
       </MemoryRouter>,
     );
 
-    const backButton = screen.getByText("Back to Events");
+    const backButton = screen.getByRole("button", { name: /back to events/i });
     fireEvent.click(backButton);
 
     expect(mockOnBack).toHaveBeenCalled();
@@ -204,8 +210,10 @@ describe("DemoDayBrowse", () => {
     );
 
     // Should show remaining budget
-    expect(screen.getByText("14")).toBeInTheDocument();
-    expect(screen.getByText("/ 15 left")).toBeInTheDocument();
+    expect(screen.getAllByText("14")[0]).toBeInTheDocument();
+    expect(
+      screen.getByText(/15 to share across the event/),
+    ).toBeInTheDocument();
   });
 
   it("should render search input", () => {
@@ -315,7 +323,7 @@ describe("DemoDayBrowse", () => {
       </MemoryRouter>,
     );
 
-    const appreciateButtons = screen.getAllByText("+1");
+    const appreciateButtons = screen.getAllByText("Love Tap +1");
     expect(appreciateButtons.length).toBeGreaterThan(0);
   });
 
@@ -331,8 +339,8 @@ describe("DemoDayBrowse", () => {
     );
 
     // Should show "X/10" for each team by default
-    expect(screen.getByText("1/10")).toBeInTheDocument();
-    expect(screen.getByText("0/10")).toBeInTheDocument();
+    expect(screen.getByText("1 / 10 sent")).toBeInTheDocument();
+    expect(screen.getByText("0 / 10 sent")).toBeInTheDocument();
   });
 
   it("should show empty state when no teams match filter", () => {
@@ -353,7 +361,7 @@ describe("DemoDayBrowse", () => {
 
     expect(screen.getByText("No Projects Found")).toBeInTheDocument();
     expect(
-      screen.getByText("Try adjusting your search terms"),
+      screen.getByText("Try another search or course."),
     ).toBeInTheDocument();
   });
 
@@ -369,7 +377,7 @@ describe("DemoDayBrowse", () => {
     );
 
     // Should show "Showing X projects"
-    expect(screen.getByText(/Showing 2 projects/)).toBeInTheDocument();
+    expect(screen.getByText(/^2 projects$/)).toBeInTheDocument();
   });
 });
 
@@ -412,7 +420,11 @@ describe("DemoDayBrowse - Team Card interactions", () => {
   });
 
   it("should call appreciate when button is clicked", async () => {
-    const mockAppreciateFunc = vi.fn().mockResolvedValue({ success: true });
+    const mockAppreciateFunc = vi.fn().mockResolvedValue({
+      success: true,
+      remainingForTeam: 7,
+      remainingTotal: 12,
+    });
     mockUseAppreciation.mockReturnValue({
       appreciate: mockAppreciateFunc,
       isLoading: false,
@@ -430,7 +442,7 @@ describe("DemoDayBrowse - Team Card interactions", () => {
       </MemoryRouter>,
     );
 
-    const appreciateButton = screen.getByText("+1");
+    const appreciateButton = screen.getByText("Love Tap +1");
     fireEvent.click(appreciateButton);
 
     await waitFor(() => {
@@ -465,7 +477,7 @@ describe("DemoDayBrowse - Team Card interactions", () => {
       </MemoryRouter>,
     );
 
-    const maxGivenButton = screen.getByText("Max");
+    const maxGivenButton = screen.getByText("Limit reached");
     expect(maxGivenButton).toBeInTheDocument();
     expect(maxGivenButton.closest("button")).toBeDisabled();
   });
@@ -496,7 +508,7 @@ describe("DemoDayBrowse - Team Card interactions", () => {
       </MemoryRouter>,
     );
 
-    const noBudgetButton = screen.getByText("None Left");
+    const noBudgetButton = screen.getByText("None left");
     expect(noBudgetButton).toBeInTheDocument();
     expect(noBudgetButton.closest("button")).toBeDisabled();
   });
@@ -520,7 +532,74 @@ describe("DemoDayBrowse - Team Card interactions", () => {
     );
 
     // Should show spinner
-    const spinnerContainer = document.querySelector(".animate-spin");
-    expect(spinnerContainer).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: /Send Love Tap/ });
+    expect(button).toBeDisabled();
+  });
+  it("updates both budget and project count from the accepted response", async () => {
+    const appreciate = vi
+      .fn()
+      .mockResolvedValue({
+        success: true,
+        remainingTotal: 12,
+        remainingForTeam: 7,
+      });
+    mockUseAppreciation.mockReturnValue({
+      appreciate,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      clearError: vi.fn(),
+    });
+    render(
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Send Love Tap to Test Team" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByText("3 / 10 sent")).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("12 left to share");
+  });
+
+  it("does not consume budget when the appreciation request is rejected", async () => {
+    const appreciate = vi
+      .fn()
+      .mockResolvedValue({
+        success: false,
+        error: "Try again",
+        remainingTotal: 13,
+        remainingForTeam: 8,
+      });
+    mockUseAppreciation.mockReturnValue({
+      appreciate,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      clearError: vi.fn(),
+    });
+    render(
+      <MemoryRouter>
+        <DemoDayBrowse
+          eventId={mockEventId}
+          event={mockEvent}
+          onBack={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Send Love Tap to Test Team" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("Try again"),
+    );
+    expect(screen.getByText("2 / 10 sent")).toBeInTheDocument();
+    expect(screen.getAllByText("13").length).toBeGreaterThan(0);
   });
 });

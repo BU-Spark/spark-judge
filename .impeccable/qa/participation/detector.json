@@ -1,0 +1,1352 @@
+[
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 108,
+    "snippet": "font-size: 0.9rem !important is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 118,
+    "snippet": "font-size: clamp(2rem, 3.5vw, 3.5rem) has fluid endpoints 2rem and 3.5rem off the DESIGN.md type ramp",
+    "ignoreValue": "2rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 130,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 143,
+    "snippet": "font-size: 1.65rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.65rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 147,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 176,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-radius",
+    "name": "Radius outside DESIGN.md",
+    "description": "A border-radius value is outside the DESIGN.md rounded scale. Use a documented radius token or update the design system if the new shape is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 205,
+    "snippet": "border-radius: 4px is outside the DESIGN.md rounded scale",
+    "ignoreValue": "4px",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 219,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 232,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 287,
+    "snippet": "font-size: 1.45rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.45rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 291,
+    "snippet": "font-size: 0.95rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.95rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 316,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 339,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 366,
+    "snippet": "Undocumented color #89a7c3 is outside DESIGN.md colors",
+    "ignoreValue": "#89a7c3",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 369,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 372,
+    "snippet": "font-size: 1.5rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.5rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 401,
+    "snippet": "Undocumented color #6c8aa7 is outside DESIGN.md colors",
+    "ignoreValue": "#6c8aa7",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-radius",
+    "name": "Radius outside DESIGN.md",
+    "description": "A border-radius value is outside the DESIGN.md rounded scale. Use a documented radius token or update the design system if the new shape is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 402,
+    "snippet": "border-radius: 4px is outside the DESIGN.md rounded scale",
+    "ignoreValue": "4px",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 408,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 410,
+    "snippet": "Undocumented color #89a7c3 is outside DESIGN.md colors",
+    "ignoreValue": "#89a7c3",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 486,
+    "snippet": "font-size: 2rem is off the DESIGN.md type ramp",
+    "ignoreValue": "2rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 493,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 534,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-radius",
+    "name": "Radius outside DESIGN.md",
+    "description": "A border-radius value is outside the DESIGN.md rounded scale. Use a documented radius token or update the design system if the new shape is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 565,
+    "snippet": "border-radius: 4px is outside the DESIGN.md rounded scale",
+    "ignoreValue": "4px",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 575,
+    "snippet": "font-size: 1.7rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.7rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 582,
+    "snippet": "font-size: 0.95rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.95rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 587,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 626,
+    "snippet": "font-size: 0.85rem !important is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 659,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 663,
+    "snippet": "font-size: 0.75rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.75rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 680,
+    "snippet": "Undocumented color #77a78b is outside DESIGN.md colors",
+    "ignoreValue": "#77a78b",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 683,
+    "snippet": "Undocumented color #77a78b is outside DESIGN.md colors",
+    "ignoreValue": "#77a78b",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 691,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 697,
+    "snippet": "Undocumented color #77a78b is outside DESIGN.md colors",
+    "ignoreValue": "#77a78b",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-radius",
+    "name": "Radius outside DESIGN.md",
+    "description": "A border-radius value is outside the DESIGN.md rounded scale. Use a documented radius token or update the design system if the new shape is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 698,
+    "snippet": "border-radius: 1px is outside the DESIGN.md rounded scale",
+    "ignoreValue": "1px",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 733,
+    "snippet": "font-size: clamp(2.5rem, 4vw, 4rem) has fluid endpoints 2.5rem and 4rem off the DESIGN.md type ramp",
+    "ignoreValue": "2.5rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 740,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 758,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 767,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 787,
+    "snippet": "font-size: 1.4rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.4rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 791,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 795,
+    "snippet": "Undocumented color #8c9d5c is outside DESIGN.md colors",
+    "ignoreValue": "#8c9d5c",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 819,
+    "snippet": "Undocumented color #6c8146 is outside DESIGN.md colors",
+    "ignoreValue": "#6c8146",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 820,
+    "snippet": "Undocumented color #e1edb0 is outside DESIGN.md colors",
+    "ignoreValue": "#e1edb0",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 824,
+    "snippet": "font-size: 1.2rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.2rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 828,
+    "snippet": "Undocumented color #edf4d1 is outside DESIGN.md colors",
+    "ignoreValue": "#edf4d1",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 839,
+    "snippet": "Undocumented color #6c8146 is outside DESIGN.md colors",
+    "ignoreValue": "#6c8146",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 866,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 885,
+    "snippet": "font-size: 2.25rem is off the DESIGN.md type ramp",
+    "ignoreValue": "2.25rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 897,
+    "snippet": "font-size: 1.3rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.3rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 908,
+    "snippet": "Undocumented color #8c9d5c is outside DESIGN.md colors",
+    "ignoreValue": "#8c9d5c",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 913,
+    "snippet": "Undocumented color #6c8146 is outside DESIGN.md colors",
+    "ignoreValue": "#6c8146",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 914,
+    "snippet": "Undocumented color #e1edb0 is outside DESIGN.md colors",
+    "ignoreValue": "#e1edb0",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 954,
+    "snippet": "font-size: clamp(2.4rem, 4vw, 4rem) has fluid endpoints 2.4rem and 4rem off the DESIGN.md type ramp",
+    "ignoreValue": "2.4rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 972,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 982,
+    "snippet": "font-size: 1.65rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.65rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 1000,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 1064,
+    "snippet": "font-size: 1.5rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.5rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 1079,
+    "snippet": "Undocumented color #77a78b is outside DESIGN.md colors",
+    "ignoreValue": "#77a78b",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-radius",
+    "name": "Radius outside DESIGN.md",
+    "description": "A border-radius value is outside the DESIGN.md rounded scale. Use a documented radius token or update the design system if the new shape is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 1080,
+    "snippet": "border-radius: 5px is outside the DESIGN.md rounded scale",
+    "ignoreValue": "5px",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 1081,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 1098,
+    "snippet": "font-size: 2.5rem is off the DESIGN.md type ramp",
+    "ignoreValue": "2.5rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 1138,
+    "snippet": "Undocumented color #e1edb0 is outside DESIGN.md colors",
+    "ignoreValue": "#e1edb0",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 1156,
+    "snippet": "font-size: 1.4rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.4rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/participation/participation.css",
+    "line": 1160,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem",
+    "importedBy": [
+      "ParticipationChrome.tsx"
+    ]
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 39,
+    "snippet": "font-size: 1.65rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.65rem"
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 47,
+    "snippet": "Undocumented color #a8c2ac is outside DESIGN.md colors",
+    "ignoreValue": "#a8c2ac"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 52,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem"
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 147,
+    "snippet": "Undocumented color #537c64 is outside DESIGN.md colors",
+    "ignoreValue": "#537c64"
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 168,
+    "snippet": "Undocumented color #537c64 is outside DESIGN.md colors",
+    "ignoreValue": "#537c64"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 172,
+    "snippet": "font-size: 0.875rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.875rem"
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 183,
+    "snippet": "Undocumented color #a8c2ac is outside DESIGN.md colors",
+    "ignoreValue": "#a8c2ac"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 212,
+    "snippet": "font-size: 0.875rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.875rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 305,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 318,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 333,
+    "snippet": "font-size: 1.25rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.25rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 414,
+    "snippet": "font-size: 1.25rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.25rem"
+  },
+  {
+    "antipattern": "design-system-radius",
+    "name": "Radius outside DESIGN.md",
+    "description": "A border-radius value is outside the DESIGN.md rounded scale. Use a documented radius token or update the design system if the new shape is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 449,
+    "snippet": "border-radius: 4px is outside the DESIGN.md rounded scale",
+    "ignoreValue": "4px"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 489,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 494,
+    "snippet": "font-size: 0.75rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.75rem"
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 502,
+    "snippet": "Undocumented color #537c64 is outside DESIGN.md colors",
+    "ignoreValue": "#537c64"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 504,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 512,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem"
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 515,
+    "snippet": "Undocumented color #102f55 is outside DESIGN.md colors",
+    "ignoreValue": "#102f55"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 527,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem"
+  },
+  {
+    "antipattern": "design-system-radius",
+    "name": "Radius outside DESIGN.md",
+    "description": "A border-radius value is outside the DESIGN.md rounded scale. Use a documented radius token or update the design system if the new shape is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 552,
+    "snippet": "border-radius: 5px is outside the DESIGN.md rounded scale",
+    "ignoreValue": "5px"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 554,
+    "snippet": "font-size: 0.85rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.85rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 561,
+    "snippet": "font-size: 0.9rem !important is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 577,
+    "snippet": "font-size: 1.6rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.6rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 586,
+    "snippet": "font-size: clamp(2.5rem, 6vw, 5rem) has fluid endpoints 2.5rem and 5rem off the DESIGN.md type ramp",
+    "ignoreValue": "2.5rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 606,
+    "snippet": "font-size: clamp(1.8rem, 3vw, 2.6rem) has fluid endpoint 2.6rem off the DESIGN.md type ramp",
+    "ignoreValue": "2.6rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 614,
+    "snippet": "font-size: 0.95rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.95rem"
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 630,
+    "snippet": "Undocumented color #879954 is outside DESIGN.md colors",
+    "ignoreValue": "#879954"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 647,
+    "snippet": "font-size: 2rem is off the DESIGN.md type ramp",
+    "ignoreValue": "2rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 672,
+    "snippet": "font-size: 0.9rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.9rem"
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 679,
+    "snippet": "Undocumented color #879954 is outside DESIGN.md colors",
+    "ignoreValue": "#879954"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 692,
+    "snippet": "font-size: 1.2rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.2rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 733,
+    "snippet": "font-size: 1.4rem is off the DESIGN.md type ramp",
+    "ignoreValue": "1.4rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 737,
+    "snippet": "font-size: 0.7rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.7rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 749,
+    "snippet": "font-size: 0.75rem is off the DESIGN.md type ramp",
+    "ignoreValue": "0.75rem"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 763,
+    "snippet": "font-size: clamp(2.75rem, 10.5vw, 4rem) has fluid endpoints 2.75rem and 4rem off the DESIGN.md type ramp",
+    "ignoreValue": "2.75rem"
+  },
+  {
+    "antipattern": "design-system-color",
+    "name": "Color outside DESIGN.md",
+    "description": "A literal color is outside the DESIGN.md palette and sidecar tonal ramps. This may be legitimate, but it should be an intentional design-system addition rather than drift.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/home/event-stage.css",
+    "line": 861,
+    "snippet": "Undocumented color #102f55 is outside DESIGN.md colors",
+    "ignoreValue": "#102f55"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/code-and-tell/CodeAndTellVoteView.tsx",
+    "line": 212,
+    "snippet": "text-[…] class: 11px is off the DESIGN.md type ramp",
+    "ignoreValue": "11px"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/code-and-tell/CodeAndTellVoteView.tsx",
+    "line": 220,
+    "snippet": "text-[…] class: 11px is off the DESIGN.md type ramp",
+    "ignoreValue": "11px"
+  },
+  {
+    "antipattern": "design-system-font-size",
+    "name": "Font size outside DESIGN.md",
+    "description": "A literal font-size is off the type ramp documented in DESIGN.md typography. Use a documented size step or update the design system if the new step is intentional.",
+    "severity": "advisory",
+    "category": "quality",
+    "file": "/Users/oea/projects/hack-judge/src/components/code-and-tell/CodeAndTellVoteView.tsx",
+    "line": 228,
+    "snippet": "text-[…] class: 11px is off the DESIGN.md type ramp",
+    "ignoreValue": "11px"
+  }
+]

@@ -135,9 +135,7 @@ export function LandingPage({
 
   const handleStartScoring = (event: LandingEvent) => {
     if (demoMode) {
-      setPreviewNotice(
-        "This is a design preview. Participation opens from the live homepage.",
-      );
+      navigate(`/participation-preview?mode=${getEventMode(event.mode)}`);
       return;
     }
     const eventMode = getEventMode(event.mode);
@@ -188,7 +186,6 @@ export function LandingPage({
   return (
     <>
       <EventStage
-        previewPalette={demoMode ? params.get("palette") ?? undefined : undefined}
         focal={focal}
         events={groups}
         projects={projects}

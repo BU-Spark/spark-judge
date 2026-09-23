@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId } from "react";
 import { getEventDisplayLabel, getEventMode } from "../../lib/eventModes";
 import type { HomepageEvent } from "../../lib/homepagePhase";
 import { formatDateRangeSimple } from "../../lib/utils";
@@ -30,7 +30,6 @@ type Props = {
   loading: boolean;
   now: number;
   demo: boolean;
-  previewPalette?: string;
   notice?: string;
   onSelectLive: (id: string) => void;
   onOpenEvent: (id: string) => void;
@@ -55,7 +54,7 @@ function Arrow({ diagonal = false }: { diagonal?: boolean }) {
 }
 
 /** Abstract, decorative geometry. Not a screenshot or an inferred project logo. */
-function ProjectArt({
+export function ProjectArt({
   index,
   compact = false,
 }: {
@@ -80,7 +79,10 @@ function ProjectArt({
         {index % 4 === 0 ? (
           <>
             <circle cx="115" cy="120" r="112" fill="var(--es-citron)" />
-            <path d="M100 240 340 0h60v240Z" fill="var(--es-art-strong, var(--es-cobalt))" />
+            <path
+              d="M100 240 340 0h60v240Z"
+              fill="var(--es-art-strong, var(--es-cobalt))"
+            />
             <path d="M0 135h115v105H0z" fill="var(--es-teal)" />
           </>
         ) : index % 4 === 1 ? (
@@ -93,12 +95,20 @@ function ProjectArt({
               d="M194 240c0-115 74-182 175-182 0 108-82 182-175 182Z"
               fill="var(--es-citron)"
             />
-            <circle cx="207" cy="46" r="38" fill="var(--es-art-light, var(--es-lilac))" />
+            <circle
+              cx="207"
+              cy="46"
+              r="38"
+              fill="var(--es-art-light, var(--es-lilac))"
+            />
             <path d="M365 0h16v240h-16z" fill="var(--es-yellow)" />
           </>
         ) : index % 4 === 2 ? (
           <>
-            <path d="M0 0h400v240H0z" fill="var(--es-art-light, var(--es-lilac))" />
+            <path
+              d="M0 0h400v240H0z"
+              fill="var(--es-art-light, var(--es-lilac))"
+            />
             <path
               d="M0 0h165v100H65v140H0zM265 140h135v100H165V140h100V0h100v140z"
               fill="var(--es-art-strong, var(--es-cobalt))"
@@ -107,8 +117,16 @@ function ProjectArt({
           </>
         ) : (
           <>
-            <path d="M0 0h400v240H0z" fill="var(--es-art-light, var(--es-lilac))" />
-            <circle cx="140" cy="125" r="110" fill="var(--es-art-strong, var(--es-cobalt))" />
+            <path
+              d="M0 0h400v240H0z"
+              fill="var(--es-art-light, var(--es-lilac))"
+            />
+            <circle
+              cx="140"
+              cy="125"
+              r="110"
+              fill="var(--es-art-strong, var(--es-cobalt))"
+            />
             <path d="M220 15a110 110 0 0 0 0 220Z" fill="var(--es-citron)" />
             <path d="m300 240 100-130v130Z" fill="var(--es-teal)" />
           </>
@@ -184,7 +202,6 @@ export function EventStage({
   loading,
   now,
   demo,
-  previewPalette,
   notice,
   onSelectLive,
   onOpenEvent,
@@ -193,13 +210,7 @@ export function EventStage({
   extraAction,
   onAddTeams,
 }: Props) {
-  const [palette, setPalette] = useState(
-    ["pool", "berry", "citron"].includes(previewPalette ?? "")
-      ? previewPalette!
-      : "pool",
-  );
   const mode = getEventMode(focal?.event.mode);
-  const comparePalettes = demo && mode === "code_and_tell";
   const visibleProjects = (projects ?? [])
     .filter((p) => !p.hidden)
     .slice(0, mode === "demo_day" ? 4 : 5);
@@ -229,39 +240,13 @@ export function EventStage({
           : "Find your favorites";
 
   return (
-    <div className={`event-stage es-${mode}`} data-palette={comparePalettes ? palette : undefined}>
+    <div className={`event-stage es-${mode}`}>
       {demo && (
         <div className="es-preview-note">
           <span>Design preview · Sample events and projects</span>
           <a href="/">
             Go to live homepage <Arrow />
           </a>
-        </div>
-      )}
-      {comparePalettes && (
-        <div className="es-palette-preview">
-          <span>Code & Tell · Color study</span>
-          <div role="group" aria-label="Preview a color palette">
-            {[
-              ["pool", "Sky & navy"],
-              ["berry", "Berry & rose"],
-              ["citron", "Chartreuse & olive"],
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={palette === value}
-                onClick={() => {
-                  setPalette(value);
-                  const url = new URL(window.location.href);
-                  url.searchParams.set("palette", value);
-                  window.history.replaceState(null, "", url);
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </div>
       )}
       {notice && (

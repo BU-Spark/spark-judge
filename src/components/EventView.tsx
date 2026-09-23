@@ -14,6 +14,7 @@ import { formatDateTime } from "../lib/utils";
 import { MODE_THEME } from "./home/modeTheme";
 import { toast } from "sonner";
 import "./EventView.fi.css";
+import "./participation/participation.css";
 
 function pad2(n: number): string {
   return String(Math.max(0, n)).padStart(2, "0");
@@ -33,15 +34,29 @@ function IdleSteps({ count = 8 }: { count?: number }) {
   );
 }
 
-export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: () => void }) {
+export function EventView({
+  eventId,
+  onBack,
+}: {
+  eventId: Id<"events">;
+  onBack: () => void;
+}) {
   const event = useQuery(api.events.getEvent, { eventId });
   const judgeStatus = useQuery(api.events.getJudgeStatus, { eventId });
   const myScores = useQuery(api.scores.getMyScores, { eventId });
-  const myAssignments = useQuery(api.judgeAssignments.getMyAssignments, { eventId });
+  const myAssignments = useQuery(api.judgeAssignments.getMyAssignments, {
+    eventId,
+  });
   const loggedInUser = useQuery(api.auth.loggedInUser);
-  const addTeamToAssignment = useMutation(api.judgeAssignments.addTeamToAssignment);
-  const addMultipleTeamsToAssignment = useMutation(api.judgeAssignments.addMultipleTeamsToAssignment);
-  const removeTeamFromAssignment = useMutation(api.judgeAssignments.removeTeamFromAssignment);
+  const addTeamToAssignment = useMutation(
+    api.judgeAssignments.addTeamToAssignment,
+  );
+  const addMultipleTeamsToAssignment = useMutation(
+    api.judgeAssignments.addMultipleTeamsToAssignment,
+  );
+  const removeTeamFromAssignment = useMutation(
+    api.judgeAssignments.removeTeamFromAssignment,
+  );
   const joinAsJudge = useMutation(api.events.joinAsJudge);
   const [showWizard, setShowWizard] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
@@ -52,13 +67,17 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
   const [sponsorFilter, setSponsorFilter] = useState("");
   const [prizeFilter, setPrizeFilter] = useState("");
   const [myQueueOnly, setMyQueueOnly] = useState(false);
-  const [hoveredTeam, setHoveredTeam] = useState<{ name: string; line: string } | null>(null);
+  const [hoveredTeam, setHoveredTeam] = useState<{
+    name: string;
+    line: string;
+  } | null>(null);
   const [judgeCodeOpen, setJudgeCodeOpen] = useState(false);
   const [joining, setJoining] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const eventPrizes = useQuery(api.prizes.listEventPrizes, { eventId }) || [];
-  const eventPrizeSubmissions = useQuery(api.prizes.getEventPrizeSubmissions, { eventId }) || [];
+  const eventPrizeSubmissions =
+    useQuery(api.prizes.getEventPrizeSubmissions, { eventId }) || [];
 
   const storageKey = judgeStatus
     ? `scoring_draft_${eventId}_${judgeStatus.userId}`
@@ -96,7 +115,7 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
   const visibleTeams = useMemo(
     () => (event?.teams ?? []).filter((team: any) => !team.hidden),
-    [event?.teams]
+    [event?.teams],
   );
 
   const teamsToJudge = useMemo(() => {
@@ -106,24 +125,32 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
   const relevantTeamIds = useMemo(
     () => new Set(teamsToJudge.map((team: any) => String(team._id))),
-    [teamsToJudge]
+    [teamsToJudge],
   );
 
   const totalTeams = teamsToJudge.length;
   const completedCount = hasDraft
     ? draftCompletedCount
-    : (myScores?.filter((score: any) => relevantTeamIds.has(String(score.teamId))).length ?? 0);
+    : (myScores?.filter((score: any) =>
+        relevantTeamIds.has(String(score.teamId)),
+      ).length ?? 0);
 
   const scoringComplete = totalTeams > 0 && completedCount >= totalTeams;
 
   const trackOptions = useMemo(
-    () => Array.from(new Set(visibleTeams.map((t: any) => t.track).filter(Boolean))).sort(),
-    [visibleTeams]
+    () =>
+      Array.from(
+        new Set(visibleTeams.map((t: any) => t.track).filter(Boolean)),
+      ).sort(),
+    [visibleTeams],
   );
 
   const sponsorOptions = useMemo(
-    () => Array.from(new Set(eventPrizes.map((p: any) => p.sponsorName).filter(Boolean))).sort(),
-    [eventPrizes]
+    () =>
+      Array.from(
+        new Set(eventPrizes.map((p: any) => p.sponsorName).filter(Boolean)),
+      ).sort(),
+    [eventPrizes],
   );
 
   const filteredTeams = useMemo(() => {
@@ -131,9 +158,10 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      baseTeams = baseTeams.filter((team: any) =>
-        team.name.toLowerCase().includes(q) ||
-        team.description.toLowerCase().includes(q)
+      baseTeams = baseTeams.filter(
+        (team: any) =>
+          team.name.toLowerCase().includes(q) ||
+          team.description.toLowerCase().includes(q),
       );
     }
 
@@ -145,30 +173,45 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       const matchingPrizeIds = new Set(
         eventPrizes
           .filter((p: any) => p.sponsorName === sponsorFilter)
-          .map((p: any) => p._id)
+          .map((p: any) => p._id),
       );
       const teamIdsWithSponsor = new Set(
         eventPrizeSubmissions
           .filter((s: any) => matchingPrizeIds.has(s.prizeId))
-          .map((s: any) => s.teamId)
+          .map((s: any) => s.teamId),
       );
-      baseTeams = baseTeams.filter((team: any) => teamIdsWithSponsor.has(team._id));
+      baseTeams = baseTeams.filter((team: any) =>
+        teamIdsWithSponsor.has(team._id),
+      );
     }
 
     if (prizeFilter) {
       const teamIdsWithPrize = new Set(
         eventPrizeSubmissions
           .filter((s: any) => s.prizeId === prizeFilter)
-          .map((s: any) => s.teamId)
+          .map((s: any) => s.teamId),
       );
-      baseTeams = baseTeams.filter((team: any) => teamIdsWithPrize.has(team._id));
+      baseTeams = baseTeams.filter((team: any) =>
+        teamIdsWithPrize.has(team._id),
+      );
     }
 
     return baseTeams.filter((team: any) => !myAssignments?.includes(team._id));
-  }, [visibleTeams, searchQuery, trackFilter, sponsorFilter, prizeFilter, myAssignments, eventPrizes, eventPrizeSubmissions]);
+  }, [
+    visibleTeams,
+    searchQuery,
+    trackFilter,
+    sponsorFilter,
+    prizeFilter,
+    myAssignments,
+    eventPrizes,
+    eventPrizeSubmissions,
+  ]);
 
   const assignedTeams = useMemo(() => {
-    return visibleTeams.filter((team: any) => myAssignments?.includes(team._id));
+    return visibleTeams.filter((team: any) =>
+      myAssignments?.includes(team._id),
+    );
   }, [visibleTeams, myAssignments]);
 
   const keyboardTeams = useMemo(() => {
@@ -176,9 +219,11 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     let base = visibleTeams;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      base = base.filter((team: any) =>
-        team.name.toLowerCase().includes(q) ||
-        (typeof team.description === "string" && team.description.toLowerCase().includes(q))
+      base = base.filter(
+        (team: any) =>
+          team.name.toLowerCase().includes(q) ||
+          (typeof team.description === "string" &&
+            team.description.toLowerCase().includes(q)),
       );
     }
     if (trackFilter) {
@@ -188,12 +233,12 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       const matchingPrizeIds = new Set(
         eventPrizes
           .filter((p: any) => p.sponsorName === sponsorFilter)
-          .map((p: any) => p._id)
+          .map((p: any) => p._id),
       );
       const teamIdsWithSponsor = new Set(
         eventPrizeSubmissions
           .filter((s: any) => matchingPrizeIds.has(s.prizeId))
-          .map((s: any) => s.teamId)
+          .map((s: any) => s.teamId),
       );
       base = base.filter((team: any) => teamIdsWithSponsor.has(team._id));
     }
@@ -201,17 +246,29 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       const teamIdsWithPrize = new Set(
         eventPrizeSubmissions
           .filter((s: any) => s.prizeId === prizeFilter)
-          .map((s: any) => s.teamId)
+          .map((s: any) => s.teamId),
       );
       base = base.filter((team: any) => teamIdsWithPrize.has(team._id));
     }
     return base;
-  }, [enableCohorts, assignedTeams, visibleTeams, searchQuery, trackFilter, sponsorFilter, prizeFilter, eventPrizes, eventPrizeSubmissions]);
+  }, [
+    enableCohorts,
+    assignedTeams,
+    visibleTeams,
+    searchQuery,
+    trackFilter,
+    sponsorFilter,
+    prizeFilter,
+    eventPrizes,
+    eventPrizeSubmissions,
+  ]);
 
   const teamParam = searchParams.get("team");
   const initialTeamId = useMemo(() => {
     if (!teamParam) return null;
-    const match = teamsToJudge.find((team: any) => String(team._id) === teamParam);
+    const match = teamsToJudge.find(
+      (team: any) => String(team._id) === teamParam,
+    );
     return match ? (match._id as Id<"teams">) : null;
   }, [teamParam, teamsToJudge]);
 
@@ -235,14 +292,18 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
   const handleToggleTeam = async (teamId: Id<"teams">, isAssigned: boolean) => {
     if (scoringLocked) {
-      alert("Scoring has been locked by an admin. Team assignments can no longer be changed.");
+      alert(
+        "Scoring has been locked by an admin. Team assignments can no longer be changed.",
+      );
       return;
     }
 
     if (isAssigned) {
       const teamHasBeenScored = myScores?.some((s: any) => s.teamId === teamId);
       if (teamHasBeenScored) {
-        toast.error("You cannot remove a team after you have already submitted scores for them.");
+        toast.error(
+          "You cannot remove a team after you have already submitted scores for them.",
+        );
         return;
       }
     }
@@ -263,14 +324,21 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
   const handleAddAllTeams = async () => {
     if (scoringLocked) {
-      alert("Scoring has been locked by an admin. Team assignments can no longer be changed.");
+      alert(
+        "Scoring has been locked by an admin. Team assignments can no longer be changed.",
+      );
       return;
     }
     try {
       const teamIds = filteredTeams.map((t: any) => t._id);
-      const addedCount = await addMultipleTeamsToAssignment({ eventId, teamIds });
+      const addedCount = await addMultipleTeamsToAssignment({
+        eventId,
+        teamIds,
+      });
       if (addedCount > 0) {
-        toast.success(`Added ${addedCount} team${addedCount === 1 ? '' : 's'} to your queue!`);
+        toast.success(
+          `Added ${addedCount} team${addedCount === 1 ? "" : "s"} to your queue!`,
+        );
       } else {
         toast("All these teams are already in your queue.");
       }
@@ -298,7 +366,9 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       await joinAsJudge({ eventId });
       toast.success("Successfully joined as judge!");
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to join as judge");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to join as judge",
+      );
     } finally {
       setJoining(false);
     }
@@ -339,7 +409,11 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     );
   }
 
-  if (judgeStatus === undefined || myScores === undefined || myAssignments === undefined) {
+  if (
+    judgeStatus === undefined ||
+    myScores === undefined ||
+    myAssignments === undefined
+  ) {
     return (
       <div className="fi-ev-loading" role="status" aria-live="polite">
         <div className="fi-ev-spinner" aria-hidden="true" />
@@ -356,8 +430,12 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
 
   if (!judgeStatus) {
     return (
-      <div className="fi-ev-page">
-        <button type="button" onClick={onBack} className="fi-key fi-key--sm fi-ev-back">
+      <div className="fi-ev-page participation participation--hackathon">
+        <button
+          type="button"
+          onClick={onBack}
+          className="fi-key fi-key--sm fi-ev-back"
+        >
           Back to events
         </button>
         <div className="fi-panel fi-ev-idle">
@@ -375,7 +453,11 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
               </button>
             ) : (
               <>
-                <button type="button" className="fi-transport" onClick={openJudgeCode}>
+                <button
+                  type="button"
+                  className="fi-transport"
+                  onClick={openJudgeCode}
+                >
                   Enter judge code
                 </button>
                 <button
@@ -388,7 +470,11 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
                 </button>
               </>
             )}
-            <button type="button" className="fi-key fi-key--sm" onClick={onBack}>
+            <button
+              type="button"
+              className="fi-key fi-key--sm"
+              onClick={onBack}
+            >
               Back to events
             </button>
           </div>
@@ -403,7 +489,10 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
     );
   }
 
-  const canStart = (!enableCohorts || myAssignments.length > 0) && totalTeams > 0 && !scoringLocked;
+  const canStart =
+    (!enableCohorts || myAssignments.length > 0) &&
+    totalTeams > 0 &&
+    !scoringLocked;
   const transportLabel = scoringLocked
     ? "Scoring locked"
     : scoringComplete
@@ -416,12 +505,19 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
             ? "Select teams first"
             : "Start scoring";
 
-  const statusLabel =
-    scoringLocked ? "Locked" : event.status === "active" ? "Live" : event.status;
+  const statusLabel = scoringLocked
+    ? "Locked"
+    : event.status === "active"
+      ? "Live"
+      : event.status;
 
   return (
-    <div className="fi-ev-page">
-      <button type="button" onClick={onBack} className="fi-key fi-key--sm fi-ev-back">
+    <div className="fi-ev-page participation participation--hackathon">
+      <button
+        type="button"
+        onClick={onBack}
+        className="fi-key fi-key--sm fi-ev-back"
+      >
         Back to events
       </button>
 
@@ -437,21 +533,27 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
               <span className="fi-ev-chip">{statusLabel}</span>
             )}
             <span className="fi-ev-chip fi-ev-chip--mode">
-              Mode · {getEventDisplayLabel(event.mode)}
+              {getEventDisplayLabel(event.mode)}
             </span>
           </div>
 
           <h1 className="fi-ev-name" id="fi-ev-event-name">
             {event.name}
           </h1>
-          {event.description ? <p className="fi-ev-desc">{event.description}</p> : null}
+          {event.description ? (
+            <p className="fi-ev-desc">{event.description}</p>
+          ) : null}
 
           <p className="fi-ev-meta">
             <span>
-              Dates <b>{formatDateTime(event.startDate)} – {formatDateTime(event.endDate)}</b>
+              Dates{" "}
+              <b>
+                {formatDateTime(event.startDate)} –{" "}
+                {formatDateTime(event.endDate)}
+              </b>
             </span>
             <span>
-              Seat <b>Judge</b>
+              Your role <b>Judge</b>
             </span>
             <span>
               Status <b>{event.status}</b>
@@ -461,19 +563,13 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
           {event.status === "active" && (
             <p className="fi-ev-progress">
               <b>{pad2(completedCount)}</b> of {pad2(totalTeams)} scored
-              {justSubmitted ? " · submitted" : hasDraft ? " · draft saved" : ""}
+              {justSubmitted
+                ? " · submitted"
+                : hasDraft
+                  ? " · draft saved"
+                  : ""}
             </p>
           )}
-
-          <p className="fi-ev-select" aria-live="polite">
-            {hoveredTeam ? (
-              <>
-                Select · <b>{hoveredTeam.name}</b> — {hoveredTeam.line}
-              </>
-            ) : (
-              "Select · no project key pressed"
-            )}
-          </p>
 
           {event.status === "active" && (
             <div className="fi-ev-actions">
@@ -499,7 +595,8 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
         <div className="fi-panel fi-ev-lock">
           <p className="fi-engraved">Scoring locked</p>
           <p className="fi-ev-lock-copy">
-            Scoring is locked for this event. Judges can view scores, but edits are disabled until an admin unlocks scoring.
+            Scoring is locked for this event. Judges can view scores, but edits
+            are disabled until an admin unlocks scoring.
           </p>
         </div>
       )}
@@ -541,9 +638,11 @@ export function EventView({ eventId, onBack }: { eventId: Id<"events">; onBack: 
       {showWizard && judgeStatus && !scoringLocked && (
         <ScoringWizard
           eventId={eventId}
+          eventName={event.name}
           teams={teamsToJudge}
           categories={event.categories.map((c: any) => ({
             name: c.name,
+            weight: c.weight,
             optOutAllowed: c.optOutAllowed,
           }))}
           existingScores={myScores ?? []}
@@ -570,11 +669,11 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
   const hasPrizeWinners = prizeWinners.length > 0;
   const groupedPrizeWinners = hasPrizeWinners
     ? prizeWinners.reduce<Record<string, any[]>>((acc, row: any) => {
-      const key = row.prizeId as string;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(row);
-      return acc;
-    }, {})
+        const key = row.prizeId as string;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(row);
+        return acc;
+      }, {})
     : {};
 
   return (
@@ -586,7 +685,8 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
               Prize winners
             </h2>
             <span className="fi-engraved">
-              Final placements · {pad2(Object.keys(groupedPrizeWinners).length)} prizes
+              Final placements · {pad2(Object.keys(groupedPrizeWinners).length)}{" "}
+              prizes
             </span>
           </div>
           <div className="fi-ev-prize-list">
@@ -598,14 +698,19 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
                   <h3 className="fi-ev-prize-name">{prizeName}</h3>
                   <div className="fi-ev-prize-teams">
                     {winnerRows
-                      .sort((a: any, b: any) => (a.placement ?? 999) - (b.placement ?? 999))
+                      .sort(
+                        (a: any, b: any) =>
+                          (a.placement ?? 999) - (b.placement ?? 999),
+                      )
                       .map((row: any) => (
                         <div key={row._id} className="fi-ev-prize-team">
                           <span className="fi-ev-prize-team-name">
                             {row.team?.name || "Unknown Team"}
                           </span>
                           {typeof row.placement === "number" ? (
-                            <span className="fi-engraved-sm">Placement {row.placement}</span>
+                            <span className="fi-engraved-sm">
+                              Placement {row.placement}
+                            </span>
                           ) : row.notes ? (
                             <span className="fi-engraved-sm">{row.notes}</span>
                           ) : null}
@@ -634,16 +739,24 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
             </article>
             {event.categoryWinners && event.categoryWinners.length > 0 && (
               <div className="fi-ev-ledger">
-                {event.categoryWinners.map((winner: { category: string; teamId: Id<"teams"> }) => {
-                  const team = event.teams.find((t: any) => t._id === winner.teamId);
-                  return (
-                    <div key={winner.category} className="fi-ev-ledger-row">
-                      <span className="fi-ev-ledger-rank">{winner.category}</span>
-                      <span className="fi-ev-ledger-name">{team?.name || "Unknown"}</span>
-                      <span className="fi-ev-stamp">Winner</span>
-                    </div>
-                  );
-                })}
+                {event.categoryWinners.map(
+                  (winner: { category: string; teamId: Id<"teams"> }) => {
+                    const team = event.teams.find(
+                      (t: any) => t._id === winner.teamId,
+                    );
+                    return (
+                      <div key={winner.category} className="fi-ev-ledger-row">
+                        <span className="fi-ev-ledger-rank">
+                          {winner.category}
+                        </span>
+                        <span className="fi-ev-ledger-name">
+                          {team?.name || "Unknown"}
+                        </span>
+                        <span className="fi-ev-stamp">Winner</span>
+                      </div>
+                    );
+                  },
+                )}
               </div>
             )}
           </div>
@@ -664,9 +777,12 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
             <div key={teamScore.team._id} className="fi-ev-ledger-row">
               <span className="fi-ev-ledger-rank">#{pad2(index + 1)}</span>
               <span className="fi-ev-ledger-name">{teamScore.team.name}</span>
-              <span className="fi-readout">{teamScore.averageScore.toFixed(2)}</span>
+              <span className="fi-readout">
+                {teamScore.averageScore.toFixed(2)}
+              </span>
               <span className="fi-ev-stamp">
-                {teamScore.judgeCount} {teamScore.judgeCount === 1 ? "judge" : "judges"}
+                {teamScore.judgeCount}{" "}
+                {teamScore.judgeCount === 1 ? "judge" : "judges"}
               </span>
             </div>
           ))}
@@ -727,15 +843,30 @@ function TeamSelectionSection({
 }) {
   const getTeamScoreStatus = (teamId: Id<"teams">) => {
     if (!myScores) return null;
-    return myScores.find((score: any) => String(score.teamId) === String(teamId));
+    return myScores.find(
+      (score: any) => String(score.teamId) === String(teamId),
+    );
   };
 
   const prizeSelectOptions = eventPrizes.filter((p: any) =>
-    ["track", "sponsor", "track_sponsor"].includes(p.type)
+    ["track", "sponsor", "track_sponsor"].includes(p.type),
   );
 
-  const showFilters = enableCohorts || assignedTeams.length > 0 || searchQuery || trackFilter || sponsorFilter || prizeFilter;
-  const showBrowse = enableCohorts && !myQueueOnly && (teams.length > 0 || searchQuery || trackFilter || sponsorFilter || prizeFilter);
+  const showFilters =
+    enableCohorts ||
+    assignedTeams.length > 0 ||
+    searchQuery ||
+    trackFilter ||
+    sponsorFilter ||
+    prizeFilter;
+  const showBrowse =
+    enableCohorts &&
+    !myQueueOnly &&
+    (teams.length > 0 ||
+      searchQuery ||
+      trackFilter ||
+      sponsorFilter ||
+      prizeFilter);
 
   return (
     <div>
@@ -816,8 +947,8 @@ function TeamSelectionSection({
           </h2>
           <span className="fi-engraved">
             {enableCohorts
-              ? `Matrix · ${pad2(assignedTeams.length)} assigned`
-              : `Keys 01–${pad2(Math.max(assignedTeams.length, 1))} · ${pad2(assignedTeams.length)} teams`}
+              ? `${assignedTeams.length} assigned`
+              : `${assignedTeams.length} teams`}
           </span>
         </div>
 
@@ -841,7 +972,9 @@ function TeamSelectionSection({
               const line = score
                 ? `Scored · ${Number(score.totalScore.toFixed(2))} pts`
                 : team.track || "Untracked";
-              const isActive = activeTeamId != null && String(activeTeamId) === String(team._id);
+              const isActive =
+                activeTeamId != null &&
+                String(activeTeamId) === String(team._id);
               return (
                 <li key={team._id} className="fi-ev-key-wrap">
                   <Link
@@ -859,7 +992,9 @@ function TeamSelectionSection({
                         className={`fi-ev-key-led${score ? " is-lit" : ""}`}
                         aria-hidden="true"
                       />
-                      <span className="fi-ev-key-num">K{pad2(i + 1)}</span>
+                      <span className="fi-ev-key-num">
+                        {score ? "Scored" : "To score"}
+                      </span>
                     </span>
                     <span>
                       <span className="fi-ev-key-name">{team.name}</span>
@@ -877,8 +1012,18 @@ function TeamSelectionSection({
                         onToggleTeam(team._id, true);
                       }}
                     >
-                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth={2} d="M6 6l12 12M18 6L6 18" />
+                      <svg
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="square"
+                          strokeLinejoin="miter"
+                          strokeWidth={2}
+                          d="M6 6l12 12M18 6L6 18"
+                        />
                       </svg>
                     </button>
                   )}
@@ -896,8 +1041,13 @@ function TeamSelectionSection({
               Browse teams
             </h2>
             {teams.length > 0 && !locked ? (
-              <button type="button" className="fi-key fi-key--sm" onClick={onAddAllTeams}>
-                Add all {teams.length} filtered {teams.length === 1 ? "team" : "teams"}
+              <button
+                type="button"
+                className="fi-key fi-key--sm"
+                onClick={onAddAllTeams}
+              >
+                Add all {teams.length} filtered{" "}
+                {teams.length === 1 ? "team" : "teams"}
               </button>
             ) : (
               <span className="fi-engraved">
@@ -918,7 +1068,9 @@ function TeamSelectionSection({
                       <p className="fi-ev-browse-desc">{team.description}</p>
                     ) : null}
                     {team.track ? (
-                      <p className="fi-engraved-sm fi-ev-browse-meta">{team.track}</p>
+                      <p className="fi-engraved-sm fi-ev-browse-meta">
+                        {team.track}
+                      </p>
                     ) : null}
                   </div>
                   <button

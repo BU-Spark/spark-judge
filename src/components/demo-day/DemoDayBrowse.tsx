@@ -1,17 +1,30 @@
-import "./DemoDayBrowse.fi.css";
 import { useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
-import { useState, useMemo, useRef, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import type { Id } from "../../../convex/_generated/dataModel";
+import { useState, useMemo, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useAttendeeIdentity } from "../../lib/demoDayIdentity";
 import { useAppreciation } from "../../lib/demoDayApi";
 import { toast } from "sonner";
-import { SearchIcon } from "../ui/AppIcons";
 import { LoadingState } from "../ui/LoadingState";
-import { Link } from "react-router-dom";
+import { ProjectArt } from "../home/EventStage";
+import {
+  ParticipationFrame,
+  ParticipationHeader,
+  HeartIcon,
+  DirectionIcon,
+} from "../participation/ParticipationChrome";
 
-interface DemoDayBrowseProps {
+type DemoTeam = {
+  _id: Id<"teams">;
+  name: string;
+  description: string;
+  members?: string[];
+  courseCode?: string;
+  hidden?: boolean;
+};
+type DemoDayBrowseProps = {
   eventId: Id<"events">;
   event: {
     name: string;
@@ -20,834 +33,310 @@ interface DemoDayBrowseProps {
     endDate: number;
     status: string;
     venueLocationEnabled?: boolean;
-    teams: Array<{
-      _id: Id<"teams">;
-      name: string;
-      description: string;
-      members?: string[];
-      courseCode?: string;
-      hidden?: boolean;
-    }>;
+    teams: DemoTeam[];
   };
   onBack: () => void;
-}
+};
+export type AppreciationData = FunctionReturnType<
+  typeof api.appreciations.getTeamAppreciations
+>;
+export type AppreciationController = ReturnType<typeof useAppreciation>;
 
-export function DemoDayBrowse({ eventId, event, onBack }: DemoDayBrowseProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
-  const [quickTeam, setQuickTeam] = useState<
-    | (DemoDayBrowseProps["event"]["teams"][number] & {
-        appreciationData?: { totalCount: number; attendeeCount: number };
-      })
-    | null
-  >(null);
-  const [sheetHeight, setSheetHeight] = useState(260);
-  const courseRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  // Get attendee identity
-  const { attendeeId, isLoading: identityLoading } = useAttendeeIdentity();
-
-  // Get appreciation data
-  const appreciationData = useQuery(
-    api.appreciations.getTeamAppreciations,
-    { eventId },
-  );
-  const maxPerAttendee = appreciationData?.maxPerAttendee ?? 100;
-  const maxPerTeam = appreciationData?.maxPerTeam ?? 10;
-  const remainingBudget =
-    appreciationData?.attendeeRemainingBudget ?? maxPerAttendee;
-
-  // Get unique course codes for filter chips
-  const courseCodes = useMemo(() => {
-    const codes = new Set<string>();
-    event.teams.forEach((team) => {
-      if (team.courseCode) {
-        codes.add(team.courseCode);
-      }
-    });
-    return Array.from(codes).sort();
-  }, [event.teams]);
-
-  // Filter teams
-  const filteredTeams = useMemo(() => {
-    return event.teams
-      .filter((team) => !team.hidden)
-      .filter((team) => {
-        // Search filter
-        if (searchQuery) {
-          const query = searchQuery.toLowerCase();
-          if (
-            !team.name.toLowerCase().includes(query) &&
-            !team.description.toLowerCase().includes(query) &&
-            !(team.members || []).some((m) => m.toLowerCase().includes(query))
-          ) {
-            return false;
-          }
-        }
-        // Course filter
-        if (selectedCourse && team.courseCode !== selectedCourse) {
-          return false;
-        }
-        return true;
-      });
-  }, [event.teams, searchQuery, selectedCourse]);
-
-  // Group teams by course when viewing all courses
-  const teamsByCourse = useMemo(() => {
-    if (selectedCourse !== null) {
-      // When a specific course is selected, return null to use flat display
-      return null;
-    }
-
-    const grouped = new Map<string, typeof filteredTeams>();
-
-    // Add teams with course codes
-    filteredTeams.forEach((team) => {
-      const course = team.courseCode || "Other";
-      if (!grouped.has(course)) {
-        grouped.set(course, []);
-      }
-      grouped.get(course)!.push(team);
-    });
-
-    // Sort courses and teams within each course
-    const sorted = Array.from(grouped.entries()).sort(([a], [b]) => {
-      if (a === "Other") return 1;
-      if (b === "Other") return -1;
-      return a.localeCompare(b);
-    });
-
-    sorted.forEach(([_, teams]) => {
-      teams.sort((a, b) => a.name.localeCompare(b.name));
-    });
-
-    return sorted;
-  }, [filteredTeams, selectedCourse]);
-
-  // Build appreciation lookup map
-  const appreciationMap = useMemo(() => {
-    const map = new Map<
-      string,
-      { totalCount: number; attendeeCount: number }
-    >();
-    appreciationData?.teams.forEach((team) => {
-      map.set(team.teamId, {
-        totalCount: team.totalCount,
-        attendeeCount: team.attendeeCount,
-      });
-    });
-    return map;
-  }, [appreciationData]);
-
-  const isEventLive = event.status === "active";
-
-  if (identityLoading) {
-    return <LoadingState label="Initializing..." />;
-  }
-
-  const scrollToCourse = (code: string | null) => {
-    if (code === null) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-    const target = courseRefs.current[code];
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
+export function DemoDayBrowse(props: DemoDayBrowseProps) {
+  const { attendeeId, isLoading } = useAttendeeIdentity();
+  const appreciationData = useQuery(api.appreciations.getTeamAppreciations, {
+    eventId: props.eventId,
+  });
+  const appreciation = useAppreciation();
   return (
-    <div className="dd-fi-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-20 sm:pb-8">
-      {/* Mobile header (compact) */}
-      <div className="sm:hidden mb-4">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-0 text-xs p-0 fi-muted hover:fi-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary rounded"
-            aria-label="Back to events"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-          </button>
-          <h1 className="text-2xl fi-zone font-bold fi-ink truncate max-w-[80vw]">
-            {event.name}
-          </h1>
-        </div>
-      </div>
-
-      {/* Desktop header (card layout) */}
-      <div className="hidden sm:block">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-sm fi-key mb-6"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-          Back to Events
-        </button>
-
-        <div className="fi-panel p-6 mb-8 fi-surface border border-border rounded-lg shadow-sm">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <h1 className="text-3xl fi-zone font-bold fi-ink">
-                  {event.name}
-                </h1>
-              </div>
-              <p className="fi-muted">{event.description}</p>
-            </div>
-            <div>
-              <BudgetIndicator
-                remaining={remainingBudget}
-                total={maxPerAttendee}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {!isEventLive && (
-        <div className="fi-panel p-3 sm:p-4 mb-5 sm:mb-6 bg-amber-50  border border-amber-200  text-amber-900  rounded-lg text-sm">
-          Appreciations open once the event is live.
-        </div>
-      )}
-
-      {/* Search and Filters */}
-      <div className="fi-panel relative mb-5 sm:mb-6 p-3 sm:p-4 fi-surface overflow-hidden">
-        <div className="space-y-3 sm:space-y-4">
-          {/* Search Input */}
-          <div className="relative">
-            <svg
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 fi-muted"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search projects by name or description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 fi-surface border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all fi-ink text-sm"
-            />
-          </div>
-
-          {/* Course Filter Chips */}
-          {courseCodes.length > 0 && (
-            <div className="sticky top-0 z-20 w-full fi-surface/95 backdrop-blur supports-[backdrop-filter]:fi-surface/60 shadow-sm overflow-hidden relative">
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-au px-3 w-full">
-                <button
-                  onClick={() => {
-                    setSelectedCourse(null);
-                    scrollToCourse(null);
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border whitespace-nowrap ${
-                    selectedCourse === null
-                      ? "bg-primary text-white border-primary shadow-sm"
-                      : "fi-surface fi-muted border-border hover:bg-muted"
-                  }`}
-                >
-                  All Courses
-                </button>
-                {courseCodes.map((code) => (
-                  <button
-                    key={code}
-                    onClick={() => {
-                      const next = selectedCourse === code ? null : code;
-                      setSelectedCourse(next);
-                      scrollToCourse(code);
-                    }}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border whitespace-nowrap ${
-                      selectedCourse === code
-                        ? "bg-primary text-white border-primary shadow-sm"
-                        : "fi-surface fi-muted border-border hover:bg-muted"
-                    }`}
-                  >
-                    {code}
-                  </button>
-                ))}
-              </div>
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-10 fi-accent-surface   " />
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-6 fi-accent-surface   " />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Results Count */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm fi-muted">
-          Showing {filteredTeams.length} project
-          {filteredTeams.length !== 1 ? "s" : ""}
-          {selectedCourse && ` in ${selectedCourse}`}
-        </p>
-      </div>
-
-      {/* Team Grid - Grouped by course when viewing all, flat when filtered */}
-      {filteredTeams.length === 0 ? (
-        <div className="fi-panel text-center py-12 fi-surface">
-          <div className="mb-4 flex justify-center">
-            <SearchIcon className="h-10 w-10 fi-muted" />
-          </div>
-          <h3 className="text-lg fi-zone font-semibold fi-ink mb-2">
-            No Projects Found
-          </h3>
-          <p className="fi-muted">
-            {searchQuery
-              ? "Try adjusting your search terms"
-              : "No projects match the selected filters"}
-          </p>
-        </div>
-      ) : teamsByCourse ? (
-        // Grouped by course view (All Courses selected)
-        <div className="space-y-8">
-          {teamsByCourse.map(([courseCode, teams]) => (
-            <div
-              key={courseCode}
-              className="space-y-4 scroll-mt-24"
-              id={`course-${courseCode}`}
-              ref={(el) => {
-                courseRefs.current[courseCode] = el;
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl fi-zone font-bold fi-ink">
-                  {courseCode}
-                </h2>
-                <span className="text-sm fi-muted">
-                  ({teams.length} project{teams.length !== 1 ? "s" : ""})
-                </span>
-              </div>
-              <div
-                className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:overflow-visible md:snap-none scrollbar-au"
-                aria-label={`${courseCode} projects`}
-              >
-                {teams.map((team, index) => (
-                  <TeamCard
-                    key={team._id}
-                    team={team}
-                    eventId={eventId}
-                    attendeeId={attendeeId}
-                    appreciationData={appreciationMap.get(team._id)}
-                    remainingBudget={remainingBudget}
-                    maxPerTeam={maxPerTeam}
-                    index={index}
-                    isEventLive={isEventLive}
-                    requestLocation={event.venueLocationEnabled === true}
-                    onQuickView={(enrichedTeam) =>
-                      setQuickTeam({
-                        ...enrichedTeam,
-                        appreciationData: appreciationMap.get(team._id),
-                      })
-                    }
-                    layout="carousel"
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+    <ParticipationFrame mode="demo_day">
+      {isLoading ? (
+        <LoadingState label="Initializing..." />
       ) : (
-        // Flat grid view (specific course selected)
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTeams.map((team, index) => (
-            <TeamCard
-              key={team._id}
-              team={team}
-              eventId={eventId}
-              attendeeId={attendeeId}
-              appreciationData={appreciationMap.get(team._id)}
-              remainingBudget={remainingBudget}
-              maxPerTeam={maxPerTeam}
-              index={index}
-              isEventLive={isEventLive}
-              requestLocation={event.venueLocationEnabled === true}
-              onQuickView={(enrichedTeam) =>
-                setQuickTeam({
-                  ...enrichedTeam,
-                  appreciationData: appreciationMap.get(team._id),
-                })
-              }
-            />
-          ))}
-        </div>
-      )}
-
-      <AnimatePresence initial={false}>
-        {quickTeam && (
-          <QuickViewSheet
-            key={quickTeam._id}
-            team={quickTeam}
-            onClose={() => setQuickTeam(null)}
-            eventId={eventId}
-            attendeeId={attendeeId}
-            remainingBudget={remainingBudget}
-            maxPerTeam={maxPerTeam}
-            maxPerAttendee={maxPerAttendee}
-            onHeightChange={(h) => setSheetHeight(h)}
-            isEventLive={isEventLive}
-            requestLocation={event.venueLocationEnabled === true}
-          />
-        )}
-      </AnimatePresence>
-      <MobileBudgetFooter
-        remaining={remainingBudget}
-        total={maxPerAttendee}
-        lifted={!!quickTeam}
-        liftAmount={sheetHeight + 24}
-      />
-    </div>
-  );
-}
-
-function BudgetIndicator({
-  remaining,
-  total,
-}: {
-  remaining: number;
-  total: number;
-}) {
-  const percentage = (remaining / total) * 100;
-  const isLow = remaining <= 3;
-
-  return (
-    <div className="flex flex-col items-end">
-      <div className="flex items-center gap-1.5 mb-3 text-right whitespace-nowrap">
-        <span className="text-xl leading-none">❤️</span>
-        <span
-          className={`text-2xl font-bold leading-none ${
-            isLow ? "text-red-500" : "fi-ink"
-          }`}
-        >
-          {remaining}
-        </span>
-        <span className="fi-muted text-sm leading-tight">
-          / {total} left
-        </span>
-      </div>
-      <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-        <div
-          className={`h-full transition-all duration-300 ${
-            isLow ? "bg-red-500" : "bg-pink-500"
-          }`}
-          style={{ width: `${percentage}%` }}
+        <DemoDayBrowseView
+          key={props.eventId}
+          {...props}
+          attendeeId={attendeeId}
+          appreciationData={appreciationData}
+          appreciation={appreciation}
         />
-      </div>
-    </div>
+      )}
+    </ParticipationFrame>
   );
 }
 
-interface TeamCardProps {
-  team: {
-    _id: Id<"teams">;
-    name: string;
-    description: string;
-    members?: string[];
-    courseCode?: string;
-  };
-  eventId: Id<"events">;
-  attendeeId: string | null;
-  appreciationData?: { totalCount: number; attendeeCount: number };
-  remainingBudget: number;
-  maxPerTeam: number;
-  index: number;
-  onQuickView?: (team: TeamCardProps["team"]) => void;
-  layout?: "grid" | "carousel";
-  isEventLive: boolean;
-  requestLocation: boolean;
-}
-
-function TeamCard({
-  team,
+export function DemoDayBrowseView({
   eventId,
+  event,
+  onBack,
   attendeeId,
   appreciationData,
-  remainingBudget,
-  maxPerTeam,
-  index,
-  onQuickView,
-  layout = "grid",
-  isEventLive,
-  requestLocation,
-}: TeamCardProps) {
-  const { appreciate, isLoading, isAuthenticated } = useAppreciation();
-  const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
-
-  const attendeeCount = optimisticCount ?? appreciationData?.attendeeCount ?? 0;
-  const canAppreciate =
-    isEventLive &&
-    isAuthenticated !== false &&
-    attendeeId &&
-    attendeeCount < maxPerTeam &&
-    remainingBudget > 0;
-
-  const handleAppreciate = async () => {
-    if (!attendeeId || !canAppreciate) return;
-
-    // Optimistic update
-    setOptimisticCount((prev) => (prev ?? attendeeCount) + 1);
-
-    const result = await appreciate(
-      eventId,
-      team._id,
-      () => {
-        toast.success(`Appreciated ${team.name}!`);
-      },
-      (error) => {
-        // Revert optimistic update
-        setOptimisticCount(null);
-        toast.error(error);
-      },
-      { requestLocation },
-    );
-
-    // If successful, the query will refresh and we can clear optimistic state
-    if (result.success) {
-      // Let the query update handle the final state
-      setTimeout(() => setOptimisticCount(null), 500);
-    }
-  };
-
-  return (
-    <div
-      className={`card fade-in p-5 fi-surface hover:shadow-lg transition-all duration-200 ${
-        layout === "carousel" ? "min-w-[80%] sm:min-w-[60%] md:min-w-0" : ""
-      }`}
-      style={{ animationDelay: `${index * 0.05}s` }}
-    >
-      <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1 min-w-0">
-            <Link
-              to={`/event/${eventId}/team/${team._id}`}
-              className="fi-zone font-semibold fi-ink text-base truncate block hover:text-primary transition-colors"
-            >
-              {team.name}
-            </Link>
-            {team.courseCode && (
-              <span className="inline-block px-2 py-0.5 bg-muted fi-muted text-[10px] rounded mt-1">
-                {team.courseCode}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Description */}
-        <p className="text-sm fi-muted flex-1 line-clamp-3 mb-4 leading-relaxed">
-          {team.description}
-        </p>
-
-        {/* Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-border gap-2">
-          {onQuickView ? (
-            <>
-              <button
-                onClick={() => onQuickView(team)}
-                className="text-xs text-primary hover:underline font-medium sm:hidden"
-              >
-                View Details →
-              </button>
-              <Link
-                to={`/event/${eventId}/team/${team._id}`}
-                className="text-xs text-primary hover:underline font-medium hidden sm:inline"
-              >
-                View Details →
-              </Link>
-            </>
-          ) : (
-            <Link
-              to={`/event/${eventId}/team/${team._id}`}
-              className="text-xs text-primary hover:underline font-medium"
-            >
-              View Details →
-            </Link>
-          )}
-          <div className="flex items-center gap-2">
-            <span className="text-xs fi-muted">
-              {attendeeCount}/{maxPerTeam}
-            </span>
-            <button
-              onClick={() => {
-                void handleAppreciate();
-              }}
-              disabled={!canAppreciate || isLoading}
-              className={`
-                flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all shadow-sm
-                ${
-                  canAppreciate
-                    ? "bg-pink-500 hover:bg-pink-600 text-white hover:shadow-md active:scale-95"
-                    : "bg-muted fi-muted cursor-not-allowed shadow-none"
-                }
-                ${isLoading ? "opacity-70" : ""}
-              `}
-            >
-              {isLoading ? (
-                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <span>❤️</span>
-              )}
-              {isAuthenticated === false
-                ? "Sign in to vote"
-                : !isEventLive
-                ? "Opens when live"
-                : attendeeCount >= maxPerTeam
-                  ? "Max"
-                  : remainingBudget <= 0
-                    ? "None Left"
-                    : "+1"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface QuickViewSheetProps {
-  team:
-    | (TeamCardProps["team"] & {
-        appreciationData?: { totalCount: number; attendeeCount: number };
-      })
-    | null;
-  onClose: () => void;
-  eventId: Id<"events">;
+  appreciation,
+  preview = false,
+}: DemoDayBrowseProps & {
   attendeeId: string | null;
-  remainingBudget: number;
-  maxPerTeam: number;
-  maxPerAttendee: number;
-  onHeightChange: (height: number) => void;
-  isEventLive: boolean;
-  requestLocation: boolean;
-}
-
-function QuickViewSheet({
-  team,
-  onClose,
-  eventId,
-  attendeeId,
-  remainingBudget,
-  maxPerTeam,
-  maxPerAttendee,
-  onHeightChange,
-  isEventLive,
-  requestLocation,
-}: QuickViewSheetProps) {
-  const { appreciate, isLoading, isAuthenticated } = useAppreciation();
-  const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
-  const sheetRef = useRef<HTMLDivElement | null>(null);
-
-  // Measure sheet height to lift footer appropriately
+  appreciationData: AppreciationData | undefined;
+  appreciation: AppreciationController;
+  preview?: boolean;
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [course, setCourse] = useState<string | null>(null);
+  const [confirmedBudget, setConfirmedBudget] = useState<number | null>(null);
+  const [confirmedCounts, setConfirmedCounts] = useState<
+    Record<string, number>
+  >({});
+  const [pendingTeam, setPendingTeam] = useState<string | null>(null);
+  const [notice, setNotice] = useState("");
   useEffect(() => {
-    const el = sheetRef.current;
-    if (!el) return;
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      if (rect.height) {
-        onHeightChange(rect.height);
-      }
-    };
-    measure();
-    const ro = new ResizeObserver(() => measure());
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [onHeightChange, team]);
-
-  if (!team) return null;
-
-  const attendeeCount =
-    optimisticCount ?? team.appreciationData?.attendeeCount ?? 0;
-  const canAppreciate =
-    isEventLive &&
-    isAuthenticated !== false &&
-    attendeeId &&
-    attendeeCount < maxPerTeam &&
-    remainingBudget > 0;
-
-  const handleAppreciate = async () => {
-    if (!attendeeId || !canAppreciate) return;
-    setOptimisticCount((prev) => (prev ?? attendeeCount) + 1);
-
-    const result = await appreciate(
-      eventId,
-      team._id,
-      () => {
-        toast.success(`Appreciated ${team.name}!`);
-      },
-      (error) => {
-        setOptimisticCount(null);
-        toast.error(error);
-      },
-      { requestLocation },
+    setConfirmedBudget(null);
+    setConfirmedCounts({});
+  }, [appreciationData]);
+  const maxPerAttendee = appreciationData?.maxPerAttendee ?? 100;
+  const maxPerTeam = appreciationData?.maxPerTeam ?? 10;
+  const remainingBudget = Math.min(
+    appreciationData?.attendeeRemainingBudget ?? maxPerAttendee,
+    confirmedBudget ?? maxPerAttendee,
+  );
+  const visibleTeams = useMemo(
+    () => event.teams.filter((team) => !team.hidden),
+    [event.teams],
+  );
+  const courses = useMemo(
+    () =>
+      [
+        ...new Set(
+          visibleTeams
+            .map((team) => team.courseCode)
+            .filter((value): value is string => Boolean(value)),
+        ),
+      ].sort(),
+    [visibleTeams],
+  );
+  const filteredTeams = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return visibleTeams.filter(
+      (team) =>
+        (!course || team.courseCode === course) &&
+        (!query ||
+          [team.name, team.description, ...(team.members ?? [])].some((text) =>
+            text.toLowerCase().includes(query),
+          )),
     );
+  }, [visibleTeams, course, searchQuery]);
+  const counts = useMemo(
+    () =>
+      new Map(
+        appreciationData?.teams.map((team) => [
+          String(team.teamId),
+          team.attendeeCount,
+        ]) ?? [],
+      ),
+    [appreciationData],
+  );
+  const live = event.status === "active";
 
-    if (result.success) {
-      setTimeout(() => setOptimisticCount(null), 500);
+  const appreciateTeam = async (team: DemoTeam) => {
+    if (appreciation.isAuthenticated === false) {
+      window.dispatchEvent(new CustomEvent("hackjudge:open-signin"));
+      return;
+    }
+    const count = Math.max(
+      counts.get(team._id) ?? 0,
+      confirmedCounts[team._id] ?? 0,
+    );
+    if (
+      !live ||
+      !attendeeId ||
+      pendingTeam ||
+      appreciation.isLoading ||
+      remainingBudget <= 0 ||
+      count >= maxPerTeam
+    )
+      return;
+    setPendingTeam(team._id);
+    try {
+      const result = await appreciation.appreciate(
+        eventId,
+        team._id,
+        undefined,
+        undefined,
+        { requestLocation: event.venueLocationEnabled === true },
+      );
+      if (result.success) {
+        setConfirmedBudget(result.remainingTotal);
+        setConfirmedCounts((current) => ({
+          ...current,
+          [team._id]: maxPerTeam - result.remainingForTeam,
+        }));
+        setNotice(
+          `Love Tap sent to ${team.name}. ${result.remainingTotal} left to share.`,
+        );
+      } else {
+        const message =
+          result.error || "Your Love Tap could not be sent. Please try again.";
+        setNotice(message);
+        toast.error(message);
+      }
+    } finally {
+      setPendingTeam(null);
     }
   };
 
   return (
-    <>
-      <motion.div
-        key="overlay"
-        className="fixed inset-0 bg-black/40 z-40"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1, transition: { duration: 0.25 } }}
-        exit={{ opacity: 0, transition: { duration: 0.25 } }}
-        role="button"
-        aria-label="Close quick view"
-        onClick={onClose}
-      />
-      <motion.div
-        key="sheet"
-        className="fixed inset-x-0 bottom-0 z-50 fi-surface rounded-t-2xl fi-elevation-panel border border-border p-4 max-h-[80vh] overflow-y-auto will-change-transform"
-        ref={sheetRef}
-        initial={{ y: "100%" }}
-        animate={{
-          y: 0,
-          transition: { duration: 0.25, ease: [0.25, 0.8, 0.3, 1] },
-        }}
-        exit={{
-          y: "100%",
-          transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
-        }}
-      >
-        <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full mx-auto mb-3" />
-        <div className="flex items-start justify-between mb-3 gap-2">
-          <div>
-            <h3 className="text-lg fi-zone font-semibold fi-ink">
-              {team.name}
-            </h3>
-            {team.courseCode && (
-              <span className="inline-block px-2 py-0.5 bg-muted fi-muted text-[10px] rounded mt-1">
-                {team.courseCode}
-              </span>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="fi-muted hover:fi-ink text-2xl -mt-2 mr-2"
-            aria-label="Close quick view"
-          >
-            ✕
-          </button>
-        </div>
-        <p className="text-sm fi-muted leading-relaxed mb-4">
-          {team.description}
-        </p>
-        {team.members && team.members.length > 0 && (
-          <div className="mb-4">
-            <p className="text-xs uppercase tracking-wide fi-muted mb-1">
-              Members
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {team.members.map((member) => (
-                <span
-                  key={member}
-                  className="px-2 py-1 bg-muted text-xs rounded-md fi-ink"
-                >
-                  {member}
-                </span>
-              ))}
+    <div className="participation-content demo-browse">
+      <ParticipationHeader
+        title={event.name}
+        description={
+          event.description ||
+          "Meet the projects and share a little appreciation."
+        }
+        onBack={onBack}
+        aside={
+          <div className="demo-budget">
+            <HeartIcon />
+            <div>
+              <strong>{remainingBudget}</strong>
+              <span>Love Taps left</span>
             </div>
+            <p>
+              Up to {maxPerTeam} per project.
+              <br />
+              {maxPerAttendee} to share across the event.
+            </p>
+          </div>
+        }
+      />
+      {!live && (
+        <p className="participation-notice">
+          {event.status === "past"
+            ? "This event has ended. You can still explore the projects."
+            : "Appreciations open once the event is live."}
+        </p>
+      )}
+      <div className="demo-toolbar">
+        <label className="participation-search">
+          <span>Find a project</span>
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search projects by name or description..."
+          />
+        </label>
+        {courses.length > 0 && (
+          <div
+            className="demo-courses"
+            role="group"
+            aria-label="Filter by course"
+          >
+            <button aria-pressed={!course} onClick={() => setCourse(null)}>
+              All Courses
+            </button>
+            {courses.map((code) => (
+              <button
+                key={code}
+                aria-pressed={course === code}
+                onClick={() => setCourse(course === code ? null : code)}
+              >
+                {code}
+              </button>
+            ))}
           </div>
         )}
-        <div className="flex items-center justify-between border-t border-border pt-3 gap-3">
-          <span className="text-xs fi-muted">
-            {attendeeCount}/{maxPerTeam} you’ve given • {remainingBudget}/
-            {maxPerAttendee} left
-          </span>
-          <button
-            onClick={() => {
-              void handleAppreciate();
-            }}
-            disabled={!canAppreciate || isLoading}
-            className={`
-              flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all shadow-sm
-              ${
-                canAppreciate
-                  ? "bg-pink-500 hover:bg-pink-600 text-white hover:shadow-md active:scale-95"
-                  : "bg-muted fi-muted cursor-not-allowed shadow-none"
-              }
-              ${isLoading ? "opacity-70" : ""}
-            `}
-          >
-            {isLoading ? (
-              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <span>❤️</span>
-            )}
-            {isAuthenticated === false
-              ? "Sign in to vote"
-              : !isEventLive
-              ? "Opens when live"
-              : attendeeCount >= maxPerTeam
-                ? "Max"
-                : remainingBudget <= 0
-                  ? "None Left"
-                  : "Appreciate"}
-          </button>
-        </div>
-      </motion.div>
-    </>
-  );
-}
-
-function MobileBudgetFooter({
-  remaining,
-  total,
-  lifted,
-  liftAmount,
-}: {
-  remaining: number;
-  total: number;
-  lifted: boolean;
-  liftAmount: number;
-}) {
-  return (
-    <motion.div
-      className="fixed bottom-0 inset-x-0 z-[60] sm:hidden px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] pt-2"
-      initial={false}
-      animate={{
-        y: lifted ? -Math.max(liftAmount, 120) : 0,
-        transition: { duration: 0.25, ease: [0.25, 0.8, 0.3, 1] },
-      }}
-    >
-      <div className="bg-primary text-primary-foreground border border-primary rounded-full shadow-[0_12px_28px_rgba(0,0,0,0.22)]  px-3 py-2 flex items-center gap-2 w-fit mx-auto text-sm">
-        <span className="text-base leading-none">❤️</span>
-        <span className="font-semibold text-sm leading-none">
-          {remaining}/{total} appreciations left
+      </div>
+      <div className="participation-section-title">
+        <h2>Explore the projects</h2>
+        <span>
+          {filteredTeams.length} project{filteredTeams.length === 1 ? "" : "s"}
+          {course ? ` in ${course}` : ""}
         </span>
       </div>
-    </motion.div>
+      <p className="demo-live-notice" role="status">
+        {notice || "Found something you love? Send the team a Love Tap."}
+      </p>
+      {filteredTeams.length === 0 ? (
+        <div className="participation-empty">
+          <h3>No Projects Found</h3>
+          <p>Try another search or course.</p>
+        </div>
+      ) : (
+        <div className="demo-project-grid">
+          {filteredTeams.map((team) => {
+            const count = Math.max(
+              counts.get(team._id) ?? 0,
+              confirmedCounts[team._id] ?? 0,
+            );
+            const blocked =
+              !live ||
+              (!attendeeId && appreciation.isAuthenticated !== false) ||
+              count >= maxPerTeam ||
+              remainingBudget <= 0 ||
+              !!pendingTeam ||
+              appreciation.isLoading;
+            return (
+              <article className="demo-project" key={team._id}>
+                <div className="demo-project-art">
+                  <ProjectArt index={visibleTeams.indexOf(team)} />
+                  {team.courseCode && <span>{team.courseCode}</span>}
+                </div>
+                <div className="demo-project-content">
+                  <h3>
+                    {preview ? (
+                      team.name
+                    ) : (
+                      <Link to={`/event/${eventId}/team/${team._id}`}>
+                        {team.name}
+                      </Link>
+                    )}
+                  </h3>
+                  <p>{team.description || "No description yet."}</p>
+                  <details className="demo-project-details">
+                    <summary>Project details</summary>
+                    {team.members?.length ? (
+                      <p>{team.members.join(" · ")}</p>
+                    ) : (
+                      <p>Team members have not been listed.</p>
+                    )}
+                    {!preview && (
+                      <Link to={`/event/${eventId}/team/${team._id}`}>
+                        Open project page <DirectionIcon />
+                      </Link>
+                    )}
+                  </details>
+                  <div className="demo-project-actions">
+                    <span>
+                      {count} / {maxPerTeam} sent
+                    </span>
+                    <button
+                      className="demo-love-tap"
+                      onClick={() => void appreciateTeam(team)}
+                      disabled={blocked}
+                      aria-label={`Send Love Tap to ${team.name}`}
+                    >
+                      <HeartIcon />
+                      {pendingTeam === team._id
+                        ? "Sending..."
+                        : appreciation.isAuthenticated === false
+                          ? "Sign in to vote"
+                          : !live
+                            ? "Voting closed"
+                            : count >= maxPerTeam
+                              ? "Limit reached"
+                              : remainingBudget <= 0
+                                ? "None left"
+                                : "Love Tap +1"}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+      <div className="demo-mobile-budget">
+        <HeartIcon />
+        <strong>{remainingBudget}</strong> Love Taps left{" "}
+        <span>Up to {maxPerTeam} per project</span>
+      </div>
+    </div>
   );
 }

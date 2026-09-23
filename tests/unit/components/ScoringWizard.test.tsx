@@ -99,12 +99,12 @@ describe("ScoringWizard", () => {
     renderWizard();
 
     expect(screen.getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /Score \d for Impact/ })).toHaveLength(
-      5,
-    );
-    expect(screen.getAllByRole("button", { name: /Score \d for Craft/ })).toHaveLength(
-      5,
-    );
+    expect(
+      screen.getAllByRole("button", { name: /Score \d for Impact/ }),
+    ).toHaveLength(5);
+    expect(
+      screen.getAllByRole("button", { name: /Score \d for Craft/ }),
+    ).toHaveLength(5);
     expect(scoreKey(3, "Impact")).toHaveAttribute("aria-pressed", "true");
     expect(scoreKey(3, "Craft")).toHaveAttribute("aria-pressed", "true");
   });
@@ -119,8 +119,12 @@ describe("ScoringWizard", () => {
     writeDraft(2);
     renderWizard({ initialTeamId: "team_beta" as Id<"teams"> });
 
-    expect(await screen.findByRole("heading", { name: "Gamma" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Beta" })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Gamma" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Beta" }),
+    ).not.toBeInTheDocument();
   });
 
   it("marks a clicked score key pressed and advances criterion on keyboard 1–5", () => {
@@ -132,7 +136,9 @@ describe("ScoringWizard", () => {
 
     fireEvent.keyDown(window, { key: "4" });
     expect(scoreKey(4, "Impact")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("group", { name: /Craft/ })).toHaveClass("is-focused");
+    expect(screen.getByRole("group", { name: /Craft/ })).toHaveClass(
+      "is-focused",
+    );
 
     fireEvent.keyDown(window, { key: "2" });
     expect(scoreKey(2, "Craft")).toHaveAttribute("aria-pressed", "true");
@@ -147,14 +153,19 @@ describe("ScoringWizard", () => {
       "true",
     );
     for (const value of [1, 2, 3, 4, 5]) {
-      expect(scoreKey(value, "Impact")).toHaveAttribute("aria-pressed", "false");
+      expect(scoreKey(value, "Impact")).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
     }
 
     fireEvent.keyDown(window, { key: "ArrowDown" });
     expect(scoreKey(3, "Craft")).toHaveAttribute("aria-pressed", "true");
     fireEvent.keyDown(window, { key: "0" });
     expect(scoreKey(3, "Craft")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.queryByRole("button", { name: "Marked N/A" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Marked N/A" }),
+    ).toBeInTheDocument();
   });
 
   it("shows the draft readout after a score change when storageKey is set", async () => {
@@ -165,7 +176,7 @@ describe("ScoringWizard", () => {
     expect(await screen.findByText(/Draft · saved/i)).toBeInTheDocument();
   });
 
-  it("marks a team completed on Next and opens a flat take-sheet after the last team", () => {
+  it("marks a team completed on Next and opens a score review after the last team", () => {
     renderWizard();
 
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -175,9 +186,11 @@ describe("ScoringWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
     expect(screen.getByRole("heading", { name: "Gamma" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Take sheet" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
 
-    expect(screen.getByRole("heading", { name: "Take sheet" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Review scores" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Beta" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Gamma" })).toBeInTheDocument();
@@ -194,7 +207,9 @@ describe("ScoringWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
-    expect(screen.getByRole("heading", { name: "Take sheet" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Review scores" }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Submit scores" }));
 
     await waitFor(() => {
@@ -220,7 +235,7 @@ describe("ScoringWizard", () => {
   it("does not submit when no teams are completed", () => {
     renderWizard();
 
-    fireEvent.click(screen.getByRole("button", { name: "Take sheet" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
     const submit = screen.getByRole("button", { name: "Submit scores" });
     expect(submit).toBeDisabled();
     fireEvent.click(submit);
@@ -236,5 +251,34 @@ describe("ScoringWizard", () => {
 
     expect(screen.getByRole("heading", { name: "Beta" })).toBeInTheDocument();
     expect(screen.getByText("00 of 03 scored")).toBeInTheDocument();
+  });
+  it("can revisit a completed project from review and retain its score", () => {
+    renderWizard();
+    fireEvent.click(scoreKey(5, "Impact"));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+    expect(screen.getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+    expect(scoreKey(5, "Impact")).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(scoreKey(4, "Impact"));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByRole("heading", { name: "Beta" })).toBeInTheDocument();
+  });
+
+  it("Previous opens the completed project without skipping it", () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+    expect(screen.getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+  });
+
+  it("keeps the browser draft when score submission fails", async () => {
+    mockSubmit.mockRejectedValueOnce(new Error("Offline"));
+    const { props } = renderWizard({ teams: [defaultTeams[1]] });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Submit scores" }));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Offline"));
+    expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+    expect(props.onSubmitted).not.toHaveBeenCalled();
   });
 });

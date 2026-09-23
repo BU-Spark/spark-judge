@@ -12,9 +12,11 @@ import { AdminHomeRoute } from "./features/admin/routes/AdminHomeRoute";
 import { AdminCreateEventRoute } from "./features/admin/routes/AdminCreateEventRoute";
 import { AdminEventRoute } from "./features/admin/routes/AdminEventRoute";
 import { AdminInsightsRoute } from "./features/admin/routes/AdminInsightsRoute";
+import { ParticipationPreview } from "./components/participation/ParticipationPreview";
 import { DesignPreview } from "./features/design-preview/DesignPreview";
 import { useState, useEffect } from "react";
 import { Id } from "../convex/_generated/dataModel";
+import { LoadingState } from "./components/ui/LoadingState";
 import { BrandLogo } from "./components/ui/BrandLogo";
 import {
   BrowserRouter,
@@ -32,12 +34,19 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route
+          path="/participation-preview"
+          element={<ParticipationPreview />}
+        />
         <Route path="/design-preview" element={<DesignPreview />} />
         <Route element={<Layout />}>
           <Route path="/" element={<LandingPageWrapper />} />
           <Route path="/event/:eventId" element={<EventViewWrapper />} />
           {/* Dedicated team page - direct route */}
-          <Route path="/event/:eventId/team/:teamId" element={<TeamPageWrapper />} />
+          <Route
+            path="/event/:eventId/team/:teamId"
+            element={<TeamPageWrapper />}
+          />
           <Route path="/admin" element={<AdminShell />}>
             <Route index element={<AdminHomeRoute />} />
             <Route path="insights" element={<AdminInsightsRoute />} />
@@ -46,7 +55,10 @@ export default function App() {
           </Route>
           <Route path="/profile" element={<ProfilePageWrapper />} />
           {/* Deep link redirect for QR codes with slug format */}
-          <Route path="/event/:eventSlug/:teamSlug/:teamId" element={<TeamRedirect />} />
+          <Route
+            path="/event/:eventSlug/:teamSlug/:teamId"
+            element={<TeamRedirect />}
+          />
           {/* Catch-all redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
@@ -59,14 +71,16 @@ export default function App() {
  * Layout component with header - wraps all routes
  */
 function Layout() {
-  const isEventStage = useLocation().pathname === "/";
+  const pathname = useLocation().pathname;
+  const isEventStage = pathname === "/" || /^\/event\/[^/]+$/.test(pathname);
   const [showSignIn, setShowSignIn] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const isAdmin = useQuery(api.events.isUserAdmin);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const updateIsMobile = () => setIsMobile(window.matchMedia("(max-width: 768px)").matches);
+    const updateIsMobile = () =>
+      setIsMobile(window.matchMedia("(max-width: 768px)").matches);
     updateIsMobile();
     window.addEventListener("resize", updateIsMobile);
     return () => window.removeEventListener("resize", updateIsMobile);
@@ -89,7 +103,9 @@ function Layout() {
   }, []);
 
   return (
-    <div className={`min-h-screen flex flex-col fi-app-shell${isEventStage ? " es-home-shell" : ""}`}>
+    <div
+      className={`min-h-screen flex flex-col fi-app-shell${isEventStage ? " es-home-shell" : ""}`}
+    >
       {/* Faceplate rail */}
       <header className="fi-rail sticky top-0 z-40">
         <div className="fi-rail-inner">
@@ -119,7 +135,11 @@ function Layout() {
               <SignOutButton className="fi-key" />
             </Authenticated>
             <Unauthenticated>
-              <button type="button" onClick={() => setShowSignIn(true)} className="fi-key">
+              <button
+                type="button"
+                onClick={() => setShowSignIn(true)}
+                className="fi-key"
+              >
                 <SignInArrowIcon />
                 Sign in
               </button>
@@ -154,7 +174,9 @@ function Layout() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0"
-            style={{ background: "color-mix(in srgb, var(--fi-ink) 55%, transparent)" }}
+            style={{
+              background: "color-mix(in srgb, var(--fi-ink) 55%, transparent)",
+            }}
             onClick={() => setShowSignIn(false)}
           />
           <div className="fi-panel fi-signin-panel relative p-8 max-w-md w-full">
@@ -165,7 +187,9 @@ function Layout() {
             >
               Esc
             </button>
-            <p className="fi-engraved" style={{ marginBottom: "0.5rem" }}>HackJudge console</p>
+            <p className="fi-engraved" style={{ marginBottom: "0.5rem" }}>
+              HackJudge console
+            </p>
             <h2 className="fi-zone" style={{ marginBottom: "1.5rem" }}>
               Sign in
             </h2>
@@ -179,7 +203,14 @@ function Layout() {
 
 function ProfileIcon() {
   return (
-    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+    <svg
+      className="w-4 h-4"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      aria-hidden="true"
+    >
       <circle cx="8" cy="5.5" r="2.5" />
       <path d="M2.5 14c.8-2.4 2.7-3.5 5.5-3.5s4.7 1.1 5.5 3.5" />
     </svg>
@@ -188,7 +219,14 @@ function ProfileIcon() {
 
 function AdminIcon() {
   return (
-    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+    <svg
+      className="w-4 h-4"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      aria-hidden="true"
+    >
       <path d="M8 1.5L2.5 3.5v4c0 3.4 2.4 5.4 5.5 6.5 3.1-1.1 5.5-3.1 5.5-6.5v-4L8 1.5z" />
     </svg>
   );
@@ -196,7 +234,14 @@ function AdminIcon() {
 
 function SignInArrowIcon() {
   return (
-    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+    <svg
+      className="w-4 h-4"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      aria-hidden="true"
+    >
       <path d="M6 3h7v10H6" />
       <path d="M9 8H2.5M6.5 5.5L9 8l-2.5 2.5" />
     </svg>
@@ -208,7 +253,7 @@ function SignInArrowIcon() {
  */
 function LandingPageWrapper() {
   const navigate = useNavigate();
-  
+
   const handleSelectEvent = (eventId: Id<"events">) => {
     void navigate(`/event/${eventId}`);
   };
@@ -228,9 +273,9 @@ function EventViewWrapper() {
   }
 
   return (
-    <EventView 
-      eventId={eventId as Id<"events">} 
-      onBack={() => void navigate("/")} 
+    <EventView
+      eventId={eventId as Id<"events">}
+      onBack={() => void navigate("/")}
     />
   );
 }
@@ -246,9 +291,9 @@ function ProfilePageWrapper() {
   };
 
   return (
-    <ProfilePage 
-      onSelectEvent={handleSelectEvent} 
-      onBackToLanding={() => void navigate("/")} 
+    <ProfilePage
+      onSelectEvent={handleSelectEvent}
+      onBackToLanding={() => void navigate("/")}
     />
   );
 }
@@ -277,16 +322,20 @@ function TeamPageWrapper() {
  * Handles /event/:slug/:slug/:teamId format from QR codes.
  */
 function TeamRedirect() {
-  const params = useParams<{ teamId: string; eventSlug?: string; teamSlug?: string }>();
+  const params = useParams<{
+    teamId: string;
+    eventSlug?: string;
+    teamSlug?: string;
+  }>();
   const navigate = useNavigate();
-  
+
   // Get teamId from the route
   const teamId = params.teamId;
-  
+
   // Look up the event for this team
   const eventId = useQuery(
     api.teams.getTeamEventId,
-    teamId ? { teamId: teamId as Id<"teams"> } : "skip"
+    teamId ? { teamId: teamId as Id<"teams"> } : "skip",
   );
 
   useEffect(() => {

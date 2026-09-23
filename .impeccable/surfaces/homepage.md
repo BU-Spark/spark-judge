@@ -32,3 +32,7 @@ Build and 26 targeted tests pass. Desktop and 390px phone screenshots cover all 
 The user rejected both the original lilac and the subsequent coral experiment. Three preview-only alternatives now share the same layout: Sky & navy (`palette=pool`), Berry & rose (`palette=berry`), and Chartreuse & olive (`palette=citron`). Open `/?demo=1&mode=code_and_tell&phase=live&palette=pool` and use the color-study buttons to compare. No replacement palette has been selected for the live homepage yet. The coral experiment was removed.
 
 All three desktop variants and the shared 390px phone layout were visually reviewed; the phone has no horizontal overflow. Text contrast across canvas, secondary text, project rows, and ballot panels ranges from 5.43:1 to 11.13:1. Vite production build passes. The palette switcher is restricted to the Code & Tell sample preview.
+
+### Palette selected and participation expanded
+
+The user chose Sky & navy. It is now the Code & Tell default on the actual homepage, and the temporary palette selector has been removed. The approved system also covers event participation; see `participation.md`. Sample homepage participation buttons now open `/participation-preview?mode=...`, using local interactions only. Earlier color-study notes above record the exploration, not the current palette.

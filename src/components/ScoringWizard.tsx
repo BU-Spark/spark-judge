@@ -4,6 +4,8 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import clsx from "clsx";
+import type { FunctionArgs } from "convex/server";
+import { DirectionIcon } from "./participation/ParticipationChrome";
 import {
   formatRubricPercent,
   getRubricPercentages,
@@ -40,6 +42,8 @@ type CategoryScoreValue = {
 
 type ScoringWizardProps = {
   eventId: Id<"events">;
+  eventName?: string;
+  embedded?: boolean;
   teams: Team[];
   categories: Category[];
   existingScores?: ExistingScore[];
@@ -129,8 +133,14 @@ function initialIndexFor(
   return idx >= 0 ? idx : 0;
 }
 
-export function ScoringWizard({
+export function ScoringWizard(props: ScoringWizardProps) {
+  const submitBatchScores = useMutation(api.scores.submitBatchScores);
+  return <ScoringSession {...props} submitBatchScores={submitBatchScores} />;
+}
+
+export function ScoringSession({
   eventId,
+  eventName = "Hackathon judging",
   teams,
   categories,
   existingScores,
@@ -138,9 +148,13 @@ export function ScoringWizard({
   onClose,
   onSubmitted,
   initialTeamId,
-}: ScoringWizardProps) {
-  const submitBatchScores = useMutation(api.scores.submitBatchScores);
-
+  submitBatchScores,
+  embedded = false,
+}: ScoringWizardProps & {
+  submitBatchScores: (
+    args: FunctionArgs<typeof api.scores.submitBatchScores>,
+  ) => Promise<unknown>;
+}) {
   const sortedTeams = useMemo(
     () => [...teams].sort((a, b) => a.name.localeCompare(b.name)),
     [teams],
@@ -159,12 +173,56 @@ export function ScoringWizard({
     initialIndexFor(teams, initialTeamId),
   );
   const [isReviewing, setIsReviewing] = useState(false);
+  const [browsingTeam, setBrowsingTeam] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [hadStoredDraft, setHadStoredDraft] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [navHistory, setNavHistory] = useState<number[]>([]);
   const [focusedCriterionIndex, setFocusedCriterionIndex] = useState(0);
+
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (embedded) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.focus();
+    const onDialogKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), summary, [tabindex="0"]',
+        ) ?? [],
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (
+        event.shiftKey &&
+        (document.activeElement === first ||
+          document.activeElement === dialogRef.current)
+      ) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    document.addEventListener("keydown", onDialogKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onDialogKey);
+      previousFocus?.focus();
+    };
+  }, [embedded]);
 
   const criterionRefs = useRef<Array<HTMLFieldSetElement | null>>([]);
   const nextButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -240,7 +298,11 @@ export function ScoringWizard({
   }, [existingScores, draftLoaded]);
 
   useEffect(() => {
-    if (draftLoaded || !storageKey) return;
+    if (draftLoaded) return;
+    if (!storageKey) {
+      setDraftLoaded(true);
+      return;
+    }
     if (typeof window === "undefined") return;
 
     try {
@@ -253,14 +315,12 @@ export function ScoringWizard({
         > = {};
         Object.entries(parsed.scores ?? {}).forEach(([teamId, categoryMap]) => {
           const normalizedCategories: Record<string, CategoryScoreValue> = {};
-          Object.entries(categoryMap ?? {}).forEach(
-            ([categoryName, value]) => {
-              const normalized = normalizeCategoryValue(value);
-              if (normalized) {
-                normalizedCategories[categoryName] = normalized;
-              }
-            },
-          );
+          Object.entries(categoryMap ?? {}).forEach(([categoryName, value]) => {
+            const normalized = normalizeCategoryValue(value);
+            if (normalized) {
+              normalizedCategories[categoryName] = normalized;
+            }
+          });
           normalizedScores[teamId] = normalizedCategories;
         });
         setDraftScores(normalizedScores);
@@ -411,6 +471,7 @@ export function ScoringWizard({
   ]);
 
   const handlePrevious = useCallback(() => {
+    setBrowsingTeam(true);
     setIsReviewing(false);
     setNavHistory((prev) => {
       if (prev.length === 0) return prev;
@@ -443,14 +504,21 @@ export function ScoringWizard({
   ]);
 
   useEffect(() => {
-    if (!hasTeams) return;
+    if (!hasTeams || browsingTeam) return;
     const id = currentTeamId;
     const isPending = id && !completedTeams.has(id) && !skippedTeams.has(id);
     if (isPending) return;
     const nextIdx = computeNextIndex(completedTeams, skippedTeams);
     if (nextIdx === -1) setIsReviewing(true);
     else setCurrentTeamIndex(nextIdx);
-  }, [hasTeams, currentTeamId, completedTeams, skippedTeams, computeNextIndex]);
+  }, [
+    hasTeams,
+    currentTeamId,
+    completedTeams,
+    skippedTeams,
+    computeNextIndex,
+    browsingTeam,
+  ]);
 
   const handleGoToTeam = useCallback(
     (index: number) => {
@@ -458,6 +526,7 @@ export function ScoringWizard({
       setNavHistory((prev) =>
         currentTeamIndex >= 0 ? [...prev, currentTeamIndex] : prev,
       );
+      setBrowsingTeam(true);
       setCurrentTeamIndex(index);
       setIsReviewing(false);
     },
@@ -563,7 +632,8 @@ export function ScoringWizard({
       const clamped = Math.max(0, Math.min(categories.length - 1, index));
       setFocusedCriterionIndex(clamped);
       const node = criterionRefs.current[clamped];
-      const firstKey = node?.querySelector<HTMLButtonElement>(".fi-wiz-score-key");
+      const firstKey =
+        node?.querySelector<HTMLButtonElement>(".fi-wiz-score-key");
       firstKey?.focus();
     },
     [categories.length],
@@ -623,25 +693,22 @@ export function ScoringWizard({
     isReviewing,
   ]);
 
-  const focusedCategory = categories[focusedCriterionIndex];
-  const focusedSelection = currentTeamId
-    ? draftScores[currentTeamId]?.[focusedCategory?.name ?? ""]
-    : undefined;
-  const focusedSelectValue = focusedCategory
-    ? focusedSelection?.optedOut || focusedSelection?.score === null
-      ? "N/A"
-      : String(focusedSelection?.score ?? DEFAULT_SCORE)
-    : "—";
-
   const sessionReadout = `${pad2(completedCount)} of ${pad2(totalTeams)} scored`;
 
   if (!hasTeams) {
     return (
-      <div className="fi-wiz" role="dialog" aria-labelledby="fi-wiz-idle-h">
+      <div
+        className="fi-wiz participation participation--hackathon"
+        ref={dialogRef}
+        tabIndex={-1}
+        role={embedded ? "region" : "dialog"}
+        aria-modal={embedded ? undefined : true}
+        aria-labelledby="fi-wiz-idle-h"
+      >
         <header className="fi-wiz-rail fi-wiz-rail--head">
           <div className="fi-wiz-session">
             <div className="fi-wiz-session-line">
-              <span className="fi-engraved">Session</span>
+              <strong className="scoring-session-name">{eventName}</strong>
               <span className="fi-readout">00 of 00 scored</span>
             </div>
             <div className="fi-wiz-idle-steps" aria-hidden="true">
@@ -687,11 +754,20 @@ export function ScoringWizard({
   }
 
   return (
-    <div className="fi-wiz" role="dialog" aria-labelledby="fi-wiz-team-name">
+    <div
+      className="fi-wiz participation participation--hackathon"
+      ref={dialogRef}
+      tabIndex={-1}
+      role={embedded ? "region" : "dialog"}
+      aria-modal={embedded ? undefined : true}
+      aria-labelledby={
+        isReviewing ? "scoring-review-heading" : "fi-wiz-team-name"
+      }
+    >
       <header className="fi-wiz-rail fi-wiz-rail--head">
         <div className="fi-wiz-session">
           <div className="fi-wiz-session-line">
-            <span className="fi-engraved">Session</span>
+            <strong className="scoring-session-name">{eventName}</strong>
             <span className="fi-readout">{sessionReadout}</span>
             {storageKey && draftSavedAt !== null && (
               <span className="fi-readout fi-wiz-draft" aria-live="polite">
@@ -738,7 +814,7 @@ export function ScoringWizard({
               onClick={() => setIsReviewing(true)}
               className="fi-key"
             >
-              Take sheet
+              Review scores
             </button>
           )}
           <button type="button" onClick={onClose} className="fi-key">
@@ -761,55 +837,46 @@ export function ScoringWizard({
           currentTeam && (
             <div className="fi-wiz-stage">
               <section className="fi-module fi-wiz-module">
-                <div className="fi-wiz-module-top">
-                  <div
-                    className="fi-wiz-crit-steps"
-                    role="img"
-                    aria-label={`Criterion progress for ${currentTeam.name}`}
-                  >
-                    {categories.map((category, index) => {
-                      const explicit =
-                        currentTeamId !== undefined &&
-                        Boolean(draftScores[currentTeamId]?.[category.name]);
-                      const isCurrent = index === focusedCriterionIndex;
-                      return (
-                        <span
-                          key={category.name}
-                          className={clsx(
-                            "fi-wiz-crit-step",
-                            explicit && "is-done",
-                            isCurrent && "is-current",
-                          )}
-                        />
-                      );
-                    })}
-                  </div>
-                  <div className="fi-wiz-chips">
-                    <span className="fi-wiz-chip">
-                      Team {pad2(currentTeamIndex + 1)} / {pad2(totalTeams)}
-                    </span>
-                    {currentTeam.track ? (
-                      <span className="fi-wiz-chip">{currentTeam.track}</span>
-                    ) : null}
-                    {currentTeam.members.length > 0 ? (
-                      <span className="fi-wiz-chip">
-                        {pad2(currentTeam.members.length)} members
-                      </span>
-                    ) : null}
-                  </div>
+                <h2 className="fi-wiz-team-name" id="fi-wiz-team-name">
+                  {currentTeam.name}
+                </h2>
+                <div className="scoring-project-position">
+                  Project {currentTeamIndex + 1} of {totalTeams}
+                  {currentTeam.track ? ` · ${currentTeam.track}` : ""}
                 </div>
-                <div className="fi-wiz-screen-tile">
-                  <h2 className="fi-wiz-team-name" id="fi-wiz-team-name">
-                    {currentTeam.name}
-                  </h2>
-                </div>
-                <p className="fi-wiz-select" aria-live="polite">
-                  Select · {focusedCategory?.name ?? "—"} ·{" "}
-                  <b>{focusedSelectValue}</b>
+                <p className="scoring-project-description">
+                  {currentTeam.description ||
+                    "No project description provided."}
                 </p>
+                {currentTeam.members.length > 0 && (
+                  <div className="scoring-members scoring-members--desktop">
+                    <h3>The team</h3>
+                    <p>{currentTeam.members.join(" · ")}</p>
+                  </div>
+                )}
+                <details className="scoring-guidance">
+                  <summary>Team & scoring guide</summary>
+                  {currentTeam.members.length > 0 && (
+                    <div className="scoring-members">
+                      <h3>The team</h3>
+                      <p>{currentTeam.members.join(" · ")}</p>
+                    </div>
+                  )}
+                  <p>
+                    Score each criterion from 1 to 5. Scores begin at 3. Adjust
+                    them, then choose Next to add this project to your review.
+                  </p>
+                  <p>
+                    Your draft is submitted only when you choose Submit scores.
+                  </p>
+                </details>
               </section>
 
               <div className="fi-wiz-criteria">
+                <div className="scoring-rubric-title">
+                  <h3>Score this project</h3>
+                  <span>1–5 scale</span>
+                </div>
                 {categories.map(({ name, optOutAllowed }, index) => {
                   const teamId = currentTeam._id as string;
                   const selection = draftScores[teamId]?.[name];
@@ -849,13 +916,14 @@ export function ScoringWizard({
                             onClick={() => handleScoreSelect(name, value)}
                             className={clsx(
                               "fi-wiz-score-key",
-                              selected === value && !isOptedOut && "is-selected",
+                              selected === value &&
+                                !isOptedOut &&
+                                "is-selected",
                               isOptedOut && "is-dim",
                             )}
                             aria-pressed={selected === value && !isOptedOut}
                             aria-label={`Score ${value} for ${name}`}
                           >
-                            <span className="fi-wiz-score-led" aria-hidden="true" />
                             {value}
                           </button>
                         ))}
@@ -865,7 +933,10 @@ export function ScoringWizard({
                           <button
                             type="button"
                             onClick={() => handleOptOut(name)}
-                            className={clsx("fi-key", isOptedOut && "is-latched")}
+                            className={clsx(
+                              "fi-key",
+                              isOptedOut && "is-latched",
+                            )}
                             aria-pressed={isOptedOut}
                           >
                             {isOptedOut
@@ -894,6 +965,11 @@ export function ScoringWizard({
 
       {isReviewing ? (
         <footer className="fi-wiz-rail fi-wiz-rail--foot">
+          <p className="scoring-footer-note">
+            {isReviewing
+              ? `${completedCount} project${completedCount === 1 ? "" : "s"} ready to submit`
+              : "Review all scores before submitting."}
+          </p>
           <div className="fi-wiz-nav">
             <button
               type="button"
@@ -916,6 +992,11 @@ export function ScoringWizard({
         </footer>
       ) : (
         <footer className="fi-wiz-rail fi-wiz-rail--foot">
+          <p className="scoring-footer-note">
+            {isReviewing
+              ? `${completedCount} project${completedCount === 1 ? "" : "s"} ready to submit`
+              : "Review all scores before submitting."}
+          </p>
           <div className="fi-wiz-nav">
             <button
               type="button"
@@ -934,7 +1015,7 @@ export function ScoringWizard({
               onClick={handleAdvance}
               className="fi-key"
             >
-              Next
+              Next <DirectionIcon />
             </button>
           </div>
         </footer>
@@ -968,7 +1049,9 @@ function ReviewPanel({
   return (
     <div className="fi-wiz-sheet">
       <div className="fi-wiz-sheet-head">
-        <h2 className="fi-zone">Take sheet</h2>
+        <h2 className="fi-zone" id="scoring-review-heading">
+          Review scores
+        </h2>
         <span className="fi-engraved">
           {pad2(completedCount)} of {pad2(totalTeams)} scored
           {skippedCount > 0 ? ` · ${pad2(skippedCount)} skipped` : ""}

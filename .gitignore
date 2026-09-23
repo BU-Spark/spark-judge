@@ -32,3 +32,6 @@ docs/
 
 # Local Netlify folder
 .netlify
+
+# Local design-decision server process state
+.impeccable/questions/

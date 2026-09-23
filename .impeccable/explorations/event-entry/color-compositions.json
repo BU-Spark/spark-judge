@@ -1,0 +1,69 @@
+{
+  "title": "Open House, in full color",
+  "question": "Same colorful visual system, three different layouts. Choose what should carry forward, or add a revision below. These are design mockups with illustrative data.",
+  "options": [
+    {
+      "id": "side-by-side",
+      "label": "Side-by-side",
+      "thesis": "A steady event index beside a boldly colored workspace.",
+      "palette": [
+        "#076B60",
+        "#D7EA83",
+        "#F4C75F",
+        "#CDC6F0",
+        "#254EDB"
+      ],
+      "materials": [
+        "full-color surfaces",
+        "bold sans type",
+        "flat geometric forms"
+      ],
+      "viewport": "Hackathon opens a queue; Demo Day a gallery; Code & Tell a project list beside a ballot.",
+      "risk": "The event index costs space on a laptop and must collapse on phones.",
+      "sketch": ".impeccable/mocks/event-entry/side-by-side.png"
+    },
+    {
+      "id": "event-stage",
+      "label": "Event stage",
+      "thesis": "The selected format takes over the canvas.",
+      "palette": [
+        "#076B60",
+        "#D7EA83",
+        "#F4C75F",
+        "#CDC6F0",
+        "#254EDB"
+      ],
+      "materials": [
+        "full-color surfaces",
+        "bold sans type",
+        "flat geometric forms"
+      ],
+      "viewport": "A horizontal event selector sits above a full-width, mode-specific entry with its primary action built into the layout.",
+      "risk": "Large color fields need enough useful content to earn their space.",
+      "sketch": ".impeccable/mocks/event-entry/event-stage.png"
+    },
+    {
+      "id": "open-lobby",
+      "label": "Open lobby",
+      "thesis": "See how each event works before choosing one.",
+      "palette": [
+        "#076B60",
+        "#D7EA83",
+        "#F4C75F",
+        "#CDC6F0",
+        "#254EDB"
+      ],
+      "materials": [
+        "full-color surfaces",
+        "bold sans type",
+        "flat geometric forms"
+      ],
+      "viewport": "Three unequal event panels expose a judging queue, a project gallery, and a ballot preview directly in the lobby.",
+      "risk": "Several active events may compete for attention; mobile needs a clear ordering.",
+      "sketch": ".impeccable/mocks/event-entry/open-lobby.png"
+    }
+  ],
+  "steer": true,
+  "reroll": false,
+  "canon": false
+}

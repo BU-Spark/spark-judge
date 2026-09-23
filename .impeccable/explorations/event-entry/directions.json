@@ -1,0 +1,116 @@
+{
+  "title": "One platform, three ways in",
+  "question": "Choose a visual direction for event entry. Every option must change structure between judging, Demo Day, and Code & Tell.",
+  "options": [
+    {
+      "id": "open-house",
+      "label": "Open House",
+      "lineage": "Event wayfinding and exhibition systems",
+      "thesis": "One event selector, three distinct working layouts.",
+      "palette": [
+        "#FFFFFF",
+        "#123D39",
+        "#D5EF63",
+        "#2864DC"
+      ],
+      "materials": [
+        "flat color fields",
+        "bold sans type",
+        "open layouts"
+      ],
+      "viewport": "A persistent event strip leads into a judging queue, a project gallery, or a split project-list and ballot layout.",
+      "risk": "Large signs must stay subordinate to the next task.",
+      "sketch": ".impeccable/sketches/event-entry/open-house.png"
+    },
+    {
+      "id": "friendly-app",
+      "label": "Friendly app",
+      "lineage": "Warm consumer application surfaces",
+      "thesis": "Comfortable touch targets and plain labels for busy event rooms.",
+      "palette": [
+        "#F2EEE7",
+        "#FFFFFF",
+        "#174F47",
+        "#292E2C"
+      ],
+      "materials": [
+        "soft cards",
+        "rounded humanist type",
+        "action-only color"
+      ],
+      "viewport": "Events stack above a task panel; the bottom navigation stays reachable while mode-specific content changes.",
+      "risk": "Cards can make the formats look too similar unless their contents truly change.",
+      "case": "Strong attendee familiarity and clear actions; less distinctive separation between modes.",
+      "sketch": ".impeccable/sketches/event-entry/friendly-app.png",
+      "hero": "https://impeccable.style/worlds/cards/digital-design-canon-warm-consumer-app-surface-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/digital-design-canon-warm-consumer-app-surface.webp"
+    },
+    {
+      "id": "studio-labels",
+      "label": "Studio labels",
+      "lineage": "Industrial streetwear labels",
+      "thesis": "Each event format gets a bold, unmistakable task zone.",
+      "palette": [
+        "#FAFAF8",
+        "#171717",
+        "#FF6A24"
+      ],
+      "materials": [
+        "square label plates",
+        "industrial caps",
+        "orange selection tags"
+      ],
+      "viewport": "A compact event index borders a boldly labeled queue, gallery, or ballot, with orange tags for selected actions.",
+      "risk": "Quotation marks and hazard patterns may make everyday tasks noisier.",
+      "case": "Fits maker culture; task clarity depends on restraint in labels and stripes.",
+      "sketch": ".impeccable/sketches/event-entry/studio-labels.png",
+      "hero": "https://impeccable.style/worlds/cards/textiles-weave-drape-fashion-industrial-quote-grammar-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/textiles-weave-drape-fashion-industrial-quote-grammar.webp"
+    },
+    {
+      "id": "event-calendar",
+      "label": "Event calendar",
+      "lineage": "Printed calendar pads",
+      "thesis": "Choose the event from the semester, then open its participation sheet.",
+      "palette": [
+        "#F8F1E1",
+        "#9F2A35",
+        "#A78744",
+        "#26211D"
+      ],
+      "materials": [
+        "calendar leaves",
+        "thin gold rules",
+        "condensed date type"
+      ],
+      "viewport": "The event calendar anchors one side while the selected event opens a judging, browsing, or voting sheet.",
+      "risk": "A calendar can put dates ahead of what attendees came to do.",
+      "case": "Familiar semester planning; weaker task clarity for someone already at an event.",
+      "sketch": ".impeccable/sketches/event-entry/event-calendar.png",
+      "hero": "https://impeccable.style/worlds/cards/vernacular-ephemera-calendar-pinup-pad-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/vernacular-ephemera-calendar-pinup-pad.webp"
+    }
+  ],
+  "reroll": true,
+  "steer": true,
+  "canon": true,
+  "canonCard": {
+    "label": "Familiar app",
+    "lineage": "Conventional event dashboard",
+    "thesis": "A familiar sidebar, event list, and clear mode-specific task panel.",
+    "palette": [
+      "#F5F7F8",
+      "#FFFFFF",
+      "#106C62",
+      "#20282C"
+    ],
+    "materials": [
+      "standard controls",
+      "compact navigation",
+      "clear status labels"
+    ],
+    "viewport": "Event list at left; the selected event and its next action at right.",
+    "risk": "Easy to learn, but less distinctive.",
+    "sketch": ".impeccable/sketches/event-entry/familiar-app.png"
+  }
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   POST_HOLD_MS,
+  groupHomepageEvents,
   PRE_WINDOW_MS,
   formatTeletextClock,
   pageCodeFor,
@@ -39,7 +40,7 @@ describe("selectFocalHomepage", () => {
         ],
         past: [],
       },
-      now
+      now,
     );
     expect(focal?.event._id).toBe("a1");
     expect(focal?.phase).toBe("live");
@@ -63,7 +64,7 @@ describe("selectFocalHomepage", () => {
           },
         ],
       },
-      now
+      now,
     );
     expect(focal?.event._id).toBe("p1");
     expect(focal?.phase).toBe("post");
@@ -95,14 +96,14 @@ describe("selectFocalHomepage", () => {
           },
         ],
       },
-      now
+      now,
     );
     expect(focal?.event._id).toBe("u1");
     expect(focal?.phase).toBe("pre");
     expect(focal?.pageCode).toBe("P301");
   });
 
-  it("armed pre beats a replay-hold event", () => {
+  it("keeps the recap before the next upcoming event", () => {
     const now = 10 * POST_HOLD_MS;
     const focal = selectFocalHomepage(
       {
@@ -126,13 +127,13 @@ describe("selectFocalHomepage", () => {
           },
         ],
       },
-      now
+      now,
     );
-    expect(focal?.event._id).toBe("u1");
-    expect(focal?.phase).toBe("pre");
+    expect(focal?.event._id).toBe("p1");
+    expect(focal?.phase).toBe("post");
   });
 
-  it("idles in standby when nothing is in any window", () => {
+  it("features the next event even when it is farther than ten days away", () => {
     const now = 10 * PRE_WINDOW_MS;
     const focal = selectFocalHomepage(
       {
@@ -156,9 +157,10 @@ describe("selectFocalHomepage", () => {
           },
         ],
       },
-      now
+      now,
     );
-    expect(focal).toBeNull();
+    expect(focal?.event._id).toBe("u1");
+    expect(focal?.phase).toBe("pre");
   });
 });
 
@@ -170,5 +172,77 @@ describe("pageCodeFor / clock", () => {
   it("maps modes", () => {
     expect(pageCodeFor("hackathon", "live")).toBe("P102");
     expect(pageCodeFor("demo_day", "pre")).toBe("P201");
+  });
+});
+
+describe("automatic event-stage lifecycle", () => {
+  const now = 10 * POST_HOLD_MS;
+  const event = {
+    ...base,
+    _id: "current",
+    status: "upcoming" as const,
+    startDate: now,
+    endDate: now + 1000,
+  };
+  it("moves upcoming to live to recap to the next event without a backend write", () => {
+    const next = {
+      ...event,
+      _id: "next",
+      startDate: now + POST_HOLD_MS * 2,
+      endDate: now + POST_HOLD_MS * 3,
+    };
+    const source = [event, next];
+    expect(
+      selectFocalHomepage(groupHomepageEvents(source, now - 1), now - 1)?.phase,
+    ).toBe("pre");
+    expect(
+      selectFocalHomepage(groupHomepageEvents(source, now), now)?.phase,
+    ).toBe("live");
+    expect(
+      selectFocalHomepage(groupHomepageEvents(source, now + 1001), now + 1001)
+        ?.phase,
+    ).toBe("post");
+    const expired = now + 1000 + POST_HOLD_MS;
+    expect(
+      selectFocalHomepage(groupHomepageEvents(source, expired), expired)?.event
+        ._id,
+    ).toBe("next");
+  });
+  it("allows selecting an overlapping live event and drops the choice after it ends", () => {
+    const other = { ...event, _id: "other", endDate: now + 500 };
+    expect(
+      selectFocalHomepage(
+        groupHomepageEvents([event, other], now),
+        now,
+        "other",
+      )?.event._id,
+    ).toBe("other");
+    expect(
+      selectFocalHomepage(
+        groupHomepageEvents([event, other], now + 600),
+        now + 600,
+        "other",
+      )?.event._id,
+    ).toBe("current");
+  });
+  it("lets a new live event take priority over a recap", () => {
+    const ended = {
+      ...event,
+      _id: "ended",
+      startDate: now - 2000,
+      endDate: now - 1000,
+    };
+    expect(
+      selectFocalHomepage(groupHomepageEvents([ended, event], now), now)?.event
+        ._id,
+    ).toBe("current");
+  });
+  it("preserves a manual close and honestly idles with no scheduled events", () => {
+    expect(
+      groupHomepageEvents([{ ...event, status: "past" as const }], now).active,
+    ).toHaveLength(0);
+    expect(
+      selectFocalHomepage({ active: [], upcoming: [], past: [] }, now),
+    ).toBeNull();
   });
 });

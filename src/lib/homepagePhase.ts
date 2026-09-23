@@ -1,8 +1,9 @@
+import { computeEventDisplayStatus } from "./eventStatus";
 import { getEventMode, type EventMode } from "./eventModes";
 
 /** Hours after an event ends that it remains the focal "replay" window. */
 export const POST_HOLD_MS = 48 * 60 * 60 * 1000;
-/** Days before start when an upcoming event becomes the focal "pre" window (armed). */
+/** Legacy preview threshold, retained for compatibility. Event stage has no pre-window cutoff. */
 export const PRE_WINDOW_MS = 10 * 24 * 60 * 60 * 1000;
 
 export type HomepagePhase = "pre" | "live" | "post" | "idle";
@@ -45,7 +46,10 @@ function phaseOffset(phase: Exclude<HomepagePhase, "idle">): number {
   }
 }
 
-export function pageCodeFor(mode: EventMode, phase: Exclude<HomepagePhase, "idle">): string {
+export function pageCodeFor(
+  mode: EventMode,
+  phase: Exclude<HomepagePhase, "idle">,
+): string {
   return `P${modeBase(mode) + phaseOffset(phase)}`;
 }
 
@@ -60,62 +64,67 @@ export function phaseLabel(phase: Exclude<HomepagePhase, "idle">): string {
   }
 }
 
-/**
- * Pick the single focal event and its homepage phase — a phase machine, not a
- * recency sort (semester-rail shape, confirmed 2026-08-12).
- * Priority: live → pre (armed, within pre-window) → replay (within post-hold) →
- * standby (null). There are no fallbacks to far-future or long-past events:
- * outside every window the instrument idles in standby.
+/** Reclassify as the clock advances, even when no Convex document changes. */
+export function groupHomepageEvents<T extends HomepageEvent>(
+  events: T[],
+  now: number,
+) {
+  const groups: { active: T[]; upcoming: T[]; past: T[] } = {
+    active: [],
+    upcoming: [],
+    past: [],
+  };
+  for (const event of events) {
+    const status = computeEventDisplayStatus({ ...event, now });
+    groups[
+      status === "active" ? "active" : status === "past" ? "past" : "upcoming"
+    ].push({ ...event, status });
+  }
+  groups.active.sort(
+    (a, b) => a.startDate - b.startDate || a._id.localeCompare(b._id),
+  );
+  groups.upcoming.sort(
+    (a, b) => a.startDate - b.startDate || a._id.localeCompare(b._id),
+  );
+  groups.past.sort(
+    (a, b) => b.endDate - a.endDate || a._id.localeCompare(b._id),
+  );
+  return groups;
+}
+
+/** Live first, then a 48-hour recap, then the next event regardless of distance.
+ * A manual choice only applies to currently live events and expires with them.
  */
-export function selectFocalHomepage(
-  events: {
-    active: HomepageEvent[];
-    upcoming: HomepageEvent[];
-    past: HomepageEvent[];
-  },
-  now = Date.now()
-): FocalHomepage | null {
-  if (events.active.length > 0) {
-    const event = [...events.active].sort((a, b) => a.startDate - b.startDate)[0]!;
-    const mode = getEventMode(event.mode);
-    const phase = "live" as const;
-    return {
-      event,
-      phase,
-      pageCode: pageCodeFor(mode, phase),
-      phaseLabel: phaseLabel(phase),
-    };
-  }
-
-  const upcomingSorted = [...events.upcoming].sort((a, b) => a.startDate - b.startDate);
-  const armed = upcomingSorted.find((e) => e.startDate > now && e.startDate - now <= PRE_WINDOW_MS);
-  if (armed) {
-    const mode = getEventMode(armed.mode);
-    const phase = "pre" as const;
-    return {
-      event: armed,
-      phase,
-      pageCode: pageCodeFor(mode, phase),
-      phaseLabel: phaseLabel(phase),
-    };
-  }
-
-  const recentPast = [...events.past]
-    .filter((e) => now - e.endDate <= POST_HOLD_MS && now >= e.endDate)
-    .sort((a, b) => b.endDate - a.endDate)[0];
-
-  if (recentPast) {
-    const mode = getEventMode(recentPast.mode);
-    const phase = "post" as const;
-    return {
-      event: recentPast,
-      phase,
-      pageCode: pageCodeFor(mode, phase),
-      phaseLabel: phaseLabel(phase),
-    };
-  }
-
-  return null;
+export function selectFocalHomepage<T extends HomepageEvent>(
+  events: { active: T[]; upcoming: T[]; past: T[] },
+  now = Date.now(),
+  selectedLiveId?: string | null,
+): (Omit<FocalHomepage, "event"> & { event: T }) | null {
+  const live = [...events.active].sort(
+    (a, b) => a.startDate - b.startDate || a._id.localeCompare(b._id),
+  );
+  const event =
+    live.find((e) => e._id === selectedLiveId) ??
+    live[0] ??
+    [...events.past]
+      .filter((e) => now >= e.endDate && now - e.endDate < POST_HOLD_MS)
+      .sort((a, b) => b.endDate - a.endDate)[0] ??
+    [...events.upcoming]
+      .filter((e) => e.startDate > now)
+      .sort((a, b) => a.startDate - b.startDate)[0];
+  if (!event) return null;
+  const phase =
+    event.status === "active"
+      ? "live"
+      : event.status === "past"
+        ? "post"
+        : "pre";
+  return {
+    event,
+    phase,
+    pageCode: pageCodeFor(getEventMode(event.mode), phase),
+    phaseLabel: phaseLabel(phase),
+  };
 }
 
 export function formatTeletextClock(ms: number): string {
@@ -132,7 +141,7 @@ export function formatTeletextClock(ms: number): string {
 export function focalCountdownMs(
   event: HomepageEvent,
   phase: Exclude<HomepagePhase, "idle">,
-  now = Date.now()
+  now = Date.now(),
 ): number {
   switch (phase) {
     case "pre":
@@ -144,7 +153,9 @@ export function focalCountdownMs(
   }
 }
 
-export function countdownCaption(phase: Exclude<HomepagePhase, "idle">): string {
+export function countdownCaption(
+  phase: Exclude<HomepagePhase, "idle">,
+): string {
   switch (phase) {
     case "pre":
       return "OPENS IN";

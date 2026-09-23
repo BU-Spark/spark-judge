@@ -23,6 +23,7 @@ import {
   Link,
   useNavigate,
   useParams,
+  useLocation,
   Outlet,
   Navigate,
 } from "react-router-dom";
@@ -58,6 +59,7 @@ export default function App() {
  * Layout component with header - wraps all routes
  */
 function Layout() {
+  const isEventStage = useLocation().pathname === "/";
   const [showSignIn, setShowSignIn] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const isAdmin = useQuery(api.events.isUserAdmin);
@@ -87,7 +89,7 @@ function Layout() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col fi-app-shell">
+    <div className={`min-h-screen flex flex-col fi-app-shell${isEventStage ? " es-home-shell" : ""}`}>
       {/* Faceplate rail */}
       <header className="fi-rail sticky top-0 z-40">
         <div className="fi-rail-inner">

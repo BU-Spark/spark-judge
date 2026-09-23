@@ -1,0 +1,62 @@
+{
+  "targeted_tests": 26,
+  "build": "passed",
+  "baseline_typescript_errors": 26,
+  "new_typescript_errors": false,
+  "contrast_pairs": [
+    {
+      "foreground": "#d7ea83",
+      "background": "#076b60",
+      "ratio": 4.87
+    },
+    {
+      "foreground": "#d0e6d2",
+      "background": "#076b60",
+      "ratio": 4.86
+    },
+    {
+      "foreground": "#073e39",
+      "background": "#f4c75f",
+      "ratio": 7.5
+    },
+    {
+      "foreground": "#354d2e",
+      "background": "#f4c75f",
+      "ratio": 5.85
+    },
+    {
+      "foreground": "#163593",
+      "background": "#cdc6f0",
+      "ratio": 6.58
+    },
+    {
+      "foreground": "#344075",
+      "background": "#cdc6f0",
+      "ratio": 6.05
+    },
+    {
+      "foreground": "#f2effd",
+      "background": "#254edb",
+      "ratio": 5.81
+    },
+    {
+      "foreground": "#073e39",
+      "background": "#d7ea83",
+      "ratio": 9.1
+    }
+  ],
+  "responsive_width": 390,
+  "horizontal_overflow": false,
+  "backend_writes": "none",
+  "production_deployment": "none",
+  "recap_duration_hours": 48,
+  "review_disposition": "ship",
+  "review_findings_resolved": 3,
+  "focus_keyboard_check": {
+    "focus_visible": true,
+    "foreground": "#d7ea83",
+    "surrounding_background": "#076b60",
+    "contrast": 4.87,
+    "review": "resolved"
+  }
+}

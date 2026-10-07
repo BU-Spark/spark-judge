@@ -160,11 +160,8 @@ describe("CodeAndTellVoteView", () => {
     expect(screen.getByText("You can’t vote for your own project.")).toBeInTheDocument();
     expect(screen.getAllByText("Project Two").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Project Three").length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(
-        "Existing ballot loaded. You can replace it until voting closes.",
-      ),
-    ).not.toHaveLength(0);
+    expect(screen.getByText("Ranked #1")).toBeInTheDocument();
+    expect(screen.getByText("Ranked #2")).toBeInTheDocument();
   });
 
   it("adds eligible projects and saves a completed ballot", async () => {

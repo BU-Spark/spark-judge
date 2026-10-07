@@ -390,7 +390,6 @@ export function CodeAndTellBallotView({
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [rankedTeamIds, setRankedTeamIds] = useState<Id<"teams">[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   const hasVerifiedEmail = Boolean(loggedInUser?.email?.trim());
   const ballotSignature = useMemo(
@@ -540,20 +539,6 @@ export function CodeAndTellBallotView({
           />
         ))}
       </ol>
-      {!votingNotOpen && (
-        <p className="ballot-help">
-          Drag to reorder, or use the up and down buttons.
-        </p>
-      )}
-      <div className="ballot-state" role="status">
-        {votingNotOpen
-          ? "Waiting for voting to open"
-          : isSaved
-            ? "Your ballot is safely stored."
-            : ballotComplete
-              ? "Ready to submit. Check your order before saving."
-              : `${remainingSlots} slot${remainingSlots === 1 ? "" : "s"} still open.`}
-      </div>
       <button
         className="participation-primary ballot-submit"
         onClick={() => void handleSaveBallot()}
@@ -572,15 +557,6 @@ export function CodeAndTellBallotView({
             : "Save Ballot"}
         <DirectionIcon />
       </button>
-      <p className="ballot-saved-note">
-        {votingNotOpen
-          ? "Enjoy the presentations in the meantime."
-          : lastSavedAt
-            ? `Last saved at ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-            : votingContext?.currentBallotTeamIds?.length
-              ? "Existing ballot loaded. You can replace it until voting closes."
-              : "Your picks are not submitted until you save."}
-      </p>
     </aside>
   );
 
@@ -615,7 +591,6 @@ export function CodeAndTellBallotView({
     setIsSubmitting(true);
     try {
       await saveBallot({ eventId, rankedTeamIds });
-      setLastSavedAt(Date.now());
       toast.success("Ballot saved");
     } catch (error: any) {
       toast.error(error?.message || "Failed to save ballot");

@@ -12,7 +12,7 @@ import {
   ParticipationFrame,
   DirectionIcon,
 } from "../participation/ParticipationChrome";
-import { Reorder } from "framer-motion";
+import { motion, Reorder, useDragControls } from "framer-motion";
 import { toast } from "sonner";
 
 import { api } from "../../../convex/_generated/api";
@@ -75,6 +75,7 @@ function BallotSlot({
   onMove?: (direction: -1 | 1) => void;
   last?: boolean;
 }) {
+  const dragControls = useDragControls();
   if (!project)
     return (
       <li className="ballot-slot ballot-slot--empty">
@@ -83,8 +84,30 @@ function BallotSlot({
       </li>
     );
   return (
-    <Reorder.Item value={project._id} className="ballot-slot">
-      <span className="ballot-rank">{index + 1}</span>
+    <Reorder.Item
+      value={project._id}
+      className="ballot-slot"
+      dragListener={false}
+      dragControls={dragControls}
+    >
+      <button
+        type="button"
+        className="ballot-drag-handle"
+        aria-label={`Drag ${project.name} to reorder`}
+        onPointerDown={(event) => dragControls.start(event)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+            event.preventDefault();
+            onMove?.(event.key === "ArrowUp" ? -1 : 1);
+          }
+        }}
+      >
+        <span className="ballot-rank">{index + 1}</span>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
+          <circle cx="4" cy="3" r="1.5" /><circle cx="12" cy="3" r="1.5" />
+          <circle cx="4" cy="9" r="1.5" /><circle cx="12" cy="9" r="1.5" />
+        </svg>
+      </button>
       <div className="ballot-slot-content">
         <strong>{project.name}</strong>
         <button
@@ -811,7 +834,9 @@ export function CodeAndTellBallotView({
         {!mobileBallot && (!loggedInUser || votingNotOpen || requiredRankCount > 0) && renderBallot()}
       </div>
       {mobileBallot && loggedInUser && (
-        <dialog
+        <motion.dialog
+          layoutScroll
+          layoutRoot
           ref={ballotDialog}
           className="ballot-mobile-dialog"
           aria-labelledby="ballot-heading"
@@ -830,7 +855,7 @@ export function CodeAndTellBallotView({
             </button>
             {renderBallot()}
           </div>
-        </dialog>
+        </motion.dialog>
       )}
       {mobileBallot && phase === "voting" && requiredRankCount > 0 && (loggedInUser ? (
         <button

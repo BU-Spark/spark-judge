@@ -25,7 +25,6 @@ export function PlatformHeader({ homepage = false }: { homepage?: boolean }) {
       <header className="hp-header">
         <Link className="hp-brand" to="/">
           HackJudge
-          <span className="hp-brand-dot" aria-hidden="true" />
         </Link>
         <div className="hp-header-actions">
           <a href={homepage ? "#past-events" : "/"}>

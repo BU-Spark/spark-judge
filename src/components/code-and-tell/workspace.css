@@ -562,7 +562,9 @@
   max-height: clamp(320px, 60svh, 620px);
   overflow-y: auto;
   scrollbar-gutter: stable;
-  padding-right: 12px;
+  border: 1px solid var(--ct-line);
+  border-radius: 8px;
+  padding-inline: 12px;
   gap: 0;
 }
 .ct-workspace .ballot-projects:focus-visible {

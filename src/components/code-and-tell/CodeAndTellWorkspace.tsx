@@ -49,6 +49,7 @@ export function CodeAndTellWorkspace({
   return (
     <div className="ct-workspace">
       {contextLabel && <div className="ct-card-edge" aria-hidden="true" />}
+      <div className="ct-event-heading">
       <div className="ct-topline">
         {contextLabel ? (
           <span className="ct-context-label">{contextLabel}</span>
@@ -57,16 +58,17 @@ export function CodeAndTellWorkspace({
             All events <DirectionIcon direction="left" />
           </button>
         )}
-        <span>
-          {date}
-          <span className="ct-dot" />
-          {event.resultsReleased ? "Results available" : phaseLabels[phase]}
+        <span className="ct-event-meta">
+          <span className="ct-event-date">{date}</span>
+          <span className="ct-dot" aria-hidden="true" />
+          <span className="ct-event-status">{event.resultsReleased ? "Results available" : phaseLabels[phase]}</span>
         </span>
       </div>
       <header className="ct-masthead ct-series-masthead">
         <h1>{CODE_AND_TELL_TITLE}</h1>
         <p className="ct-series-subtitle">{CODE_AND_TELL_SUBTITLE}</p>
       </header>
+      </div>
       {children}
       <footer className="ct-footer">
         <span>Code &amp; Tell / HackJudge</span>

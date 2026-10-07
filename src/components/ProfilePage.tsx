@@ -1,101 +1,83 @@
 import { useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
-import { useState, type CSSProperties } from "react";
+import type { Id } from "../../convex/_generated/dataModel";
+import { useState } from "react";
 import { formatDateTime } from "../lib/utils";
-import {
-  getEventDisplayLabel,
-  getEventMode,
-  type EventMode,
-} from "../lib/eventModes";
+import { getEventDisplayLabel } from "../lib/eventModes";
+import { DirectionIcon } from "./participation/ParticipationChrome";
 import "./ProfilePage.fi.css";
 
 interface ProfilePageProps {
   onSelectEvent: (eventId: Id<"events">) => void;
   onBackToLanding: () => void;
 }
+export type ProfileData = FunctionReturnType<typeof api.users.getUserProfile>;
 
-const MODE_ACCENT: Record<EventMode, string> = {
-  hackathon: "var(--fi-teal)",
-  code_and_tell: "var(--fi-blue)",
-  demo_day: "var(--fi-green)",
-};
-
-function modeAccent(mode?: string | null): string {
-  return MODE_ACCENT[getEventMode(mode)];
-}
-
-function pad2(n: number): string {
-  return String(Math.max(0, n)).padStart(2, "0");
-}
-
-function tMinusLabel(startDate: number | string | Date): string {
-  const start = startDate instanceof Date ? startDate : new Date(startDate);
-  if (Number.isNaN(start.getTime())) return "T−?";
-  const now = new Date();
-  const days = Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (days <= 0) return "T−0 DAYS";
-  return `T−${days} DAY${days === 1 ? "" : "S"}`;
-}
-
-export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps) {
+export function ProfilePage(props: ProfilePageProps) {
   const profile = useQuery(api.users.getUserProfile);
-  const [expandedPastEvents, setExpandedPastEvents] = useState(false);
+  return <ProfilePageView {...props} profile={profile} />;
+}
 
+export function ProfilePageView({
+  profile,
+  onSelectEvent,
+  onBackToLanding,
+}: ProfilePageProps & { profile: ProfileData | undefined }) {
+  const [expandedPastEvents, setExpandedPastEvents] = useState(false);
   if (profile === undefined) {
     return (
-      <div className="pp-loading" role="status" aria-live="polite">
-        <div className="pp-spinner" aria-hidden="true" />
-        <span className="fi-sr">Loading profile</span>
+      <div className="pp-page pp-loading" role="status">
+        Loading your profile…
       </div>
     );
   }
-
   if (!profile) {
     return (
       <div className="pp-page">
-        <div className="fi-panel pp-idle">
-          <div className="pp-idle-steps" aria-hidden="true">
-            <span className="pp-idle-step" />
-            <span className="pp-idle-step" />
-            <span className="pp-idle-step" />
-            <span className="pp-idle-step" />
-          </div>
-          <p className="fi-engraved pp-idle-copy">Not signed in · Sign in to view assignments</p>
-          <p className="pp-idle-body">Please sign in to view your profile.</p>
+        <header className="pp-header">
+          <h1>My profile</h1>
+        </header>
+        <section className="pp-idle" aria-labelledby="pp-signin-heading">
+          <h2 id="pp-signin-heading">Your events, all in one place.</h2>
+          <p>
+            Sign in to see your judging assignments and return to your events.
+          </p>
           <button
-            type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent("hackjudge:open-signin"))}
-            className="fi-key"
+            className="pp-primary"
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent("hackjudge:open-signin"))
+            }
           >
-            Sign in
+            Sign in <DirectionIcon />
           </button>
-        </div>
+        </section>
       </div>
     );
   }
-
   const { user, pastEvents, activeEvents, upcomingEvents, stats } = profile;
-
   return (
     <div className="pp-page">
       <header className="pp-header">
-        <h1 className="pp-header-name">{user.name || "Anonymous Judge"}</h1>
-        <div className="pp-header-stats">
-          <span className="fi-readout">{pad2(stats.totalEvents)} events</span>
-          <span className="fi-readout">{pad2(stats.totalTeamsScored)} teams scored</span>
+        <div>
+          <h1>{user.name || "My profile"}</h1>
+          {user.email && <p className="pp-email">{user.email}</p>}
+        </div>
+        <div className="pp-header-stats" aria-label="Judging activity">
+          <span>
+            {stats.totalEvents} {stats.totalEvents === 1 ? "event" : "events"}
+          </span>
+          <span>
+            {stats.totalTeamsScored}{" "}
+            {stats.totalTeamsScored === 1 ? "team" : "teams"} scored
+          </span>
         </div>
       </header>
-
       {activeEvents.length > 0 && (
         <section className="pp-zone" aria-labelledby="pp-active-h">
           <div className="pp-zone-head">
-            <h2 className="fi-zone" id="pp-active-h">
-              Active judging
-            </h2>
-            <span className="fi-engraved">
-              {pad2(activeEvents.length)} live · resume scoring
-            </span>
+            <h2 id="pp-active-h">Active judging</h2>
+            <span>{activeEvents.length} live</span>
           </div>
           <div className="pp-active-list">
             {activeEvents.map(({ event, teamsJudged, scoresSubmitted }) => {
@@ -103,36 +85,27 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
                 teamsJudged > 0
                   ? Math.round((scoresSubmitted / teamsJudged) * 100)
                   : 0;
-              const isComplete = teamsJudged > 0 && scoresSubmitted >= teamsJudged * 0.8;
-              const modeStyle = {
-                ["--c" as string]: modeAccent(event.mode),
-              } as CSSProperties;
-
+              const isComplete =
+                teamsJudged > 0 && scoresSubmitted >= teamsJudged * 0.8;
               return (
-                <article
-                  key={event._id}
-                  className="fi-module pp-active-module"
-                  style={modeStyle}
-                >
+                <article key={event._id} className="pp-active-event">
                   <div className="pp-active-status">
-                    <span className="fi-chip pp-mode-chip">
+                    <span className="pp-mode">
                       {getEventDisplayLabel(event.mode)}
                     </span>
-                    {isComplete && (
-                      <span className="fi-chip pp-complete-chip">Complete</span>
-                    )}
+                    {isComplete && <span className="pp-status">Complete</span>}
                   </div>
-                  <h3 className="pp-active-name">{event.name}</h3>
-                  <p className="fi-readout pp-active-progress">
-                    {pad2(scoresSubmitted)} of {pad2(teamsJudged)}
+                  <h3>{event.name}</h3>
+                  <p className="pp-progress">
+                    {scoresSubmitted} of {teamsJudged} teams scored
                     {teamsJudged > 0 ? ` · ${progressPercent}%` : ""}
                   </p>
                   <button
-                    type="button"
+                    className="pp-primary"
                     onClick={() => onSelectEvent(event._id)}
-                    className="fi-transport"
                   >
-                    {scoresSubmitted > 0 ? "Resume scoring" : "Start scoring"}
+                    {scoresSubmitted > 0 ? "Resume scoring" : "Start scoring"}{" "}
+                    <DirectionIcon />
                   </button>
                 </article>
               );
@@ -140,139 +113,94 @@ export function ProfilePage({ onSelectEvent, onBackToLanding }: ProfilePageProps
           </div>
         </section>
       )}
-
       {upcomingEvents.length > 0 && (
         <section className="pp-zone" aria-labelledby="pp-upcoming-h">
           <div className="pp-zone-head">
-            <h2 className="fi-zone" id="pp-upcoming-h">
-              Upcoming
-            </h2>
-            <span className="fi-engraved">
-              Sequencer · {pad2(upcomingEvents.length)} tracks armed
+            <h2 id="pp-upcoming-h">Upcoming</h2>
+            <span>
+              {upcomingEvents.length}{" "}
+              {upcomingEvents.length === 1 ? "event" : "events"}
             </span>
           </div>
-          <ol className="pp-track-list">
-            {upcomingEvents.map(({ event }) => {
-              const modeStyle = {
-                ["--c" as string]: modeAccent(event.mode),
-              } as CSSProperties;
-
-              return (
-                <li key={event._id}>
-                  <div className="pp-track" style={modeStyle}>
-                    <span className="pp-track-led" aria-hidden="true" />
-                    <h3 className="pp-track-name">{event.name}</h3>
-                    <p className="fi-readout pp-track-dates">
-                      {formatDateTime(event.startDate)} – {formatDateTime(event.endDate)}
-                    </p>
-                    <span className="fi-readout pp-track-count">
-                      {tMinusLabel(event.startDate)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => onSelectEvent(event._id)}
-                      className="fi-key fi-key--sm pp-track-action"
-                    >
-                      View details
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+          <ul className="pp-event-list">
+            {upcomingEvents.map(({ event }) => (
+              <li key={event._id} className="pp-event-row">
+                <div>
+                  <h3>{event.name}</h3>
+                  <p>{getEventDisplayLabel(event.mode)}</p>
+                  <p className="pp-dates">
+                    {formatDateTime(event.startDate)} –{" "}
+                    {formatDateTime(event.endDate)}
+                  </p>
+                </div>
+                <button
+                  className="pp-secondary"
+                  onClick={() => onSelectEvent(event._id)}
+                >
+                  View details <DirectionIcon />
+                </button>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
-
       {pastEvents.length > 0 && (
         <section className="pp-zone" aria-labelledby="pp-past-h">
           <div className="pp-zone-head">
-            <button
-              type="button"
-              id="pp-past-h"
-              onClick={() => setExpandedPastEvents(!expandedPastEvents)}
-              className="pp-zone-toggle"
-              aria-expanded={expandedPastEvents}
-            >
-              <svg
-                className={`pp-zone-chevron${expandedPastEvents ? " is-open" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
+            <h2 id="pp-past-h">
+              <button
+                className="pp-zone-toggle"
+                onClick={() => setExpandedPastEvents(!expandedPastEvents)}
+                aria-expanded={expandedPastEvents}
+                aria-controls="pp-completed-events"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-              <span className="fi-zone">Completed</span>
-            </button>
-            <span className="fi-engraved">
-              Event log · {pad2(pastEvents.length)} records
+                Completed{" "}
+                <DirectionIcon direction={expandedPastEvents ? "up" : "down"} />
+              </button>
+            </h2>
+            <span>
+              {pastEvents.length} {pastEvents.length === 1 ? "event" : "events"}
             </span>
           </div>
-
-          {expandedPastEvents && (
-            <div className="pp-ledger">
-              {pastEvents.map(({ event, teamsJudged, scoresSubmitted }) => {
-                const isComplete = teamsJudged > 0 && scoresSubmitted >= teamsJudged * 0.8;
-                const skippedCount = teamsJudged - scoresSubmitted;
-
-                return (
-                  <div
-                    key={event._id}
-                    className="pp-ledger-row"
-                    data-complete={isComplete ? "true" : "false"}
-                  >
-                    <div>
-                      <h3 className="pp-ledger-name">{event.name}</h3>
-                      <p className="fi-readout pp-ledger-meta">
-                        {pad2(scoresSubmitted)}/{pad2(teamsJudged)} teams
-                        {skippedCount > 0 && ` · ${skippedCount} skipped`}
-                      </p>
-                    </div>
-                    <span className="fi-engraved-sm">
-                      {getEventDisplayLabel(event.mode)}
-                    </span>
-                    <span className="fi-chip pp-closed-chip">Closed</span>
-                    <button
-                      type="button"
-                      onClick={() => onSelectEvent(event._id)}
-                      className="fi-key fi-key--sm pp-ledger-action"
-                    >
-                      View results
-                    </button>
+          <ul
+            className="pp-event-list"
+            id="pp-completed-events"
+            hidden={!expandedPastEvents}
+          >
+            {pastEvents.map(({ event, teamsJudged, scoresSubmitted }) => {
+              const skippedCount = teamsJudged - scoresSubmitted;
+              return (
+                <li key={event._id} className="pp-event-row">
+                  <div>
+                    <h3>{event.name}</h3>
+                    <p>{getEventDisplayLabel(event.mode)} · Closed</p>
+                    <p>
+                      {scoresSubmitted}/{teamsJudged} teams
+                      {skippedCount > 0 && ` · ${skippedCount} skipped`}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  <button
+                    className="pp-secondary"
+                    onClick={() => onSelectEvent(event._id)}
+                  >
+                    View results <DirectionIcon />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </section>
       )}
-
       {activeEvents.length === 0 &&
         upcomingEvents.length === 0 &&
         pastEvents.length === 0 && (
-          <div className="fi-panel pp-idle">
-            <div className="pp-idle-steps" aria-hidden="true">
-              <span className="pp-idle-step" />
-              <span className="pp-idle-step" />
-              <span className="pp-idle-step" />
-              <span className="pp-idle-step" />
-              <span className="pp-idle-step" />
-              <span className="pp-idle-step" />
-              <span className="pp-idle-step" />
-              <span className="pp-idle-step" />
-            </div>
-            <p className="fi-engraved pp-idle-copy">
-              No assignments yet · Browse events
-            </p>
-            <button type="button" onClick={onBackToLanding} className="fi-key">
-              Browse events
+          <section className="pp-idle" aria-labelledby="pp-empty-heading">
+            <h2 id="pp-empty-heading">No judging assignments yet.</h2>
+            <p>Browse events to see what’s happening at HackJudge.</p>
+            <button className="pp-primary" onClick={onBackToLanding}>
+              Browse events <DirectionIcon />
             </button>
-          </div>
+          </section>
         )}
     </div>
   );

@@ -1,0 +1,111 @@
+@import "../code-and-tell/ibm-plex.css";
+
+.platform-auth-dialog {
+  box-sizing: border-box;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100svh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: #f6f7f2;
+  color: #103c3b;
+  font-family: "IBM Plex Sans", sans-serif;
+  box-shadow: 0 20px 64px #103c3b30;
+}
+.platform-auth-dialog::backdrop {
+  background: #103c3b80;
+}
+.platform-auth-content {
+  padding: 32px;
+}
+.platform-auth-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.platform-auth-heading h2 {
+  margin: 0;
+  font:
+    600 32px/1.2 "IBM Plex Sans",
+    sans-serif;
+  letter-spacing: -0.025em;
+}
+.platform-auth-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #103c3b;
+  cursor: pointer;
+}
+.platform-auth-close:hover {
+  background: #dcece3;
+}
+.platform-auth-content > p {
+  margin: 12px 0 28px;
+  color: #506260;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.platform-sign-in {
+  font-family: "IBM Plex Sans", sans-serif;
+  color: #103c3b;
+}
+.platform-google-sign-in {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 18px;
+  border: 1px solid #ccd7d1;
+  border-radius: 6px;
+  background: #dcece3;
+  color: #103c3b;
+  font:
+    500 16px/1.5 "IBM Plex Sans",
+    sans-serif;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+.platform-google-sign-in:hover {
+  background: #cfe5d9;
+}
+.platform-google-sign-in:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+.platform-google-sign-in svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.platform-sign-in-note {
+  margin: 20px 0 0;
+  color: #506260;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+}
+.platform-sign-in-error {
+  margin: 16px 0 0;
+  color: #9a3026;
+  font-size: 14px;
+  line-height: 1.5;
+}
+:is(.platform-auth-dialog, .platform-sign-in) button:focus-visible {
+  outline: 3px solid #087f78;
+  outline-offset: 4px;
+}
+@media (max-width: 480px) {
+  .platform-auth-content {
+    padding: 24px;
+  }
+}

@@ -1,19 +1,31 @@
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useState } from "react";
+import "./components/auth/sign-in.css";
 
 export function SignInForm() {
   const { signIn } = useAuthActions();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleGoogleSignIn = () => {
-    void signIn("google", { 
-      redirectTo: window.location.origin 
-    });
+  const handleGoogleSignIn = async () => {
+    setPending(true);
+    setError("");
+    try {
+      await signIn("google", { redirectTo: window.location.origin });
+    } catch {
+      setError("Couldn’t sign in with Google. Please try again.");
+    } finally {
+      setPending(false);
+    }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="platform-sign-in">
       <button
-        onClick={handleGoogleSignIn}
-        className="fi-key w-full flex items-center justify-center gap-3 px-6 py-3"
+        type="button"
+        onClick={() => void handleGoogleSignIn()}
+        disabled={pending}
+        className="platform-google-sign-in"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
           <path
@@ -33,10 +45,15 @@ export function SignInForm() {
             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
           />
         </svg>
-        <span>Sign in with Google</span>
+        <span>{pending ? "Connecting to Google…" : "Sign in with Google"}</span>
       </button>
-      
-      <p className="text-xs text-center fi-muted">
+
+      {error && (
+        <p className="platform-sign-in-error" role="alert">
+          {error}
+        </p>
+      )}
+      <p className="platform-sign-in-note">
         By signing in, you agree to our terms and privacy policy
       </p>
     </div>

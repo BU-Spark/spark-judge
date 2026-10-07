@@ -1,6 +1,6 @@
 /** Keep in sync with public/theme-init.js, which runs before the app loads. */
 export function getBrowserChromeColor(pathname: string) {
-  if (pathname === "/" || pathname === "/homepage-preview") return "#103c3b";
+  if (pathname === "/" || pathname === "/homepage-preview" || pathname === "/profile") return "#103c3b";
   if (/^\/event\/[^/]+\/?$/.test(pathname)) return "#073e39";
   return "#ddd9d0";
 }

@@ -2,7 +2,8 @@ import { Homepage } from "./components/home/Homepage";
 import { HomepagePreview } from "./components/home/HomepagePreview";
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { SignInForm } from "./SignInFormNew";
+import { SignInDialog } from "./components/auth/SignInDialog";
+import { PlatformHeader } from "./components/home/PlatformHeader";
 import { SignOutButton } from "./SignOutButtonNew";
 import { Toaster } from "sonner";
 import { LandingPage } from "./components/LandingPageNew";
@@ -47,6 +48,7 @@ export default function App() {
           element={<ParticipationPreview />}
         />
         <Route path="/design-preview" element={<DesignPreview />} />
+        <Route path="/profile" element={<ProfilePageWrapper />} />
         <Route element={<Layout />}>
           <Route path="/events" element={<LandingPageWrapper />} />
           <Route path="/event/:eventId" element={<EventViewWrapper />} />
@@ -61,7 +63,6 @@ export default function App() {
             <Route path="events/new" element={<AdminCreateEventRoute />} />
             <Route path="events/:eventId" element={<AdminEventRoute />} />
           </Route>
-          <Route path="/profile" element={<ProfilePageWrapper />} />
           {/* Deep link redirect for QR codes with slug format */}
           <Route
             path="/event/:eventSlug/:teamSlug/:teamId"
@@ -183,34 +184,7 @@ function Layout() {
         />
       )}
 
-      {/* Sign In Modal */}
-      {showSignIn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0"
-            style={{
-              background: "color-mix(in srgb, var(--fi-ink) 55%, transparent)",
-            }}
-            onClick={() => setShowSignIn(false)}
-          />
-          <div className="fi-panel fi-signin-panel relative p-8 max-w-md w-full">
-            <button
-              onClick={() => setShowSignIn(false)}
-              className="fi-key fi-key--sm absolute top-4 right-4"
-              aria-label="Close sign in"
-            >
-              Esc
-            </button>
-            <p className="fi-engraved" style={{ marginBottom: "0.5rem" }}>
-              HackJudge console
-            </p>
-            <h2 className="fi-zone" style={{ marginBottom: "1.5rem" }}>
-              Sign in
-            </h2>
-            <SignInForm />
-          </div>
-        </div>
-      )}
+      <SignInDialog open={showSignIn} onClose={() => setShowSignIn(false)} />
     </div>
   );
 }
@@ -305,10 +279,16 @@ function ProfilePageWrapper() {
   };
 
   return (
-    <ProfilePage
-      onSelectEvent={handleSelectEvent}
-      onBackToLanding={() => void navigate("/")}
-    />
+    <div className="hp-workspace">
+      <PlatformHeader />
+      <main>
+        <ProfilePage
+          onSelectEvent={handleSelectEvent}
+          onBackToLanding={() => void navigate("/")}
+        />
+      </main>
+      <Toaster position="bottom-right" />
+    </div>
   );
 }
 

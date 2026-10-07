@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
 import { Link } from "react-router-dom";
 import { Toaster } from "sonner";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { CodeAndTellVoteView } from "../code-and-tell/CodeAndTellVoteView";
 import { DirectionIcon } from "../participation/ParticipationChrome";
-import { SignInForm } from "../../SignInFormNew";
+import { PlatformHeader } from "./PlatformHeader";
 import { getEventDisplayLabel } from "../../lib/eventModes";
 import {
   groupHomepageEvents,
@@ -26,18 +25,11 @@ const formatDate = (date: number) =>
 
 export function Homepage() {
   const events = useQuery(api.events.listEvents);
-  const user = useQuery(api.auth.loggedInUser);
-  const isAdmin = useQuery(api.events.isUserAdmin);
-  const { signOut } = useAuthActions();
-  const dialog = useRef<HTMLDialogElement>(null);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
-  useEffect(() => {
-    if (user) dialog.current?.close();
-  }, [user]);
   const groups = groupHomepageEvents<StageEvent>(
     [
       ...(events?.active ?? []),
@@ -54,36 +46,7 @@ export function Homepage() {
   const upcoming = groups.upcoming.filter((e) => e._id !== focal?.event._id);
   return (
     <div className="hp-workspace">
-      <header className="hp-header">
-        <Link className="hp-brand" to="/">
-          HackJudge
-          <span className="hp-brand-dot" aria-hidden="true" />
-        </Link>
-        <div className="hp-header-actions">
-          <a href="#past-events">Past events</a>
-          {user ? (
-            <details className="hp-account-menu">
-              <summary>
-                My account <DirectionIcon direction="down" />
-              </summary>
-              <div className="hp-account-panel">
-                <span>{user.name || user.email}</span>
-                <Link to="/profile">Profile</Link>
-                {isAdmin && <Link to="/admin">Admin</Link>}
-                <button onClick={() => void signOut()}>Sign out</button>
-              </div>
-            </details>
-          ) : (
-            <button
-              className="hp-sign-in"
-              disabled={user === undefined}
-              onClick={() => dialog.current?.showModal()}
-            >
-              Sign in <DirectionIcon />
-            </button>
-          )}
-        </div>
-      </header>
+      <PlatformHeader homepage />
       <main>
         <section
           id="current-event"
@@ -99,7 +62,6 @@ export function Homepage() {
               <CodeAndTellVoteView
                 eventId={focal.event._id as Id<"events">}
                 event={event}
-                onSignIn={() => dialog.current?.showModal()}
                 onBack={() =>
                   document
                     .getElementById("events")
@@ -163,26 +125,6 @@ export function Homepage() {
           Back to event <DirectionIcon direction="up" />
         </a>
       </footer>
-      <dialog
-        ref={dialog}
-        className="hp-auth-dialog"
-        aria-labelledby="homepage-sign-in-title"
-        onClick={(e) => {
-          if (e.target === dialog.current) dialog.current.close();
-        }}
-      >
-        <div>
-          <button
-            className="hp-dialog-close"
-            aria-label="Close sign in"
-            onClick={() => dialog.current?.close()}
-          >
-            Close
-          </button>
-          <h2 id="homepage-sign-in-title">Sign in</h2>
-          <SignInForm />
-        </div>
-      </dialog>
       <Toaster position="bottom-right" />
     </div>
   );

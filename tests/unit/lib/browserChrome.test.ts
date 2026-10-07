@@ -18,7 +18,7 @@ describe("browser chrome", () => {
     ["/event/event-1", "#073e39"],
     ["/event/event-1/team/team-1", "#ddd9d0"],
     ["/admin", "#ddd9d0"],
-    ["/profile", "#ddd9d0"],
+    ["/profile", "#103c3b"],
     ["/events", "#ddd9d0"],
   ])("matches initial and client-side colors for %s", (path, color) => {
     window.history.replaceState({}, "", path);

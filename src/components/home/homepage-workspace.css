@@ -399,33 +399,6 @@
   gap: 16px;
   align-items: start;
 }
-.hp-auth-dialog {
-  border: 1px solid var(--hp-line);
-  border-radius: 8px;
-  background: var(--hp-paper);
-  color: var(--hp-ink);
-  width: min(440px, calc(100vw - 40px));
-  padding: 32px;
-}
-.hp-auth-dialog::backdrop {
-  background: #103c3b80;
-}
-.hp-auth-dialog h2 {
-  font-size: 28px;
-  font-weight: 600;
-  margin: 16px 0 24px;
-}
-.hp-dialog-close {
-  float: right;
-  cursor: pointer;
-}
-.hp-auth-dialog .fi-key {
-  background: #087f78;
-  color: #fff;
-  border: 0;
-  border-radius: 4px;
-  box-shadow: none;
-}
 .hp-live-event > .participation {
   min-height: 0;
 }

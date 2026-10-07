@@ -51,7 +51,7 @@ export function Homepage() {
   );
   const upcoming = groups.upcoming.filter((e) => e._id !== focal?.event._id);
   return (
-    <div className="hp-workspace">
+    <div className="hp-workspace" id="top">
       <PlatformHeader homepage />
       <main>
         <section
@@ -127,10 +127,8 @@ export function Homepage() {
         </section>
       </main>
       <footer className="hp-footer">
-        <span>HackJudge</span>
-        <span>Projects and the people behind them.</span>
-        <a href="#current-event">
-          Back to event <DirectionIcon direction="up" />
+        <a href="#top">
+          Back to top <DirectionIcon direction="up" />
         </a>
       </footer>
       <Toaster position="bottom-right" />

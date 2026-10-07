@@ -1,0 +1,4 @@
+[build.environment]
+# The public site address is intentionally present in the sign-in allowlist.
+# Keep secret scanning enabled for all credentials and other environment values.
+SECRETS_SCAN_OMIT_KEYS = "SITE_URL"

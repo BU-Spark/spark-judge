@@ -13,10 +13,10 @@ describe('LoadingState', () => {
     expect(screen.getByText('Fetching data...')).toBeInTheDocument();
   });
 
-  it('should render spinner element', () => {
-    const { container } = render(<LoadingState />);
-    const spinner = container.querySelector('.animate-spin');
-    expect(spinner).toBeInTheDocument();
+  it('should announce loading status politely', () => {
+    render(<LoadingState />);
+    const status = screen.getByRole('status');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveTextContent('Loading...');
   });
 });
-

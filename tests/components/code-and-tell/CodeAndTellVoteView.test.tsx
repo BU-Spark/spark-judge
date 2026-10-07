@@ -220,7 +220,7 @@ describe("CodeAndTellVoteView", () => {
       />,
     );
 
-    expect(screen.getByText(/Results released/)).toBeInTheDocument();
+    expect(screen.getByText("Results available")).toBeInTheDocument();
     expect(screen.getAllByText("Project Two").length).toBeGreaterThan(0);
     expect(screen.getByText("The audience’s favorites")).toBeInTheDocument();
     const winnerCard = screen.getByText(
@@ -389,7 +389,7 @@ describe("CodeAndTellVoteView", () => {
     expect(
       screen.queryByRole("button", { name: /Remove|Move/ }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Results pending")).toBeInTheDocument();
+    expect(screen.getByText("Voting closed")).toBeInTheDocument();
   });
   it("does not show someone else's ballot when signed out", () => {
     queryResults.set("auth:loggedInUser", null);
@@ -402,7 +402,7 @@ describe("CodeAndTellVoteView", () => {
       />,
     );
     expect(screen.queryByText("Your submitted ballot")).not.toBeInTheDocument();
-    expect(screen.getByText("Results pending")).toBeInTheDocument();
+    expect(screen.getByText("Voting closed")).toBeInTheDocument();
   });
   it("distinguishes loading a ballot from having no submitted ballot", () => {
     queryResults.set("auth:loggedInUser", {

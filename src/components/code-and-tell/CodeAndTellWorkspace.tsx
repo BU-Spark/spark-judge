@@ -22,8 +22,8 @@ export type WorkspaceEvent = {
   }[];
 };
 const phaseLabels = {
-  submissions: "Voting hasn’t opened yet",
-  presentations: "Presentations",
+  submissions: "Voting soon",
+  presentations: "Voting soon",
   voting: "Voting open",
   closed: "Voting closed",
 };
@@ -60,7 +60,7 @@ export function CodeAndTellWorkspace({
         <span>
           {date}
           <span className="ct-dot" />
-          {event.resultsReleased ? "Results released" : phaseLabels[phase]}
+          {event.resultsReleased ? "Results available" : phaseLabels[phase]}
         </span>
       </div>
       <header className="ct-masthead ct-series-masthead">

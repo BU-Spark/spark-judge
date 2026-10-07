@@ -325,6 +325,12 @@
   border-radius: 6px;
 }
 .ct-workspace .ballot-mobile-jump {
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  padding: 16px 20px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px #103c3b30;
   background: #103c3b;
   color: #fff;
 }

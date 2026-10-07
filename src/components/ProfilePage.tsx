@@ -1,3 +1,5 @@
+import { CODE_AND_TELL_TITLE } from "../lib/codeAndTellPresentation";
+import { formatDateTime } from "../lib/utils";
 import { profileParticipation } from "../lib/profileParticipation";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -56,7 +58,13 @@ export function ProfilePageView({
     );
   }
   const { user } = profile;
-  const { activeEvents, historyEvents, totalEvents: attendedEventCount, totalTeamsScored } = profileParticipation(profile);
+  const { activeEvents, historyEvents, totalTeamsScored } = profileParticipation(profile);
+  const participantEvents = profile.participantEvents ?? [];
+  const attendedEventCount = new Set([
+    ...activeEvents.map(entry => entry.event._id),
+    ...historyEvents.map(entry => entry.event._id),
+    ...participantEvents.map(entry => entry.event._id),
+  ]).size;
   return (
     <div className="pp-page">
       <header className="pp-header">
@@ -114,6 +122,25 @@ export function ProfilePageView({
           </div>
         </section>
       )}
+      {participantEvents.length > 0 && (
+        <section className="pp-zone" aria-labelledby="pp-participant-h">
+          <div className="pp-zone-head">
+            <h2 id="pp-participant-h">Participated in</h2>
+          </div>
+          <ul className="pp-event-list">
+            {participantEvents.map(({ event, projectNames }) => (
+              <li key={event._id} className="pp-event-row">
+                <div>
+                  <h3>{event.mode === "code_and_tell" ? CODE_AND_TELL_TITLE : event.name}</h3>
+                  <p>{getEventDisplayLabel(event.mode)} · Participant</p>
+                  <p>{formatDateTime(event.startDate)}</p>
+                  {projectNames.length > 0 && <p>{projectNames.join(" · ")}</p>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {historyEvents.length > 0 && (
         <section className="pp-zone" aria-labelledby="pp-past-h">
           <div className="pp-zone-head">
@@ -155,8 +182,7 @@ export function ProfilePageView({
           </ul>
         </section>
       )}
-      {activeEvents.length === 0 &&
-        historyEvents.length === 0 && (
+      {attendedEventCount === 0 && (
           <section className="pp-idle" aria-labelledby="pp-empty-heading">
             <h2 id="pp-empty-heading">No events attended yet.</h2>
             <p>Browse events to see what’s happening at HackJudge.</p>

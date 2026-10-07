@@ -48,6 +48,7 @@ import type * as seeds_demos_regularJudging from "../seeds/demos/regularJudging.
 import type * as seeds_prize_prizeFlow from "../seeds/prize/prizeFlow.js";
 import type * as seeds_shared_auth from "../seeds/shared/auth.js";
 import type * as seeds_shared_scoring from "../seeds/shared/scoring.js";
+import type * as teamMembership from "../teamMembership.js";
 import type * as teams from "../teams.js";
 import type * as users from "../users.js";
 
@@ -95,6 +96,7 @@ declare const fullApi: ApiFromModules<{
   "seeds/prize/prizeFlow": typeof seeds_prize_prizeFlow;
   "seeds/shared/auth": typeof seeds_shared_auth;
   "seeds/shared/scoring": typeof seeds_shared_scoring;
+  teamMembership: typeof teamMembership;
   teams: typeof teams;
   users: typeof users;
 }>;

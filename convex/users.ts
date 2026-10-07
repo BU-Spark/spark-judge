@@ -1,3 +1,4 @@
+import { isProjectMember } from "./teamMembership";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { query } from "./_generated/server";
@@ -44,6 +45,10 @@ export const getUserProfile = query({
           scoresSubmitted: v.number(),
         })
       ),
+      participantEvents: v.array(v.object({
+        event: v.any(),
+        projectNames: v.array(v.string()),
+      })),
       stats: v.object({
         totalEvents: v.number(),
         totalTeamsScored: v.number(),
@@ -118,6 +123,27 @@ export const getUserProfile = query({
       .filter((e) => computeEventStatus(e!.event) === "upcoming")
       .map(({ scores, ...rest }) => rest);
 
+    // Imported teammates may have only an entrant email, with no participant row.
+    const [participantRows, allTeams] = await Promise.all([
+      ctx.db.query("participants").withIndex("by_user", q => q.eq("userId", userId)).collect(),
+      ctx.db.query("teams").collect(),
+    ]);
+    const myProjects = allTeams.filter(team =>
+      !team.hidden && isProjectMember(team, userId, user.email),
+    );
+    const participantEventIds = new Set([
+      ...participantRows.map(row => row.eventId),
+      ...myProjects.map(team => team.eventId),
+    ]);
+    const participantEvents = (await Promise.all([...participantEventIds].map(async eventId => {
+      const event = await ctx.db.get(eventId);
+      if (!event || event.hidden) return null;
+      return {
+        event: shapeEventForViewer(event, undefined, false),
+        projectNames: myProjects.filter(team => team.eventId === eventId).map(team => team.name),
+      };
+    }))).filter(entry => entry !== null);
+
     // Calculate statistics
     const allScores = validEventsData.flatMap((e) => e!.scores);
     const totalTeamsScored = new Set(allScores.map((s) => s.teamId)).size;
@@ -137,6 +163,7 @@ export const getUserProfile = query({
       pastEvents,
       activeEvents,
       upcomingEvents,
+      participantEvents,
       stats: {
         totalEvents: validEventsData.length,
         totalTeamsScored,

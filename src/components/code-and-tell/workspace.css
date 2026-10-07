@@ -338,6 +338,47 @@
   justify-content: center;
   font-weight: 600;
 }
+.ct-workspace .ballot-mobile-dialog {
+  position: fixed;
+  inset: auto 16px calc(16px + env(safe-area-inset-bottom));
+  width: auto;
+  max-width: none;
+  max-height: calc(100svh - 100px - env(safe-area-inset-bottom));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: #dcece3;
+  color: #103c3b;
+  box-shadow: 0 12px 40px #103c3b30;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.ballot-mobile-dialog::backdrop {
+  background: #103c3b60;
+}
+.ballot-mobile-dialog-content {
+  padding: 16px 20px 24px;
+}
+.ct-workspace .ballot-mobile-close {
+  display: block;
+  min-height: 44px;
+  margin: 0 0 12px auto;
+  padding: 8px 0 8px 16px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.ct-workspace .ballot-mobile-dialog .ballot-board {
+  position: static;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+@media (max-width: 850px) {
+  .ct-workspace .ballot-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .ct-workspace .ct-fi-page {
   --fi-desk: #f6f7f2;
   --fi-ink: #103c3b;

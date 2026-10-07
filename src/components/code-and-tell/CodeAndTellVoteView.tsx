@@ -339,6 +339,25 @@ export function CodeAndTellBallotView({
   }) => Promise<unknown>;
 }) {
   const phase = codeAndTellPhase(event);
+  const [mobileBallot, setMobileBallot] = useState(
+    () => window.matchMedia("(max-width: 850px)").matches,
+  );
+  const [ballotOpen, setBallotOpen] = useState(false);
+  const ballotDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 850px)");
+    const update = () => {
+      setMobileBallot(media.matches);
+      if (!media.matches) setBallotOpen(false);
+    };
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    const dialog = ballotDialog.current;
+    if (mobileBallot && loggedInUser && ballotOpen) dialog?.showModal();
+    else dialog?.close();
+  }, [mobileBallot, loggedInUser, ballotOpen]);
   const votingNotOpen = phase === "presentations" || phase === "submissions";
   const votingContext = useMemo<VotingContext | undefined>(() => {
     if (!votingNotOpen && loggedInUser) return suppliedVotingContext;
@@ -815,15 +834,43 @@ export function CodeAndTellBallotView({
             </ProjectListViewport>
           )}
         </section>
-        {(!loggedInUser || votingNotOpen || requiredRankCount > 0) && renderBallot()}
+        {!mobileBallot && (!loggedInUser || votingNotOpen || requiredRankCount > 0) && renderBallot()}
       </div>
-      {requiredRankCount > 0 && (loggedInUser ? (
-        <a className="ballot-mobile-jump" href="#your-ballot">
+      {mobileBallot && loggedInUser && (
+        <dialog
+          ref={ballotDialog}
+          className="ballot-mobile-dialog"
+          aria-labelledby="ballot-heading"
+          onClose={() => setBallotOpen(false)}
+          onClick={(event) => {
+            if (event.target === ballotDialog.current) setBallotOpen(false);
+          }}
+        >
+          <div className="ballot-mobile-dialog-content">
+            <button
+              type="button"
+              className="ballot-mobile-close"
+              onClick={() => setBallotOpen(false)}
+            >
+              Close ballot
+            </button>
+            {renderBallot()}
+          </div>
+        </dialog>
+      )}
+      {mobileBallot && requiredRankCount > 0 && (loggedInUser ? (
+        <button
+          type="button"
+          className="ballot-mobile-jump"
+          aria-haspopup="dialog"
+          aria-expanded={ballotOpen}
+          onClick={() => setBallotOpen(true)}
+        >
           Your ballot{" "}
           <span>
             {rankedTeamIds.length} / {requiredRankCount}
           </span>
-        </a>
+        </button>
       ) : (
         <button
           type="button"

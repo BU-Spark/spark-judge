@@ -68,12 +68,14 @@ function BallotSlot({
   onRemove,
   onMove,
   last,
+  draggable = true,
 }: {
   index: number;
   project?: Project;
   onRemove: () => void;
   onMove?: (direction: -1 | 1) => void;
   last?: boolean;
+  draggable?: boolean;
 }) {
   const dragControls = useDragControls();
   if (!project)
@@ -87,10 +89,11 @@ function BallotSlot({
     <Reorder.Item
       value={project._id}
       className="ballot-slot"
+      drag={draggable ? "y" : false}
       dragListener={false}
-      dragControls={dragControls}
+      dragControls={draggable ? dragControls : undefined}
     >
-      <button
+      {draggable ? <button
         type="button"
         className="ballot-drag-handle"
         aria-label={`Drag ${project.name} to reorder`}
@@ -107,7 +110,7 @@ function BallotSlot({
           <circle cx="4" cy="3" r="1.5" /><circle cx="12" cy="3" r="1.5" />
           <circle cx="4" cy="9" r="1.5" /><circle cx="12" cy="9" r="1.5" />
         </svg>
-      </button>
+      </button> : <span className="ballot-rank">{index + 1}</span>}
       <div className="ballot-slot-content">
         <strong>{project.name}</strong>
         <button
@@ -550,6 +553,7 @@ export function CodeAndTellBallotView({
             onRemove={() => removeProjectFromBallot(teamId)}
             onMove={(direction) => moveBallotProject(index, direction)}
             last={index === rankedTeamIds.length - 1}
+            draggable={!mobileBallot}
           />
         ))}
       </Reorder.Group>

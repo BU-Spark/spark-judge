@@ -302,6 +302,9 @@
 .ct-workspace .ballot-project.is-picked {
   background: transparent;
 }
+.ct-workspace .ballot-project:first-child {
+  border-top: 0;
+}
 .ct-workspace .ballot-project h3 {
   font-size: 25px;
   letter-spacing: -0.025em;
@@ -481,6 +484,17 @@
 .ct-workspace .participation-search input { font-size: 16px; }
 
 /* Keep project browsing compact and independent of the ballot. */
+.ct-list-edge {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+  color: var(--ct-muted);
+  visibility: hidden;
+}
+.ct-list-edge[data-visible="true"] {
+  visibility: visible;
+}
 .ct-workspace .ballot-projects {
   max-height: clamp(320px, 60svh, 620px);
   overflow-y: auto;

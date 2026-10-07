@@ -30,10 +30,12 @@ const phaseLabels = {
 export function CodeAndTellWorkspace({
   event,
   onBack,
+  contextLabel,
   children,
 }: {
   event: WorkspaceEvent;
   onBack: () => void;
+  contextLabel?: string;
   children?: ReactNode;
 }) {
   const phase = codeAndTellPhase(event);
@@ -44,10 +46,15 @@ export function CodeAndTellWorkspace({
   }).format(event.startDate);
   return (
     <div className="ct-workspace">
+      {contextLabel && <div className="ct-card-edge" aria-hidden="true" />}
       <div className="ct-topline">
-        <button onClick={onBack}>
-          All events <DirectionIcon direction="left" />
-        </button>
+        {contextLabel ? (
+          <span className="ct-context-label">{contextLabel}</span>
+        ) : (
+          <button onClick={onBack}>
+            All events <DirectionIcon direction="left" />
+          </button>
+        )}
         <span>
           {date}
           <span className="ct-dot" />
@@ -56,9 +63,6 @@ export function CodeAndTellWorkspace({
       </div>
       <header className="ct-masthead">
         <h1>{event.name}</h1>
-        <span className="ct-mark" aria-hidden="true">
-          &
-        </span>
       </header>
       {children}
       <footer className="ct-footer">

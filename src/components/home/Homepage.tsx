@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { Link } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -27,9 +27,12 @@ const formatDate = (date: number) =>
 const eventWebsites: Record<string, string> = {
   "DS+X 2026": "https://www.dsplusx.com/",
   "CivicHacks 2027": "https://civic-hacks.com/",
+  "November 2026 Code & Tell: Monthly Demo Night":
+    "https://www.eventbrite.com/e/november-2026-code-tell-monthly-demo-night-tickets-2002257285440",
 };
 
 export function Homepage() {
+  const homepageRef = useRef<HTMLDivElement>(null);
   const events = useQuery(api.events.listEvents);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -50,13 +53,25 @@ export function Homepage() {
     focal ? { eventId: focal.event._id as Id<"events"> } : "skip",
   );
   const upcoming = groups.upcoming.filter((e) => e._id !== focal?.event._id);
+  useEffect(() => {
+    const root = homepageRef.current;
+    const header = root?.querySelector<HTMLElement>(".hp-header");
+    if (!root || !header) return;
+    const measure = () => {
+      root.style.setProperty("--hp-header-height", `${header.getBoundingClientRect().height}px`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, [event?._id]);
   return (
-    <div className="hp-workspace" id="top">
+    <div className="hp-workspace" id="top" ref={homepageRef}>
       <PlatformHeader homepage />
       <main>
         <section
           id="current-event"
-          className="hp-live-event"
+          className={`hp-live-event${focal?.event.mode === "code_and_tell" ? " hp-live-event--code-and-tell" : ""}`}
           aria-label="Current event"
         >
           {events === undefined || (focal && event === undefined) ? (
@@ -66,6 +81,7 @@ export function Homepage() {
           ) : event && focal ? (
             focal.event.mode === "code_and_tell" ? (
               <CodeAndTellVoteView
+                contextLabel="Current event"
                 eventId={focal.event._id as Id<"events">}
                 event={event}
                 onBack={() =>
@@ -177,7 +193,9 @@ function EventDescription({ event }: { event: StageEvent }) {
       <p>{event.description?.trim() || "More details coming soon."}</p>
       {website && (
         <a className="hp-event-website" href={website}>
-          Visit {event.name} website <DirectionIcon />
+          {website.startsWith("https://www.eventbrite.com/")
+            ? "Register on Eventbrite"
+            : `Visit ${event.name} website`} <DirectionIcon />
         </a>
       )}
     </>

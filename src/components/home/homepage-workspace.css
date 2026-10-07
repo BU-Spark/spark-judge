@@ -4,6 +4,8 @@
   --hp-ink: #103c3b;
   --hp-muted: #506260;
   --hp-line: #ccd7d1;
+  --hp-current-event: #eaf1ec;
+  --hp-current-ballot: #d8e9e0;
   font-family: "IBM Plex Sans", sans-serif;
   background: var(--hp-paper);
   color: var(--hp-ink);
@@ -95,7 +97,6 @@
 .hp-directory {
   margin: 0 clamp(20px, 5vw, 80px);
   padding: 48px 0 64px;
-  border-top: 1px solid var(--hp-line);
   scroll-margin-top: 110px;
 }
 .hp-directory-heading {
@@ -386,6 +387,88 @@
 
 .hp-loading {
   padding: 48px clamp(20px, 5vw, 80px);
+}
+
+/* Keep the current event's identity, projects, and ballot in one shared area. */
+.hp-live-event--code-and-tell {
+  --hp-event-gap: 28px;
+  --hp-event-inset: clamp(20px, 2.5vw, 40px);
+  --hp-event-radius: 20px;
+  margin: 28px clamp(12px, 2.5vw, 40px) 44px;
+  border-radius: 20px;
+  background: var(--hp-current-event);
+}
+.hp-live-event--code-and-tell > .participation,
+.hp-live-event--code-and-tell .ct-workspace {
+  background: transparent;
+}
+.hp-live-event--code-and-tell .ct-workspace {
+  padding: 0 var(--hp-event-inset) 32px;
+}
+.hp-live-event--code-and-tell .ct-card-edge {
+  position: sticky;
+  top: calc(var(--hp-header-height, 68px) + var(--hp-event-gap));
+  z-index: 20;
+  height: 28px;
+  margin-inline: calc(-1 * var(--hp-event-inset));
+  background: var(--hp-paper);
+  pointer-events: none;
+}
+.hp-live-event--code-and-tell .ct-card-edge::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 100%;
+  height: calc(var(--hp-header-height, 68px) + var(--hp-event-gap));
+  background: var(--hp-paper);
+}
+.hp-live-event--code-and-tell .ct-card-edge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--hp-event-radius) var(--hp-event-radius) 0 0;
+  background: var(--hp-current-event);
+}
+.hp-live-event--code-and-tell .ct-topline {
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.hp-live-event--code-and-tell .ct-context-label {
+  margin-right: auto;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.hp-live-event--code-and-tell .ct-masthead {
+  padding-block: 12px;
+  margin-bottom: 24px;
+}
+.hp-live-event--code-and-tell .ballot-page {
+  padding-bottom: 0;
+}
+.hp-live-event--code-and-tell .ballot-board {
+  background: var(--hp-current-ballot);
+  top: calc(var(--hp-header-height, 68px) + var(--hp-event-gap) + 44px);
+  scroll-margin-top: calc(var(--hp-header-height, 68px) + var(--hp-event-gap) + 44px);
+}
+@media (max-width: 600px) {
+  .hp-live-event--code-and-tell {
+    --hp-event-gap: 16px;
+    --hp-event-inset: 16px;
+    --hp-event-radius: 16px;
+    margin: 16px 12px 28px;
+    border-radius: 16px;
+  }
+  .hp-live-event--code-and-tell .ct-workspace {
+    padding: 0 var(--hp-event-inset) 24px;
+  }
+  .hp-live-event--code-and-tell .ct-card-edge {
+    height: 20px;
+  }
+  .hp-live-event--code-and-tell .ct-topline {
+    gap: 10px;
+  }
 }
 .hp-event-row {
   display: flex;

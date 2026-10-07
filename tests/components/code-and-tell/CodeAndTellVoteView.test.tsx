@@ -299,7 +299,7 @@ describe("CodeAndTellVoteView", () => {
         onBack={vi.fn()}
       />,
     );
-    expect(screen.getByText("Find your favorites")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Projects to rank" })).toBeInTheDocument();
     expect(screen.getByText("Project Two")).toBeInTheDocument();
     expect(screen.queryByText("Sign up to present")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Project name")).not.toBeInTheDocument();

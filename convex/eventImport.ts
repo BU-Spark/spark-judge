@@ -27,6 +27,10 @@ export const upsertEvent = internalMutation({
     mode: v.union(v.literal("code_and_tell"), v.literal("hackathon")),
     startDate: v.number(),
     endDate: v.number(),
+    codeAndTellPhase: v.optional(v.union(
+      v.literal("submissions"), v.literal("presentations"),
+      v.literal("voting"), v.literal("closed"),
+    )),
     projects: v.optional(
       v.array(
         v.object({
@@ -59,6 +63,9 @@ export const upsertEvent = internalMutation({
       mode: args.mode,
       startDate: args.startDate,
       endDate: args.endDate,
+      ...(args.mode === "code_and_tell" && args.codeAndTellPhase
+        ? { codeAndTellPhase: args.codeAndTellPhase }
+        : {}),
       ...(args.mode === "hackathon"
         ? {
             status: (args.startDate > Date.now()
@@ -78,7 +85,7 @@ export const upsertEvent = internalMutation({
           status: "upcoming",
           resultsReleased: false,
           ...(args.mode === "code_and_tell"
-            ? { codeAndTellPhase: "presentations" as const }
+            ? { codeAndTellPhase: args.codeAndTellPhase ?? (args.startDate > Date.now() ? "submissions" as const : "presentations" as const) }
             : {}),
         });
     if (existing) await ctx.db.patch(eventId, metadata);

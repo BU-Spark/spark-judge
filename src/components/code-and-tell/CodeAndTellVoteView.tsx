@@ -1,5 +1,6 @@
 import "./CodeAndTellVoteView.fi.css";
 import { CodeAndTellWorkspace } from "./CodeAndTellWorkspace";
+import { ProjectListViewport } from "./ProjectListViewport";
 import {
   codeAndTellPhase,
   type CodeAndTellPhase,
@@ -266,6 +267,7 @@ function ResultsSection({
 }
 
 type BallotProps = {
+  contextLabel?: string;
   eventId: Id<"events">;
   event: CodeAndTellEvent;
   onBack: () => void;
@@ -298,6 +300,7 @@ export function CodeAndTellVoteView(props: BallotProps) {
         key={`${eventId}:${loggedInUser?._id ?? "signed-out"}`}
         event={event}
         onBack={props.onBack}
+        contextLabel={props.contextLabel}
       >
         <CodeAndTellBallotView
           key={props.eventId}
@@ -727,11 +730,7 @@ export function CodeAndTellBallotView({
         </p>
       )}
       <div className="ballot-layout">
-        <section aria-labelledby="ballot-projects-heading">
-          <div className="participation-section-title">
-            <h2 id="ballot-projects-heading">Find your favorites</h2>
-            <span>{filteredProjects.length} projects</span>
-          </div>
+        <section aria-label="Projects">
           {votingContext.projects.length >= 10 && <label className="participation-search">
             <span>Search projects</span>
             <input
@@ -750,12 +749,7 @@ export function CodeAndTellBallotView({
               No projects match that search.
             </p>
           ) : (
-            <div
-              className="ballot-projects"
-              role="region"
-              aria-label="Projects to rank"
-              tabIndex={0}
-            >
+            <ProjectListViewport>
               {filteredProjects.map((project) => {
                 const rank = rankedTeamIds.indexOf(project._id);
                 return (
@@ -818,7 +812,7 @@ export function CodeAndTellBallotView({
                   </article>
                 );
               })}
-            </div>
+            </ProjectListViewport>
           )}
         </section>
         {(!loggedInUser || votingNotOpen || requiredRankCount > 0) && renderBallot()}

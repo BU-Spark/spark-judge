@@ -165,6 +165,7 @@ export function Homepage() {
       <dialog
         ref={dialog}
         className="hp-auth-dialog"
+        aria-labelledby="homepage-sign-in-title"
         onClick={(e) => {
           if (e.target === dialog.current) dialog.current.close();
         }}
@@ -177,7 +178,7 @@ export function Homepage() {
           >
             Close
           </button>
-          <h2>Sign in</h2>
+          <h2 id="homepage-sign-in-title">Sign in</h2>
           <SignInForm />
         </div>
       </dialog>

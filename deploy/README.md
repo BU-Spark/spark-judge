@@ -13,6 +13,8 @@ credentials belong in the frontend build. Nginx serves the Vite output on port
 8080 and falls back to `index.html` for client-side routes.
 
 Keep deployments scoped to the development environment and `dev` branch.
+Railway is connected to `BU-Spark/spark-judge` and automatically deploys pushes
+to `dev` using the Dockerfile.
 The existing Netlify production frontend is separate.
 
 Event stages are organizer controlled. In the event admin, change Participant

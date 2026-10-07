@@ -40,6 +40,7 @@ export function CodeAndTellWorkspace({
   const date = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
+    timeZone: "America/New_York",
   }).format(event.startDate);
   return (
     <div className="ct-workspace">

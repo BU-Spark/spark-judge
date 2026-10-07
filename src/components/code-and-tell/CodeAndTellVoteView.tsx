@@ -858,7 +858,7 @@ export function CodeAndTellBallotView({
           </div>
         </dialog>
       )}
-      {mobileBallot && requiredRankCount > 0 && (loggedInUser ? (
+      {mobileBallot && phase === "voting" && requiredRankCount > 0 && (loggedInUser ? (
         <button
           type="button"
           className="ballot-mobile-jump"

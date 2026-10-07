@@ -116,21 +116,27 @@ describe("CodeAndTellVoteView", () => {
 
   it("requires sign in before voting", () => {
     queryResults.set("auth:loggedInUser", null);
+    const onSignIn = vi.fn();
 
     render(
       <CodeAndTellVoteView
         eventId={eventId}
         event={baseEvent}
         onBack={vi.fn()}
+        onSignIn={onSignIn}
       />,
     );
 
-    expect(screen.getByText("Rank your favorites.")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Sign in to rank the projects you just saw. You can update your ballot until voting closes.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Project Two")).toBeInTheDocument();
+    const ballot = screen.getByRole("complementary", { name: "Your ballot" });
+    expect(ballot.querySelectorAll(".ballot-slot")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Save Ballot" })).not.toBeInTheDocument();
+    screen.getAllByRole("button", { name: "Add to ballot" }).forEach((button) =>
+      expect(button).toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Sign in to vote" }));
+    expect(onSignIn).toHaveBeenCalledOnce();
+    expect(saveBallotMock).not.toHaveBeenCalled();
   });
 
   it("loads an existing ballot and marks owned projects as ineligible", () => {
@@ -317,10 +323,16 @@ describe("CodeAndTellVoteView", () => {
         name: "Add to ballot",
       });
       addButtons.forEach((button) => expect(button).toBeDisabled());
-      const saveButton = screen.getByRole("button", { name: "Save Ballot" });
-      expect(saveButton).toBeDisabled();
+      if (user) {
+        const saveButton = screen.getByRole("button", { name: "Save Ballot" });
+        expect(saveButton).toBeDisabled();
+        fireEvent.click(saveButton);
+      } else {
+        expect(screen.getByRole("button", { name: "Sign in to vote" })).toBeEnabled();
+        expect(document.querySelectorAll(".ballot-slot")).toHaveLength(0);
+        expect(screen.queryByRole("button", { name: "Save Ballot" })).not.toBeInTheDocument();
+      }
       fireEvent.click(addButtons[0]);
-      fireEvent.click(saveButton);
       expect(saveBallotMock).not.toHaveBeenCalled();
       fireEvent.change(
         screen.getByRole("searchbox", { name: "Search projects" }),

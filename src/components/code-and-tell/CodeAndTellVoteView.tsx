@@ -16,7 +16,6 @@ import { toast } from "sonner";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { SignInForm } from "../../SignInFormNew";
 import { LoadingState } from "../ui/LoadingState";
 import { ProjectDescription } from "../ui/ProjectDescription";
 
@@ -270,6 +269,7 @@ type BallotProps = {
   eventId: Id<"events">;
   event: CodeAndTellEvent;
   onBack: () => void;
+  onSignIn?: () => void;
 };
 export type VotingContext = FunctionReturnType<
   typeof api.codeAndTell.getVotingContext
@@ -323,6 +323,7 @@ export function CodeAndTellBallotView({
   votingContext: suppliedVotingContext,
   saveBallot,
   onPreviewSignIn,
+  onSignIn,
 }: BallotProps & {
   onPreviewSignIn?: () => void;
   submittedBallot?: Id<"teams">[];
@@ -337,9 +338,9 @@ export function CodeAndTellBallotView({
   const phase = codeAndTellPhase(event);
   const votingNotOpen = phase === "presentations" || phase === "submissions";
   const votingContext = useMemo<VotingContext | undefined>(() => {
-    if (!votingNotOpen) return suppliedVotingContext;
+    if (!votingNotOpen && loggedInUser) return suppliedVotingContext;
     const projects =
-      suppliedVotingContext?.projects ??
+      (loggedInUser ? suppliedVotingContext?.projects : undefined) ??
       event.teams.map((team) => ({
         ...team,
         members: team.members ?? [],
@@ -362,7 +363,7 @@ export function CodeAndTellBallotView({
       votingClosedToNewVoters: false,
       projects,
     };
-  }, [votingNotOpen, suppliedVotingContext, event.teams]);
+  }, [votingNotOpen, suppliedVotingContext, event.teams, loggedInUser]);
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [rankedTeamIds, setRankedTeamIds] = useState<Id<"teams">[]>([]);
@@ -437,7 +438,7 @@ export function CodeAndTellBallotView({
     votingContext?.currentBallotTeamIds?.length === requiredRankCount;
 
   const addProjectToBallot = (teamId: Id<"teams">) => {
-    if (votingNotOpen) return;
+    if (votingNotOpen || !loggedInUser) return;
     setRankedTeamIds((current) => {
       if (current.includes(teamId) || current.length >= requiredRankCount) {
         return current;
@@ -446,7 +447,34 @@ export function CodeAndTellBallotView({
     });
   };
 
-  const renderBallot = () => (
+  const requestSignIn = () => {
+    if (onPreviewSignIn) onPreviewSignIn();
+    else if (onSignIn) onSignIn();
+    else window.dispatchEvent(new CustomEvent("hackjudge:open-signin"));
+  };
+
+  const renderBallot = () => !loggedInUser ? (
+    <aside
+      className="ballot-board ballot-board--signed-out"
+      id="your-ballot"
+      aria-labelledby="ballot-heading"
+    >
+      <div className="ballot-board-heading">
+        <h2 id="ballot-heading">Your ballot</h2>
+      </div>
+      <p>Sign in to choose and rank your favorite projects.</p>
+      <button
+        className="participation-primary ballot-submit"
+        onClick={requestSignIn}
+        disabled={loggedInUser === undefined}
+      >
+        Sign in to vote <DirectionIcon />
+      </button>
+      {votingNotOpen && (
+        <p className="ballot-saved-note">Voting hasn’t opened yet. Enjoy the presentations in the meantime.</p>
+      )}
+    </aside>
+  ) : (
     <aside
       className={`ballot-board${votingNotOpen ? " ballot-board--disabled" : ""}`}
       aria-disabled={votingNotOpen || undefined}
@@ -552,7 +580,7 @@ export function CodeAndTellBallotView({
   };
 
   const handleSaveBallot = async () => {
-    if (votingNotOpen) return;
+    if (votingNotOpen || !loggedInUser) return;
     if (!ballotComplete) {
       toast.error(
         `Rank exactly ${requiredRankCount} project${
@@ -649,30 +677,7 @@ export function CodeAndTellBallotView({
     return <LoadingState label="Loading voting access..." />;
   }
 
-  if (!votingNotOpen && !loggedInUser) {
-    return (
-      <section className="ct-auth">
-        <div>
-          <h2>Rank your favorites.</h2>
-          <p>
-            Sign in to rank the projects you just saw. You can update your
-            ballot until voting closes.
-          </p>
-        </div>
-        <div>
-          {onPreviewSignIn ? (
-            <button className="ct-primary" onClick={onPreviewSignIn}>
-              Sign in to rank
-            </button>
-          ) : (
-            <SignInForm />
-          )}
-        </div>
-      </section>
-    );
-  }
-
-  if (!votingNotOpen && !hasVerifiedEmail) {
+  if (!votingNotOpen && loggedInUser && !hasVerifiedEmail) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <button
@@ -800,6 +805,7 @@ export function CodeAndTellBallotView({
                           className="participation-secondary"
                           onClick={() => addProjectToBallot(project._id)}
                           disabled={
+                            !loggedInUser ||
                             votingNotOpen ||
                             votingClosedToNewVoters ||
                             rankedTeamIds.length >= requiredRankCount
@@ -815,13 +821,13 @@ export function CodeAndTellBallotView({
             </div>
           )}
         </section>
-        {(votingNotOpen || requiredRankCount > 0) && renderBallot()}
+        {(!loggedInUser || votingNotOpen || requiredRankCount > 0) && renderBallot()}
       </div>
       {requiredRankCount > 0 && (
         <a className="ballot-mobile-jump" href="#your-ballot">
           Your ballot{" "}
           <span>
-            {rankedTeamIds.length} / {requiredRankCount}
+            {loggedInUser ? `${rankedTeamIds.length} / ${requiredRankCount}` : "Sign in to vote"}
           </span>
           <DirectionIcon direction="down" />
         </a>

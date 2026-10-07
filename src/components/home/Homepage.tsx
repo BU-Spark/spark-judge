@@ -99,6 +99,7 @@ export function Homepage() {
               <CodeAndTellVoteView
                 eventId={focal.event._id as Id<"events">}
                 event={event}
+                onSignIn={() => dialog.current?.showModal()}
                 onBack={() =>
                   document
                     .getElementById("events")

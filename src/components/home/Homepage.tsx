@@ -132,7 +132,6 @@ export function Homepage() {
           <div className="hp-archive" id="past-events">
             <div className="hp-archive-heading">
               <h3>Past events</h3>
-              <span>Previous competitions &amp; showcases</span>
             </div>
             <div className="hp-event-rows">
               {groups.past.map((event) => (

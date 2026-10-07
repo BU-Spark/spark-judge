@@ -486,6 +486,14 @@
   gap: 16px;
   align-items: start;
 }
+.hp-archive .hp-event-row:first-child {
+  border-top: 0;
+}
+@media (min-width: 761px) {
+  .hp-archive .hp-event-row:nth-child(2) {
+    border-top: 0;
+  }
+}
 .hp-live-event > .participation {
   min-height: 0;
 }

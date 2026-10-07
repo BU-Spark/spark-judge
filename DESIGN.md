@@ -2,20 +2,30 @@
 name: HackJudge
 description: Open House for homepage and event participation; Field Instrument retained on admin, profiles, full project pages, and auth.
 colors:
+  ct-teal: "#087f78"
+  ct-deep: "#103c3b"
+  ct-paper: "#f6f7f2"
+  ct-muted: "#506260"
+  ct-line: "#ccd7d1"
+  ct-ballot: "#dcece3"
   evergreen: "#073e39"
   lagoon: "#076b60"
   citron: "#d7ea83"
   yellow: "#f4c75f"
   sky: "#88c9e8"
-  navy: "#102f55"
   lagoon-muted: "#d0e6d2"
   yellow-muted: "#354d2e"
-  sky-muted: "#254568"
   sky-panel: "#b7def0"
   gallery-caption: "#f8d689"
   sky-light: "#d6edfa"
   citron-light: "#e1edb0"
 typography:
+  ct-display:
+    fontFamily: "Bricolage Grotesque, sans-serif"
+    fontSize: "clamp(36px, 5.4vw, 76px)"
+    fontWeight: 650
+    lineHeight: 1.03
+    letterSpacing: "-0.04em"
   display:
     fontFamily: "Bricolage Grotesque, Helvetica Neue, sans-serif"
     fontSize: "clamp(2.8rem, 4.5vw, 4.8rem)"
@@ -72,6 +82,11 @@ spacing:
   wide: "2rem"
   page-inline: "clamp(1.25rem, 4vw, 4.5rem)"
 components:
+  ct-primary:
+    backgroundColor: "{colors.ct-deep}"
+    textColor: "#fff"
+    rounded: "{rounded.control}"
+    padding: "14px 22px"
   button-hackathon:
     backgroundColor: "{colors.citron}"
     textColor: "{colors.lagoon}"
@@ -83,8 +98,8 @@ components:
     rounded: "{rounded.action}"
     padding: "0.9rem 1.15rem"
   button-code-and-tell:
-    backgroundColor: "{colors.navy}"
-    textColor: "{colors.sky}"
+    backgroundColor: "{colors.evergreen}"
+    textColor: "{colors.citron}"
     rounded: "{rounded.action}"
     padding: "0.9rem 1.15rem"
   button-navigation:
@@ -99,7 +114,7 @@ components:
     padding: "0.85rem"
   project-row-code-and-tell:
     backgroundColor: "{colors.sky-panel}"
-    textColor: "{colors.navy}"
+    textColor: "{colors.evergreen}"
     rounded: "{rounded.action}"
     padding: "0.85rem"
   gallery-card:
@@ -112,13 +127,13 @@ components:
     rounded: "{rounded.panel}"
     padding: "1.4rem"
   participation-primary:
-    backgroundColor: "{colors.navy}"
-    textColor: "{colors.sky}"
+    backgroundColor: "{colors.evergreen}"
+    textColor: "{colors.citron}"
     rounded: "{rounded.control}"
     padding: "0.7rem 1rem"
   participation-search:
     backgroundColor: "{colors.sky-panel}"
-    textColor: "{colors.navy}"
+    textColor: "{colors.evergreen}"
     rounded: "{rounded.control}"
     padding: "0.75rem 1rem"
   score-choice:
@@ -130,7 +145,7 @@ components:
     textColor: "{colors.citron}"
     rounded: "{rounded.control}"
   ballot-board:
-    backgroundColor: "{colors.navy}"
+    backgroundColor: "{colors.evergreen}"
     textColor: "{colors.sky-light}"
     rounded: "{rounded.panel}"
     padding: "1.6rem"
@@ -147,11 +162,13 @@ components:
 
 **Creative North Star: "Open House"**
 
+**Code & Tell workspace exception (2026-10-06):** The participant workspace now uses teal, pale paper, and a pale ballot board. Its scoped contract below and `.impeccable/surfaces/code-and-tell.md` supersede the older sky-field and dark-ballot guidance only inside `CodeAndTellWorkspace`. Homepage mode tiles and other event modes retain their existing rules. This record is extracted from source; rendered visual verification was unavailable.
+
 Open House uses broad colored fields, strong Bricolage Grotesque headings, and flat geometric project art. Evergreen navigation holds the identity steady while lagoon, yellow, and sky distinguish event formats. Project names and participation controls remain readable in busy event rooms.
 
 The user-approved expansion covers the homepage, event entry and judging queue, rubric scoring and review, Code & Tell ranked ballots, and Demo Day appreciation browsing. It extends the same visual identity. Admin, profiles, full project pages, event configuration, and authentication retain Field Instrument. Do not change their global tokens to implement participation styling.
 
-The implemented sources are `src/components/home/event-stage.css`, `EventStage.tsx`, `src/components/participation/participation.css`, `ParticipationChrome.tsx`, `ScoringWizard.tsx`, `code-and-tell/CodeAndTellVoteView.tsx`, and `demo-day/DemoDayBrowse.tsx`. The participation contract is `.impeccable/surfaces/participation.md`. Historical color exploration in the homepage brief does not override the current sky/navy implementation. `src/index.css` remains the Field Instrument source outside this scope.
+The implemented sources are `src/components/home/event-stage.css`, `EventStage.tsx`, `src/components/participation/participation.css`, `ParticipationChrome.tsx`, `ScoringWizard.tsx`, `code-and-tell/CodeAndTellVoteView.tsx`, and `demo-day/DemoDayBrowse.tsx`. The participation contract is `.impeccable/surfaces/participation.md`. Historical color exploration in the homepage brief does not override the current sky/evergreen/citron implementation. `src/index.css` remains the Field Instrument source outside this scope.
 
 **Key Characteristics:**
 
@@ -174,7 +191,7 @@ Color fills the page. The frontmatter owns the current palette; mode assignments
 ### Secondary
 
 - **Yellow** is the Demo Day field. Evergreen supplies text and actions; **gallery caption** supplies the warmer pale project panels and budget text.
-- **Sky** is the permanent Code & Tell field on both homepage and participation pages. **Navy** supplies text, primary actions, and the ballot board. **Sky panel** holds eligible project cards, and **sky light** holds ballot slots and text on navy.
+- **Sky** is the permanent Code & Tell field on both homepage and participation pages. **Evergreen** supplies text, primary actions, and the ballot board. **Citron** supplies primary action labels and the inverted save action on the dark ballot board. **Sky panel** holds eligible project cards, and **sky light** holds ballot slots and text on evergreen.
 
 ### Neutral
 
@@ -207,7 +224,7 @@ The homepage centers within 1600px and uses fluid side padding. Its desktop grid
 
 Participation content centers within 1500px with the same fluid side padding. The judging queue uses plain project rows. Scoring places project context beside a pale rubric panel within 1280px; review uses readable pale rows. At 850px the scoring grid stacks, the project module loses sticky positioning, and header/footer actions remain compact horizontal groups. Team names remain visible beside the project on desktop. On phones they move into the Team & scoring guide disclosure, which keeps members and instructions available without expanding the initial scoring view. Project name, description, and position remain outside the disclosure.
 
-Code & Tell places a searchable project list beside a navy ballot board. The board is sticky on desktop with a 100px top offset. At 850px it follows the list in document order, becomes static, and gains a fixed bottom jump link. Leave bottom space for that link and the device safe area.
+Code & Tell places a searchable project list beside a evergreen ballot board. The board is sticky on desktop with a 100px top offset. At 850px it follows the list in document order, becomes static, and gains a fixed bottom jump link. Leave bottom space for that link and the device safe area.
 
 Demo Day uses an exhibition grid with three columns, two at 1100px, and one at 600px. Search and course filters sit above the grid. On phones a fixed bottom summary keeps the remaining Love Taps and per-project limit visible; the full budget panel also states the event total. Leave bottom space for the summary and safe area.
 
@@ -231,7 +248,7 @@ Circles, arcs, blocks, and diagonals belong to decorative SVG covers. Keep cover
 
 ### Buttons
 
-Homepage primary actions invert the current field and foreground with a 52px minimum height. Participation actions use the same inversion with a 44px minimum height and smaller padding. Secondary actions use transparent backgrounds and a thin visible outline or a text treatment. Disabled participation buttons lower opacity and use a disabled cursor.
+Homepage primary actions invert the current field and foreground with a 52px minimum height. Code & Tell uses citron labels on evergreen primary actions to connect its sky field to the shared brand palette. Participation actions use the same inversion with a 44px minimum height and smaller padding. Secondary actions use transparent backgrounds and a thin visible outline or a text treatment. Disabled participation buttons lower opacity and use a disabled cursor.
 
 Keyboard focus uses a three-pixel outline with an offset of four pixels in participation and five pixels in the homepage stage. Choose the ring against the surrounding region: pale on dark boards and rails, dark on pale rubric panels and ballot slots. Never derive the ring solely from an inverted button's label color.
 
@@ -257,7 +274,21 @@ The citron rubric panel groups criteria with thin rules. Score choices have a 54
 
 ### Ranked ballot
 
-The navy ballot board holds ordered pale slots, visible rank numbers, removal links, and explicit up/down controls alongside drag reordering. Empty positions use dashed outlines. The required count, completion state, save action, and server-confirmed saved state remain visible in the board. On phones the fixed link names the ballot and shows the selected count.
+The evergreen ballot board holds ordered pale slots, visible rank numbers, removal links, and explicit up/down controls alongside drag reordering. Empty positions use dashed outlines. The required count, completion state, save action, and server-confirmed saved state remain visible in the board. On phones the fixed link names the ballot and shows the selected count.
+
+### Code & Tell participant workspace
+
+This scoped workspace uses IBM Plex Sans throughout, teal winner panels, deep green text and actions, and a pale paper canvas. The `ct-` frontmatter tokens apply only here. Large event titles use the scoped display role; invitation headings are fluid, section headings are compact, and project names carry more weight than supporting metadata.
+
+**The Participant Task Rule.** Within Code & Tell, show the current participant task beside concise context: sign-in leading to searchable projects beside the ranked ballot. Before voting, show the project roster and a waiting state. Presenter submission is deferred. Keep event dates and stage labels compact; do not add schedule-led hero sections.
+
+The submission grid uses two near-equal columns and a form capped at 600px. The ballot pairs a wider project list with a narrower pale board. Workspace grids stack at 760px; inherited ballot sticky and phone-jump behavior still follows the participation stylesheet. Project rows use thin top rules and no card fill. Pale fields, thin borders, and whitespace supply depth without shadows. Controls use modest rounding; invitation and winner panels share a larger lower-right corner.
+
+Inputs have explicit labels, white fill, and a thin green-gray border. Deep-green primary buttons use white labels and a 48px minimum height. Keyboard focus uses a three-pixel teal outline with a four-pixel offset; shared ballot controls retain their contextual focus rules. Saving, saved, error, signed-out, and empty states stay explicit. Optional project links and teammate emails sit in a disclosure; names and descriptions remain visible. The ballot retains rank numbers, removal, drag reordering, and up/down controls.
+
+**The Deliberate Release Rule.** Submission, presentations, voting, closed voting, and released results remain distinct views. Closed voting shows results pending until organizers release results.
+
+The preview controls and sample projects belong only to the design fixture; they are not production navigation or evidence of event results. No screenshot or deployed-state claim is established by this source record.
 
 ### Appreciation and budgets
 
@@ -265,7 +296,7 @@ Demo Day pairs the Love Tap action with project-level usage. The evergreen budge
 
 ### Guidance and content states
 
-Homepage guidance uses evergreen/citron for judging and navy/sky light for ballots. Loading, empty, access, and closed states use plain readable copy on the mode field or pale panel. Retain actual lifecycle and save-state distinctions. Do not invent projects, totals, or successful submissions to fill these states.
+Homepage guidance uses evergreen/citron for judging and evergreen/sky light for ballots, with citron action accents. Loading, empty, access, and closed states use plain readable copy on the mode field or pale panel. Retain actual lifecycle and save-state distinctions. Do not invent projects, totals, or successful submissions to fill these states.
 
 ## Do's and Don'ts
 
@@ -286,3 +317,7 @@ Homepage guidance uses evergreen/citron for judging and navy/sky light for ballo
 - Don't present abstract covers as screenshots, logos, or evidence about a project.
 - Don't let fixed phone controls obscure the final content or primary action.
 - Don't canonize inherited results decoration or leftover hardware class names as new design rules.
+
+### Current Code & Tell scope
+
+The attendee experience leads this round: QR arrival, sign-in, ranked ballot, pending results, released winner. Before voting opens, show projects with an explicit waiting state. Native presenter submission is deferred; no signup form or submission CTA belongs on this event page. The preview defaults to voting and signed-out arrival.

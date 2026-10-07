@@ -22,12 +22,6 @@
   --fi-shadow-key: none;
   --fi-shadow-panel: none;
   --fi-shadow-module: none;
-  --es-evergreen: #073e39;
-  --es-teal: #076b60;
-  --es-citron: #d7ea83;
-  --es-yellow: #f4c75f;
-  --es-lilac: #cdc6f0;
-  --es-cobalt: #254edb;
   background: var(--p-bg);
   color: var(--p-ink);
   font-family: var(--fi-font-ui);
@@ -37,14 +31,16 @@
   width: 100%;
 }
 .participation--code_and_tell {
-  --p-bg: #88c9e8;
-  --p-ink: #102f55;
-  --p-muted: #254568;
-  --p-panel: #b7def0;
-  --p-panel-ink: #102f55;
-  --p-line: #4b7994;
-  --p-dark: #102f55;
-  --p-light: #d6edfa;
+  --p-bg: var(--es-sky);
+  --p-ink: var(--es-evergreen);
+  --p-muted: var(--es-evergreen);
+  --p-panel: var(--es-sky-panel);
+  --p-panel-ink: var(--es-evergreen);
+  --p-line: var(--es-teal);
+  --p-dark: var(--es-evergreen);
+  --p-light: var(--es-sky-light);
+  --p-action-ink: var(--es-citron);
+  --p-accent-fill: var(--es-citron);
 }
 .participation--demo_day {
   --p-bg: #f4c75f;
@@ -160,7 +156,7 @@
 }
 .participation-primary {
   background: var(--p-ink);
-  color: var(--p-bg);
+  color: var(--p-action-ink, var(--p-bg));
 }
 .participation-secondary {
   background: transparent;
@@ -242,7 +238,7 @@
 }
 .participation .fi-transport {
   background: var(--p-ink);
-  color: var(--p-bg);
+  color: var(--p-action-ink, var(--p-bg));
   font-weight: 700;
 }
 .participation .ct-fi-page .fi-surface,
@@ -322,7 +318,7 @@
   background: var(--p-dark);
   color: var(--p-light);
   border-radius: 8px;
-  --p-focus: #d6edfa;
+  --p-focus: var(--p-light);
   scroll-margin-top: 90px;
 }
 .ballot-board-heading {
@@ -360,7 +356,7 @@
   background: var(--p-light);
   color: var(--p-dark);
   border-radius: 6px;
-  --p-focus: #102f55;
+  --p-focus: var(--p-dark);
 }
 .ballot-slot--empty {
   border: 1px dashed #89a7c3;
@@ -410,7 +406,7 @@
   border-top: 1px solid #89a7c3;
 }
 .ballot-submit {
-  background: var(--p-light);
+  background: var(--p-accent-fill, var(--p-light));
   color: var(--p-dark);
   width: 100%;
   margin-top: 1rem;

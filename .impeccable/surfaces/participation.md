@@ -2,7 +2,7 @@
 
 Mode: Operate. Scope: hackathon judging queue and score wizard, Code & Tell ranked ballot, Demo Day browsing and Love Taps.
 
-The user approved the Open House homepage and selected Sky & navy for Code & Tell, then explicitly requested expansion into the actual scoring screens for all event types. Inherit the approved visual system; no new identity tournament. Lagoon/citron for hackathons, yellow/evergreen for Demo Day, sky/navy for Code & Tell. Bricolage Grotesque, broad flat colored fields, readable sentence-case controls, no hardware effects or white canvas.
+The user approved the Open House homepage and its expansion into the actual scoring screens for all event types. On September 24, 2026, they approved replacing Code & Tell navy with the shared evergreen and adding citron action accents while retaining sky backgrounds and pale-blue cards. Inherit the approved visual system; no new identity tournament. Lagoon/citron for hackathons, yellow/evergreen for Demo Day, sky/evergreen/citron for Code & Tell. Bricolage Grotesque, broad flat colored fields, readable sentence-case controls, no hardware effects or white canvas.
 
 - Hackathon: project context beside a 1–5 weighted rubric. Retain optional N/A, browser drafts, previous/skip/next, batch review, final submission, assignment constraints and scoring locks. Keep project descriptions and members visible while evaluating.
 - Code & Tell: searchable eligible project list beside an ordered ballot. Preserve account/email gate, own-project exclusion, exact required rank count, voting limits, server confirmation, editable saved ballot, and controlled results release. Reorder through drag or explicit up/down buttons. On phones the ballot follows projects with a fixed jump link.

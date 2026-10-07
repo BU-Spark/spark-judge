@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-23T14:57:22.001149+00:00",
+  "generatedAt": "2026-10-06T00:00:00Z",
   "title": "Design System: HackJudge",
   "extensions": {
     "colorMeta": {
@@ -74,20 +74,6 @@
           "oklch(95.00% 0.07922 229.49)"
         ]
       },
-      "navy": {
-        "role": "secondary",
-        "displayName": "Navy",
-        "tonalRamp": [
-          "oklch(15.00% 0.07782 255.26)",
-          "oklch(26.43% 0.07782 255.26)",
-          "oklch(37.86% 0.07782 255.26)",
-          "oklch(49.29% 0.07782 255.26)",
-          "oklch(60.71% 0.07782 255.26)",
-          "oklch(72.14% 0.07782 255.26)",
-          "oklch(83.57% 0.07782 255.26)",
-          "oklch(95.00% 0.07782 255.26)"
-        ]
-      },
       "lagoon-muted": {
         "role": "neutral",
         "displayName": "Lagoon Muted",
@@ -114,20 +100,6 @@
           "oklch(72.14% 0.05856 138.78)",
           "oklch(83.57% 0.05856 138.78)",
           "oklch(95.00% 0.05856 138.78)"
-        ]
-      },
-      "sky-muted": {
-        "role": "neutral",
-        "displayName": "Sky Muted",
-        "tonalRamp": [
-          "oklch(15.00% 0.07114 252.05)",
-          "oklch(26.43% 0.07114 252.05)",
-          "oklch(37.86% 0.07114 252.05)",
-          "oklch(49.29% 0.07114 252.05)",
-          "oklch(60.71% 0.07114 252.05)",
-          "oklch(72.14% 0.07114 252.05)",
-          "oklch(83.57% 0.07114 252.05)",
-          "oklch(95.00% 0.07114 252.05)"
         ]
       },
       "sky-panel": {
@@ -260,7 +232,34 @@
         "name": "wide-homepage",
         "value": "1600px"
       }
-    ]
+    ],
+    "codeAndTellWorkspace": {
+      "scope": "CodeAndTellWorkspace only; incumbent Open House metadata and component examples retain their existing scope outside this workspace.",
+      "source": "src/components/code-and-tell/workspace.css",
+      "surfaceBrief": ".impeccable/surfaces/code-and-tell.md",
+      "verification": "Source inspection only; rendered visual verification unavailable.",
+      "breakpoints": [
+        {
+          "name": "workspace-stack",
+          "value": "760px"
+        }
+      ],
+      "focus": {
+        "value": "3px solid #087f78; outline-offset: 4px",
+        "purpose": "Workspace controls; shared ballot controls retain contextual focus rules."
+      },
+      "depth": "Flat tonal regions and thin rules; no workspace shadows.",
+      "rules": [
+        {
+          "name": "The Participant Task Rule",
+          "body": "Within Code & Tell, show the current participant task beside concise context: submission form beside the invitation, or searchable projects beside the ranked ballot. Keep event dates and stage labels compact; do not add schedule-led hero sections."
+        },
+        {
+          "name": "The Deliberate Release Rule",
+          "body": "Submission, presentations, voting, closed voting, and released results remain distinct views. Closed voting shows results pending until organizers release results."
+        }
+      ]
+    }
   },
   "components": [
     {
@@ -283,9 +282,9 @@
       "name": "Code & Tell primary action",
       "kind": "button",
       "refersTo": "button-code-and-tell",
-      "description": "Homepage primary action in its event-mode color pair.",
+      "description": "Evergreen primary action with citron label on the Code & Tell sky field.",
       "html": "<button class=\"ds-button-code\">Start your ballot<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"M4 12h15m-6-6 6 6-6 6\"/></svg></button>",
-      "css": ".ds-button-code{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;display:inline-flex;align-items:center;justify-content:space-between;gap:1.5rem;min-height:52px;padding:.9rem 1.15rem;background:#102f55;color:#88c9e8;border:0;border-radius:7px;font-size:1rem;font-weight:700;cursor:pointer}.ds-button-code svg{width:22px;height:22px}.ds-button-code:hover{filter:brightness(1.08)}.ds-button-code:active{transform:translateY(1px)}.ds-button-code:focus-visible{outline:3px solid #102f55;outline-offset:5px}"
+      "css": ".ds-button-code{font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;display:inline-flex;align-items:center;justify-content:space-between;gap:1.5rem;min-height:52px;padding:.9rem 1.15rem;background:#073e39;color:#d7ea83;border:0;border-radius:7px;font-size:1rem;font-weight:700;cursor:pointer}.ds-button-code svg{width:22px;height:22px}.ds-button-code:hover{filter:brightness(1.08)}.ds-button-code:active{transform:translateY(1px)}.ds-button-code:focus-visible{outline:3px solid #073e39;outline-offset:5px}"
     },
     {
       "name": "Open House navigation",
@@ -316,7 +315,7 @@
       "refersTo": "participation-search",
       "description": "Labeled project search on the Code & Tell field.",
       "html": "<label class=\"ds-search\"><span>Find a project</span><input placeholder=\"Search projects by name or description...\"></label>",
-      "css": ".ds-search{display:block;color:#102f55;font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;}.ds-search span{display:block;font-size:.85rem;font-weight:600;margin-bottom:.45rem}.ds-search input{width:100%;min-height:48px;padding:.75rem 1rem;border:1px solid #4b7994;border-radius:6px;background:#b7def0;color:#102f55;font:inherit}.ds-search input::placeholder{color:#254568;opacity:1}.ds-search input:focus-visible{outline:3px solid #102f55;outline-offset:4px}"
+      "css": ".ds-search{display:block;color:#073e39;font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;}.ds-search span{display:block;font-size:.85rem;font-weight:600;margin-bottom:.45rem}.ds-search input{width:100%;min-height:48px;padding:.75rem 1rem;border:1px solid #076b60;border-radius:6px;background:#b7def0;color:#073e39;font:inherit}.ds-search input::placeholder{color:#073e39;opacity:1}.ds-search input:focus-visible{outline:3px solid #073e39;outline-offset:4px}"
     },
     {
       "name": "Score choices",
@@ -332,7 +331,7 @@
       "refersTo": "ballot-board",
       "description": "Ordered ballot with empty slots and a clear save action.",
       "html": "<section class=\"ds-ballot\"><h2>Your ballot</h2><ol><li><strong>1</strong><span>Project name</span><button aria-label=\"Remove project from ballot\">Remove</button></li><li class=\"ds-empty\">2 &nbsp; Choose a project</li></ol><button class=\"ds-save\">Save ballot</button></section>",
-      "css": ".ds-ballot{background:#102f55;color:#d6edfa;padding:1.6rem;border-radius:8px;font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;}.ds-ballot h2{font-size:1.8rem;font-weight:750;letter-spacing:-.025em;margin:0 0 1.5rem}.ds-ballot ol{padding:0;margin:0;list-style:none;display:grid;gap:.6rem}.ds-ballot li{display:flex;align-items:center;gap:.75rem;min-height:83px;padding:.8rem;border-radius:6px;background:#d6edfa;color:#102f55}.ds-ballot li strong{font-size:1.5rem}.ds-ballot li button{background:transparent;border:0;color:inherit;font:inherit;font-size:.8rem;text-decoration:underline;min-height:32px;cursor:pointer}.ds-ballot .ds-empty{background:transparent;border:1px dashed #89a7c3;color:#d6edfa}.ds-save{margin-top:1rem;min-height:44px;width:100%;padding:.7rem 1rem;border:0;border-radius:6px;background:#d6edfa;color:#102f55;font:inherit;font-weight:650;cursor:pointer}.ds-ballot button:hover{filter:brightness(1.05)}.ds-ballot button:focus-visible{outline:3px solid #d6edfa;outline-offset:4px}.ds-ballot li button:focus-visible{outline-color:#102f55}"
+      "css": ".ds-ballot{background:#073e39;color:#d6edfa;padding:1.6rem;border-radius:8px;font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;}.ds-ballot h2{font-size:1.8rem;font-weight:750;letter-spacing:-.025em;margin:0 0 1.5rem}.ds-ballot ol{padding:0;margin:0;list-style:none;display:grid;gap:.6rem}.ds-ballot li{display:flex;align-items:center;gap:.75rem;min-height:83px;padding:.8rem;border-radius:6px;background:#d6edfa;color:#073e39}.ds-ballot li strong{font-size:1.5rem}.ds-ballot li button{background:transparent;border:0;color:inherit;font:inherit;font-size:.8rem;text-decoration:underline;min-height:32px;cursor:pointer}.ds-ballot .ds-empty{background:transparent;border:1px dashed #89a7c3;color:#d6edfa}.ds-save{margin-top:1rem;min-height:44px;width:100%;padding:.7rem 1rem;border:0;border-radius:6px;background:#d7ea83;color:#073e39;font:inherit;font-weight:650;cursor:pointer}.ds-ballot button:hover{filter:brightness(1.05)}.ds-ballot button:focus-visible{outline:3px solid #d6edfa;outline-offset:4px}.ds-ballot li button:focus-visible{outline-color:#073e39}"
     },
     {
       "name": "Love Tap budget",
@@ -341,11 +340,19 @@
       "description": "Remaining appreciation and both limits are readable together.",
       "html": "<div class=\"ds-budget\"><div><strong>12</strong><span>Love Taps left</span></div><p>Up to 3 per project.<br>20 to share across the event.</p></div>",
       "css": ".ds-budget{display:flex;align-items:center;flex-wrap:wrap;gap:.85rem;background:#073e39;color:#f8d689;padding:1.25rem;border-radius:8px;font-family:\"Bricolage Grotesque\",\"Helvetica Neue\",sans-serif;}.ds-budget strong{font-size:2rem;font-weight:750;line-height:1;display:inline-block;margin-right:.5rem}.ds-budget span{font-size:.9rem}.ds-budget p{font-size:.8rem;margin:0;width:100%}"
+    },
+    {
+      "name": "Code & Tell workspace primary action",
+      "kind": "button",
+      "refersTo": "ct-primary",
+      "description": "Scoped participant action; does not replace the incumbent homepage button.",
+      "html": "<button class=\"ds-ct-primary\">Sign up to present</button>",
+      "css": ".ds-ct-primary{background:#103c3b;color:#fff;border:0;border-radius:6px;font-family:\"Bricolage Grotesque\",sans-serif;font-weight:600;padding:14px 22px;min-height:48px;cursor:pointer}.ds-ct-primary:hover{background:#165955}.ds-ct-primary:focus-visible{outline:3px solid #087f78;outline-offset:4px}.ds-ct-primary:disabled{cursor:not-allowed;opacity:.55}"
     }
   ],
   "narrative": {
     "northStar": "Open House",
-    "overview": "Open House uses broad colored fields, strong Bricolage Grotesque headings, and flat geometric project art. Evergreen navigation holds the identity steady while lagoon, yellow, and sky distinguish event formats. Project names and participation controls remain readable in busy event rooms.\n\nThe user-approved expansion covers the homepage, event entry and judging queue, rubric scoring and review, Code & Tell ranked ballots, and Demo Day appreciation browsing. It extends the same visual identity. Admin, profiles, full project pages, event configuration, and authentication retain Field Instrument. Do not change their global tokens to implement participation styling.\n\nThe implemented sources are `src/components/home/event-stage.css`, `EventStage.tsx`, `src/components/participation/participation.css`, `ParticipationChrome.tsx`, `ScoringWizard.tsx`, `code-and-tell/CodeAndTellVoteView.tsx`, and `demo-day/DemoDayBrowse.tsx`. The participation contract is `.impeccable/surfaces/participation.md`. Historical color exploration in the homepage brief does not override the current sky/navy implementation. `src/index.css` remains the Field Instrument source outside this scope.",
+    "overview": "Open House uses broad colored fields, strong Bricolage Grotesque headings, and flat geometric project art. Evergreen navigation holds the identity steady while lagoon, yellow, and sky distinguish event formats. Project names and participation controls remain readable in busy event rooms.\n\nThe user-approved expansion covers the homepage, event entry and judging queue, rubric scoring and review, Code & Tell ranked ballots, and Demo Day appreciation browsing. It extends the same visual identity. Admin, profiles, full project pages, event configuration, and authentication retain Field Instrument. Do not change their global tokens to implement participation styling.\n\nThe implemented sources are `src/components/home/event-stage.css`, `EventStage.tsx`, `src/components/participation/participation.css`, `ParticipationChrome.tsx`, `ScoringWizard.tsx`, `code-and-tell/CodeAndTellVoteView.tsx`, and `demo-day/DemoDayBrowse.tsx`. The participation contract is `.impeccable/surfaces/participation.md`. Historical color exploration in the homepage brief does not override the current sky/evergreen/citron implementation. `src/index.css` remains the Field Instrument source outside this scope.",
     "keyCharacteristics": [
       "Colored page fields with contrasting text and working panels",
       "One expressive sans family for headings, controls, and metadata",

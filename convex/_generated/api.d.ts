@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as appreciations from "../appreciations.js";
 import type * as auth from "../auth.js";
+import type * as authRedirect from "../authRedirect.js";
 import type * as codeAndTell from "../codeAndTell.js";
 import type * as codeAndTellPhase from "../codeAndTellPhase.js";
 import type * as crons from "../crons.js";
@@ -63,6 +64,7 @@ import type * as users from "../users.js";
 declare const fullApi: ApiFromModules<{
   appreciations: typeof appreciations;
   auth: typeof auth;
+  authRedirect: typeof authRedirect;
   codeAndTell: typeof codeAndTell;
   codeAndTellPhase: typeof codeAndTellPhase;
   crons: typeof crons;

@@ -157,7 +157,7 @@ describe("CodeAndTellVoteView", () => {
       />,
     );
 
-    expect(screen.getByText("Your project · Ineligible")).toBeInTheDocument();
+    expect(screen.getByText("Your project").parentElement).toHaveTextContent("Your project · Ineligible");
     expect(screen.getAllByText("Project Two").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Project Three").length).toBeGreaterThan(0);
     expect(

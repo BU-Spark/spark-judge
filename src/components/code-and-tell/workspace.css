@@ -630,11 +630,25 @@
     grid-row: 3;
     align-items: flex-end;
     max-width: 150px;
-    gap: 4px;
+    gap: 12px;
     margin-top: 0;
   }
   .ct-workspace .ballot-project-actions > .participation-badge {
     white-space: normal;
+    padding: 8px 10px;
+    line-height: 1.3;
+    text-align: center;
+  }
+  .ct-workspace .ballot-project-eligibility {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ct-workspace .ballot-project-eligibility > span {
+    white-space: nowrap;
+  }
+  .ct-workspace .ballot-project-eligibility > .ballot-eligibility-separator {
+    display: none;
   }
   /* Expanded copy gets the full row; keep the ballot action clear of it. */
   .ct-workspace .ballot-project > .project-description[open] {

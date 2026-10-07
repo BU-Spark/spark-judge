@@ -800,9 +800,9 @@ export function CodeAndTellBallotView({
                         </span>
                       )}
                       {project.isOwned || !project.isEligible ? (
-                        <span className="participation-badge">
+                        <span className="participation-badge ballot-project-eligibility">
                           {project.isOwned
-                            ? "Your project · Ineligible"
+                            ? <><span>Your project</span><span className="ballot-eligibility-separator" aria-hidden="true"> · </span><span>Ineligible</span></>
                             : "Ineligible"}
                         </span>
                       ) : rank >= 0 ? (

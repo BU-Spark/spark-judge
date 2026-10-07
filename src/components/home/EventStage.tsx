@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { ProjectDescription } from "../ui/ProjectDescription";
 import { getEventDisplayLabel, getEventMode } from "../../lib/eventModes";
 import type { HomepageEvent } from "../../lib/homepagePhase";
 import { formatDateRangeSimple } from "../../lib/utils";
@@ -183,12 +184,13 @@ function ProjectList({
             <ProjectArt index={i} compact />
             <span className="es-project-copy">
               <strong>{p.name}</strong>
-              <span>{p.track || p.description || "View project"}</span>
+              <span>{p.track || "View project"}</span>
             </span>
             <span className="es-project-arrow">
               <Arrow diagonal />
             </span>
           </button>
+          <ProjectDescription description={p.description} projectName={p.name} />
         </li>
       ))}
     </ul>

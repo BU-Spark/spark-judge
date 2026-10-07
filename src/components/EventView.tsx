@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ScoringWizard } from "./ScoringWizard";
 import { LoadingState } from "./ui/LoadingState";
+import { ProjectDescription } from "./ui/ProjectDescription";
 import { ErrorState } from "./ui/ErrorState";
 import { CodeAndTellVoteView } from "./code-and-tell/CodeAndTellVoteView";
 import { DemoDayBrowse } from "./demo-day";
@@ -1064,9 +1065,7 @@ function TeamSelectionSection({
                 <div key={team._id} className="fi-ev-browse-row">
                   <div>
                     <h3 className="fi-ev-browse-name">{team.name}</h3>
-                    {team.description ? (
-                      <p className="fi-ev-browse-desc">{team.description}</p>
-                    ) : null}
+                    <ProjectDescription description={team.description} projectName={team.name} />
                     {team.track ? (
                       <p className="fi-engraved-sm fi-ev-browse-meta">
                         {team.track}

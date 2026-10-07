@@ -18,6 +18,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { SignInForm } from "../../SignInFormNew";
 import { LoadingState } from "../ui/LoadingState";
+import { ProjectDescription } from "../ui/ProjectDescription";
 
 export type CodeAndTellEvent = {
   codeAndTellPhase?: CodeAndTellPhase;
@@ -185,7 +186,7 @@ function ResultsSection({
         {winner ? (
           <>
             <h3>{winner.name}</h3>
-            <p>{winner.description}</p>
+            <ProjectDescription description={winner.description} projectName={winner.name} />
             {winnerStanding && (
               <details className="ct-score-details ct-winner-details">
                 <summary>
@@ -251,7 +252,7 @@ function ResultsSection({
               <li key={row.teamId}>
                 <div>
                   <h3>{row.name}</h3>
-                  <p>{row.description}</p>
+                  <ProjectDescription description={row.description} projectName={row.name} />
                 </div>
                 <span>{row.points} points</span>
               </li>
@@ -765,7 +766,7 @@ export function CodeAndTellBallotView({
                         </span>
                       )}
                     </div>
-                    <p>{project.description || "No description"}</p>
+                    <ProjectDescription description={project.description} projectName={project.name} />
                     {project.members.length > 0 && (
                       <p className="ballot-members">
                         {project.members.join(" · ")}

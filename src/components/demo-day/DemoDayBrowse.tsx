@@ -8,6 +8,7 @@ import { useAttendeeIdentity } from "../../lib/demoDayIdentity";
 import { useAppreciation } from "../../lib/demoDayApi";
 import { toast } from "sonner";
 import { LoadingState } from "../ui/LoadingState";
+import { ProjectDescription } from "../ui/ProjectDescription";
 import { ProjectArt } from "../home/EventStage";
 import {
   ParticipationFrame,
@@ -288,7 +289,7 @@ export function DemoDayBrowseView({
                       </Link>
                     )}
                   </h3>
-                  <p>{team.description || "No description yet."}</p>
+                  <ProjectDescription description={team.description} projectName={team.name} />
                   <details className="demo-project-details">
                     <summary>Project details</summary>
                     {team.members?.length ? (

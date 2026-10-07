@@ -1,0 +1,33 @@
+.project-description {
+  grid-column: 1;
+  min-width: 0;
+  color: inherit;
+}
+.project-description > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 32px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.project-description > summary::-webkit-details-marker { display: none; }
+.project-description > summary::after { content: "+"; text-decoration: none; }
+.project-description[open] > summary::after { content: "−"; }
+.project-description > summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.project-description .project-description-hide { display: none; }
+.project-description[open] .project-description-show { display: none; }
+.project-description[open] .project-description-hide { display: inline; }
+.project-description > p {
+  margin: 6px 0 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.es-project-list > li > .project-description { margin: 0 16px 12px 76px; }

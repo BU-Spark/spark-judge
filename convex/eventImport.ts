@@ -1,6 +1,23 @@
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
+/** Retain seeded examples for admin testing without advertising invented events. */
+export const hideSeedExamples = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const examples = new Set([
+      "Code & Tell: Fall Kickoff",
+      "Code & Tell: AI Edition",
+      "Demo Day — Fall 2026",
+      "Demo Day — Spring 2027",
+    ]);
+    const events = await ctx.db.query("events").collect();
+    const matches = events.filter((event) => examples.has(event.name));
+    for (const event of matches) await ctx.db.patch(event._id, { hidden: true });
+    return { hidden: matches.map((event) => event.name) };
+  },
+});
+
 /** Operator-only, additive import. Repeat runs preserve IDs, ballots and organizer state. */
 export const upsertEvent = internalMutation({
   args: {

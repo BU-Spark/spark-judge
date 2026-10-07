@@ -43,7 +43,7 @@ export function Homepage() {
       ...(events?.active ?? []),
       ...(events?.upcoming ?? []),
       ...(events?.past ?? []),
-    ],
+    ].filter((event) => !event.hidden),
     now,
   );
   const focal = selectFocalHomepage(groups, now);

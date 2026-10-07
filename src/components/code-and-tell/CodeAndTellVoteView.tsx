@@ -777,11 +777,6 @@ export function CodeAndTellBallotView({
                   >
                     <div className="ballot-project-heading">
                       <h3>{project.name}</h3>
-                      {rank >= 0 && (
-                        <span className="participation-badge">
-                          Ranked #{rank + 1}
-                        </span>
-                      )}
                     </div>
                     <ProjectDescription description={project.description} projectName={project.name} />
                     {project.members.length > 0 && (
@@ -798,6 +793,11 @@ export function CodeAndTellBallotView({
                         >
                           View project <DirectionIcon />
                         </a>
+                      )}
+                      {rank >= 0 && (
+                        <span className="ballot-project-rank">
+                          Ranked #{rank + 1}
+                        </span>
                       )}
                       {project.isOwned || !project.isEligible ? (
                         <span className="participation-badge">

@@ -590,6 +590,18 @@
   margin-top: 0;
 }
 .ct-workspace .ballot-project-actions > button { min-height: 44px; padding: 8px 12px; font-size: 13px; }
+.ct-workspace .ballot-project-rank {
+  align-self: flex-end;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #dceee5;
+  color: var(--ct-deep);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 @media (max-width: 760px) {
   .ct-workspace .ballot-project {
     grid-template-columns: minmax(0, 1fr) auto;

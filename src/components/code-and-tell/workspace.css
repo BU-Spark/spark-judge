@@ -334,6 +334,10 @@
   background: #103c3b;
   color: #fff;
 }
+.ct-workspace .ballot-mobile-sign-in {
+  justify-content: center;
+  font-weight: 600;
+}
 .ct-workspace .ct-fi-page {
   --fi-desk: #f6f7f2;
   --fi-ink: #103c3b;

@@ -817,15 +817,22 @@ export function CodeAndTellBallotView({
         </section>
         {(!loggedInUser || votingNotOpen || requiredRankCount > 0) && renderBallot()}
       </div>
-      {requiredRankCount > 0 && (
+      {requiredRankCount > 0 && (loggedInUser ? (
         <a className="ballot-mobile-jump" href="#your-ballot">
           Your ballot{" "}
           <span>
-            {loggedInUser ? `${rankedTeamIds.length} / ${requiredRankCount}` : "Sign in to vote"}
+            {rankedTeamIds.length} / {requiredRankCount}
           </span>
-          <DirectionIcon direction="down" />
         </a>
-      )}
+      ) : (
+        <button
+          type="button"
+          className="ballot-mobile-jump ballot-mobile-sign-in"
+          onClick={requestSignIn}
+        >
+          Sign in to vote
+        </button>
+      ))}
     </div>
   );
 }

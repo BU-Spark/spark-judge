@@ -228,33 +228,3 @@
     font-size: 24px;
   }
 }
-
-.pp-event-row:has(.pp-event-details) {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
-}
-.pp-event-details summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: fit-content;
-  min-height: 44px;
-  cursor: pointer;
-  list-style: none;
-}
-.pp-event-details summary::-webkit-details-marker { display: none; }
-.pp-event-details[open] summary svg { rotate: 180deg; }
-.pp-event-details a {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  color: var(--pp-ink);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-.pp-event-details :is(summary, a):focus-visible {
-  outline: 3px solid #087f78;
-  outline-offset: 4px;
-}

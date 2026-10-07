@@ -1,10 +1,8 @@
-import { eventWebsites } from "../lib/eventWebsites";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
-import { formatDateTime } from "../lib/utils";
 import { getEventDisplayLabel } from "../lib/eventModes";
 import { DirectionIcon } from "./participation/ParticipationChrome";
 import "./ProfilePage.fi.css";
@@ -56,7 +54,8 @@ export function ProfilePageView({
       </div>
     );
   }
-  const { user, pastEvents, activeEvents, upcomingEvents, stats } = profile;
+  const { user, pastEvents, activeEvents, stats } = profile;
+  const attendedEventCount = activeEvents.length + pastEvents.length;
   return (
     <div className="pp-page">
       <header className="pp-header">
@@ -66,7 +65,7 @@ export function ProfilePageView({
         </div>
         <div className="pp-header-stats" aria-label="Judging activity">
           <span>
-            {stats.totalEvents} {stats.totalEvents === 1 ? "event" : "events"}
+            {attendedEventCount} {attendedEventCount === 1 ? "event" : "events"}
           </span>
           <span>
             {stats.totalTeamsScored}{" "}
@@ -114,42 +113,6 @@ export function ProfilePageView({
           </div>
         </section>
       )}
-      {upcomingEvents.length > 0 && (
-        <section className="pp-zone" aria-labelledby="pp-upcoming-h">
-          <div className="pp-zone-head">
-            <h2 id="pp-upcoming-h">Upcoming</h2>
-            <span>
-              {upcomingEvents.length}{" "}
-              {upcomingEvents.length === 1 ? "event" : "events"}
-            </span>
-          </div>
-          <ul className="pp-event-list">
-            {upcomingEvents.map(({ event }) => (
-              <li key={event._id} className="pp-event-row">
-                <div>
-                  <h3>{event.name}</h3>
-                  <p>{getEventDisplayLabel(event.mode)}</p>
-                  <p className="pp-dates">
-                    {formatDateTime(event.startDate)} –{" "}
-                    {formatDateTime(event.endDate)}
-                  </p>
-                </div>
-                <details className="pp-event-details">
-                  <summary>Event details <DirectionIcon direction="down" /></summary>
-                  <p>{event.description?.trim() || "More details coming soon."}</p>
-                  {eventWebsites[event.name] && (
-                    <a href={eventWebsites[event.name]}>
-                      {eventWebsites[event.name].startsWith("https://www.eventbrite.com/")
-                        ? "Register on Eventbrite"
-                        : `Visit ${event.name} website`} <DirectionIcon />
-                    </a>
-                  )}
-                </details>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
       {pastEvents.length > 0 && (
         <section className="pp-zone" aria-labelledby="pp-past-h">
           <div className="pp-zone-head">
@@ -192,10 +155,9 @@ export function ProfilePageView({
         </section>
       )}
       {activeEvents.length === 0 &&
-        upcomingEvents.length === 0 &&
         pastEvents.length === 0 && (
           <section className="pp-idle" aria-labelledby="pp-empty-heading">
-            <h2 id="pp-empty-heading">No judging assignments yet.</h2>
+            <h2 id="pp-empty-heading">No events attended yet.</h2>
             <p>Browse events to see what’s happening at HackJudge.</p>
             <button className="pp-primary" onClick={onBackToLanding}>
               Browse events <DirectionIcon />

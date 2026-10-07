@@ -8,6 +8,7 @@ import { CodeAndTellVoteView } from "../code-and-tell/CodeAndTellVoteView";
 import { DirectionIcon } from "../participation/ParticipationChrome";
 import { PlatformHeader } from "./PlatformHeader";
 import { getEventDisplayLabel } from "../../lib/eventModes";
+import { CODE_AND_TELL_TITLE, CODE_AND_TELL_SUBTITLE } from "../../lib/codeAndTellPresentation";
 import {
   groupHomepageEvents,
   selectFocalHomepage,
@@ -157,8 +158,8 @@ function EventRowContent({ event }: { event: StageEvent }) {
     <>
       <span className="hp-date">{formatDate(event.startDate)}</span>
       <span className="hp-event-name">
-        <span className="hp-event-title">{event.name}</span>
-        <span>{getEventDisplayLabel(event.mode)}</span>
+        <span className="hp-event-title">{event.mode === "code_and_tell" ? CODE_AND_TELL_TITLE : event.name}</span>
+        <span>{event.mode === "code_and_tell" ? CODE_AND_TELL_SUBTITLE : getEventDisplayLabel(event.mode)}</span>
       </span>
     </>
   );

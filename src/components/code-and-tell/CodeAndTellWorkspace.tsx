@@ -4,6 +4,7 @@ import {
   type CodeAndTellPhase,
 } from "../../../convex/codeAndTellPhase";
 import { DirectionIcon } from "../participation/ParticipationChrome";
+import { CODE_AND_TELL_TITLE, CODE_AND_TELL_SUBTITLE } from "../../lib/codeAndTellPresentation";
 import "./workspace.css";
 
 export type WorkspaceEvent = {
@@ -42,6 +43,7 @@ export function CodeAndTellWorkspace({
   const date = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
+    year: "numeric",
     timeZone: "America/New_York",
   }).format(event.startDate);
   return (
@@ -61,8 +63,9 @@ export function CodeAndTellWorkspace({
           {event.resultsReleased ? "Results released" : phaseLabels[phase]}
         </span>
       </div>
-      <header className="ct-masthead">
-        <h1>{event.name}</h1>
+      <header className="ct-masthead ct-series-masthead">
+        <h1>{CODE_AND_TELL_TITLE}</h1>
+        <p className="ct-series-subtitle">{CODE_AND_TELL_SUBTITLE}</p>
       </header>
       {children}
       <footer className="ct-footer">

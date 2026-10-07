@@ -526,6 +526,18 @@
 
 /* Adopted Code & Tell typography: IBM Plex Sans. */
 .ct-workspace .ct-masthead h1 { font-size: clamp(36px, 4.4vw, 60px); font-weight: 600; letter-spacing: -.025em; line-height: 1.1; }
+.ct-workspace .ct-series-masthead {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.ct-workspace .ct-series-subtitle {
+  margin: 0;
+  color: var(--ct-muted);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.5;
+}
 .ct-workspace :is(h1,h2,h3) { text-wrap: balance; overflow-wrap: break-word; }
 .ct-workspace :is(.participation-heading h1,.participation-section-title h2,.ballot-board h2,.ct-stage-message h2,.ct-auth h2,.ct-results h2) { font-size: 28px; font-weight: 600; line-height: 1.2; letter-spacing: -.02em; }
 .ct-workspace :is(.ballot-project h3,.ct-roster h3,.ct-standings h3) { font-size: 22px; font-weight: 600; line-height: 1.4; letter-spacing: -.015em; }

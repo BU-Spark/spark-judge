@@ -19,3 +19,7 @@ Workspace grids stack at 760px. The shared ballot still supplies its sticky desk
 Recorded from component and stylesheet source on 2026-10-06. Browser screenshots were unavailable; this is not visual QA or deployment verification. Preview projects, ballot totals, and stage controls are explicit fixtures, not event evidence. The decorative ampersand is display text, not an interaction icon. Do not promote preview chrome or inherited legacy results decoration into reusable workspace rules.
 
 IBM Plex Sans selected by the user as the working typeface. Self-hosted regular, medium, semibold, and bold faces; the preview defaults to Plex. Homepage alignment is being scoped separately.
+
+## Event title rule
+
+Use “Code & Tell” as the display title and “Monthly Demo Night” as the smaller subtitle in the workspace and homepage event rows. Show the event date, including the year, separately in metadata. Keep the stored event name intact for administration and website mappings. Never place the month/year prefix or subtitle in the large heading.

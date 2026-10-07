@@ -70,16 +70,6 @@ export function CodeAndTellWorkspace({
       </header>
       </div>
       {children}
-      <footer className="ct-footer">
-        <span>Code &amp; Tell / HackJudge</span>
-        <span>
-          {phase === "submissions"
-            ? "A place for projects and the people behind them."
-            : phase === "voting"
-              ? "Your favorite goes first."
-              : "Projects and the people behind them."}
-        </span>
-      </footer>
     </div>
   );
 }

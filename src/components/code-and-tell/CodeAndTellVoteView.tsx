@@ -649,7 +649,6 @@ export function CodeAndTellBallotView({
             Voting is closed. Results will appear here once the organizers
             confirm the winner.
           </p>
-          <span className="ct-status-note">Results pending</span>
         </section>
         {loggedInUser && (
           <aside

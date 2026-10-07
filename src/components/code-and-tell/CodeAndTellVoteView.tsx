@@ -266,7 +266,7 @@ function ResultsSection({
   );
 }
 
-type BallotProps = {
+export type BallotProps = {
   contextLabel?: string;
   eventId: Id<"events">;
   event: CodeAndTellEvent;

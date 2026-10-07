@@ -12,7 +12,7 @@
   root.classList.remove("light", "dark");
   root.classList.add("light");
   var path = window.location.pathname;
-  var color = path === "/" || path === "/homepage-preview" || path === "/profile"
+  var color = path === "/" || path === "/vote-test" || path === "/homepage-preview" || path === "/profile"
     ? "#103c3b"
     : /^\/event\/[^/]+\/?$/.test(path)
       ? "#073e39"

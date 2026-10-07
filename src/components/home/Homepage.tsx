@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { CodeAndTellVoteView } from "../code-and-tell/CodeAndTellVoteView";
+import { CodeAndTellVoteTest } from "../code-and-tell/CodeAndTellVoteTest";
 import { DirectionIcon } from "../participation/ParticipationChrome";
 import { PlatformHeader } from "./PlatformHeader";
 import { getEventDisplayLabel } from "../../lib/eventModes";
@@ -26,7 +27,8 @@ const formatDate = (date: number) =>
   }).format(date);
 
 
-export function Homepage() {
+export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
+  const VotingView = voteTest ? CodeAndTellVoteTest : CodeAndTellVoteView;
   const homepageRef = useRef<HTMLDivElement>(null);
   const events = useQuery(api.events.listEvents);
   const [now, setNow] = useState(Date.now);
@@ -62,7 +64,18 @@ export function Homepage() {
   }, [event?._id]);
   return (
     <div className="hp-workspace" id="top" ref={homepageRef}>
-      <PlatformHeader homepage />
+      {voteTest ? (
+        <header className="hp-header">
+          <Link className="hp-brand" to="/vote-test">
+            <img className="hp-brand-mark" src="/brand/hackjudge-mark.png" alt="" width={36} height={36} />
+            HackJudge
+          </Link>
+          <div className="hp-header-actions">
+            <a href="#past-events">Past events</a>
+            <button className="hp-sign-in" onClick={() => window.location.reload()}>Reset test</button>
+          </div>
+        </header>
+      ) : <PlatformHeader homepage />}
       <main>
         <section
           id="current-event"
@@ -75,8 +88,9 @@ export function Homepage() {
             </p>
           ) : event && focal ? (
             focal.event.mode === "code_and_tell" ? (
-              <CodeAndTellVoteView
-                contextLabel="Current event"
+              <VotingView
+                key={focal.event._id}
+                contextLabel={voteTest ? "Voting test · Nothing is saved" : "Current event"}
                 eventId={focal.event._id as Id<"events">}
                 event={event}
                 onBack={() =>

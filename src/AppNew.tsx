@@ -41,6 +41,7 @@ export default function App() {
       <BrowserChrome />
       <Routes>
         <Route path="/" element={<Homepage />} />
+        <Route path="/vote-test" element={<Homepage voteTest />} />
         <Route path="/homepage-preview" element={<HomepagePreview />} />
         <Route path="/code-and-tell-preview" element={<CodeAndTellPreview />} />
         <Route

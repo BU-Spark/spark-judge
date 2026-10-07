@@ -41,8 +41,12 @@
   display: flex;
   align-items: center;
   gap: 44px;
-  border-bottom: 1px solid var(--hp-line);
+  background: var(--hp-ink);
+  color: var(--hp-paper);
   padding: 20px clamp(20px, 5vw, 80px);
+}
+.hp-workspace .hp-header :is(a, button, summary):focus-visible {
+  outline-color: #a8ded0;
 }
 .hp-brand {
   display: inline-flex;
@@ -56,7 +60,7 @@
 .hp-brand-dot {
   width: 7px;
   height: 7px;
-  background: #087f78;
+  background: #a8ded0;
   border-radius: 50%;
 }
 :is(.hp-event-preview, .hp-live-event) .ct-preview-controls {
@@ -236,7 +240,7 @@
 }
 .hp-header-actions > a {
   padding-block: 10px;
-  color: var(--hp-muted);
+  color: #d0ded8;
 }
 .hp-sign-in {
   display: inline-flex;
@@ -271,6 +275,7 @@
   gap: 12px;
   min-width: 230px;
   background: var(--hp-paper);
+  color: var(--hp-ink);
   border: 1px solid var(--hp-line);
   padding: 20px;
   box-shadow: 0 8px 24px #103c3b12;

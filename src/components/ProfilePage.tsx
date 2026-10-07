@@ -1,3 +1,4 @@
+import { profileParticipation } from "../lib/profileParticipation";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
@@ -54,8 +55,8 @@ export function ProfilePageView({
       </div>
     );
   }
-  const { user, pastEvents, activeEvents, stats } = profile;
-  const attendedEventCount = activeEvents.length + pastEvents.length;
+  const { user } = profile;
+  const { activeEvents, historyEvents, totalEvents: attendedEventCount, totalTeamsScored } = profileParticipation(profile);
   return (
     <div className="pp-page">
       <header className="pp-header">
@@ -68,8 +69,8 @@ export function ProfilePageView({
             {attendedEventCount} {attendedEventCount === 1 ? "event" : "events"}
           </span>
           <span>
-            {stats.totalTeamsScored}{" "}
-            {stats.totalTeamsScored === 1 ? "team" : "teams"} scored
+            {totalTeamsScored}{" "}
+            {totalTeamsScored === 1 ? "team" : "teams"} scored
           </span>
         </div>
       </header>
@@ -113,7 +114,7 @@ export function ProfilePageView({
           </div>
         </section>
       )}
-      {pastEvents.length > 0 && (
+      {historyEvents.length > 0 && (
         <section className="pp-zone" aria-labelledby="pp-past-h">
           <div className="pp-zone-head">
             <h2 id="pp-past-h">
@@ -123,12 +124,12 @@ export function ProfilePageView({
                 aria-expanded={expandedPastEvents}
                 aria-controls="pp-completed-events"
               >
-                Completed{" "}
+                Scoring history{" "}
                 <DirectionIcon direction={expandedPastEvents ? "up" : "down"} />
               </button>
             </h2>
             <span>
-              {pastEvents.length} {pastEvents.length === 1 ? "event" : "events"}
+              {historyEvents.length} {historyEvents.length === 1 ? "event" : "events"}
             </span>
           </div>
           <ul
@@ -136,13 +137,13 @@ export function ProfilePageView({
             id="pp-completed-events"
             hidden={!expandedPastEvents}
           >
-            {pastEvents.map(({ event, teamsJudged, scoresSubmitted }) => {
+            {historyEvents.map(({ event, teamsJudged, scoresSubmitted }) => {
               const skippedCount = teamsJudged - scoresSubmitted;
               return (
                 <li key={event._id} className="pp-event-row">
                   <div>
                     <h3>{event.name}</h3>
-                    <p>{getEventDisplayLabel(event.mode)} · Closed</p>
+                    <p>{getEventDisplayLabel(event.mode)}</p>
                     <p>
                       {scoresSubmitted}/{teamsJudged} teams
                       {skippedCount > 0 && ` · ${skippedCount} skipped`}
@@ -155,7 +156,7 @@ export function ProfilePageView({
         </section>
       )}
       {activeEvents.length === 0 &&
-        pastEvents.length === 0 && (
+        historyEvents.length === 0 && (
           <section className="pp-idle" aria-labelledby="pp-empty-heading">
             <h2 id="pp-empty-heading">No events attended yet.</h2>
             <p>Browse events to see what’s happening at HackJudge.</p>

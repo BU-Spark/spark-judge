@@ -15,6 +15,22 @@ const base = {
 };
 
 describe("selectFocalHomepage", () => {
+  it("keeps an organizer-closed Code & Tell visible before its scheduled end", () => {
+    const now = 1_000_000;
+    const event = {
+      ...base,
+      _id: "closed-code-and-tell",
+      status: "active" as const,
+      mode: "code_and_tell",
+      codeAndTellPhase: "closed" as const,
+      startDate: now - 60_000,
+      endDate: now + 60_000,
+    };
+    const focal = selectFocalHomepage(groupHomepageEvents([event], now), now);
+    expect(focal?.event._id).toBe(event._id);
+    expect(focal?.phase).toBe("post");
+  });
+
   it("prefers the live event", () => {
     const now = 1_000_000;
     const focal = selectFocalHomepage(

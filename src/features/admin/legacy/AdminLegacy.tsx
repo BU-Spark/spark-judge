@@ -1,3 +1,4 @@
+import { CodeAndTellStageControl } from "../codeAndTell/CodeAndTellStageControl";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import {
@@ -2832,6 +2833,7 @@ export function EventManagementModal({
       )}
       {isPageLayout && (
         <>
+          {isCodeAndTellMode && <CodeAndTellStageControl eventId={eventId} />}
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <button

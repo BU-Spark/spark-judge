@@ -1,10 +1,14 @@
 import "./CodeAndTellVoteView.fi.css";
+import { CodeAndTellWorkspace } from "./CodeAndTellWorkspace";
+import {
+  codeAndTellPhase,
+  type CodeAndTellPhase,
+} from "../../../convex/codeAndTellPhase";
 import { useMutation, useQuery } from "convex/react";
 import { useDeferredValue, useEffect, useMemo, useState, useRef } from "react";
 import type { FunctionReturnType } from "convex/server";
 import {
   ParticipationFrame,
-  ParticipationHeader,
   DirectionIcon,
 } from "../participation/ParticipationChrome";
 import { Reorder } from "framer-motion";
@@ -13,11 +17,10 @@ import { toast } from "sonner";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { SignInForm } from "../../SignInFormNew";
-import { formatDateTime } from "../../lib/utils";
-import { MedalIcon, TrophyIcon } from "../ui/AppIcons";
 import { LoadingState } from "../ui/LoadingState";
 
-type CodeAndTellEvent = {
+export type CodeAndTellEvent = {
+  codeAndTellPhase?: CodeAndTellPhase;
   name: string;
   description: string;
   startDate: number;
@@ -111,6 +114,54 @@ function BallotSlot({
   );
 }
 
+function ScoreBreakdown({
+  standing,
+  totalBallots,
+}: {
+  standing: PublicResults["standings"][number];
+  totalBallots: number;
+}) {
+  return (
+    <div className="ct-score-breakdown">
+      <dl className="ct-winner-totals">
+        <div>
+          <dt>Total points</dt>
+          <dd>{standing.points}</dd>
+        </div>
+        <div>
+          <dt>Ballots received</dt>
+          <dd>
+            {standing.ballotsCount}
+            <span> / {totalBallots}</span>
+          </dd>
+        </div>
+      </dl>
+      <h4>How the audience ranked it</h4>
+      <ol className="ct-rank-breakdown">
+        {standing.rankCounts.map((count, index) => (
+          <li key={index}>
+            <span>#{index + 1} choice</span>
+            <span className="ct-rank-track" aria-hidden="true">
+              <span
+                style={{
+                  width: `${totalBallots ? (count / totalBallots) * 100 : 0}%`,
+                }}
+              />
+            </span>
+            <span>
+              {count} {count === 1 ? "ballot" : "ballots"}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="ct-score-explainer">
+        Higher-ranked choices earn more points. The organizers confirm the final
+        winner.
+      </p>
+    </div>
+  );
+}
+
 function ResultsSection({
   event,
   results,
@@ -118,127 +169,99 @@ function ResultsSection({
   event: CodeAndTellEvent;
   results: PublicResults;
 }) {
+  const winnerStanding = results.standings.find(
+    (row) => row.teamId === results.winnerTeamId,
+  );
   const winner =
-    (results?.winnerTeamId &&
-      results.standings.find(
-        (row) => String(row.teamId) === String(results.winnerTeamId),
-      )) ||
-    (results?.winnerTeamId
-      ? event.teams.find(
-          (team) => String(team._id) === String(results.winnerTeamId),
-        )
-      : null);
-
+    winnerStanding ??
+    event.teams.find((team) => team._id === results.winnerTeamId);
+  const runnersUp = results.standings
+    .filter((row) => row.teamId !== results.winnerTeamId)
+    .slice(0, 2);
   return (
-    <div className="space-y-8">
-      <div className="fi-radius-module border border-amber-500/25 bg-[linear-gradient(140deg,rgba(245,158,11,0.16),rgba(251,191,36,0.05),transparent_65%)] p-6 shadow-sm">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/25 fi-surface/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700 ">
-              <TrophyIcon className="h-4 w-4" />
-              Results Released
-            </div>
-            <div>
-              <h2 className="text-3xl fi-zone font-bold fi-ink">
-                {winner?.name || "Winner"}
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm fi-muted">
-                {winner?.description ||
-                  "Final Code & Tell winner selected from ranked ballots."}
-              </p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="fi-radius-panel border border-border fi-surface/80 px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.16em] fi-muted">
-                Ballots
-              </div>
-              <div className="mt-1 text-2xl font-bold fi-ink">
-                {results.totalBallots}
-              </div>
-            </div>
-            <div className="fi-radius-panel border border-border fi-surface/80 px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.16em] fi-muted">
-                Published
-              </div>
-              <div className="mt-1 text-sm font-semibold fi-ink">
-                Ranked summary
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="fi-radius-module border border-border fi-surface shadow-sm">
-        <div className="border-b border-border px-6 py-5">
-          <h3 className="text-xl fi-zone font-bold fi-ink">Top Standings</h3>
-          <p className="mt-1 text-sm fi-muted">
-            Totals use K-Borda points per ballot (K for 1st, then K−1… down to
-            1). Ties use more 1st-place finishes, then 2nd, and so on, then
-            name.
-          </p>
-        </div>
-        {results.standings.length === 0 ? (
-          <div className="px-6 py-8 text-sm fi-muted">
-            No valid ballots were counted for this event.
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {results.standings.map((row, index) => (
-              <div
-                key={row.teamId}
-                className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between"
+    <section className="ct-results">
+      <div className="ct-winner">
+        <h2>{winner ? "Your Code & Tell winner." : "Results"}</h2>
+        {winner ? (
+          <>
+            <h3>{winner.name}</h3>
+            <p>{winner.description}</p>
+            {winnerStanding && (
+              <details className="ct-score-details ct-winner-details">
+                <summary>
+                  <span>Scoring breakdown</span>
+                  <span>{winnerStanding.points} points</span>
+                  <DirectionIcon direction="down" />
+                </summary>
+                <ScoreBreakdown
+                  standing={winnerStanding}
+                  totalBallots={results.totalBallots}
+                />
+              </details>
+            )}
+            {winner.projectUrl && (
+              <a href={winner.projectUrl} target="_blank" rel="noreferrer">
+                Explore the project <DirectionIcon />
+              </a>
+            )}
+            {runnersUp.length > 0 && (
+              <ol
+                className="ct-runners-up"
+                aria-label="Second and third place"
+                start={2}
               >
-                <div className="flex min-w-0 items-start gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center fi-radius-panel border border-border bg-muted/30 text-sm font-bold fi-ink">
-                    #{index + 1}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="truncate text-base font-semibold fi-ink">
-                        {row.name}
-                      </div>
-                      {index < 3 && (
-                        <MedalIcon className="h-4 w-4 text-amber-500" />
-                      )}
-                    </div>
-                    <div className="mt-1 line-clamp-2 text-sm fi-muted">
-                      {row.description || "No description"}
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3 text-sm md:min-w-[18rem]">
-                  <div className="rounded-xl border border-border fi-surface px-3 py-2">
-                    <div className="text-[11px] uppercase tracking-[0.16em] fi-muted">
-                      Points
-                    </div>
-                    <div className="mt-1 font-semibold fi-ink">
-                      {row.points}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-border fi-surface px-3 py-2">
-                    <div className="text-[11px] uppercase tracking-[0.16em] fi-muted">
-                      Ballots
-                    </div>
-                    <div className="mt-1 font-semibold fi-ink">
-                      {row.ballotsCount}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-border fi-surface px-3 py-2">
-                    <div className="text-[11px] uppercase tracking-[0.16em] fi-muted">
-                      1st Place
-                    </div>
-                    <div className="mt-1 font-semibold fi-ink">
-                      {row.rankCounts[0] || 0}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                {runnersUp.map((project, index) => (
+                  <li key={project.teamId}>
+                    <details className="ct-score-details ct-runner-details">
+                      <summary>
+                        <span className="ct-place">
+                          {index === 0 ? "2nd place" : "3rd place"}
+                        </span>
+                        <strong>{project.name}</strong>
+                        <span className="ct-runner-points">
+                          {project.points} points
+                        </span>
+                        <DirectionIcon direction="down" />
+                      </summary>
+                      <ScoreBreakdown
+                        standing={project}
+                        totalBallots={results.totalBallots}
+                      />
+                    </details>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </>
+        ) : (
+          <p>No winner has been published.</p>
         )}
       </div>
-    </div>
+      <div className="ct-standings">
+        <h2>The audience’s favorites</h2>
+        <p>{results.totalBallots} ballots submitted</p>
+        {results.standings.length ? (
+          <ol
+            className="ct-results-scroll"
+            role="region"
+            aria-label="Ranked project results"
+            tabIndex={0}
+          >
+            {results.standings.map((row) => (
+              <li key={row.teamId}>
+                <div>
+                  <h3>{row.name}</h3>
+                  <p>{row.description}</p>
+                </div>
+                <span>{row.points} points</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p>No ranked results to show.</p>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -258,22 +281,33 @@ export function CodeAndTellVoteView(props: BallotProps) {
     event.resultsReleased ? { eventId } : "skip",
   );
   const saveBallot = useMutation(api.codeAndTell.saveBallot);
+  const savedBallot = useQuery(
+    api.codeAndTell.getMyBallot,
+    loggedInUser && codeAndTellPhase(event) === "closed" ? { eventId } : "skip",
+  );
   const votingContext = useQuery(
     api.codeAndTell.getVotingContext,
-    event.status === "active" && loggedInUser?.email?.trim()
+    codeAndTellPhase(event) === "voting" && loggedInUser?.email?.trim()
       ? { eventId }
       : "skip",
   );
   return (
     <ParticipationFrame mode="code_and_tell">
-      <CodeAndTellBallotView
-        key={props.eventId}
-        {...props}
-        loggedInUser={loggedInUser}
-        publicResults={publicResults}
-        votingContext={votingContext}
-        saveBallot={saveBallot}
-      />
+      <CodeAndTellWorkspace
+        key={`${eventId}:${loggedInUser?._id ?? "signed-out"}`}
+        event={event}
+        onBack={props.onBack}
+      >
+        <CodeAndTellBallotView
+          key={props.eventId}
+          {...props}
+          loggedInUser={loggedInUser}
+          publicResults={publicResults}
+          submittedBallot={savedBallot}
+          votingContext={votingContext}
+          saveBallot={saveBallot}
+        />
+      </CodeAndTellWorkspace>
     </ParticipationFrame>
   );
 }
@@ -284,9 +318,13 @@ export function CodeAndTellBallotView({
   onBack,
   loggedInUser,
   publicResults,
-  votingContext,
+  submittedBallot,
+  votingContext: suppliedVotingContext,
   saveBallot,
+  onPreviewSignIn,
 }: BallotProps & {
+  onPreviewSignIn?: () => void;
+  submittedBallot?: Id<"teams">[];
   loggedInUser: { _id: string; email?: string } | null | undefined;
   publicResults: PublicResults | null | undefined;
   votingContext: VotingContext | undefined;
@@ -295,6 +333,35 @@ export function CodeAndTellBallotView({
     rankedTeamIds: Id<"teams">[];
   }) => Promise<unknown>;
 }) {
+  const phase = codeAndTellPhase(event);
+  const votingNotOpen = phase === "presentations" || phase === "submissions";
+  const votingContext = useMemo<VotingContext | undefined>(() => {
+    if (!votingNotOpen) return suppliedVotingContext;
+    const projects =
+      suppliedVotingContext?.projects ??
+      event.teams.map((team) => ({
+        ...team,
+        members: team.members ?? [],
+        projectUrl: team.projectUrl ?? team.githubUrl,
+        isOwned: false,
+        isEligible: true,
+      }));
+    const eligibleProjectCount = projects.filter(
+      (project) => project.isEligible,
+    ).length;
+    return {
+      myEmail: "",
+      ownProjectIds: suppliedVotingContext?.ownProjectIds ?? [],
+      requiredRankCount: Math.min(5, eligibleProjectCount),
+      eligibleProjectCount,
+      currentBallotTeamIds: [],
+      maxBallots: null,
+      rankedVoteRowCount: 0,
+      hasSubmittedBallot: false,
+      votingClosedToNewVoters: false,
+      projects,
+    };
+  }, [votingNotOpen, suppliedVotingContext, event.teams]);
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [rankedTeamIds, setRankedTeamIds] = useState<Id<"teams">[]>([]);
@@ -369,6 +436,7 @@ export function CodeAndTellBallotView({
     votingContext?.currentBallotTeamIds?.length === requiredRankCount;
 
   const addProjectToBallot = (teamId: Id<"teams">) => {
+    if (votingNotOpen) return;
     setRankedTeamIds((current) => {
       if (current.includes(teamId) || current.length >= requiredRankCount) {
         return current;
@@ -379,7 +447,8 @@ export function CodeAndTellBallotView({
 
   const renderBallot = () => (
     <aside
-      className="ballot-board"
+      className={`ballot-board${votingNotOpen ? " ballot-board--disabled" : ""}`}
+      aria-disabled={votingNotOpen || undefined}
       id="your-ballot"
       aria-labelledby="ballot-heading"
     >
@@ -390,7 +459,9 @@ export function CodeAndTellBallotView({
         </span>
       </div>
       <p>
-        Rank your top {requiredRankCount} projects. Your favorite goes first.
+        {votingNotOpen
+          ? "Voting hasn’t opened yet. You’ll be able to rank your favorites here once the organizers open voting."
+          : `Rank your top ${requiredRankCount} projects. Your favorite goes first.`}
       </p>
       <Reorder.Group
         axis="y"
@@ -418,20 +489,25 @@ export function CodeAndTellBallotView({
           />
         ))}
       </ol>
-      <p className="ballot-help">
-        Drag to reorder, or use the up and down buttons.
-      </p>
+      {!votingNotOpen && (
+        <p className="ballot-help">
+          Drag to reorder, or use the up and down buttons.
+        </p>
+      )}
       <div className="ballot-state" role="status">
-        {isSaved
-          ? "Your ballot is safely stored."
-          : ballotComplete
-            ? "Ready to submit. Check your order before saving."
-            : `${remainingSlots} slot${remainingSlots === 1 ? "" : "s"} still open.`}
+        {votingNotOpen
+          ? "Waiting for voting to open"
+          : isSaved
+            ? "Your ballot is safely stored."
+            : ballotComplete
+              ? "Ready to submit. Check your order before saving."
+              : `${remainingSlots} slot${remainingSlots === 1 ? "" : "s"} still open.`}
       </div>
       <button
         className="participation-primary ballot-submit"
         onClick={() => void handleSaveBallot()}
         disabled={
+          votingNotOpen ||
           !ballotComplete ||
           isSubmitting ||
           votingClosedToNewVoters ||
@@ -446,11 +522,13 @@ export function CodeAndTellBallotView({
         <DirectionIcon />
       </button>
       <p className="ballot-saved-note">
-        {lastSavedAt
-          ? `Last saved at ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-          : votingContext?.currentBallotTeamIds?.length
-            ? "Existing ballot loaded. You can replace it until the event ends."
-            : "Your picks are not submitted until you save."}
+        {votingNotOpen
+          ? "Enjoy the presentations in the meantime."
+          : lastSavedAt
+            ? `Last saved at ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+            : votingContext?.currentBallotTeamIds?.length
+              ? "Existing ballot loaded. You can replace it until voting closes."
+              : "Your picks are not submitted until you save."}
       </p>
     </aside>
   );
@@ -473,6 +551,7 @@ export function CodeAndTellBallotView({
   };
 
   const handleSaveBallot = async () => {
+    if (votingNotOpen) return;
     if (!ballotComplete) {
       toast.error(
         `Rank exactly ${requiredRankCount} project${
@@ -500,189 +579,99 @@ export function CodeAndTellBallotView({
     }
 
     return (
-      <div className="ct-fi-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <button
-          onClick={onBack}
-          className="mb-6 flex items-center gap-2 fi-key"
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-          Back to Events
-        </button>
-
-        <div className="mb-8 fi-radius-module border border-border fi-surface px-6 py-6 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 ">
-                Code &amp; Tell
-              </div>
-              <h1 className="mt-3 text-3xl fi-zone font-bold fi-ink">
-                {event.name}
-              </h1>
-              <p className="mt-2 max-w-3xl text-sm fi-muted">
-                {event.description}
-              </p>
-            </div>
-            <div className="text-sm fi-muted">
-              {formatDateTime(event.startDate).split(",")[0]}
-            </div>
-          </div>
-        </div>
-
+      <div className="ct-fi-page">
         {publicResults ? (
           <ResultsSection event={event} results={publicResults} />
         ) : (
-          <div className="fi-radius-module border border-border fi-surface px-6 py-8 text-sm fi-muted">
-            Results have not been published yet.
-          </div>
+          <p>Results have not been published yet.</p>
         )}
       </div>
     );
   }
 
-  if (event.status === "upcoming") {
+  if (phase === "closed") {
     return (
-      <div className="ct-fi-page max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <button
-          onClick={onBack}
-          className="mb-6 flex items-center gap-2 fi-key"
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-          Back to Events
-        </button>
-        <div className="fi-radius-module border border-border fi-surface p-8 text-center shadow-sm">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center fi-radius-panel bg-amber-500/10 text-amber-600 ">
-            <TrophyIcon className="h-7 w-7" />
-          </div>
-          <h1 className="mt-4 text-3xl fi-zone font-bold fi-ink">
-            {event.name}
-          </h1>
-          <p className="mt-3 text-sm fi-muted">
-            Voting opens when the event becomes active. Projects are already
-            managed by admins, and ranked ballots will unlock at the scheduled
-            start time.
+      <div className={`ct-closed${loggedInUser ? " ballot-layout" : ""}`}>
+        <section className="ct-stage-message">
+          <h2>That’s a wrap.</h2>
+          <p>
+            Voting is closed. Results will appear here once the organizers
+            confirm the winner.
           </p>
-        </div>
+          <span className="ct-status-note">Results pending</span>
+        </section>
+        {loggedInUser && (
+          <aside
+            className="ballot-board ballot-receipt"
+            aria-labelledby="submitted-ballot-heading"
+          >
+            <div className="ballot-board-heading">
+              <h2 id="submitted-ballot-heading">Your submitted ballot</h2>
+            </div>
+            {submittedBallot === undefined ? (
+              <LoadingState label="Loading your submitted ballot..." />
+            ) : submittedBallot.length ? (
+              <>
+                <p>
+                  Your ranking is saved. Voting is closed, so this ballot can’t
+                  be changed.
+                </p>
+                <ol className="ballot-slots">
+                  {submittedBallot.map((teamId, index) => {
+                    const project = event.teams.find(
+                      (team) => team._id === teamId,
+                    );
+                    return (
+                      <li className="ballot-slot" key={teamId}>
+                        <span className="ballot-rank">{index + 1}</span>
+                        <div className="ballot-slot-content">
+                          <strong>
+                            {project?.name ?? "Project no longer available"}
+                          </strong>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+                <p className="ballot-saved-note">Ballot submitted</p>
+              </>
+            ) : (
+              <p>You didn’t submit a ballot for this event.</p>
+            )}
+          </aside>
+        )}
       </div>
     );
   }
 
-  if (event.status === "past") {
-    return (
-      <div className="ct-fi-page max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <button
-          onClick={onBack}
-          className="mb-6 flex items-center gap-2 fi-key"
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-          Back to Events
-        </button>
-        <div className="fi-radius-module border border-border fi-surface p-8 shadow-sm">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/30 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] fi-muted">
-            Code &amp; Tell
-          </div>
-          <h1 className="mt-4 text-3xl fi-zone font-bold fi-ink">
-            Results Pending
-          </h1>
-          <p className="mt-3 text-sm fi-muted">
-            Balloting is closed. Admins still need to confirm the final winner
-            and release the ranked-vote results.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loggedInUser === undefined) {
+  if (!votingNotOpen && loggedInUser === undefined) {
     return <LoadingState label="Loading voting access..." />;
   }
 
-  if (!loggedInUser) {
+  if (!votingNotOpen && !loggedInUser) {
     return (
-      <div className="ct-fi-page max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <button
-          onClick={onBack}
-          className="mb-6 flex items-center gap-2 fi-key"
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-          Back to Events
-        </button>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_24rem]">
-          <div className="fi-radius-module border border-amber-500/20 bg-[linear-gradient(135deg,rgba(245,158,11,0.12),transparent_72%)] p-8 shadow-sm">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 fi-surface/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 ">
-              Code &amp; Tell Ballot
-            </div>
-            <h1 className="mt-4 text-3xl fi-zone font-bold fi-ink">
-              Sign in to vote
-            </h1>
-            <p className="mt-3 text-sm fi-muted">
-              Code &amp; Tell uses one editable ranked ballot per signed-in
-              voter. Your own projects stay visible, but they cannot be placed
-              in your ranking.
-            </p>
-          </div>
-          <div className="fi-radius-module border border-border fi-surface p-6 shadow-sm">
-            <h2 className="text-xl fi-zone font-bold fi-ink">Sign In</h2>
-            <p className="mt-2 text-sm fi-muted">
-              Use your event account to unlock ballot editing.
-            </p>
-            <div className="mt-6">
-              <SignInForm />
-            </div>
-          </div>
+      <section className="ct-auth">
+        <div>
+          <h2>Rank your favorites.</h2>
+          <p>
+            Sign in to rank the projects you just saw. You can update your
+            ballot until voting closes.
+          </p>
         </div>
-      </div>
+        <div>
+          {onPreviewSignIn ? (
+            <button className="ct-primary" onClick={onPreviewSignIn}>
+              Sign in to rank
+            </button>
+          ) : (
+            <SignInForm />
+          )}
+        </div>
+      </section>
     );
   }
 
-  if (!hasVerifiedEmail) {
+  if (!votingNotOpen && !hasVerifiedEmail) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <button
@@ -718,16 +707,6 @@ export function CodeAndTellBallotView({
 
   return (
     <div className="participation-content ballot-page">
-      <ParticipationHeader
-        title={event.name}
-        description="Explore the projects. Pick your favorites. Put them in order."
-        onBack={onBack}
-        aside={
-          <span className="participation-status">
-            Voting open · {formatDateTime(event.startDate).split(",")[0]}
-          </span>
-        }
-      />
       {votingClosedToNewVoters && (
         <p className="participation-notice" role="status">
           This event has reached its voting limit for new voters. Existing
@@ -737,8 +716,8 @@ export function CodeAndTellBallotView({
       )}
       {isSaved && (
         <p className="participation-notice" role="status">
-          Your ballot is submitted. You can still make changes until the event
-          ends.
+          Your ballot is submitted. You can still make changes until voting
+          closes.
         </p>
       )}
       <div className="ballot-layout">
@@ -750,6 +729,7 @@ export function CodeAndTellBallotView({
           <label className="participation-search">
             <span>Search projects</span>
             <input
+              type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Project, description, or member"
@@ -764,7 +744,12 @@ export function CodeAndTellBallotView({
               No projects match that search.
             </p>
           ) : (
-            <div className="ballot-projects">
+            <div
+              className="ballot-projects"
+              role="region"
+              aria-label="Projects to rank"
+              tabIndex={0}
+            >
               {filteredProjects.map((project) => {
                 const rank = rankedTeamIds.indexOf(project._id);
                 return (
@@ -777,11 +762,6 @@ export function CodeAndTellBallotView({
                       {rank >= 0 && (
                         <span className="participation-badge">
                           Ranked #{rank + 1}
-                        </span>
-                      )}
-                      {project.isOwned && (
-                        <span className="participation-badge">
-                          Your project
                         </span>
                       )}
                     </div>
@@ -802,7 +782,11 @@ export function CodeAndTellBallotView({
                         </a>
                       )}
                       {project.isOwned || !project.isEligible ? (
-                        <span className="participation-badge">Ineligible</span>
+                        <span className="participation-badge">
+                          {project.isOwned
+                            ? "Your project · Ineligible"
+                            : "Ineligible"}
+                        </span>
                       ) : rank >= 0 ? (
                         <button
                           className="participation-secondary"
@@ -815,6 +799,7 @@ export function CodeAndTellBallotView({
                           className="participation-secondary"
                           onClick={() => addProjectToBallot(project._id)}
                           disabled={
+                            votingNotOpen ||
                             votingClosedToNewVoters ||
                             rankedTeamIds.length >= requiredRankCount
                           }
@@ -829,15 +814,17 @@ export function CodeAndTellBallotView({
             </div>
           )}
         </section>
-        {renderBallot()}
+        {(votingNotOpen || requiredRankCount > 0) && renderBallot()}
       </div>
-      <a className="ballot-mobile-jump" href="#your-ballot">
-        Your ballot{" "}
-        <span>
-          {rankedTeamIds.length} / {requiredRankCount}
-        </span>
-        <DirectionIcon direction="down" />
-      </a>
+      {requiredRankCount > 0 && (
+        <a className="ballot-mobile-jump" href="#your-ballot">
+          Your ballot{" "}
+          <span>
+            {rankedTeamIds.length} / {requiredRankCount}
+          </span>
+          <DirectionIcon direction="down" />
+        </a>
+      )}
     </div>
   );
 }

@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 
 import type { Id } from "../../../convex/_generated/dataModel";
 import { CodeAndTellVoteView } from "@/components/code-and-tell/CodeAndTellVoteView";
@@ -119,9 +125,11 @@ describe("CodeAndTellVoteView", () => {
       />,
     );
 
-    expect(screen.getByText("Sign in to vote")).toBeInTheDocument();
+    expect(screen.getByText("Rank your favorites.")).toBeInTheDocument();
     expect(
-      screen.getByText("Use your event account to unlock ballot editing."),
+      screen.getByText(
+        "Sign in to rank the projects you just saw. You can update your ballot until voting closes.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -143,15 +151,14 @@ describe("CodeAndTellVoteView", () => {
       />,
     );
 
-    expect(screen.getByText("Your project")).toBeInTheDocument();
+    expect(screen.getByText("Your project · Ineligible")).toBeInTheDocument();
     expect(screen.getAllByText("Project Two").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Project Three").length).toBeGreaterThan(0);
     expect(
       screen.getAllByText(
-        "Existing ballot loaded. You can replace it until the event ends.",
+        "Existing ballot loaded. You can replace it until voting closes.",
       ),
     ).not.toHaveLength(0);
-    expect(screen.getByText("Ineligible")).toBeInTheDocument();
   });
 
   it("adds eligible projects and saves a completed ballot", async () => {
@@ -207,9 +214,16 @@ describe("CodeAndTellVoteView", () => {
       />,
     );
 
-    expect(screen.getByText("Results Released")).toBeInTheDocument();
+    expect(screen.getByText(/Results released/)).toBeInTheDocument();
     expect(screen.getAllByText("Project Two").length).toBeGreaterThan(0);
-    expect(screen.getByText("Top Standings")).toBeInTheDocument();
+    expect(screen.getByText("The audience’s favorites")).toBeInTheDocument();
+    const winnerCard = screen.getByText(
+      "Your Code & Tell winner.",
+    ).parentElement!;
+    expect(within(winnerCard).getByText("27")).toBeInTheDocument();
+    expect(within(winnerCard).getByText("4 ballots")).toBeInTheDocument();
+    expect(within(winnerCard).getByText("2 ballots")).toBeInTheDocument();
+    expect(within(winnerCard).getByText("#5 choice")).toBeInTheDocument();
   });
   it("saves the order chosen with accessible move buttons", async () => {
     queryResults.set("auth:loggedInUser", {
@@ -266,5 +280,117 @@ describe("CodeAndTellVoteView", () => {
     expect(
       screen.queryByText("Your ballot is safely stored."),
     ).not.toBeInTheDocument();
+  });
+  it("shows projects before voting without a presenter form", () => {
+    render(
+      <CodeAndTellVoteView
+        eventId={eventId}
+        event={{
+          ...baseEvent,
+          status: "upcoming",
+          codeAndTellPhase: "submissions",
+        }}
+        onBack={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Find your favorites")).toBeInTheDocument();
+    expect(screen.getByText("Project Two")).toBeInTheDocument();
+    expect(screen.queryByText("Sign up to present")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Project name")).not.toBeInTheDocument();
+  });
+
+  it.each([null, { _id: "user-1", email: "voter@example.com" }])(
+    "keeps projects searchable and ballot disabled during presentations for %s",
+    (user) => {
+      queryResults.set("auth:loggedInUser", user);
+      render(
+        <CodeAndTellVoteView
+          eventId={eventId}
+          event={{ ...baseEvent, codeAndTellPhase: "presentations" }}
+          onBack={vi.fn()}
+        />,
+      );
+      expect(
+        screen.getByRole("heading", { name: "Your ballot" }),
+      ).toBeInTheDocument();
+      const addButtons = screen.getAllByRole("button", {
+        name: "Add to ballot",
+      });
+      addButtons.forEach((button) => expect(button).toBeDisabled());
+      const saveButton = screen.getByRole("button", { name: "Save Ballot" });
+      expect(saveButton).toBeDisabled();
+      fireEvent.click(addButtons[0]);
+      fireEvent.click(saveButton);
+      expect(saveBallotMock).not.toHaveBeenCalled();
+      fireEvent.change(
+        screen.getByRole("searchbox", { name: "Search projects" }),
+        { target: { value: "compiler" } },
+      );
+      expect(screen.getByText("Project Two")).toBeInTheDocument();
+      expect(screen.queryByText("Project Three")).not.toBeInTheDocument();
+    },
+  );
+  it("shows the saved ballot in submitted order after voting closes", () => {
+    queryResults.set("auth:loggedInUser", {
+      _id: "user-1",
+      email: "voter@example.com",
+    });
+    queryResults.set("codeAndTell:getMyBallot", ["team-3", "team-2"]);
+    render(
+      <CodeAndTellVoteView
+        eventId={eventId}
+        event={{ ...baseEvent, codeAndTellPhase: "closed" }}
+        onBack={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Your submitted ballot" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual(["1Project Three", "2Project Two"]);
+    expect(
+      screen.queryByRole("button", { name: "Save Ballot" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Remove|Move/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Results pending")).toBeInTheDocument();
+  });
+  it("does not show someone else's ballot when signed out", () => {
+    queryResults.set("auth:loggedInUser", null);
+    queryResults.set("codeAndTell:getMyBallot", ["team-3", "team-2"]);
+    render(
+      <CodeAndTellVoteView
+        eventId={eventId}
+        event={{ ...baseEvent, codeAndTellPhase: "closed" }}
+        onBack={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("Your submitted ballot")).not.toBeInTheDocument();
+    expect(screen.getByText("Results pending")).toBeInTheDocument();
+  });
+  it("distinguishes loading a ballot from having no submitted ballot", () => {
+    queryResults.set("auth:loggedInUser", {
+      _id: "user-1",
+      email: "voter@example.com",
+    });
+    const props = {
+      eventId,
+      event: { ...baseEvent, codeAndTellPhase: "closed" as const },
+      onBack: vi.fn(),
+    };
+    const view = render(<CodeAndTellVoteView {...props} />);
+    expect(
+      screen.getByText("Loading your submitted ballot..."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("You didn’t submit a ballot for this event."),
+    ).not.toBeInTheDocument();
+    queryResults.set("codeAndTell:getMyBallot", []);
+    view.rerender(<CodeAndTellVoteView {...props} />);
+    expect(
+      screen.getByText("You didn’t submit a ballot for this event."),
+    ).toBeInTheDocument();
   });
 });

@@ -171,6 +171,7 @@ export function shapeEventForViewer(
     scoringLockedAt: event.scoringLockedAt,
     scoringLockReason: event.scoringLockReason,
     codeAndTellMaxBallots: event.codeAndTellMaxBallots,
+    codeAndTellPhase: event.codeAndTellPhase,
   };
 
   if (event.resultsReleased) {
@@ -196,7 +197,12 @@ export function shapeEventForViewer(
 export function computeEventStatus(event: {
   startDate: number;
   endDate: number;
+  mode?: string;
+  codeAndTellPhase?: string;
 }): "upcoming" | "active" | "past" {
+  if (event.mode === "code_and_tell" && event.codeAndTellPhase) {
+    return event.codeAndTellPhase === "closed" ? "past" : event.codeAndTellPhase === "submissions" ? "upcoming" : "active";
+  }
   const now = Date.now();
 
   if (now < event.startDate) {

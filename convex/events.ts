@@ -353,6 +353,7 @@ export const createEvent = mutation({
       description: args.description ?? "",
       status: computedStatus,
       resultsReleased: false,
+      ...(args.mode === "code_and_tell" ? { codeAndTellPhase: "submissions" as const } : {}),
       mode: getEventMode(args.mode),
     });
 
@@ -375,6 +376,15 @@ export const updateEventStatus = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
+
+    if (isCodeAndTellMode(event.mode)) {
+      if (event.resultsReleased) throw new Error("Unrelease results before changing participation");
+      const phase = args.status === "upcoming" ? "submissions" : args.status === "active" ? "voting" : "closed";
+      const ballot = await ctx.db.query("rankedVotes").withIndex("by_event", q => q.eq("eventId", args.eventId)).first();
+      if (phase === "submissions" && ballot) throw new Error("Submissions cannot reopen after ballots have been saved");
+      await ctx.db.patch(args.eventId, { codeAndTellPhase: phase });
+      return null;
+    }
 
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
@@ -618,6 +628,7 @@ export const duplicateEvent = mutation({
       scoringLockedBy: event.scoringLockedBy,
       scoringLockReason: event.scoringLockReason,
       codeAndTellMaxBallots: event.codeAndTellMaxBallots,
+      codeAndTellPhase: event.codeAndTellPhase,
       hidden: hidden ?? true,
     });
 

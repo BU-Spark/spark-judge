@@ -10,6 +10,8 @@ import {
 } from "./helpers";
 import { isCodeAndTellMode } from "./eventModes";
 
+import { codeAndTellPhase } from "./codeAndTellPhase";
+
 export const MAX_RANKED_CHOICES = 5;
 
 type VisibleTeam = Doc<"teams">;
@@ -45,7 +47,7 @@ function getOwnedTeamIdsForEmail(teams: VisibleTeam[], email: string | null) {
   return new Set(
     teams
       .filter((team) => (team.entrantEmails || []).includes(email))
-      .map((team) => team._id)
+      .map((team) => team._id),
   );
 }
 
@@ -55,7 +57,7 @@ export function getRequiredRankCount(eligibleTeamCount: number) {
 
 export function sanitizeBallotTeamIds(
   rankedTeamIds: Id<"teams">[],
-  visibleTeamIds: Set<Id<"teams">>
+  visibleTeamIds: Set<Id<"teams">>,
 ) {
   const seen = new Set<Id<"teams">>();
   const sanitized: Id<"teams">[] = [];
@@ -82,7 +84,7 @@ export function validateRankedBallot({
 }) {
   const uniqueRankedTeamIds = sanitizeBallotTeamIds(
     rankedTeamIds,
-    visibleTeamIds
+    visibleTeamIds,
   );
 
   if (uniqueRankedTeamIds.length !== rankedTeamIds.length) {
@@ -97,7 +99,7 @@ export function validateRankedBallot({
     throw new Error(
       `Ballots must rank exactly ${requiredRankCount} project${
         requiredRankCount === 1 ? "" : "s"
-      }`
+      }`,
     );
   }
 
@@ -106,7 +108,7 @@ export function validateRankedBallot({
 
 async function getEventAndVisibleTeams(
   ctx: QueryCtx | MutationCtx,
-  eventId: Id<"events">
+  eventId: Id<"events">,
 ) {
   const event = await ctx.db.get(eventId);
   if (!event) {
@@ -116,14 +118,16 @@ async function getEventAndVisibleTeams(
     throw new Error("Event not found");
   }
   if (!isCodeAndTellMode(event.mode)) {
-    throw new Error("Code & Tell voting is only available for Code & Tell events");
+    throw new Error(
+      "Code & Tell voting is only available for Code & Tell events",
+    );
   }
 
   const teams = getVisibleTeams(
     await ctx.db
       .query("teams")
       .withIndex("by_event", (q) => q.eq("eventId", eventId))
-      .collect()
+      .collect(),
   );
 
   return { event, teams };
@@ -149,7 +153,7 @@ type StandingTeamInput = {
 
 export function computeCodeAndTellStandings(
   teams: StandingTeamInput[],
-  ballots: Id<"teams">[][]
+  ballots: Id<"teams">[][],
 ) {
   const visibleTeamIds = new Set(teams.map((team) => team._id));
   const standings = new Map<Id<"teams">, StandingRow>();
@@ -202,17 +206,17 @@ export function computeCodeAndTellStandings(
 
 async function buildStandings(
   ctx: QueryCtx | MutationCtx,
-  eventId: Id<"events">
+  eventId: Id<"events">,
 ) {
   const { event, teams } = await getEventAndVisibleTeams(ctx, eventId);
   const votes = await ctx.db
     .query("rankedVotes")
-      .withIndex("by_event", (q) => q.eq("eventId", eventId))
-      .collect();
+    .withIndex("by_event", (q) => q.eq("eventId", eventId))
+    .collect();
   const { totalBallots, standings, defaultWinnerId } =
     computeCodeAndTellStandings(
       teams,
-      votes.map((vote) => vote.rankedTeamIds)
+      votes.map((vote) => vote.rankedTeamIds),
     );
 
   return {
@@ -248,9 +252,9 @@ export const getVotingContext = query({
           projectUrl: v.optional(v.string()),
           isOwned: v.boolean(),
           isEligible: v.boolean(),
-        })
+        }),
       ),
-    })
+    }),
   ),
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -267,7 +271,7 @@ export const getVotingContext = query({
     const currentBallot = await ctx.db
       .query("rankedVotes")
       .withIndex("by_event_and_voter", (q) =>
-        q.eq("eventId", args.eventId).eq("voterUserId", userId)
+        q.eq("eventId", args.eventId).eq("voterUserId", userId),
       )
       .first();
 
@@ -287,7 +291,7 @@ export const getVotingContext = query({
       !hasSubmittedBallot;
 
     const eligibleProjectCount = teams.filter(
-      (team) => !ownProjectIds.includes(team._id)
+      (team) => !ownProjectIds.includes(team._id),
     ).length;
 
     return {
@@ -325,7 +329,7 @@ export const getMyBallot = query({
     const vote = await ctx.db
       .query("rankedVotes")
       .withIndex("by_event_and_voter", (q) =>
-        q.eq("eventId", args.eventId).eq("voterUserId", userId)
+        q.eq("eventId", args.eventId).eq("voterUserId", userId),
       )
       .first();
 
@@ -350,7 +354,10 @@ export const saveBallot = mutation({
     }
 
     const { event, teams } = await getEventAndVisibleTeams(ctx, args.eventId);
-    if (computeEventStatus(event) !== "active") {
+    if (
+      codeAndTellPhase({ ...event, status: computeEventStatus(event) }) !==
+      "voting"
+    ) {
       throw new Error("Ballots can only be edited while the event is active");
     }
 
@@ -361,6 +368,8 @@ export const saveBallot = mutation({
       .filter((teamId) => !ownProjectIds.has(teamId));
     const requiredRankCount = getRequiredRankCount(eligibleTeamIds.length);
 
+    if (requiredRankCount === 0)
+      throw new Error("No eligible projects to rank yet");
     const uniqueRankedTeamIds = validateRankedBallot({
       rankedTeamIds: args.rankedTeamIds,
       visibleTeamIds,
@@ -371,7 +380,7 @@ export const saveBallot = mutation({
     const existingVote = await ctx.db
       .query("rankedVotes")
       .withIndex("by_event_and_voter", (q) =>
-        q.eq("eventId", args.eventId).eq("voterUserId", userId)
+        q.eq("eventId", args.eventId).eq("voterUserId", userId),
       )
       .first();
 
@@ -425,9 +434,9 @@ export const getAdminSummary = query({
           points: v.number(),
           ballotsCount: v.number(),
           rankCounts: v.array(v.number()),
-        })
+        }),
       ),
-    })
+    }),
   ),
   handler: async (ctx, args) => {
     const userIsAdmin = await isAdmin(ctx);
@@ -487,7 +496,9 @@ export const releaseResults = mutation({
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
     if (!isCodeAndTellMode(event.mode)) {
-      throw new Error("Code & Tell release is only available for Code & Tell events");
+      throw new Error(
+        "Code & Tell release is only available for Code & Tell events",
+      );
     }
     if (computeEventStatus(event) !== "past") {
       throw new Error("The event must be past before releasing results");
@@ -500,7 +511,7 @@ export const releaseResults = mutation({
       await ctx.db
         .query("teams")
         .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
-        .collect()
+        .collect(),
     );
     if (!visibleTeams.some((team) => team._id === event.overallWinner)) {
       throw new Error("Selected winner is no longer available");
@@ -530,9 +541,9 @@ export const getPublicResults = query({
           points: v.number(),
           ballotsCount: v.number(),
           rankCounts: v.array(v.number()),
-        })
+        }),
       ),
-    })
+    }),
   ),
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
@@ -543,9 +554,159 @@ export const getPublicResults = query({
 
     const summary = await buildStandings(ctx, args.eventId);
     return {
-      winnerTeamId: summary.event.overallWinner ?? summary.defaultWinnerId ?? null,
+      winnerTeamId:
+        summary.event.overallWinner ?? summary.defaultWinnerId ?? null,
       totalBallots: summary.totalBallots,
       standings: summary.standings.slice(0, 5),
     };
+  },
+});
+
+export const setPhase = mutation({
+  args: {
+    eventId: v.id("events"),
+    phase: v.union(
+      v.literal("submissions"),
+      v.literal("presentations"),
+      v.literal("voting"),
+      v.literal("closed"),
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, { eventId, phase }) => {
+    await requireAdmin(ctx);
+    const { event } = await getEventAndVisibleTeams(ctx, eventId);
+    if (event.resultsReleased)
+      throw new Error("Unrelease results before changing participation");
+    const ballot = await ctx.db
+      .query("rankedVotes")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .first();
+    if (phase === "submissions" && ballot)
+      throw new Error(
+        "Submissions cannot reopen after ballots have been saved",
+      );
+    await ctx.db.patch(eventId, { codeAndTellPhase: phase });
+    return null;
+  },
+});
+
+export function validateSubmission(input: {
+  name: string;
+  description: string;
+  members: string[];
+  projectUrl?: string;
+  entrantEmails: string[];
+}) {
+  const name = input.name.trim();
+  const description = input.description.trim();
+  const members = input.members.map((value) => value.trim()).filter(Boolean);
+  if (!name || name.length > 120)
+    throw new Error("Enter a project name of up to 120 characters");
+  if (!description || description.length > 2000)
+    throw new Error("Describe your project in up to 2,000 characters");
+  if (
+    !members.length ||
+    members.length > 20 ||
+    members.some((name) => name.length > 120)
+  )
+    throw new Error("Add 1–20 presenter names, each up to 120 characters");
+  const entrantEmails = [
+    ...new Set(
+      input.entrantEmails
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+  if (
+    entrantEmails.length > 20 ||
+    entrantEmails.some((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+  )
+    throw new Error("Enter valid teammate email addresses");
+  const projectUrl = input.projectUrl?.trim() || undefined;
+  if (projectUrl) {
+    try {
+      const url = new URL(projectUrl);
+      if (
+        !["https:", "http:"].includes(url.protocol) ||
+        url.username ||
+        url.password
+      )
+        throw new Error();
+    } catch {
+      throw new Error("Use an http or https project link");
+    }
+  }
+  return { name, description, members, entrantEmails, projectUrl };
+}
+
+export const saveSubmission = mutation({
+  args: {
+    eventId: v.id("events"),
+    name: v.string(),
+    description: v.string(),
+    members: v.array(v.string()),
+    projectUrl: v.optional(v.string()),
+    entrantEmails: v.array(v.string()),
+  },
+  returns: v.id("teams"),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Sign in to submit your project");
+    const user = await ctx.db.get(userId);
+    const email = normalizeEmail(user?.email);
+    if (!email) throw new Error("An account email is required to submit");
+    const { event, teams } = await getEventAndVisibleTeams(ctx, args.eventId);
+    if (
+      codeAndTellPhase({ ...event, status: computeEventStatus(event) }) !==
+      "submissions"
+    )
+      throw new Error("Project submissions are closed");
+    const existing = await ctx.db
+      .query("teams")
+      .withIndex("by_event_and_submitter", (q) =>
+        q.eq("eventId", args.eventId).eq("submittedBy", userId),
+      )
+      .first();
+    if (existing?.hidden)
+      throw new Error("Contact an organizer to update this project");
+    if (!existing && teams.some((team) => team.entrantEmails?.includes(email)))
+      throw new Error(
+        "You are already listed on a project. Ask its submitter or an organizer to update it",
+      );
+    const values = validateSubmission({
+      ...args,
+      entrantEmails: [email, ...args.entrantEmails],
+    });
+    if (
+      teams.some(
+        (team) =>
+          team._id !== existing?._id &&
+          team.name.trim().toLowerCase() === values.name.toLowerCase(),
+      )
+    )
+      throw new Error("A project with this name is already signed up");
+    if (existing) {
+      await ctx.db.patch(existing._id, values);
+      return existing._id;
+    }
+    const participant = await ctx.db
+      .query("participants")
+      .withIndex("by_user_and_event", (q) =>
+        q.eq("userId", userId).eq("eventId", args.eventId),
+      )
+      .first();
+    if (!participant)
+      await ctx.db.insert("participants", {
+        userId,
+        eventId: args.eventId,
+        createdAt: Date.now(),
+      });
+    return await ctx.db.insert("teams", {
+      ...values,
+      eventId: args.eventId,
+      submittedBy: userId,
+      submittedAt: Date.now(),
+    });
   },
 });

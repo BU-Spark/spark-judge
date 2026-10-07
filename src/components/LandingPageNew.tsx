@@ -1,3 +1,5 @@
+import { CodeAndTellVoteView } from "./code-and-tell/CodeAndTellVoteView";
+import { CodeAndTellPreview } from "./code-and-tell/CodeAndTellPreview";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useNavigate } from "react-router-dom";
@@ -183,6 +185,10 @@ export function LandingPage({
     });
   };
 
+  if (focal && getEventMode(focal.event.mode) === "code_and_tell" && params.get("all") !== "1") {
+    if (demoMode) return <CodeAndTellPreview />;
+    return <CodeAndTellHome eventId={focal.event._id as Id<"events">} />;
+  }
   return (
     <>
       <EventStage
@@ -252,4 +258,10 @@ export function LandingPage({
       )}
     </>
   );
+}
+
+function CodeAndTellHome({ eventId }: { eventId: Id<"events"> }) {
+  const event = useQuery(api.events.getEvent, { eventId });
+  if (!event) return <p role="status" className="p-8">Loading event…</p>;
+  return <CodeAndTellVoteView eventId={eventId} event={event} onBack={() => { window.location.href = "/events?all=1"; }} />;
 }

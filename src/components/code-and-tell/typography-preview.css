@@ -1,0 +1,218 @@
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(/fonts/inter-preview-0.woff2) format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(/fonts/space-grotesk-preview-0.woff2) format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+
+
+
+.ct-type-preview[data-typography="inter"] {
+  --ct-type-family: "Inter", sans-serif;
+  --ct-type-display: clamp(36px, 4.1vw, 56px);
+  --ct-type-weight: 600;
+  --ct-type-tracking: -0.035em;
+}
+.ct-type-preview[data-typography="space"] {
+  --ct-type-family: "Space Grotesk", sans-serif;
+  --ct-type-display: clamp(36px, 4.7vw, 64px);
+  --ct-type-weight: 500;
+  --ct-type-tracking: -0.03em;
+}
+.ct-type-preview[data-typography="plex"] {
+  --ct-type-family: "IBM Plex Sans", sans-serif;
+  --ct-type-display: clamp(36px, 4.4vw, 60px);
+  --ct-type-weight: 600;
+  --ct-type-tracking: -0.025em;
+}
+.ct-type-preview:not([data-typography="original"]) .ct-workspace {
+  font-family: var(--ct-type-family);
+  --fi-font-ui: var(--ct-type-family);
+  --ct-type-section: 28px;
+  --ct-type-project: 22px;
+  --ct-type-body: 16px;
+  font-size: var(--ct-type-body);
+  font-optical-sizing: auto;
+}
+.ct-type-preview:not([data-typography="original"])
+  .ct-workspace
+  :is(h1, h2, h3) {
+  font-family: var(--ct-type-family);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+.ct-type-preview:not([data-typography="original"])
+  .ct-workspace
+  .ct-masthead
+  h1 {
+  font-size: var(--ct-type-display);
+  font-weight: var(--ct-type-weight);
+  letter-spacing: var(--ct-type-tracking);
+  line-height: 1.1;
+}
+.ct-type-preview:not([data-typography="original"])
+  .ct-workspace
+  :is(
+    .participation-heading h1,
+    .participation-section-title h2,
+    .ballot-board h2,
+    .ct-stage-message h2,
+    .ct-auth h2,
+    .ct-results h2
+  ) {
+  font-size: var(--ct-type-section);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.ct-type-preview:not([data-typography="original"])
+  .ct-workspace
+  :is(.ballot-project h3, .ct-roster h3, .ct-standings h3) {
+  font-size: var(--ct-type-project);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.015em;
+}
+.ct-type-preview:not([data-typography="original"]) .ct-workspace p {
+  text-wrap: pretty;
+  line-height: 1.6;
+  max-width: 65ch;
+}
+.ct-type-preview:not([data-typography="original"]) .ct-mark {
+  font-weight: 500;
+  font-size: var(--ct-type-display);
+}
+.ct-type-preview:not([data-typography="original"])
+  .ct-workspace
+  :is(.ballot-rank, .ballot-board-heading > span, .ballot-mobile-jump > span) {
+  font-variant-numeric: tabular-nums;
+}
+.ct-type-preview:not([data-typography="original"])
+  .ct-workspace
+  .participation-search
+  input {
+  font-size: 16px;
+}
+.ct-type-choices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px clamp(20px, 5vw, 80px);
+  background: #f6f7f2;
+  border-bottom: 1px solid #ccd7d1;
+  color: #103c3b;
+  font:
+    14px/1.5 "Inter",
+    sans-serif;
+}
+.ct-type-choices > span {
+  margin-right: 8px;
+}
+.ct-type-choices button {
+  text-align: left;
+  padding: 10px 16px;
+  border: 1px solid #a7bab2;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+.ct-type-choices button[aria-pressed="true"] {
+  background: #103c3b;
+  color: white;
+  border-color: #103c3b;
+}
+.ct-type-choices button:hover {
+  border-color: #087f78;
+}
+.ct-type-choices button:focus-visible {
+  outline: 3px solid #087f78;
+  outline-offset: 3px;
+}
+.ct-type-choices strong,
+.ct-type-choices button span {
+  display: block;
+}
+.ct-type-choices button span {
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .ct-type-choices {
+    gap: 8px;
+  }
+  .ct-type-choices > span {
+    flex-basis: 100%;
+  }
+  .ct-type-choices button {
+    flex: 1 1 40%;
+  }
+}
+
+@font-face {
+  font-family: "Chivo";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(/fonts/chivo-preview-0.woff2) format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+.ct-type-preview[data-typography="chivo"] {
+  --ct-type-family: "Chivo", sans-serif;
+  --ct-type-display: clamp(36px, 4.4vw, 60px);
+  --ct-type-weight: 600;
+  --ct-type-tracking: -0.025em;
+}
+@font-face {
+  font-family: "Overpass";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(/fonts/overpass-preview-0.woff2) format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+.ct-type-preview[data-typography="overpass"] {
+  --ct-type-family: "Overpass", sans-serif;
+  --ct-type-display: clamp(36px, 4.4vw, 60px);
+  --ct-type-weight: 600;
+  --ct-type-tracking: -0.025em;
+}
+@font-face {
+  font-family: "Geologica";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(/fonts/geologica-preview-0.woff2) format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+.ct-type-preview[data-typography="geologica"] {
+  --ct-type-family: "Geologica", sans-serif;
+  --ct-type-display: clamp(36px, 4.4vw, 60px);
+  --ct-type-weight: 600;
+  --ct-type-tracking: -0.025em;
+}

@@ -101,6 +101,7 @@ const applicationTables = {
     scoringLockedBy: v.optional(v.id("users")),
     scoringLockReason: v.optional(v.string()),
     // Code & Tell: optional cap on distinct ballots (rankedVotes rows); unset = unlimited
+    codeAndTellPhase: v.optional(v.union(v.literal("submissions"), v.literal("presentations"), v.literal("voting"), v.literal("closed"))),
     codeAndTellMaxBallots: v.optional(v.number()),
     hidden: v.optional(v.boolean()), // Hidden events are visible only to admins.
   }).index("by_status", ["status"]),

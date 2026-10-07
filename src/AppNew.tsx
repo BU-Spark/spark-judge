@@ -1,3 +1,5 @@
+import { Homepage } from "./components/home/Homepage";
+import { HomepagePreview } from "./components/home/HomepagePreview";
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { SignInForm } from "./SignInFormNew";
@@ -12,6 +14,7 @@ import { AdminHomeRoute } from "./features/admin/routes/AdminHomeRoute";
 import { AdminCreateEventRoute } from "./features/admin/routes/AdminCreateEventRoute";
 import { AdminEventRoute } from "./features/admin/routes/AdminEventRoute";
 import { AdminInsightsRoute } from "./features/admin/routes/AdminInsightsRoute";
+import { CodeAndTellPreview } from "./components/code-and-tell/CodeAndTellPreview";
 import { ParticipationPreview } from "./components/participation/ParticipationPreview";
 import { DesignPreview } from "./features/design-preview/DesignPreview";
 import { useState, useEffect } from "react";
@@ -34,13 +37,16 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Homepage />} />
+        <Route path="/homepage-preview" element={<HomepagePreview />} />
+        <Route path="/code-and-tell-preview" element={<CodeAndTellPreview />} />
         <Route
           path="/participation-preview"
           element={<ParticipationPreview />}
         />
         <Route path="/design-preview" element={<DesignPreview />} />
         <Route element={<Layout />}>
-          <Route path="/" element={<LandingPageWrapper />} />
+          <Route path="/events" element={<LandingPageWrapper />} />
           <Route path="/event/:eventId" element={<EventViewWrapper />} />
           {/* Dedicated team page - direct route */}
           <Route

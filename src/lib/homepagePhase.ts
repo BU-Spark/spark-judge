@@ -15,6 +15,7 @@ export type HomepageEvent = {
   startDate: number;
   endDate: number;
   mode?: string | null;
+  codeAndTellPhase?: "submissions" | "presentations" | "voting" | "closed";
 };
 
 export type FocalHomepage = {
@@ -107,7 +108,14 @@ export function selectFocalHomepage<T extends HomepageEvent>(
     live.find((e) => e._id === selectedLiveId) ??
     live[0] ??
     [...events.past]
-      .filter((e) => now >= e.endDate && now - e.endDate < POST_HOLD_MS)
+      .filter(
+        (e) =>
+          (now >= e.endDate ||
+            (e.mode === "code_and_tell" &&
+              e.codeAndTellPhase === "closed" &&
+              now >= e.startDate)) &&
+          now - e.endDate < POST_HOLD_MS,
+      )
       .sort((a, b) => b.endDate - a.endDate)[0] ??
     [...events.upcoming]
       .filter((e) => e.startDate > now)

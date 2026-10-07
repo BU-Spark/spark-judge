@@ -1,3 +1,4 @@
+import { CodeAndTellPreview } from "../code-and-tell/CodeAndTellPreview";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -17,6 +18,7 @@ import { ParticipationFrame } from "./ParticipationChrome";
 export function ParticipationPreview() {
   const [params] = useSearchParams();
   const mode = getEventMode(params.get("mode"));
+  if (mode === "code_and_tell") return <CodeAndTellPreview />;
   return (
     <div className="participation-preview">
       <nav className="participation-preview-nav" aria-label="Scoring previews">

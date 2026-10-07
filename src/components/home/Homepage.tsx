@@ -157,7 +157,7 @@ function EventRowContent({ event }: { event: StageEvent }) {
     <>
       <span className="hp-date">{formatDate(event.startDate)}</span>
       <span className="hp-event-name">
-        {event.name}
+        <span className="hp-event-title">{event.name}</span>
         <span>{getEventDisplayLabel(event.mode)}</span>
       </span>
     </>

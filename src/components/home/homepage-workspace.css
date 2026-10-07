@@ -153,7 +153,7 @@
   flex: 1;
   overflow-wrap: break-word;
 }
-.hp-event-name > span {
+.hp-event-name > span:not(.hp-event-title) {
   display: block;
   color: var(--hp-muted);
   font-size: 14px;
@@ -335,7 +335,7 @@
   font-size: 17px;
   font-weight: 400;
 }
-.hp-archive .hp-event-name > span {
+.hp-archive .hp-event-name > span:not(.hp-event-title) {
   font-size: 12px;
   margin-top: 2px;
 }
@@ -477,7 +477,7 @@
   padding: 20px 0;
   border-top: 1px solid var(--hp-line);
 }
-.hp-upcoming-event summary:hover .hp-event-name {
+.hp-upcoming-event summary:hover .hp-event-title {
   text-decoration: underline;
   text-underline-offset: 3px;
 }

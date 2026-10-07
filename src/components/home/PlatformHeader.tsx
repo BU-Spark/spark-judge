@@ -24,6 +24,7 @@ export function PlatformHeader({ homepage = false }: { homepage?: boolean }) {
     <>
       <header className="hp-header">
         <Link className="hp-brand" to="/">
+          <img className="hp-brand-mark" src="/brand/hackjudge-mark.png" alt="" width={36} height={36} />
           HackJudge
         </Link>
         <div className="hp-header-actions">

@@ -55,18 +55,19 @@
 }
 .hp-brand {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   font-size: 25px;
   font-weight: 600;
   letter-spacing: -0.035em;
   line-height: 1.2;
 }
-.hp-brand-dot {
-  width: 7px;
-  height: 7px;
-  background: #a8ded0;
-  border-radius: 50%;
+.hp-brand-mark {
+  display: block;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 :is(.hp-event-preview, .hp-live-event) .ct-preview-controls {
   display: none;

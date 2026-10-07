@@ -36,8 +36,8 @@ export function HomepagePreview() {
       </div>
       <header className="hp-header">
         <a className="hp-brand" href="/homepage-preview">
+          <img className="hp-brand-mark" src="/brand/hackjudge-mark.png" alt="" width={36} height={36} />
           HackJudge
-          <span className="hp-brand-dot" aria-hidden="true" />
         </a>
         <div className="hp-header-actions">
           <a href="#past-events">Past events</a>

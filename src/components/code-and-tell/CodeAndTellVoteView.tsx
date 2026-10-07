@@ -802,7 +802,7 @@ export function CodeAndTellBallotView({
                       {project.isOwned || !project.isEligible ? (
                         <span className="participation-badge ballot-project-eligibility">
                           {project.isOwned
-                            ? <><span>Your project</span><span className="ballot-eligibility-separator" aria-hidden="true"> · </span><span>Ineligible</span></>
+                            ? "You can’t vote for your own project."
                             : "Ineligible"}
                         </span>
                       ) : rank >= 0 ? (

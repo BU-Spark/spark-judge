@@ -23,6 +23,12 @@ const formatDate = (date: number) =>
     timeZone: "America/New_York",
   }).format(date);
 
+// Public event sites, separate from the judging routes used during live events.
+const eventWebsites: Record<string, string> = {
+  "DS+X 2026": "https://www.dsplusx.com/",
+  "CivicHacks 2027": "https://civic-hacks.com/",
+};
+
 export function Homepage() {
   const events = useQuery(api.events.listEvents);
   const [now, setNow] = useState(Date.now);
@@ -80,10 +86,12 @@ export function Homepage() {
                   <h1>{event.name}</h1>
                 </header>
                 <section className="ct-stage-message">
-                  <p>{event.description}</p>
-                  <Link className="hp-sign-in" to={`/event/${event._id}`}>
-                    Open event <DirectionIcon />
-                  </Link>
+                  <EventDescription event={event} />
+                  {focal.phase === "live" && (
+                    <Link className="hp-sign-in" to={`/event/${event._id}`}>
+                      Open event <DirectionIcon />
+                    </Link>
+                  )}
                 </section>
               </div>
             )
@@ -99,7 +107,7 @@ export function Homepage() {
               </div>
               <div className="hp-event-rows">
                 {upcoming.map((event) => (
-                  <EventRow key={event._id} event={event} />
+                  <UpcomingEventRow key={event._id} event={event} />
                 ))}
               </div>
             </>
@@ -130,15 +138,50 @@ export function Homepage() {
   );
 }
 
-function EventRow({ event }: { event: StageEvent }) {
+function EventRowContent({ event }: { event: StageEvent }) {
   return (
-    <Link className="hp-event-link" to={`/event/${event._id}`}>
+    <>
       <span className="hp-date">{formatDate(event.startDate)}</span>
       <span className="hp-event-name">
         {event.name}
         <span>{getEventDisplayLabel(event.mode)}</span>
       </span>
-      <DirectionIcon />
-    </Link>
+    </>
+  );
+}
+
+function EventRow({ event }: { event: StageEvent }) {
+  return (
+    <div className="hp-event-row">
+      <EventRowContent event={event} />
+    </div>
+  );
+}
+
+function UpcomingEventRow({ event }: { event: StageEvent }) {
+  return (
+    <details className="hp-upcoming-event">
+      <summary>
+        <EventRowContent event={event} />
+        <DirectionIcon direction="down" />
+      </summary>
+      <div className="hp-event-description">
+        <EventDescription event={event} />
+      </div>
+    </details>
+  );
+}
+
+function EventDescription({ event }: { event: StageEvent }) {
+  const website = eventWebsites[event.name];
+  return (
+    <>
+      <p>{event.description?.trim() || "More details coming soon."}</p>
+      {website && (
+        <a className="hp-event-website" href={website}>
+          Visit {event.name} website <DirectionIcon />
+        </a>
+      )}
+    </>
   );
 }

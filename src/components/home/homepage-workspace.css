@@ -383,18 +383,18 @@
 .hp-loading {
   padding: 48px clamp(20px, 5vw, 80px);
 }
-.hp-event-link {
+.hp-event-row {
   display: flex;
   align-items: center;
   gap: 32px;
   padding: 20px 0;
   border-top: 1px solid var(--hp-line);
 }
-.hp-event-link:hover .hp-event-name {
+.hp-upcoming-event summary:hover .hp-event-name {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.hp-archive .hp-event-link {
+.hp-archive .hp-event-row {
   padding: 16px 0;
   gap: 16px;
   align-items: start;
@@ -403,11 +403,41 @@
   min-height: 0;
 }
 @media (max-width: 760px) {
-  .hp-event-link {
+  .hp-event-row {
     flex-wrap: wrap;
     gap: 8px 16px;
   }
-  .hp-archive .hp-event-link {
+  .hp-archive .hp-event-row {
     flex-wrap: nowrap;
+  }
+}
+
+.hp-event-description {
+  padding: 0 0 28px 152px;
+  color: var(--hp-muted);
+}
+.hp-event-description p {
+  max-width: 65ch;
+  margin: 0 0 12px;
+  white-space: pre-line;
+}
+.hp-event-website {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--hp-ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.hp-event-website:hover {
+  color: #087f78;
+}
+.hp-upcoming-event[open] > summary > svg {
+  rotate: 180deg;
+}
+@media (max-width: 760px) {
+  .hp-event-description {
+    padding-left: 0;
   }
 }

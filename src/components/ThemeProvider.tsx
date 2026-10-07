@@ -14,7 +14,6 @@ export function ThemeProvider({ children, storageKey = "vite-ui-theme", ...props
     const root = document.documentElement;
     root.classList.remove("dark");
     root.classList.add("light");
-    root.style.backgroundColor = "#ddd9d0";
     localStorage.setItem(storageKey, "light");
   }, [storageKey]);
   const value: ThemeProviderState = { theme: "light", setTheme: () => undefined };

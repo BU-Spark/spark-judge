@@ -512,12 +512,47 @@
 }
 .ct-workspace .ballot-project-actions > button { min-height: 44px; padding: 8px 12px; font-size: 13px; }
 @media (max-width: 760px) {
-  .ct-workspace .ballot-project { grid-template-columns: 1fr; }
-  .ct-workspace .ballot-project-actions {
+  .ct-workspace .ballot-project {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    padding: 12px 0;
+  }
+  .ct-workspace .ballot-project-heading {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+  .ct-workspace .ballot-project .ballot-members {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-top: 3px;
+  }
+  .ct-workspace .ballot-project > .project-description {
     grid-column: 1;
-    grid-row: auto;
-    flex-direction: row;
-    margin-top: 8px;
+    grid-row: 3;
+    align-self: center;
+  }
+  .ct-workspace .ballot-project .project-description > summary {
+    min-height: 44px;
+  }
+  .ct-workspace .ballot-project-actions {
+    grid-column: 2;
+    grid-row: 3;
+    align-items: flex-end;
+    max-width: 150px;
+    gap: 4px;
+    margin-top: 0;
+  }
+  .ct-workspace .ballot-project-actions > .participation-badge {
+    white-space: normal;
+  }
+  /* Expanded copy gets the full row; keep the ballot action clear of it. */
+  .ct-workspace .ballot-project > .project-description[open] {
+    grid-column: 1 / -1;
+  }
+  .ct-workspace .ballot-project:has(> .project-description[open]) .ballot-project-actions {
+    grid-row: 4;
+    grid-column: 1 / -1;
+    justify-self: end;
   }
   .ct-workspace .ballot-projects { max-height: 60svh; }
 }

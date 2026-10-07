@@ -80,10 +80,14 @@
   --fi-zone-y: clamp(1.5rem, 3.5vw, 2.5rem);
 }
 
-/* The world sits on the workbench: desk under everything, chassis units on top.
-   (index.css loads after legacy.css, so this wins the body background tie.) */
+/* Let the page canvas and browser chrome continue the header color. The app
+   keeps its light controls and each surface keeps its own background. */
+html,
 body {
-  background-color: var(--fi-desk);
+  background-color: var(--browser-chrome, #103c3b);
+}
+#root {
+  color-scheme: light;
 }
 
 ::selection {

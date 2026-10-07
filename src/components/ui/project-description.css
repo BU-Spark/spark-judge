@@ -13,6 +13,8 @@
   font-weight: 500;
   cursor: pointer;
   list-style: none;
+}
+.project-description > summary > span {
   text-decoration: underline;
   text-underline-offset: 3px;
 }

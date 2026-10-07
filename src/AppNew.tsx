@@ -17,7 +17,8 @@ import { AdminInsightsRoute } from "./features/admin/routes/AdminInsightsRoute";
 import { CodeAndTellPreview } from "./components/code-and-tell/CodeAndTellPreview";
 import { ParticipationPreview } from "./components/participation/ParticipationPreview";
 import { DesignPreview } from "./features/design-preview/DesignPreview";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
+import { syncBrowserChrome } from "./lib/browserChrome";
 import { Id } from "../convex/_generated/dataModel";
 import { LoadingState } from "./components/ui/LoadingState";
 import { BrandLogo } from "./components/ui/BrandLogo";
@@ -36,6 +37,7 @@ import {
 export default function App() {
   return (
     <BrowserRouter>
+      <BrowserChrome />
       <Routes>
         <Route path="/" element={<Homepage />} />
         <Route path="/homepage-preview" element={<HomepagePreview />} />
@@ -71,6 +73,12 @@ export default function App() {
       </Routes>
     </BrowserRouter>
   );
+}
+
+function BrowserChrome() {
+  const { pathname } = useLocation();
+  useLayoutEffect(() => syncBrowserChrome(pathname), [pathname]);
+  return null;
 }
 
 /**

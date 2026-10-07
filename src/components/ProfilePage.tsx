@@ -1,3 +1,4 @@
+import { eventWebsites } from "../lib/eventWebsites";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
@@ -133,12 +134,17 @@ export function ProfilePageView({
                     {formatDateTime(event.endDate)}
                   </p>
                 </div>
-                <button
-                  className="pp-secondary"
-                  onClick={() => onSelectEvent(event._id)}
-                >
-                  View details <DirectionIcon />
-                </button>
+                <details className="pp-event-details">
+                  <summary>Event details <DirectionIcon direction="down" /></summary>
+                  <p>{event.description?.trim() || "More details coming soon."}</p>
+                  {eventWebsites[event.name] && (
+                    <a href={eventWebsites[event.name]}>
+                      {eventWebsites[event.name].startsWith("https://www.eventbrite.com/")
+                        ? "Register on Eventbrite"
+                        : `Visit ${event.name} website`} <DirectionIcon />
+                    </a>
+                  )}
+                </details>
               </li>
             ))}
           </ul>
@@ -179,12 +185,6 @@ export function ProfilePageView({
                       {skippedCount > 0 && ` · ${skippedCount} skipped`}
                     </p>
                   </div>
-                  <button
-                    className="pp-secondary"
-                    onClick={() => onSelectEvent(event._id)}
-                  >
-                    View results <DirectionIcon />
-                  </button>
                 </li>
               );
             })}

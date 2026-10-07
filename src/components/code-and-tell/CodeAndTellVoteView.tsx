@@ -410,7 +410,7 @@ export function CodeAndTellBallotView({
   const filteredProjects = useMemo(() => {
     const query = deferredSearchQuery.trim().toLowerCase();
     const projects = votingContext?.projects || [];
-    if (!query) return projects;
+    if (projects.length < 10 || !query) return projects;
     return projects.filter((project) => {
       return (
         project.name.toLowerCase().includes(query) ||
@@ -732,7 +732,7 @@ export function CodeAndTellBallotView({
             <h2 id="ballot-projects-heading">Find your favorites</h2>
             <span>{filteredProjects.length} projects</span>
           </div>
-          <label className="participation-search">
+          {votingContext.projects.length >= 10 && <label className="participation-search">
             <span>Search projects</span>
             <input
               type="search"
@@ -740,7 +740,7 @@ export function CodeAndTellBallotView({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Project, description, or member"
             />
-          </label>
+          </label>}
           {votingContext.eligibleProjectCount === 0 ? (
             <p className="participation-empty">
               You do not have any eligible projects to rank in this event.

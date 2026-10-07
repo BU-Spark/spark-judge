@@ -306,7 +306,7 @@ describe("CodeAndTellVoteView", () => {
   });
 
   it.each([null, { _id: "user-1", email: "voter@example.com" }])(
-    "keeps projects searchable and ballot disabled during presentations for %s",
+    "keeps small project lists visible and ballot disabled during presentations for %s",
     (user) => {
       queryResults.set("auth:loggedInUser", user);
       render(
@@ -334,14 +334,36 @@ describe("CodeAndTellVoteView", () => {
       }
       fireEvent.click(addButtons[0]);
       expect(saveBallotMock).not.toHaveBeenCalled();
-      fireEvent.change(
-        screen.getByRole("searchbox", { name: "Search projects" }),
-        { target: { value: "compiler" } },
-      );
+      expect(screen.queryByRole("searchbox", { name: "Search projects" })).not.toBeInTheDocument();
       expect(screen.getByText("Project Two")).toBeInTheDocument();
-      expect(screen.queryByText("Project Three")).not.toBeInTheDocument();
+      expect(screen.getByText("Project Three")).toBeInTheDocument();
     },
   );
+  it.each([9, 10])("shows search only with at least 10 projects, given %s", (count) => {
+    queryResults.set("auth:loggedInUser", null);
+    const teams = Array.from({ length: count }, (_, index) => ({
+      _id: `team-${index}` as Id<"teams">,
+      name: `Project ${index}`,
+      description: `Description ${index}`,
+    }));
+    render(
+      <CodeAndTellVoteView
+        eventId={eventId}
+        event={{ ...baseEvent, teams, codeAndTellPhase: "presentations" }}
+        onBack={vi.fn()}
+      />,
+    );
+    const search = screen.queryByRole("searchbox", { name: "Search projects" });
+    if (count < 10) {
+      expect(search).not.toBeInTheDocument();
+    } else {
+      expect(search).toBeInTheDocument();
+      fireEvent.change(search!, { target: { value: "Project 9" } });
+      expect(screen.getByText("Project 9")).toBeInTheDocument();
+      expect(screen.queryByText("Project 0")).not.toBeInTheDocument();
+      expect(search).toBeInTheDocument();
+    }
+  });
   it("shows the saved ballot in submitted order after voting closes", () => {
     queryResults.set("auth:loggedInUser", {
       _id: "user-1",

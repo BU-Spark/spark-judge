@@ -1,5 +1,7 @@
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { EMAIL_PATTERN } from "./normalize";
+import { CODE_AND_TELL_PHASE_VALIDATOR } from "./validators";
 
 /** Retain seeded examples for admin testing without advertising invented events. */
 export const hideSeedExamples = internalMutation({
@@ -27,10 +29,7 @@ export const upsertEvent = internalMutation({
     mode: v.union(v.literal("code_and_tell"), v.literal("hackathon")),
     startDate: v.number(),
     endDate: v.number(),
-    codeAndTellPhase: v.optional(v.union(
-      v.literal("submissions"), v.literal("presentations"),
-      v.literal("voting"), v.literal("closed"),
-    )),
+    codeAndTellPhase: v.optional(CODE_AND_TELL_PHASE_VALIDATOR),
     projects: v.optional(
       v.array(
         v.object({
@@ -102,7 +101,7 @@ export const upsertEvent = internalMutation({
         ),
       ];
       if (
-        entrantEmails.some((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        entrantEmails.some((email) => !EMAIL_PATTERN.test(email))
       )
         throw new Error("Invalid entrant email");
       const match = existingTeams.find(

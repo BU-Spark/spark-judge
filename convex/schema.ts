@@ -1,12 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
-
-const EVENT_MODE_VALIDATOR = v.union(
-  v.literal("hackathon"),
-  v.literal("demo_day"),
-  v.literal("code_and_tell"),
-);
+import { EVENT_MODE_VALIDATOR, CODE_AND_TELL_PHASE_VALIDATOR } from "./validators";
 
 const APPRECIATION_REVIEW_STATUS_VALIDATOR = v.union(
   v.literal("accepted"),
@@ -101,7 +96,7 @@ const applicationTables = {
     scoringLockedBy: v.optional(v.id("users")),
     scoringLockReason: v.optional(v.string()),
     // Code & Tell: optional cap on distinct ballots (rankedVotes rows); unset = unlimited
-    codeAndTellPhase: v.optional(v.union(v.literal("submissions"), v.literal("presentations"), v.literal("voting"), v.literal("closed"))),
+    codeAndTellPhase: v.optional(CODE_AND_TELL_PHASE_VALIDATOR),
     codeAndTellMaxBallots: v.optional(v.number()),
     hidden: v.optional(v.boolean()), // Hidden events are visible only to admins.
   }).index("by_status", ["status"]),

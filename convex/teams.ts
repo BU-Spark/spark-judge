@@ -13,6 +13,7 @@ import {
   isAdmin,
   requireAdmin,
   shapeTeamForPublic,
+  requireAuth,
 } from "./helpers";
 import {
   getEventMode,
@@ -20,23 +21,12 @@ import {
   isDemoDayMode,
   isHackathonMode,
 } from "./eventModes";
-
-function normalizeOptionalString(value?: string) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-}
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { EMAIL_PATTERN, normalizeEmailList, normalizeOptionalString } from "./normalize";
+import { EVENT_MODE_VALIDATOR } from "./validators";
 
 function normalizeEntrantEmails(values?: string[]) {
   if (!values) return undefined;
-  const deduped = Array.from(
-    new Set(
-      values
-        .map((value) => value.trim().toLowerCase())
-        .filter(Boolean)
-    )
-  );
+  const deduped = normalizeEmailList(values);
   return deduped.length > 0 ? deduped : undefined;
 }
 
@@ -588,8 +578,7 @@ export const saveMyProject = mutation({
   },
   returns: v.object({ teamId: v.id("teams"), created: v.boolean() }),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await requireAuth(ctx);
 
     let teamId = args.teamId;
     if (!teamId) {
@@ -650,8 +639,7 @@ export const generateUploadUrl = mutation({
   args: { eventId: v.id("events") },
   returns: v.string(),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    await requireAuth(ctx);
 
     const event = await ctx.db.get(args.eventId);
     if (!event || !(await canAccessEvent(ctx, event))) {
@@ -806,11 +794,7 @@ export const getTeamById = query({
         _id: v.id("events"),
         name: v.string(),
         mode: v.optional(
-          v.union(
-            v.literal("hackathon"),
-            v.literal("demo_day"),
-            v.literal("code_and_tell")
-          )
+          EVENT_MODE_VALIDATOR
         ),
       }),
     })

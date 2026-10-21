@@ -7,10 +7,13 @@ import {
   computeEventStatus,
   isAdmin,
   requireAdmin,
+  requireAuth,
 } from "./helpers";
 import { isCodeAndTellMode } from "./eventModes";
 
 import { codeAndTellPhase } from "./codeAndTellPhase";
+import { normalizeEmail } from "./normalize";
+import { CODE_AND_TELL_PHASE_VALIDATOR } from "./validators";
 
 export const MAX_RANKED_CHOICES = 5;
 
@@ -30,11 +33,6 @@ export function shapeVotingProject(
     isOwned,
     isEligible,
   };
-}
-
-function normalizeEmail(value?: string | null) {
-  const trimmed = value?.trim().toLowerCase();
-  return trimmed || null;
 }
 
 function getVisibleTeams(eventTeams: Doc<"teams">[]) {
@@ -344,8 +342,7 @@ export const saveBallot = mutation({
   },
   returns: v.id("rankedVotes"),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await requireAuth(ctx);
 
     const user = await ctx.db.get(userId);
     const userEmail = normalizeEmail(user?.email);
@@ -566,12 +563,7 @@ export const getPublicResults = query({
 export const setPhase = mutation({
   args: {
     eventId: v.id("events"),
-    phase: v.union(
-      v.literal("submissions"),
-      v.literal("presentations"),
-      v.literal("voting"),
-      v.literal("closed"),
-    ),
+    phase: CODE_AND_TELL_PHASE_VALIDATOR,
   },
   returns: v.null(),
   handler: async (ctx, { eventId, phase }) => {

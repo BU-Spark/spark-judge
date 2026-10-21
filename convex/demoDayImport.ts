@@ -9,6 +9,7 @@ import { requireAdmin } from "./helpers";
 import { internal } from "./_generated/api";
 import { isDemoDayMode } from "./eventModes";
 import type { Doc, Id } from "./_generated/dataModel";
+import { normalizeOptionalString } from "./normalize";
 
 type CsvRow = Record<string, string>;
 type AirtableRecord = { id: string; fields: Record<string, unknown> };
@@ -271,11 +272,6 @@ export function parseCsv(text: string): CsvRow[] {
     });
     return rowObj;
   });
-}
-
-function normalizeOptionalString(value?: string) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
 }
 
 function normalizeAirtableCell(value: unknown): string {

@@ -7,6 +7,7 @@ import {
   isAdmin,
   isJudgeVerifiedForEvent,
   requireAdmin,
+  requireAuth,
 } from "./helpers";
 import { shapeTeamForPublic } from "./helpers";
 import { Doc, Id } from "./_generated/dataModel";
@@ -16,6 +17,7 @@ import {
   isAutomaticPrize,
   isPrizeEligibleForTrack,
 } from "../shared/prizeEntries";
+import { normalizeOptionalString } from "./normalize";
 
 const PRIZE_TYPE = v.union(
   v.literal("general"),
@@ -57,11 +59,6 @@ async function getHackathonEvent(
     throw new Error("Prize workflows are only supported for hackathon events");
   }
   return event;
-}
-
-function normalizeOptionalString(value?: string) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
 }
 
 function isTeamEligibleForPrize(team: Doc<"teams">, prize: Doc<"prizes">) {
@@ -389,8 +386,7 @@ export const setMyTeamPrizeSubmissions = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await requireAuth(ctx);
 
     const event = await getHackathonEvent(ctx, args.eventId);
     if (computeEventStatus(event) === "past") {

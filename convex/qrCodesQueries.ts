@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalQuery } from "./_generated/server";
 import { isDemoDayMode } from "./eventModes";
 import { canAccessEvent, isAdmin, requireAdmin } from "./helpers";
+import { EVENT_MODE_VALIDATOR } from "./validators";
 
 // Internal queries for fetching data (used by QR code actions)
 
@@ -14,11 +15,7 @@ export const getAuthorizedTeamQrContext = internalQuery({
         _id: v.id("events"),
         name: v.string(),
         mode: v.optional(
-          v.union(
-            v.literal("hackathon"),
-            v.literal("demo_day"),
-            v.literal("code_and_tell"),
-          ),
+          EVENT_MODE_VALIDATOR,
         ),
       }),
       team: v.object({
@@ -72,11 +69,7 @@ export const getEventInternal = internalQuery({
       _id: v.id("events"),
       name: v.string(),
       mode: v.optional(
-        v.union(
-          v.literal("hackathon"),
-          v.literal("demo_day"),
-          v.literal("code_and_tell"),
-        ),
+        EVENT_MODE_VALIDATOR,
       ),
     }),
   ),

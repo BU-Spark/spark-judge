@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { isHackathonMode } from "./eventModes";
-import { canAccessEvent, isAdmin, isJudgeVerifiedForEvent } from "./helpers";
+import { canAccessEvent, isAdmin, isJudgeVerifiedForEvent, requireAuth } from "./helpers";
 
 export function assertCanRemoveTeamAssignment(hasSubmittedScore: boolean) {
   if (hasSubmittedScore) {
@@ -17,8 +17,7 @@ export const addTeamToAssignment = mutation({
   },
   returns: v.id("judgeAssignments"),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await requireAuth(ctx);
 
     const judge = await ctx.db
       .query("judges")
@@ -79,8 +78,7 @@ export const addMultipleTeamsToAssignment = mutation({
   },
   returns: v.number(),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await requireAuth(ctx);
 
     const judge = await ctx.db
       .query("judges")
@@ -147,8 +145,7 @@ export const removeTeamFromAssignment = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await requireAuth(ctx);
 
     const judge = await ctx.db
       .query("judges")

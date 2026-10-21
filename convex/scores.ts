@@ -7,6 +7,7 @@ import {
   isAdmin,
   isJudgeVerifiedForEvent,
   requireAdmin,
+  requireAuth,
 } from "./helpers";
 import { isDemoDayMode, isHackathonMode } from "./eventModes";
 import { assertResultsReady } from "./resultPublication";
@@ -152,8 +153,7 @@ export const submitBatchScores = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await requireAuth(ctx);
 
     const judge = await ctx.db
       .query("judges")

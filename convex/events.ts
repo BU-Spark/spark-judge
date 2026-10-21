@@ -11,6 +11,7 @@ import {
   isJudgeVerifiedForEvent,
   shapeEventForViewer,
   shouldInvalidateJudgeCodeState,
+  requireAuth,
 } from "./helpers";
 import { Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
@@ -21,12 +22,7 @@ import {
   isHackathonMode,
 } from "./eventModes";
 import { insertInitialPrizes, PRIZE_INPUT_VALIDATOR } from "./prizes";
-
-const EVENT_MODE_VALIDATOR = v.union(
-  v.literal("hackathon"),
-  v.literal("demo_day"),
-  v.literal("code_and_tell"),
-);
+import { EVENT_MODE_VALIDATOR } from "./validators";
 
 async function invalidateJudgeCodeState(
   ctx: MutationCtx,
@@ -188,8 +184,7 @@ export const joinAsJudge = mutation({
   args: { eventId: v.id("events") },
   returns: v.id("judges"),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await requireAuth(ctx);
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
@@ -237,8 +232,7 @@ export const verifyJudgeCodeAndStartJudging = mutation({
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await requireAuth(ctx);
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
@@ -1236,13 +1230,7 @@ export const setScoringLock = mutation({
 export const isUserAdmin = query({
   args: {},
   returns: v.boolean(),
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return false;
-
-    const user = await ctx.db.get(userId);
-    return user?.isAdmin === true;
-  },
+  handler: async (ctx) => await isAdmin(ctx),
 });
 
 export const getAdminInsights = query({

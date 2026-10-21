@@ -1,9 +1,5 @@
 /* Transitional pre-migration stylesheet (teletext era).
    Deleted as Field Instrument phases complete — do not add new rules here. */
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 :root {
   --logo-color: #0a4942;
   --background: #fafafa;

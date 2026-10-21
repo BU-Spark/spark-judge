@@ -1,7 +1,5 @@
 @import "./components/public-surfaces.fi.css";
 @import "./styles/platform.css";
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -65,8 +63,8 @@
   --fi-select-dim: #7d9198;
   --fi-scope-grid: #1b262c;
 
-  --fi-font-ui: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
-  --fi-font-mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+  --fi-font-ui: "IBM Plex Sans", "Helvetica Neue", system-ui, sans-serif;
+  --fi-font-mono: "SFMono-Regular", ui-monospace, monospace;
 
   --fi-r-pip: 2px;
   --fi-r-xs: 3px;

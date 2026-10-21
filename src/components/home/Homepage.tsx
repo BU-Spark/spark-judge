@@ -1,12 +1,12 @@
 import { eventWebsites } from "../../lib/eventWebsites";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { CodeAndTellVoteTest } from "@/devRoutes";
 import { useQuery } from "convex/react";
 import { Link } from "react-router-dom";
 import { PlatformToaster } from "../ui/PlatformToaster";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { CodeAndTellVoteView } from "../code-and-tell/CodeAndTellVoteView";
-import { CodeAndTellVoteTest } from "../code-and-tell/CodeAndTellVoteTest";
 import { DirectionIcon } from "../participation/ParticipationChrome";
 import { PlatformHeader } from "./PlatformHeader";
 import { EventCard, EventCardEmpty, EventCardSkeleton, UpcomingEventCard } from "./EventCard";
@@ -33,7 +33,7 @@ const formatDate = (date: number) =>
 
 
 export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
-  const VotingView = voteTest ? CodeAndTellVoteTest : CodeAndTellVoteView;
+  const VotingView = voteTest && CodeAndTellVoteTest ? CodeAndTellVoteTest : CodeAndTellVoteView;
   const homepageRef = useRef<HTMLDivElement>(null);
   const events = useQuery(api.events.listEvents);
   const [now, setNow] = useState(Date.now);
@@ -90,17 +90,19 @@ export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
             <EventCardSkeleton />
           ) : event && focal ? (
             focal.event.mode === "code_and_tell" ? (
-              <VotingView
-                key={focal.event._id}
-                contextLabel={voteTest ? "Voting test · Nothing is saved" : "Current event"}
-                eventId={focal.event._id as Id<"events">}
-                event={event}
-                onBack={() =>
-                  document
-                    .getElementById("events")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-              />
+              <Suspense fallback={<EventCardSkeleton />}>
+                <VotingView
+                  key={focal.event._id}
+                  contextLabel={voteTest ? "Voting test · Nothing is saved" : "Current event"}
+                  eventId={focal.event._id as Id<"events">}
+                  event={event}
+                  onBack={() =>
+                    document
+                      .getElementById("events")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                />
+              </Suspense>
             ) : (
               <EventCard
                 event={event}

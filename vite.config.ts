@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vite.dev/config/
-export default defineConfig(() => ({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     {
@@ -36,8 +36,12 @@ export default defineConfig(() => ({
     },
   ].filter(Boolean),
   resolve: {
-    alias: {
-      "@": path.resolve(rootDir, "./src"),
-    },
+    alias: [
+      // Design review routes never ship: production builds swap in a stub.
+      ...(command === "build"
+        ? [{ find: /^@\/devRoutes$/, replacement: path.resolve(rootDir, "./src/devRoutes.prod.ts") }]
+        : []),
+      { find: "@", replacement: path.resolve(rootDir, "./src") },
+    ],
   },
 }));

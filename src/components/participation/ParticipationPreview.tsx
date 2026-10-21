@@ -14,6 +14,7 @@ import {
 } from "../demo-day/DemoDayBrowse";
 import { ScoringSession } from "../ScoringWizard";
 import { ParticipationFrame } from "./ParticipationChrome";
+import "./participation-preview.css";
 
 export function ParticipationPreview() {
   const [params] = useSearchParams();

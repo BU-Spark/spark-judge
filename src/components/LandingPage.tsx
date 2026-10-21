@@ -1,6 +1,6 @@
 import { CodeAndTellVoteView } from "./code-and-tell/CodeAndTellVoteView";
-import { CodeAndTellPreview } from "./code-and-tell/CodeAndTellPreview";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { CodeAndTellPreview } from "@/devRoutes";
 import { useMutation, useQuery } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -30,7 +30,8 @@ export function LandingPage({
 }) {
   const navigate = useNavigate();
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
-  const demoMode = params.get("demo") === "1";
+  // Sample fixtures are a development-only review aid.
+  const demoMode = import.meta.env.DEV && params.get("demo") === "1";
   const preview = useMemo(() => getStagePreview(params), [params]);
   const events = useQuery(api.events.listEvents, demoMode ? "skip" : undefined);
   const isAdmin = useQuery(
@@ -186,7 +187,7 @@ export function LandingPage({
   };
 
   if (focal && getEventMode(focal.event.mode) === "code_and_tell" && params.get("all") !== "1") {
-    if (demoMode) return <CodeAndTellPreview />;
+    if (demoMode && CodeAndTellPreview) return <Suspense fallback={null}><CodeAndTellPreview /></Suspense>;
     return <CodeAndTellHome eventId={focal.event._id as Id<"events">} />;
   }
   return (

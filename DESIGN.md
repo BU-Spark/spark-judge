@@ -96,7 +96,7 @@ The appreciation panel displays the per-project limit and remaining event allowa
 
 ## Review routes
 
-These routes ship in production builds; only `/admin-results-preview` is limited to development.
+These routes exist only in development builds; production builds replace `src/devRoutes.tsx` with an empty stub.
 
 - `/project-preview?mode=hackathon`, `code_and_tell`, or `demo_day` renders the real project presentation with sample data. Demo Day preview interactions are local only.
 - `/participation-preview?mode=hackathon|demo_day|code_and_tell` exercises sample workflows.

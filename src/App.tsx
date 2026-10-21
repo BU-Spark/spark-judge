@@ -1,6 +1,4 @@
 import { Homepage } from "./components/home/Homepage";
-import { HomepagePreview } from "./components/home/HomepagePreview";
-import { EventCardPreview } from "./components/home/EventCardPreview";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { PlatformHeader } from "./components/home/PlatformHeader";
@@ -14,15 +12,21 @@ import { AdminHomeRoute } from "./features/admin/routes/AdminHomeRoute";
 import { AdminCreateEventRoute } from "./features/admin/routes/AdminCreateEventRoute";
 import { AdminEventRoute } from "./features/admin/routes/AdminEventRoute";
 import { AdminInsightsRoute } from "./features/admin/routes/AdminInsightsRoute";
-import { CodeAndTellPreview } from "./components/code-and-tell/CodeAndTellPreview";
-import { ParticipationPreview } from "./components/participation/ParticipationPreview";
-import { DesignPreview } from "./features/design-preview/DesignPreview";
-import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
+import { Suspense, useEffect, useLayoutEffect } from "react";
 import { syncBrowserChrome } from "./lib/browserChrome";
 import { Id } from "../convex/_generated/dataModel";
 import { LoadingState } from "./components/ui/LoadingState";
-import { ProjectPreview } from "./components/ProjectPreview";
 import { RouteBoundary, UnavailablePage, isConvexIdShape } from "./components/RouteFallbacks";
+import {
+  CodeAndTellPreview,
+  CodeAndTellVoteTest,
+  DesignPreview,
+  EventCardPreview,
+  HomepagePreview,
+  ParticipationPreview,
+  ProjectPreview,
+  ResultsPreview,
+} from "@/devRoutes";
 import {
   BrowserRouter,
   Routes,
@@ -34,7 +38,9 @@ import {
   Navigate,
 } from "react-router-dom";
 
-const ResultsPreview = import.meta.env.DEV ? lazy(() => import("./features/admin/ResultsPreview")) : null;
+function PreviewSuspense({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<LoadingState label="Loading preview..." />}>{children}</Suspense>;
+}
 
 export default function App() {
   return (
@@ -42,19 +48,16 @@ export default function App() {
       <BrowserChrome />
       <Routes>
         <Route path="/" element={<RouteBoundary section="home"><Homepage /></RouteBoundary>} />
-        <Route path="/vote-test" element={<RouteBoundary section="vote-test"><Homepage voteTest /></RouteBoundary>} />
-        <Route path="/homepage-preview" element={<HomepagePreview />} />
-        <Route path="/code-and-tell-preview" element={<CodeAndTellPreview />} />
-        <Route
-          path="/participation-preview"
-          element={<ParticipationPreview />}
-        />
-        <Route path="/design-preview" element={<DesignPreview />} />
-        <Route path="/event-card-preview" element={<EventCardPreview />} />
+        {CodeAndTellVoteTest && <Route path="/vote-test" element={<RouteBoundary section="vote-test"><Homepage voteTest /></RouteBoundary>} />}
+        {HomepagePreview && <Route path="/homepage-preview" element={<PreviewSuspense><HomepagePreview /></PreviewSuspense>} />}
+        {CodeAndTellPreview && <Route path="/code-and-tell-preview" element={<PreviewSuspense><CodeAndTellPreview /></PreviewSuspense>} />}
+        {ParticipationPreview && <Route path="/participation-preview" element={<PreviewSuspense><ParticipationPreview /></PreviewSuspense>} />}
+        {DesignPreview && <Route path="/design-preview" element={<PreviewSuspense><DesignPreview /></PreviewSuspense>} />}
+        {EventCardPreview && <Route path="/event-card-preview" element={<PreviewSuspense><EventCardPreview /></PreviewSuspense>} />}
         <Route path="/profile" element={<ProfilePageWrapper />} />
         <Route element={<Layout />}>
-          {ResultsPreview && <Route path="/admin-results-preview" element={<Suspense fallback={<LoadingState label="Loading preview..." />}><ResultsPreview /></Suspense>} />}
-          <Route path="/project-preview" element={<ProjectPreview />} />
+          {ResultsPreview && <Route path="/admin-results-preview" element={<PreviewSuspense><ResultsPreview /></PreviewSuspense>} />}
+          {ProjectPreview && <Route path="/project-preview" element={<PreviewSuspense><ProjectPreview /></PreviewSuspense>} />}
           <Route path="/events" element={<LandingPageWrapper />} />
           <Route path="/event/:eventId" element={<EventViewWrapper />} />
           {/* Dedicated team page - direct route */}

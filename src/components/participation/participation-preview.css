@@ -1,0 +1,63 @@
+/* Styles for the development-only /participation-preview route. */
+.participation-preview-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem 2rem;
+  padding: 1rem clamp(1.25rem, 4vw, 4.5rem);
+  background: var(--platform-ink);
+  color: var(--platform-paper);
+  font-family: var(--platform-font);
+}
+.preview-brand {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+.participation-preview-nav > span {
+  font-size: 0.8rem;
+}
+.participation-preview-nav > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.participation-preview-nav > div a {
+  padding: 0.6rem 0.8rem;
+  min-height: 44px;
+  border: 1px solid var(--platform-line);
+  border-radius: 5px;
+  font-size: 0.85rem;
+}
+.participation-preview-nav a[aria-current="page"] {
+  background: var(--platform-mint);
+  color: var(--platform-ink);
+}
+.participation-preview-nav :focus-visible {
+  outline: 3px solid var(--platform-mint);
+  outline-offset: 4px;
+}
+.participation-preview .fi-wiz.participation {
+  position: relative;
+  height: calc(100svh - 78px);
+  min-height: 650px;
+  z-index: auto;
+}
+.preview-receipt h1 {
+  font-size: 2.5rem;
+  font-weight: 600;
+}
+.preview-receipt p {
+  margin-block: 1rem 2rem;
+}
+@media (max-width: 700px) {
+  .participation-preview .fi-wiz.participation {
+    height: auto;
+    min-height: calc(100svh - 170px);
+  }
+  .participation-preview .fi-wiz-rail--foot {
+    position: sticky;
+    bottom: 0;
+  }
+}

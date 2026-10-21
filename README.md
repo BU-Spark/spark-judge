@@ -176,10 +176,12 @@ QR generation resolves the public frontend URL from `SITE_URL`,
 | `/admin/events/new` | Event creation |
 | `/admin/events/:eventId` | Event details, teams, prizes, scores, and results |
 
-Design review routes also ship in production builds: `/vote-test` (local-only
-ballots), `/homepage-preview`, `/participation-preview`, `/code-and-tell-preview`, `/design-preview`,
-`/event-card-preview`, and `/project-preview`. `/admin-results-preview` exists
-only in development builds.
+Design review routes exist only in development builds (`npm run dev`):
+`/vote-test` (local-only ballots), `/homepage-preview`, `/participation-preview`,
+`/code-and-tell-preview`, `/design-preview`, `/event-card-preview`,
+`/project-preview`, `/admin-results-preview`, and `/events?demo=1`. They are
+registered in `src/devRoutes.tsx`, which production builds replace with
+`src/devRoutes.prod.ts`.
 
 ## Data imports
 

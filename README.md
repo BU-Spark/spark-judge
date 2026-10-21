@@ -39,12 +39,8 @@ compatibility.
 - [Convex](https://www.convex.dev/) for data, server functions, HTTP routes,
   scheduled work, and authentication
 - [React Router](https://reactrouter.com/) for application and admin routing
-- [Chakra UI](https://chakra-ui.com/), Tailwind CSS, Emotion, and Framer Motion
-  for the interface
+- Tailwind CSS, plain CSS, and Framer Motion for the interface
 - [Vitest](https://vitest.dev/) and Testing Library for tests
-
-The package metadata still uses the historical name `flex-template`; the
-product itself is HackJudge.
 
 ## Getting started
 
@@ -73,11 +69,11 @@ stay in sync.
 
 ### Configure authentication
 
-Run Convex configuration once so `.env.local` exists. The repository includes
-`setup.mjs`, which then runs the Convex Auth setup helper:
+Run `npm run dev` once so Convex creates `.env.local`. If the deployment has
+no auth keys yet, run the Convex Auth setup helper:
 
 ```bash
-node setup.mjs
+npx @convex-dev/auth
 ```
 
 Configure the Google provider and site URLs in the Convex deployment
@@ -151,29 +147,39 @@ QR generation resolves the public frontend URL from `SITE_URL`,
 │   ├── demoDayImport.ts      # CSV and Airtable import pipeline
 │   ├── codeAndTell.ts        # Ranked ballots, standings, and results
 │   └── http.ts               # HTTP route registration and implementations
-├── public/                   # Static assets and hosting headers/redirects
+├── deploy/                   # Railway dev frontend (nginx config and notes)
+├── public/                   # Static assets and Netlify headers/redirects
 ├── scripts/                  # Authenticated data-import utilities
+├── shared/                   # Readiness and prize rules shared by UI and server
 ├── src/
-│   ├── App.tsx            # Top-level route tree and page wrappers
+│   ├── App.tsx               # Top-level route tree and page wrappers
 │   ├── components/           # Participant, judge, and mode-specific UI
 │   ├── features/admin/       # Route-based admin workspace
-│   └── lib/                  # Shared frontend helpers
+│   ├── lib/                  # Shared frontend helpers
+│   └── styles/               # Platform-wide styles
 ├── tests/                    # Vitest and Testing Library suites
-└── vercel.json               # Vercel SPA rewrites and security headers
+├── Dockerfile                # Railway dev frontend build
+└── netlify.toml              # Production frontend build
 ```
 
 ### Main routes
 
 | Route | Surface |
 | --- | --- |
-| `/` | Event discovery, sign-in, judge joining, and event entry |
+| `/` | Homepage: opens the event that matters now |
+| `/events` | Full event list, sign-in, judge joining, and event entry |
 | `/event/:eventId` | Mode-aware judging, browsing, or voting |
 | `/event/:eventId/team/:teamId` | Project detail and Demo Day appreciation |
 | `/profile` | Judge progress across events |
 | `/admin` | Admin event workspace |
 | `/admin/insights` | Platform-level insights |
 | `/admin/events/new` | Event creation |
-| `/admin/events/:eventId` | Event details, teams, prizes, scores, and winners |
+| `/admin/events/:eventId` | Event details, teams, prizes, scores, and results |
+
+Design review routes also ship in production builds: `/vote-test` (local-only
+ballots), `/homepage-preview`, `/participation-preview`, `/code-and-tell-preview`, `/design-preview`,
+`/event-card-preview`, and `/project-preview`. `/admin-results-preview` exists
+only in development builds.
 
 ## Data imports
 
@@ -185,15 +191,16 @@ CONVEX_AUTH_TOKEN="<authenticated-admin-token>" \
 node scripts/importDemoDay.mjs "/path/Assignments.csv" "/path/Projects.csv"
 ```
 
-The migration and import scripts require an authenticated admin token; they do
+The import script requires an authenticated admin token; they do
 not perform anonymous imports. Keep input files and credentials out of version
 control.
 
 ## Deployment
 
-The frontend is a static Vite build. `vercel.json` configures single-page-app
-rewrites and response headers for Vercel; `public/_headers` and
-`public/_redirects` provide Netlify-compatible equivalents.
+The frontend is a static Vite build. Production runs on Netlify
+(`netlify.toml`, with headers and SPA rewrites in `public/_headers` and
+`public/_redirects`). The development frontend runs on Railway from the
+`Dockerfile`; see [`deploy/README.md`](deploy/README.md).
 
 Deploy the Convex backend and frontend as separate parts of the release:
 

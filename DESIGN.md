@@ -94,11 +94,15 @@ Appreciation counts and actions appear only for Demo Day. Other formats link bac
 
 The appreciation panel displays the per-project limit and remaining event allowance. Signed-out visitors can open the shared sign-in dialog. Pending sends are disabled; failures preserve the allowance, and successful sends use server-confirmed counts.
 
-## Local review routes
+## Review routes
+
+These routes ship in production builds; only `/admin-results-preview` is limited to development.
 
 - `/project-preview?mode=hackathon`, `code_and_tell`, or `demo_day` renders the real project presentation with sample data. Demo Day preview interactions are local only.
 - `/participation-preview?mode=hackathon|demo_day|code_and_tell` exercises sample workflows.
 - `/homepage-preview` remains the Code & Tell homepage reference.
 - `/events?demo=1&mode=hackathon&phase=live` exercises sample event entry.
+- `/event-card-preview`, `/code-and-tell-preview`, and `/design-preview` hold card, typography, and layout studies.
+- `/vote-test` runs the Code & Tell ballot with local-only votes.
 
 Verify desktop and 390px phone layouts, keyboard focus, long content, empty and closed states, and the affected competition interactions. Admin UI review requires an authorized admin session; never bypass the role gate for a screenshot.

@@ -14,7 +14,7 @@
 
 /* ============ Field Instrument token layer (DESIGN.md, 2026-08-12) ============ */
 /* Canonical instrument tokens. Unmigrated screens keep their legacy styles in
-   legacy.css (loaded after this file); migrated surfaces use fi-* only.
+   legacy.css (loaded before this file by index.html); migrated surfaces use fi-* only.
    Light-chassis world: no dark variant. */
 :root {
   --fi-desk: #ddd9d0;

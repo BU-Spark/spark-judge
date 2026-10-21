@@ -39,3 +39,7 @@ docs/
 # Local screenshots and audit output
 output/
 audits/
+screenshots/
+
+# Vitest HTML report
+html/

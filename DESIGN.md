@@ -1,323 +1,104 @@
 ---
 name: HackJudge
-description: Open House for homepage and event participation; Field Instrument retained on admin, profiles, full project pages, and auth.
+description: A shared competition platform translated from the Code & Tell homepage. Event formats retain distinct working layouts.
 colors:
-  ct-teal: "#087f78"
-  ct-deep: "#103c3b"
-  ct-paper: "#f6f7f2"
-  ct-muted: "#506260"
-  ct-line: "#ccd7d1"
-  ct-ballot: "#dcece3"
-  evergreen: "#073e39"
-  lagoon: "#076b60"
-  citron: "#d7ea83"
-  yellow: "#f4c75f"
-  sky: "#88c9e8"
-  lagoon-muted: "#d0e6d2"
-  yellow-muted: "#354d2e"
-  sky-panel: "#b7def0"
-  gallery-caption: "#f8d689"
-  sky-light: "#d6edfa"
-  citron-light: "#e1edb0"
+  paper: "#f6f7f2"
+  ink: "#103c3b"
+  muted: "#506260"
+  line: "#ccd7d1"
+  teal: "#087f78"
+  mint: "#dcece3"
+  workspace: "#eaf1ec"
+  selected: "#d8e9e0"
+  hover: "#e2ece5"
+  focus-on-dark: "#a8ded0"
 typography:
-  ct-display:
-    fontFamily: "Bricolage Grotesque, sans-serif"
-    fontSize: "clamp(36px, 5.4vw, 76px)"
-    fontWeight: 650
-    lineHeight: 1.03
-    letterSpacing: "-0.04em"
-  display:
-    fontFamily: "Bricolage Grotesque, Helvetica Neue, sans-serif"
-    fontSize: "clamp(2.8rem, 4.5vw, 4.8rem)"
-    fontWeight: 800
-    lineHeight: 0.99
-    letterSpacing: "-0.035em"
-  participation-display:
-    fontFamily: "Bricolage Grotesque, Helvetica Neue, sans-serif"
-    fontSize: "clamp(2rem, 3.5vw, 3.5rem)"
-    fontWeight: 800
-    lineHeight: 1.05
-    letterSpacing: "-0.025em"
-  headline:
-    fontFamily: "Bricolage Grotesque, Helvetica Neue, sans-serif"
-    fontSize: "clamp(1.35rem, 2vw, 1.8rem)"
-    fontWeight: 700
-    letterSpacing: "-0.025em"
-  guide-title:
-    fontFamily: "Bricolage Grotesque, Helvetica Neue, sans-serif"
-    fontSize: "1.35rem"
-    fontWeight: 700
-    lineHeight: 1.15
-    letterSpacing: "-0.02em"
-  project-title:
-    fontFamily: "Bricolage Grotesque, Helvetica Neue, sans-serif"
-    fontSize: "1.15rem"
-    fontWeight: 750
-    lineHeight: 1.2
   body:
-    fontFamily: "Bricolage Grotesque, Helvetica Neue, sans-serif"
-    fontSize: "1rem"
-    fontWeight: 400
-    lineHeight: 1.5
-  body-intro:
-    fontFamily: "Bricolage Grotesque, Helvetica Neue, sans-serif"
-    fontSize: "1.08rem"
-    fontWeight: 400
+    fontFamily: "IBM Plex Sans, Helvetica Neue, sans-serif"
+    fontSize: "16px"
     lineHeight: 1.6
-  metadata:
-    fontFamily: "Bricolage Grotesque, Helvetica Neue, sans-serif"
-    fontSize: "0.8rem"
-    fontWeight: 400
-    lineHeight: 1.5
+  display:
+    fontFamily: "IBM Plex Sans, Helvetica Neue, sans-serif"
+    fontSize: "clamp(36px, 5vw, 64px)"
+    fontWeight: 600
+    lineHeight: 1.08
+    letterSpacing: "-0.035em"
 rounded:
-  badge: "4px"
   control: "6px"
-  action: "7px"
-  panel: "8px"
+  panel: "12px"
+  workspace: "16px"
 spacing:
-  compact: "0.75rem"
-  standard: "1rem"
-  content: "1.25rem"
-  section: "1.5rem"
-  wide: "2rem"
-  page-inline: "clamp(1.25rem, 4vw, 4.5rem)"
-components:
-  ct-primary:
-    backgroundColor: "{colors.ct-deep}"
-    textColor: "#fff"
-    rounded: "{rounded.control}"
-    padding: "14px 22px"
-  button-hackathon:
-    backgroundColor: "{colors.citron}"
-    textColor: "{colors.lagoon}"
-    rounded: "{rounded.action}"
-    padding: "0.9rem 1.15rem"
-  button-demo-day:
-    backgroundColor: "{colors.evergreen}"
-    textColor: "{colors.yellow}"
-    rounded: "{rounded.action}"
-    padding: "0.9rem 1.15rem"
-  button-code-and-tell:
-    backgroundColor: "{colors.evergreen}"
-    textColor: "{colors.citron}"
-    rounded: "{rounded.action}"
-    padding: "0.9rem 1.15rem"
-  button-navigation:
-    backgroundColor: "transparent"
-    textColor: "{colors.citron}"
-    rounded: "{rounded.control}"
-    padding: "0.55rem 0.9rem"
-  project-row-hackathon:
-    backgroundColor: "{colors.citron}"
-    textColor: "{colors.evergreen}"
-    rounded: "{rounded.action}"
-    padding: "0.85rem"
-  project-row-code-and-tell:
-    backgroundColor: "{colors.sky-panel}"
-    textColor: "{colors.evergreen}"
-    rounded: "{rounded.action}"
-    padding: "0.85rem"
-  gallery-card:
-    backgroundColor: "{colors.gallery-caption}"
-    textColor: "{colors.evergreen}"
-    rounded: "{rounded.panel}"
-  guide:
-    backgroundColor: "{colors.evergreen}"
-    textColor: "{colors.citron}"
-    rounded: "{rounded.panel}"
-    padding: "1.4rem"
-  participation-primary:
-    backgroundColor: "{colors.evergreen}"
-    textColor: "{colors.citron}"
-    rounded: "{rounded.control}"
-    padding: "0.7rem 1rem"
-  participation-search:
-    backgroundColor: "{colors.sky-panel}"
-    textColor: "{colors.evergreen}"
-    rounded: "{rounded.control}"
-    padding: "0.75rem 1rem"
-  score-choice:
-    backgroundColor: "{colors.citron-light}"
-    textColor: "{colors.evergreen}"
-    rounded: "{rounded.control}"
-  score-choice-selected:
-    backgroundColor: "{colors.evergreen}"
-    textColor: "{colors.citron}"
-    rounded: "{rounded.control}"
-  ballot-board:
-    backgroundColor: "{colors.evergreen}"
-    textColor: "{colors.sky-light}"
-    rounded: "{rounded.panel}"
-    padding: "1.6rem"
-  love-tap-budget:
-    backgroundColor: "{colors.evergreen}"
-    textColor: "{colors.gallery-caption}"
-    rounded: "{rounded.panel}"
-    padding: "1.25rem"
+  base: "4px"
+  page-inline: "clamp(20px, 5vw, 80px)"
 ---
 
-# Design System: HackJudge
+# HackJudge design contract
 
-## Overview
+The shared identity comes from the Code & Tell homepage: a deep-green navigation band, paper canvas, pale-mint working panels, readable project rows, and IBM Plex Sans. Competition activity supplies the hierarchy: projects, submissions, judging, ballots, and results.
 
-**Creative North Star: "Open House"**
+This contract supersedes the previous Open House mode fields and Field Instrument styling on translated pages. Historical exploration files under `.impeccable/` remain reference material, not a reason to restore sky, citron, orange transport buttons, hardware shadows, or alternate typefaces on those pages.
 
-**Code & Tell workspace exception (2026-10-06):** The participant workspace now uses teal, pale paper, and a pale ballot board. Its scoped contract below and `.impeccable/surfaces/code-and-tell.md` supersede the older sky-field and dark-ballot guidance only inside `CodeAndTellWorkspace`. Homepage mode tiles and other event modes retain their existing rules. This record is extracted from source; rendered visual verification was unavailable.
+## Source and scope
 
-Open House uses broad colored fields, strong Bricolage Grotesque headings, and flat geometric project art. Evergreen navigation holds the identity steady while lagoon, yellow, and sky distinguish event formats. Project names and participation controls remain readable in busy event rooms.
+- `src/styles/platform.css` owns shared palette, type, spacing, shell adapters, focus, and notification styling.
+- `homepage-workspace.css` and Code & Tell `workspace.css` bind their existing tokens to the shared foundation.
+- `PlatformHeader.tsx` supplies the real navigation and sign-in dialog on home, profile, event, project, and admin pages. Account actions respect the existing admin role check.
+- `event-stage.css` translates event entry while retaining format-specific compositions.
+- `participation.css` translates judging queues, rubric scoring and review, Demo Day browsing, and the shared ballot primitives.
+- `TeamPage.tsx` and `TeamPage.fi.css` own the full project presentation.
+- `admin.fi.css` supplies the initial compact admin treatment. Deeper admin layouts and dedicated submission/judge-code form refinements remain subsequent passes.
 
-The user-approved expansion covers the homepage, event entry and judging queue, rubric scoring and review, Code & Tell ranked ballots, and Demo Day appreciation browsing. It extends the same visual identity. Admin, profiles, full project pages, event configuration, and authentication retain Field Instrument. Do not change their global tokens to implement participation styling.
+Keep the existing mode-specific behavior, access checks, event locks, quotas, draft persistence, and result-release rules. A styling change does not authorize changing competition rules or publishing results.
 
-The implemented sources are `src/components/home/event-stage.css`, `EventStage.tsx`, `src/components/participation/participation.css`, `ParticipationChrome.tsx`, `ScoringWizard.tsx`, `code-and-tell/CodeAndTellVoteView.tsx`, and `demo-day/DemoDayBrowse.tsx`. The participation contract is `.impeccable/surfaces/participation.md`. Historical color exploration in the homepage brief does not override the current sky/evergreen/citron implementation. `src/index.css` remains the Field Instrument source outside this scope.
+## Type and density
 
-**Key Characteristics:**
+Use self-hosted IBM Plex Sans. Headings use weight 600 and slightly negative tracking; controls use 500. Body text is 16px with a 1.5–1.6 line height. Supporting text is 13–14px. Reserve larger type for event and project identity, not every section.
 
-- Colored page fields with contrasting text and working panels
-- One expressive sans family for headings, controls, and metadata
-- Flat, lightly rounded panels and geometric SVG covers
-- Distinct project-and-rubric, exhibition, and list-and-ballot layouts
-- Compact phone controls with reachable scoring, ballot, and budget information
-- A scoped extension that preserves Field Instrument on untouched pages
+Project detail titles use `clamp(36px, 5vw, 64px)`. Section headings use 22px; sidebar headings use 18px. Admin event-list headings use `clamp(32px, 4vw, 44px)`. Scoring project titles use `clamp(36px, 4vw, 56px)`, becoming 36px on phones. Counters and changing numerical values use tabular figures.
 
-## Colors
+Use a 4px spacing base. Most panels use 24–28px padding, controls use 12–16px, and major content groups use 28–40px separation. Admin tables use a denser version of the same hierarchy.
 
-Color fills the page. The frontmatter owns the current palette; mode assignments determine its use.
+## Color, depth, and controls
 
-### Primary
+The canvas is paper. Text and primary actions use ink. Supporting text uses muted. Working panels use workspace or mint; selection and hover use related pale greens. Teal indicates focus or active work. Semantic warnings and errors keep clear text and their existing meaning.
 
-- **Evergreen** anchors shared navigation, hackathon guidance, and Demo Day budget panels. It provides text on yellow and citron.
-- **Lagoon** is the hackathon field. **Citron** supplies headings, primary actions, judging rows, the rubric panel, and the homepage calendar. **Citron light** supplies unselected score choices.
+Use flat fills, spacing, and thin rules. Remove hardware bevels, inset display effects, orange commit treatments, and decorative shadows from translated controls. Account menus and dialogs may use a quiet elevation shadow because they float above page content.
 
-### Secondary
+Primary buttons use ink with paper labels. Secondary buttons use paper or transparent fills and a thin line. Controls have a 44px minimum target height; score choices are 54px. Buttons and inputs use 6px corners, panels 12px, and bounded working regions 16px. Focus uses a 3px teal outline with a 4px offset on pale areas, and pale mint on dark navigation.
 
-- **Yellow** is the Demo Day field. Evergreen supplies text and actions; **gallery caption** supplies the warmer pale project panels and budget text.
-- **Sky** is the permanent Code & Tell field on both homepage and participation pages. **Evergreen** supplies text, primary actions, and the ballot board. **Citron** supplies primary action labels and the inverted save action on the dark ballot board. **Sky panel** holds eligible project cards, and **sky light** holds ballot slots and text on evergreen.
+Provide default, hover, focus, disabled, loading, empty, and failure states. A count, color, or animation must not imply that a save succeeded before the server confirms it.
 
-### Neutral
+## Shared navigation
 
-Open House has no white primary canvas. The mode-specific muted colors carry descriptions and metadata. Dark ink and pale mode panels provide the contrast normally assigned to gray neutrals.
+Use `PlatformHeader`, including the same logo, account menu, role-aware Admin link, and sign-in dialog. The browser chrome matches its deep-green background on every route. Regular participants cannot access admin content through the shared navigation or by entering the admin URL.
 
-**The Mode Field Rule.** Use the event mode to select the page field and its contrasting text pair. Carry that pair through headings, controls, and working content.
+The shared shell has one main landmark, a skip link, and consistent notification styling. Keep menus inside the viewport and wrap long account names. Dialogs retain focus management and Escape behavior.
 
-Field Instrument retains its warm desk and chassis palette, dark displays, house-teal focus, and orange commit actions on untouched pages. The scoped participation overrides do not authorize a global token migration. Legacy lilac and cobalt art variables still occur in source; they do not define a Code & Tell palette option.
+## Event workflows
 
-## Typography
+Event formats change the working composition and action, while sharing the palette, type, controls, and status language.
 
-**Display and body font:** Bricolage Grotesque, self-hosted with Helvetica Neue and sans-serif fallbacks. Weight, size, and tighter heading spacing create hierarchy without a second display family.
+- **Hackathon:** a project queue leads into project context beside an editable rubric. Keep draft status, progress, review, and submission controls visible. On phones the team and guidance live in a disclosure, and the rubric stacks below the project. Review rows use the same pale panels and readable score labels.
+- **Demo Day:** a searchable project gallery with course filters, appreciation actions, and an explicit event allowance. On phones the remaining allowance stays in a fixed summary; leave bottom space and respect the safe area. Decorative project art uses the platform palette and remains separate from real project descriptions.
+- **Code & Tell:** a project list beside an editable ranked ballot. Its existing pale ballot board, ordering controls, mobile ballot dialog, self-voting restrictions, and server-confirmed receipt remain the reference pattern.
 
-### Hierarchy
+A full-screen scoring session may replace global navigation with compact session and action rails. Keep the body scrollable so the rubric and opt-out controls remain reachable above the footer. Respect reduced motion.
 
-- **Display:** the homepage event title. On phones it uses `clamp(2.75rem, 10.5vw, 4rem)` with a 15ch maximum measure.
-- **Participation display:** event participation headings. Project names in scoring use a separate fluid range, `clamp(2.5rem, 4vw, 4rem)`, and reduce to 2.25rem in the compact layout.
-- **Headline and guide title:** section headings and guidance panel headings. Participation section headings use 1.65rem; the ballot heading uses 1.8rem.
-- **Project title:** strong row labels. Exhibition cards use larger titles to support browsing; eligible ballot projects keep a denser heading.
-- **Body and introduction:** ordinary UI copy and project descriptions. Supporting descriptions keep a readable measure, commonly 48ch to 65ch in participation views.
-- **Metadata:** dates, tracks, weights, counts, and supporting labels remain in Bricolage at a quieter size.
+## Full project pages
 
-**The Plain Label Rule.** Use readable sentence-case labels. Event metadata is information, not engraved decoration or an invented eyebrow.
+Use a readable description column beside a pale team-and-links panel. Project name is the focal point. Hackathons show every effective prize entry as a wrapping pill under “Entered for,” marking automatic entries. If no prize entries exist, show the track as context. Demo Day shows its course; Code & Tell has no course or prize pill. Omit missing values. Show event context, team members, and genuine project/repository links. Preserve paragraph breaks and wrap long content. Collapse to one column below 760px.
 
-Untouched Field Instrument pages retain Instrument Sans and IBM Plex Mono. Existing class names do not make those fonts or hardware labels part of Open House.
+Prizes can be opt-in or automatic for a matching track. Admins configure `prizes.entryMode` for track-linked prizes; existing prizes default to opt-in. Automatic entries are derived from the current track for every team, including imported teams, and used consistently by project pages, admin entry lists, deliberation, and winner validation. The shared `PrizeEntryPicker` presents automatic entries as checked and read-only, separate from optional multi-selection. Store optional choices separately. Loading and sponsor filtering must preserve selections. Public project metadata exposes prize names and automatic status, never submission actors or timestamps.
 
-## Layout
+Appreciation counts and actions appear only for Demo Day. Other formats link back to their event workflow. Do not call Demo Day appreciation endpoints for Hackathon or Code & Tell projects. Hidden projects, missing events, and event/team mismatches show an unavailable state before loading format-specific data.
 
-The homepage centers within 1600px and uses fluid side padding. Its desktop grid pairs an introduction with working content; the inner list-and-guide grid stacks at 1100px, and the outer layout stacks at 720px. Its gallery stays two columns on phones. Homepage composition is not a universal participation template.
+The appreciation panel displays the per-project limit and remaining event allowance. Signed-out visitors can open the shared sign-in dialog. Pending sends are disabled; failures preserve the allowance, and successful sends use server-confirmed counts.
 
-Participation content centers within 1500px with the same fluid side padding. The judging queue uses plain project rows. Scoring places project context beside a pale rubric panel within 1280px; review uses readable pale rows. At 850px the scoring grid stacks, the project module loses sticky positioning, and header/footer actions remain compact horizontal groups. Team names remain visible beside the project on desktop. On phones they move into the Team & scoring guide disclosure, which keeps members and instructions available without expanding the initial scoring view. Project name, description, and position remain outside the disclosure.
+## Local review routes
 
-Code & Tell places a searchable project list beside a evergreen ballot board. The board is sticky on desktop with a 100px top offset. At 850px it follows the list in document order, becomes static, and gains a fixed bottom jump link. Leave bottom space for that link and the device safe area.
+- `/project-preview?mode=hackathon`, `code_and_tell`, or `demo_day` renders the real project presentation with sample data. Demo Day preview interactions are local only.
+- `/participation-preview?mode=hackathon|demo_day|code_and_tell` exercises sample workflows.
+- `/homepage-preview` remains the Code & Tell homepage reference.
+- `/events?demo=1&mode=hackathon&phase=live` exercises sample event entry.
 
-Demo Day uses an exhibition grid with three columns, two at 1100px, and one at 600px. Search and course filters sit above the grid. On phones a fixed bottom summary keeps the remaining Love Taps and per-project limit visible; the full budget panel also states the event total. Leave bottom space for the summary and safe area.
-
-Use the frontmatter spacing steps for repeated internal gaps. Maintain the mode-specific work layouts rather than turning every mode into the same card grid.
-
-## Elevation & Depth
-
-Open House is flat. Color changes, spacing, and thin rules separate regions. Controls and panels have no ambient or hard offset shadows. Hover feedback uses a small brightness change, an underline, or a caption fill change; the homepage primary action moves down one pixel on press.
-
-**The Flat Surface Rule.** Separate Open House regions with color, spacing, or thin rules. Do not add hardware bevels, inset glass, offset block shadows, or decorative gradients.
-
-The homepage has a short clipped arrival animation and a gallery caption transition. Participation disables animation, transitions, and smooth scrolling for reduced motion. Exact motion and breakpoint values live in the sidecar. Field Instrument's remaining decorative effects are outside this system; inherited result-page decoration is not a precedent for new participation screens.
-
-## Shapes
-
-Use rectangles with small corner rounding. Badges, controls, actions, and panels follow the frontmatter scale. Thin rules divide criteria and supporting information. Selected projects gain a visible outline; selected score choices invert fill and text. Neither selection depends on a decorative shadow.
-
-Circles, arcs, blocks, and diagonals belong to decorative SVG covers. Keep covers separate from names and interaction icons. Arrows and hearts use consistent inline stroke SVGs. Status marks pair their shape and fill with readable text.
-
-## Components
-
-### Buttons
-
-Homepage primary actions invert the current field and foreground with a 52px minimum height. Code & Tell uses citron labels on evergreen primary actions to connect its sky field to the shared brand palette. Participation actions use the same inversion with a 44px minimum height and smaller padding. Secondary actions use transparent backgrounds and a thin visible outline or a text treatment. Disabled participation buttons lower opacity and use a disabled cursor.
-
-Keyboard focus uses a three-pixel outline with an offset of four pixels in participation and five pixels in the homepage stage. Choose the ring against the surrounding region: pale on dark boards and rails, dark on pale rubric panels and ballot slots. Never derive the ring solely from an inverted button's label color.
-
-### Navigation
-
-The shared sticky evergreen band carries a citron text wordmark and account controls. The hardware brand mark is hidden in Open House. Account controls retain labels, a thin pale border, and a lagoon hover fill. Authentication dialog content remains Field Instrument. Scoring uses compact evergreen session and action rails around the working view.
-
-### Selection controls and status
-
-Event and course selection use outlined controls with inverted selected fills and `aria-pressed`. Project selection adds a visible border; ballot membership and rank also appear as text. Status badges use a thin outline and a small radius. Preserve words for live, closed, selected, saved, and remaining states rather than encoding them only through color.
-
-### Project rows and gallery cards
-
-Homepage and judging rows emphasize project names with supporting context. Demo Day cards devote more room to art, then title, description, a Project details disclosure, and an appreciation action. Full project links remain available. Covers are abstract decoration and make no claim about the project's actual appearance.
-
-### Inputs / Fields
-
-Participation search fields have an explicit label, a pale mode panel, a thin mode rule, a control radius, and a 48px minimum height. They use the same font and focus treatment as the surrounding page. Search and course filters preserve an honest empty state when no projects match.
-
-### Scoring rubric
-
-The citron rubric panel groups criteria with thin rules. Score choices have a 54px minimum height, pale fill at rest, and evergreen fill with citron text when selected. Optional N/A controls use the same visible selection inversion. Project context remains separate from the editable rubric; team names remain visible on desktop, and the phone disclosure includes the team, scale, and final submission guidance. Keep draft, review, and submitted states visually explicit.
-
-### Ranked ballot
-
-The evergreen ballot board holds ordered pale slots, visible rank numbers, removal links, and explicit up/down controls alongside drag reordering. Empty positions use dashed outlines. The required count, completion state, save action, and server-confirmed saved state remain visible in the board. On phones the fixed link names the ballot and shows the selected count.
-
-### Code & Tell participant workspace
-
-This scoped workspace uses IBM Plex Sans throughout, teal winner panels, deep green text and actions, and a pale paper canvas. The `ct-` frontmatter tokens apply only here. Large event titles use the scoped display role; invitation headings are fluid, section headings are compact, and project names carry more weight than supporting metadata.
-
-**The Participant Task Rule.** Within Code & Tell, show the current participant task beside concise context: sign-in leading to searchable projects beside the ranked ballot. Before voting, show the project roster and a waiting state. Presenter submission is deferred. Keep event dates and stage labels compact; do not add schedule-led hero sections.
-
-The submission grid uses two near-equal columns and a form capped at 600px. The ballot pairs a wider project list with a narrower pale board. Workspace grids stack at 760px; inherited ballot sticky and phone-jump behavior still follows the participation stylesheet. Project rows use thin top rules and no card fill. Pale fields, thin borders, and whitespace supply depth without shadows. Controls use modest rounding; invitation and winner panels share a larger lower-right corner.
-
-Inputs have explicit labels, white fill, and a thin green-gray border. Deep-green primary buttons use white labels and a 48px minimum height. Keyboard focus uses a three-pixel teal outline with a four-pixel offset; shared ballot controls retain their contextual focus rules. Saving, saved, error, signed-out, and empty states stay explicit. Optional project links and teammate emails sit in a disclosure; names and descriptions remain visible. The ballot retains rank numbers, removal, drag reordering, and up/down controls.
-
-**The Deliberate Release Rule.** Submission, presentations, voting, closed voting, and released results remain distinct views. Closed voting shows results pending until organizers release results.
-
-The preview controls and sample projects belong only to the design fixture; they are not production navigation or evidence of event results. No screenshot or deployed-state claim is established by this source record.
-
-### Appreciation and budgets
-
-Demo Day pairs the Love Tap action with project-level usage. The evergreen budget panel shows the remaining count, per-project limit, and event total. The fixed phone summary repeats the remaining count and per-project limit. Preserve disabled and feedback states when appreciation is unavailable or a limit is reached.
-
-### Guidance and content states
-
-Homepage guidance uses evergreen/citron for judging and evergreen/sky light for ballots, with citron action accents. Loading, empty, access, and closed states use plain readable copy on the mode field or pale panel. Retain actual lifecycle and save-state distinctions. Do not invent projects, totals, or successful submissions to fill these states.
-
-## Do's and Don'ts
-
-### Do:
-
-- Do keep evergreen navigation consistent across homepage and event participation.
-- Do use each mode's field, foreground, muted text, and panel colors together.
-- Do preserve the project-and-rubric, exhibition, and list-and-ballot layouts.
-- Do keep project names, action labels, draft states, and remaining budgets readable.
-- Do preserve visible keyboard focus, explicit reorder controls, and reduced-motion behavior.
-- Do keep Field Instrument on admin, profiles, full project pages, and authentication until separately redesigned.
-
-### Don't:
-
-- Don't make white the primary Open House canvas.
-- Don't reintroduce lilac or a color preview switcher as the Code & Tell direction.
-- Don't import hardware chassis, engraved micro-labels, keycap shadows, or decorative sequencers into Open House.
-- Don't present abstract covers as screenshots, logos, or evidence about a project.
-- Don't let fixed phone controls obscure the final content or primary action.
-- Don't canonize inherited results decoration or leftover hardware class names as new design rules.
-
-### Current Code & Tell scope
-
-The attendee experience leads this round: QR arrival, sign-in, ranked ballot, pending results, released winner. Before voting opens, show projects with an explicit waiting state. Native presenter submission is deferred; no signup form or submission CTA belongs on this event page. The preview defaults to voting and signed-out arrival.
+Verify desktop and 390px phone layouts, keyboard focus, long content, empty and closed states, and the affected competition interactions. Admin UI review requires an authorized admin session; never bypass the role gate for a screenshot.

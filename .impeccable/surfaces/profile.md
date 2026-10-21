@@ -2,7 +2,7 @@
 version: 1
 slug: "profile"
 primary_target: "src/components/ProfilePage.tsx"
-related_targets: ["src/components/ProfilePage.fi.css", "src/components/home/PlatformHeader.tsx", "src/components/auth/SignInDialog.tsx", "src/components/auth/sign-in.css", "src/AppNew.tsx"]
+related_targets: ["src/components/ProfilePage.fi.css", "src/components/home/PlatformHeader.tsx", "src/components/auth/SignInDialog.tsx", "src/components/auth/sign-in.css", "src/App.tsx"]
 ---
 
 # Profile surface brief

@@ -1,8 +1,8 @@
 ---
 version: 1
 slug: "homepage"
-primary_target: "src/components/LandingPageNew.tsx"
-related_targets: ["src/components/home/EventStage.tsx","src/components/home/event-stage.css","src/lib/homepagePhase.ts","src/lib/eventStagePreview.ts","src/AppNew.tsx","index.html"]
+primary_target: "src/components/LandingPage.tsx"
+related_targets: ["src/components/home/EventStage.tsx","src/components/home/event-stage.css","src/lib/homepagePhase.ts","src/lib/eventStagePreview.ts","src/App.tsx","index.html"]
 ---
 
 # Homepage surface brief

@@ -1,7 +1,7 @@
 ---
 version: 1
 slug: "shell"
-primary_target: "src/AppNew.tsx"
+primary_target: "src/App.tsx"
 related_targets: ["src/index.css", "src/components/ui/BrandLogo.tsx", "src/components/ThemeToggle.tsx", "index.html", "public/theme-init.js"]
 ---
 
@@ -40,10 +40,10 @@ The instrument's faceplate, from the Field Instrument previews:
 ## Inventory
 | Ingredient | Medium |
 | ---------- | ------ |
-| Top rail | `Layout` in `src/AppNew.tsx` |
+| Top rail | `Layout` in `src/App.tsx` |
 | Wordmark | `src/components/ui/BrandLogo.tsx` |
 | Tokens | `src/index.css` (`fi-*` layer) |
-| Sign-in modal | `Layout` + `SignInFormNew` |
+| Sign-in modal | `Layout` + `SignInForm` |
 | Toasts | sonner, styled to panel tokens |
 
 ## Constraints

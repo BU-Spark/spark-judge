@@ -154,7 +154,7 @@ QR generation resolves the public frontend URL from `SITE_URL`,
 ├── public/                   # Static assets and hosting headers/redirects
 ├── scripts/                  # Authenticated data-import utilities
 ├── src/
-│   ├── AppNew.tsx            # Top-level route tree and page wrappers
+│   ├── App.tsx            # Top-level route tree and page wrappers
 │   ├── components/           # Participant, judge, and mode-specific UI
 │   ├── features/admin/       # Route-based admin workspace
 │   └── lib/                  # Shared frontend helpers

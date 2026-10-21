@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SignInForm } from "../../src/SignInFormNew";
+import { SignInForm } from "../../src/SignInForm";
 
 const signIn = vi.hoisted(() => vi.fn());
 vi.mock("@convex-dev/auth/react", () => ({

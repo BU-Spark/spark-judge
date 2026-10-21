@@ -21,7 +21,7 @@ vi.mock("convex/react", () => ({
       : saveTeam,
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-import { TeamSubmissionModal } from "../../../src/components/TeamSubmissionModalNew";
+import { TeamSubmissionModal } from "../../../src/components/TeamSubmissionModal";
 const team = {
   _id: "team",
   name: "Garden",

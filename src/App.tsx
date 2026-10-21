@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { PlatformHeader } from "./components/home/PlatformHeader";
 import { PlatformToaster } from "./components/ui/PlatformToaster";
-import { LandingPage } from "./components/LandingPageNew";
+import { LandingPage } from "./components/LandingPage";
 import { EventView } from "./components/EventView";
 import { ProfilePage } from "./components/ProfilePage";
 import { TeamPage } from "./components/TeamPage";

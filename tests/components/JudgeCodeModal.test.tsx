@@ -3,7 +3,7 @@ import { getFunctionName } from "convex/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Id } from "../../convex/_generated/dataModel";
-import { JudgeCodeModal } from "../../src/components/JudgeCodeModalNew";
+import { JudgeCodeModal } from "../../src/components/JudgeCodeModal";
 
 const joinAsJudge = vi.hoisted(() => vi.fn());
 const verifyCode = vi.hoisted(() => vi.fn());

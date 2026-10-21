@@ -27,7 +27,7 @@ import {
   PROJECT_DRAFT_SCHEMA,
   TeamSubmissionModal,
   projectDraftKey,
-} from "../../../src/components/TeamSubmissionModalNew";
+} from "../../../src/components/TeamSubmissionModal";
 
 const user = { _id: "user" };
 const baseTeam = {

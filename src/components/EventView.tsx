@@ -10,7 +10,7 @@ import { ProjectDescription } from "./ui/ProjectDescription";
 import { ErrorState } from "./ui/ErrorState";
 import { CodeAndTellVoteView } from "./code-and-tell/CodeAndTellVoteView";
 import { DemoDayBrowse } from "./demo-day";
-import { JudgeCodeModal } from "./JudgeCodeModalNew";
+import { JudgeCodeModal } from "./JudgeCodeModal";
 import { getEventDisplayLabel, getEventMode } from "../lib/eventModes";
 import { formatDateTime } from "../lib/utils";
 import { MODE_THEME } from "./home/modeTheme";

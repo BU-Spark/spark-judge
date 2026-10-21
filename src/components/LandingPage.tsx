@@ -6,8 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { JudgeCodeModal } from "./JudgeCodeModalNew";
-import { TeamSubmissionModal } from "./TeamSubmissionModalNew";
+import { JudgeCodeModal } from "./JudgeCodeModal";
+import { TeamSubmissionModal } from "./TeamSubmissionModal";
 import { getEventMode, type EventMode } from "../lib/eventModes";
 import { groupHomepageEvents, selectFocalHomepage } from "../lib/homepagePhase";
 import {

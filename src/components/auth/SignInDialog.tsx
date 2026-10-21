@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { SignInForm } from "../../SignInForm";
-import "./sign-in.css";
 
 export function SignInDialog({
   open,

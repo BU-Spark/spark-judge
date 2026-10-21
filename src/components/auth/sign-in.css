@@ -1,5 +1,3 @@
-@import "../code-and-tell/ibm-plex.css";
-
 .platform-auth-dialog {
   box-sizing: border-box;
   width: min(440px, calc(100vw - 32px));

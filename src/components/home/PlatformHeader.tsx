@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Link } from "react-router-dom";
@@ -12,6 +12,9 @@ export function PlatformHeader({ homepage = false }: { homepage?: boolean }) {
   const isAdmin = useQuery(api.events.isUserAdmin);
   const { signOut } = useAuthActions();
   const [signInOpen, setSignInOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const navId = useId();
+  const toggleRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const open = () => setSignInOpen(true);
     window.addEventListener("hackjudge:open-signin", open);
@@ -20,15 +23,48 @@ export function PlatformHeader({ homepage = false }: { homepage?: boolean }) {
   useEffect(() => {
     if (user) setSignInOpen(false);
   }, [user]);
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setNavOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navOpen]);
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 761px)");
+    const close = () => {
+      if (media.matches) setNavOpen(false);
+    };
+    close();
+    media.addEventListener("change", close);
+    return () => media.removeEventListener("change", close);
+  }, []);
+  const closeNav = () => setNavOpen(false);
+
   return (
     <>
-      <header className="hp-header">
-        <Link className="hp-brand" to="/">
+      <header className={`hp-header${navOpen ? " hp-header--nav-open" : ""}`}>
+        <Link className="hp-brand" to="/" onClick={closeNav}>
           <img className="hp-brand-mark" src="/brand/hackjudge-mark.png" alt="" width={36} height={36} />
           HackJudge
         </Link>
-        <div className="hp-header-actions">
-          <a href={homepage ? "#past-events" : "/"}>
+        <button
+          ref={toggleRef}
+          type="button"
+          className="hp-nav-toggle"
+          aria-expanded={navOpen}
+          aria-controls={navId}
+          onClick={() => setNavOpen((open) => !open)}
+        >
+          <span className="sr-only">{navOpen ? "Close menu" : "Open menu"}</span>
+          <span className="hp-nav-toggle-bars" aria-hidden="true" />
+        </button>
+        <nav id={navId} className="hp-header-actions" aria-label="Primary">
+          <a href={homepage ? "#past-events" : "/"} onClick={closeNav}>
             {homepage ? "Past events" : "All events"}
           </a>
           {user ? (
@@ -38,21 +74,31 @@ export function PlatformHeader({ homepage = false }: { homepage?: boolean }) {
               </summary>
               <div className="hp-account-panel">
                 <span>{user.name || user.email}</span>
-                <Link to="/profile">Profile</Link>
-                {isAdmin && <Link to="/admin">Admin</Link>}
-                <button onClick={() => void signOut()}>Sign out</button>
+                <Link to="/profile" onClick={closeNav}>Profile</Link>
+                {isAdmin && <Link to="/admin" onClick={closeNav}>Admin</Link>}
+                <button
+                  onClick={() => {
+                    closeNav();
+                    void signOut();
+                  }}
+                >
+                  Sign out
+                </button>
               </div>
             </details>
           ) : (
             <button
               className="hp-sign-in"
               disabled={user === undefined}
-              onClick={() => setSignInOpen(true)}
+              onClick={() => {
+                closeNav();
+                setSignInOpen(true);
+              }}
             >
               Sign in <DirectionIcon />
             </button>
           )}
-        </div>
+        </nav>
       </header>
       <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} />
     </>

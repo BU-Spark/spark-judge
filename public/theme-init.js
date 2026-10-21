@@ -1,7 +1,5 @@
-// Field Instrument ships light-only for v1: the chassis is a light world and
-// dark is reserved for display modules. Keep the root class stable so legacy
-// screens relying on the light aliases render unchanged. Match browser chrome
-// to the route's header before React mounts (see browserChrome.ts).
+// Match the shared platform header before React mounts.
+// Keep working panels light regardless of saved theme preferences.
 (function () {
   try {
     localStorage.setItem("vite-ui-theme", "light");
@@ -11,12 +9,7 @@
   var root = document.documentElement;
   root.classList.remove("light", "dark");
   root.classList.add("light");
-  var path = window.location.pathname;
-  var color = path === "/" || path === "/vote-test" || path === "/homepage-preview" || path === "/profile"
-    ? "#103c3b"
-    : /^\/event\/[^/]+\/?$/.test(path)
-      ? "#073e39"
-      : "#ddd9d0";
+  var color = "#103c3b";
   var existing = document.getElementById("theme-color-meta");
   var fresh = document.createElement("meta");
   fresh.setAttribute("name", "theme-color");
@@ -28,5 +21,5 @@
     document.head.appendChild(fresh);
   }
   root.style.setProperty("--browser-chrome", color);
-  root.style.colorScheme = color === "#ddd9d0" ? "light" : "dark";
+  root.style.colorScheme = "dark";
 })();

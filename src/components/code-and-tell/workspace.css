@@ -1,14 +1,14 @@
 @import "./ibm-plex.css";
 .ct-workspace {
-  --ct-teal: #087f78;
-  --ct-deep: #103c3b;
-  --ct-paper: #f6f7f2;
-  --ct-muted: #506260;
-  --ct-line: #ccd7d1;
+  --ct-teal: var(--platform-teal);
+  --ct-deep: var(--platform-ink);
+  --ct-paper: var(--platform-paper);
+  --ct-muted: var(--platform-muted);
+  --ct-line: var(--platform-line);
   background: var(--ct-paper);
   color: var(--ct-deep);
-  font-family: "IBM Plex Sans", sans-serif;
-  --fi-font-ui: "IBM Plex Sans", sans-serif;
+  font-family: var(--platform-font);
+  --fi-font-ui: var(--platform-font);
   font-optical-sizing: auto;
   padding: 24px clamp(20px, 5vw, 80px) 0;
   min-height: calc(100svh - 76px);

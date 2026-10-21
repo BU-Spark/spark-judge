@@ -69,6 +69,7 @@ describe("CodeAndTellVoteView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     queryResults.clear();
+    window.localStorage.clear();
     saveBallotMock.mockResolvedValue("vote-1");
     queryResults.set("codeAndTell:getPublicResults", null);
     queryResults.set("codeAndTell:getVotingContext", {
@@ -423,5 +424,169 @@ describe("CodeAndTellVoteView", () => {
     expect(
       screen.getByText("You didn’t submit a ballot for this event."),
     ).toBeInTheDocument();
+  });
+  describe("ballot drafts and live updates", () => {
+    const voter = { _id: "user-1", email: "voter@example.com" };
+    const baseContext = () =>
+      queryResults.get("codeAndTell:getVotingContext") as Record<string, unknown> & {
+        projects: Array<Record<string, unknown>>;
+      };
+    const setServerBallot = (ids: string[]) =>
+      queryResults.set("codeAndTell:getVotingContext", {
+        ...baseContext(),
+        currentBallotTeamIds: ids,
+      });
+    const rankedNames = () =>
+      Array.from(
+        document.querySelectorAll("#your-ballot .ballot-slot:not(.ballot-slot--empty) strong"),
+      ).map((node) => node.textContent);
+    const renderView = () =>
+      render(<CodeAndTellVoteView eventId={eventId} event={baseEvent} onBack={vi.fn()} />);
+
+    it("restores an unsubmitted ranking after reload and can discard it", async () => {
+      queryResults.set("auth:loggedInUser", voter);
+      const first = renderView();
+      fireEvent.click(screen.getAllByRole("button", { name: "Add to ballot" })[1]);
+      expect(
+        await screen.findByText("Draft saved on this device — not submitted"),
+      ).toBeInTheDocument();
+      first.unmount();
+
+      renderView();
+      expect(rankedNames()).toEqual(["Project Three"]);
+      expect(
+        screen.getByText("Draft saved on this device — not submitted"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Ballot submitted")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Discard draft" }));
+      expect(rankedNames()).toEqual([]);
+      expect(
+        screen.queryByText("Draft saved on this device — not submitted"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not restore another account's draft", () => {
+      queryResults.set("auth:loggedInUser", voter);
+      const first = renderView();
+      fireEvent.click(screen.getAllByRole("button", { name: "Add to ballot" })[0]);
+      first.unmount();
+
+      queryResults.set("auth:loggedInUser", { _id: "user-2", email: "other@example.com" });
+      renderView();
+      expect(rankedNames()).toEqual([]);
+      expect(screen.queryByRole("button", { name: "Discard draft" })).not.toBeInTheDocument();
+    });
+
+    it("clears the draft after the server confirms the save", async () => {
+      queryResults.set("auth:loggedInUser", voter);
+      const first = renderView();
+      fireEvent.click(screen.getAllByRole("button", { name: "Add to ballot" })[0]);
+      fireEvent.click(screen.getByRole("button", { name: "Add to ballot" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save Ballot" }));
+      expect(await screen.findByRole("button", { name: "Ballot submitted" })).toBeDisabled();
+      expect(document.querySelector(".task-status")).toHaveTextContent("Ballot submitted");
+      expect(window.localStorage.getItem(`hackjudge:draft:code-and-tell-ballot:${eventId}:user-1`)).toBeNull();
+      first.unmount();
+
+      renderView();
+      expect(rankedNames()).toEqual([]);
+    });
+
+    it("keeps unsaved local changes when another tab saves a ballot", () => {
+      queryResults.set("auth:loggedInUser", voter);
+      const view = renderView();
+      fireEvent.click(screen.getAllByRole("button", { name: "Add to ballot" })[0]);
+      expect(rankedNames()).toEqual(["Project Two"]);
+
+      setServerBallot(["team-3", "team-2"]);
+      view.rerender(<CodeAndTellVoteView eventId={eventId} event={baseEvent} onBack={vi.fn()} />);
+      expect(rankedNames()).toEqual(["Project Two"]);
+      expect(screen.getByRole("button", { name: "Use saved ballot" })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Keep my changes" }));
+      expect(rankedNames()).toEqual(["Project Two"]);
+      expect(screen.queryByRole("button", { name: "Use saved ballot" })).not.toBeInTheDocument();
+
+      setServerBallot(["team-2", "team-3"]);
+      view.rerender(<CodeAndTellVoteView eventId={eventId} event={baseEvent} onBack={vi.fn()} />);
+      fireEvent.click(screen.getByRole("button", { name: "Use saved ballot" }));
+      expect(rankedNames()).toEqual(["Project Two", "Project Three"]);
+    });
+
+    it("adopts a new server ballot when there are no local edits", () => {
+      queryResults.set("auth:loggedInUser", voter);
+      const view = renderView();
+      setServerBallot(["team-3", "team-2"]);
+      view.rerender(<CodeAndTellVoteView eventId={eventId} event={baseEvent} onBack={vi.fn()} />);
+      expect(rankedNames()).toEqual(["Project Three", "Project Two"]);
+      expect(screen.queryByRole("button", { name: "Use saved ballot" })).not.toBeInTheDocument();
+    });
+
+    it("removes projects that become ineligible and names the affected slot", () => {
+      queryResults.set("auth:loggedInUser", voter);
+      const view = renderView();
+      fireEvent.click(screen.getAllByRole("button", { name: "Add to ballot" })[0]);
+      fireEvent.click(screen.getByRole("button", { name: "Add to ballot" }));
+
+      queryResults.set("codeAndTell:getVotingContext", {
+        ...baseContext(),
+        projects: baseContext().projects.filter((project) => project._id !== "team-3"),
+      });
+      view.rerender(<CodeAndTellVoteView eventId={eventId} event={baseEvent} onBack={vi.fn()} />);
+      expect(rankedNames()).toEqual(["Project Two"]);
+      expect(screen.getByText(/#2 Project Three/)).toBeInTheDocument();
+    });
+
+    it("keeps edits made while an earlier save is pending", async () => {
+      queryResults.set("auth:loggedInUser", voter);
+      let resolveSave!: () => void;
+      saveBallotMock.mockImplementationOnce(
+        () => new Promise<void>((resolve) => { resolveSave = resolve; }),
+      );
+      const view = renderView();
+      fireEvent.click(screen.getAllByRole("button", { name: "Add to ballot" })[0]);
+      fireEvent.click(screen.getByRole("button", { name: "Add to ballot" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save Ballot" }));
+      expect(saveBallotMock).toHaveBeenCalledWith({
+        eventId,
+        rankedTeamIds: ["team-2", "team-3"],
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "Move Project Three up" }));
+      expect(rankedNames()).toEqual(["Project Three", "Project Two"]);
+
+      // The live query reflects the earlier save before the mutation resolves.
+      setServerBallot(["team-2", "team-3"]);
+      view.rerender(<CodeAndTellVoteView eventId={eventId} event={baseEvent} onBack={vi.fn()} />);
+      resolveSave();
+
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Save Ballot" })).toBeEnabled(),
+      );
+      expect(rankedNames()).toEqual(["Project Three", "Project Two"]);
+      expect(screen.queryByRole("button", { name: "Use saved ballot" })).not.toBeInTheDocument();
+      expect(
+        screen.getByText("Draft saved on this device — not submitted"),
+      ).toBeInTheDocument();
+    });
+
+    it("shows a persistent failure with retry and keeps the ranking", async () => {
+      queryResults.set("auth:loggedInUser", voter);
+      saveBallotMock.mockRejectedValueOnce(new Error("Ballot rejected: voting is closed"));
+      renderView();
+      fireEvent.click(screen.getAllByRole("button", { name: "Add to ballot" })[0]);
+      fireEvent.click(screen.getByRole("button", { name: "Add to ballot" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save Ballot" }));
+
+      expect(await screen.findByText("Your ballot wasn’t saved")).toBeInTheDocument();
+      expect(rankedNames()).toEqual(["Project Two", "Project Three"]);
+      expect(screen.queryByText("Ballot submitted")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Retry saving ballot" }));
+      expect(await screen.findByRole("button", { name: "Ballot submitted" })).toBeInTheDocument();
+      expect(screen.queryByText("Your ballot wasn’t saved")).not.toBeInTheDocument();
+      expect(saveBallotMock).toHaveBeenCalledTimes(2);
+    });
   });
 });

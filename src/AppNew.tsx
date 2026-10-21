@@ -1,11 +1,10 @@
 import { Homepage } from "./components/home/Homepage";
 import { HomepagePreview } from "./components/home/HomepagePreview";
-import { Authenticated, Unauthenticated, useQuery } from "convex/react";
+import { EventCardPreview } from "./components/home/EventCardPreview";
+import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { SignInDialog } from "./components/auth/SignInDialog";
 import { PlatformHeader } from "./components/home/PlatformHeader";
-import { SignOutButton } from "./SignOutButtonNew";
-import { Toaster } from "sonner";
+import { PlatformToaster } from "./components/ui/PlatformToaster";
 import { LandingPage } from "./components/LandingPageNew";
 import { EventView } from "./components/EventView";
 import { ProfilePage } from "./components/ProfilePage";
@@ -18,16 +17,16 @@ import { AdminInsightsRoute } from "./features/admin/routes/AdminInsightsRoute";
 import { CodeAndTellPreview } from "./components/code-and-tell/CodeAndTellPreview";
 import { ParticipationPreview } from "./components/participation/ParticipationPreview";
 import { DesignPreview } from "./features/design-preview/DesignPreview";
-import { useState, useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import { syncBrowserChrome } from "./lib/browserChrome";
 import { Id } from "../convex/_generated/dataModel";
 import { LoadingState } from "./components/ui/LoadingState";
-import { BrandLogo } from "./components/ui/BrandLogo";
+import { ProjectPreview } from "./components/ProjectPreview";
+import { RouteBoundary, UnavailablePage, isConvexIdShape } from "./components/RouteFallbacks";
 import {
   BrowserRouter,
   Routes,
   Route,
-  Link,
   useNavigate,
   useParams,
   useLocation,
@@ -35,13 +34,15 @@ import {
   Navigate,
 } from "react-router-dom";
 
+const ResultsPreview = import.meta.env.DEV ? lazy(() => import("./features/admin/ResultsPreview")) : null;
+
 export default function App() {
   return (
     <BrowserRouter>
       <BrowserChrome />
       <Routes>
-        <Route path="/" element={<Homepage />} />
-        <Route path="/vote-test" element={<Homepage voteTest />} />
+        <Route path="/" element={<RouteBoundary section="home"><Homepage /></RouteBoundary>} />
+        <Route path="/vote-test" element={<RouteBoundary section="vote-test"><Homepage voteTest /></RouteBoundary>} />
         <Route path="/homepage-preview" element={<HomepagePreview />} />
         <Route path="/code-and-tell-preview" element={<CodeAndTellPreview />} />
         <Route
@@ -49,8 +50,11 @@ export default function App() {
           element={<ParticipationPreview />}
         />
         <Route path="/design-preview" element={<DesignPreview />} />
+        <Route path="/event-card-preview" element={<EventCardPreview />} />
         <Route path="/profile" element={<ProfilePageWrapper />} />
         <Route element={<Layout />}>
+          {ResultsPreview && <Route path="/admin-results-preview" element={<Suspense fallback={<LoadingState label="Loading preview..." />}><ResultsPreview /></Suspense>} />}
+          <Route path="/project-preview" element={<ProjectPreview />} />
           <Route path="/events" element={<LandingPageWrapper />} />
           <Route path="/event/:eventId" element={<EventViewWrapper />} />
           {/* Dedicated team page - direct route */}
@@ -69,8 +73,8 @@ export default function App() {
             path="/event/:eventSlug/:teamSlug/:teamId"
             element={<TeamRedirect />}
           />
-          {/* Catch-all redirect to home */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Unknown or obsolete links explain themselves instead of silently redirecting */}
+          <Route path="*" element={<UnavailablePage />} />
         </Route>
       </Routes>
     </BrowserRouter>
@@ -87,153 +91,19 @@ function BrowserChrome() {
  * Layout component with header - wraps all routes
  */
 function Layout() {
-  const pathname = useLocation().pathname;
-  const isEventStage = pathname === "/" || /^\/event\/[^/]+$/.test(pathname);
-  const [showSignIn, setShowSignIn] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const isAdmin = useQuery(api.events.isUserAdmin);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const updateIsMobile = () =>
-      setIsMobile(window.matchMedia("(max-width: 768px)").matches);
-    updateIsMobile();
-    window.addEventListener("resize", updateIsMobile);
-    return () => window.removeEventListener("resize", updateIsMobile);
-  }, []);
-
-  useEffect(() => {
-    if (!showSignIn) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowSignIn(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [showSignIn]);
-
-  /* Pages surface sign-in through one channel so the modal stays single-surface */
-  useEffect(() => {
-    const open = () => setShowSignIn(true);
-    window.addEventListener("hackjudge:open-signin", open);
-    return () => window.removeEventListener("hackjudge:open-signin", open);
-  }, []);
-
   return (
-    <div
-      className={`min-h-screen flex flex-col fi-app-shell${isEventStage ? " es-home-shell" : ""}`}
-    >
-      {/* Faceplate rail */}
-      <header className="fi-rail sticky top-0 z-40">
-        <div className="fi-rail-inner">
-          <Link to="/" aria-label="HackJudge home" className="fi-brand-link">
-            <BrandLogo />
-          </Link>
-          <nav className="fi-rail-nav" aria-label="Primary">
-            <Authenticated>
-              <button
-                type="button"
-                onClick={() => void navigate("/profile")}
-                className="fi-key"
-              >
-                <ProfileIcon />
-                Profile
-              </button>
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => void navigate("/admin")}
-                  className="fi-key"
-                >
-                  <AdminIcon />
-                  Admin
-                </button>
-              )}
-              <SignOutButton className="fi-key" />
-            </Authenticated>
-            <Unauthenticated>
-              <button
-                type="button"
-                onClick={() => setShowSignIn(true)}
-                className="fi-key"
-              >
-                <SignInArrowIcon />
-                Sign in
-              </button>
-            </Unauthenticated>
-          </nav>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1">
-        <Outlet />
+    <div className="platform-shell hp-workspace">
+      <a href="#main-content" className="platform-skip-link">
+        Skip to content
+      </a>
+      <PlatformHeader />
+      <main id="main-content" className="platform-main" tabIndex={-1}>
+        <RouteBoundary>
+          <Outlet />
+        </RouteBoundary>
       </main>
-
-      {/* Toast Notifications - hidden on mobile */}
-      {!isMobile && (
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            style: {
-              background: "var(--fi-panel)",
-              color: "var(--fi-ink)",
-              border: "1px solid var(--fi-hair)",
-              borderRadius: "var(--fi-r-xl)",
-              fontFamily: "var(--fi-font-ui)",
-            },
-          }}
-        />
-      )}
-
-      <SignInDialog open={showSignIn} onClose={() => setShowSignIn(false)} />
+      <PlatformToaster />
     </div>
-  );
-}
-
-function ProfileIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      aria-hidden="true"
-    >
-      <circle cx="8" cy="5.5" r="2.5" />
-      <path d="M2.5 14c.8-2.4 2.7-3.5 5.5-3.5s4.7 1.1 5.5 3.5" />
-    </svg>
-  );
-}
-
-function AdminIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      aria-hidden="true"
-    >
-      <path d="M8 1.5L2.5 3.5v4c0 3.4 2.4 5.4 5.5 6.5 3.1-1.1 5.5-3.1 5.5-6.5v-4L8 1.5z" />
-    </svg>
-  );
-}
-
-function SignInArrowIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      aria-hidden="true"
-    >
-      <path d="M6 3h7v10H6" />
-      <path d="M9 8H2.5M6.5 5.5L9 8l-2.5 2.5" />
-    </svg>
   );
 }
 
@@ -261,6 +131,15 @@ function EventViewWrapper() {
     return <Navigate to="/" replace />;
   }
 
+  if (!isConvexIdShape(eventId)) {
+    return (
+      <UnavailablePage
+        title="Event link isn't valid"
+        description="This event link is incomplete or mistyped. Check the address, or browse current events."
+      />
+    );
+  }
+
   return (
     <EventView
       eventId={eventId as Id<"events">}
@@ -283,12 +162,14 @@ function ProfilePageWrapper() {
     <div className="hp-workspace">
       <PlatformHeader />
       <main>
-        <ProfilePage
-          onSelectEvent={handleSelectEvent}
-          onBackToLanding={() => void navigate("/")}
-        />
+        <RouteBoundary section="profile">
+          <ProfilePage
+            onSelectEvent={handleSelectEvent}
+            onBackToLanding={() => void navigate("/")}
+          />
+        </RouteBoundary>
       </main>
-      <Toaster position="bottom-right" />
+      <PlatformToaster />
     </div>
   );
 }
@@ -301,6 +182,17 @@ function TeamPageWrapper() {
 
   if (!eventId || !teamId) {
     return <Navigate to="/" replace />;
+  }
+
+  if (!isConvexIdShape(eventId) || !isConvexIdShape(teamId)) {
+    return (
+      <UnavailablePage
+        title="Project link isn't valid"
+        description="This project link is incomplete or mistyped. Check the address, or open the event to find the project."
+        backTo={isConvexIdShape(eventId) ? `/event/${eventId}` : "/"}
+        backLabel={isConvexIdShape(eventId) ? "Back to event" : "Back to events"}
+      />
+    );
   }
 
   return (
@@ -324,8 +216,8 @@ function TeamRedirect() {
   }>();
   const navigate = useNavigate();
 
-  // Get teamId from the route
-  const teamId = params.teamId;
+  // Get teamId from the route; malformed IDs never reach the query validator
+  const teamId = isConvexIdShape(params.teamId) ? params.teamId : undefined;
 
   // Look up the event for this team
   const eventId = useQuery(
@@ -337,12 +229,18 @@ function TeamRedirect() {
     if (eventId && teamId) {
       // Redirect to the dedicated team page
       void navigate(`/event/${eventId}/team/${teamId}`, { replace: true });
-    } else if (eventId === null) {
-      // Team not found, redirect to home
-      void navigate("/", { replace: true });
     }
-    // If eventId is undefined, we're still loading
+    // If eventId is undefined, we're still loading; null renders the unavailable state
   }, [eventId, teamId, navigate]);
+
+  if (!teamId || eventId === null) {
+    return (
+      <UnavailablePage
+        title="Project link isn't available"
+        description="This QR code or link points to a project that has moved, been removed, or isn't public yet. Browse events to find it."
+      />
+    );
+  }
 
   return <LoadingState label="Loading project…" />;
 }

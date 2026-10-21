@@ -1,2 +1,57 @@
 .ct-fi-page { background: var(--fi-desk); color: var(--fi-ink); }
 .ct-fi-page [data-rank] { background: var(--fi-key-white); border: 1px solid var(--fi-key-edge); box-shadow: var(--fi-shadow-key); }
+
+/* Ballot save status, draft and conflict notices */
+.ballot-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+}
+.ballot-discard-draft,
+.ballot-notice-dismiss {
+  padding: 0.25rem 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.ballot-board .inline-failure {
+  margin-top: 0.75rem;
+}
+.ballot-conflict,
+.ballot-removed-notice {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #e3b98a;
+  border-radius: 8px;
+  background: #fff6ec;
+  color: #2b2118;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.ballot-conflict p,
+.ballot-removed-notice p {
+  margin: 0;
+}
+.ballot-conflict-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style: decimal;
+}
+.ballot-conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.ballot-removed-notice .ballot-notice-dismiss {
+  justify-self: start;
+}

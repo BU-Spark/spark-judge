@@ -1,12 +1,12 @@
 @import "../code-and-tell/ibm-plex.css";
 .hp-workspace {
-  --hp-paper: #f6f7f2;
-  --hp-ink: #103c3b;
-  --hp-muted: #506260;
-  --hp-line: #ccd7d1;
-  --hp-current-event: #eaf1ec;
-  --hp-current-ballot: #d8e9e0;
-  font-family: "IBM Plex Sans", sans-serif;
+  --hp-paper: var(--platform-paper);
+  --hp-ink: var(--platform-ink);
+  --hp-muted: var(--platform-muted);
+  --hp-line: var(--platform-line);
+  --hp-current-event: var(--platform-workspace);
+  --hp-current-ballot: var(--platform-selected);
+  font-family: var(--platform-font);
   background: var(--hp-paper);
   color: var(--hp-ink);
   min-height: 100svh;
@@ -24,8 +24,8 @@
   outline-offset: 4px;
 }
 .hp-preview-bar {
-  background: #103c3b;
-  color: #fff;
+  background: var(--platform-mint);
+  color: var(--hp-ink);
   padding: 8px clamp(20px, 5vw, 80px);
   font-size: 13px;
   display: flex;
@@ -46,12 +46,12 @@
   display: flex;
   align-items: center;
   gap: 44px;
-  background: var(--hp-ink);
-  color: var(--hp-paper);
+  background: var(--platform-mint);
+  color: var(--hp-ink);
   padding: 12px clamp(20px, 5vw, 80px);
 }
 .hp-workspace .hp-header :is(a, button, summary):focus-visible {
-  outline-color: #a8ded0;
+  outline-color: var(--platform-teal);
 }
 .hp-brand {
   display: inline-flex;
@@ -237,6 +237,51 @@
   }
 }
 
+.hp-nav-toggle {
+  display: none;
+  margin-left: auto;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 4px;
+  color: var(--hp-ink);
+  cursor: pointer;
+}
+.hp-nav-toggle-bars,
+.hp-nav-toggle-bars::before,
+.hp-nav-toggle-bars::after {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+.hp-nav-toggle-bars {
+  position: relative;
+}
+.hp-nav-toggle-bars::before,
+.hp-nav-toggle-bars::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+.hp-nav-toggle-bars::before {
+  top: -6px;
+}
+.hp-nav-toggle-bars::after {
+  top: 6px;
+}
+.hp-header--nav-open .hp-nav-toggle-bars {
+  background: transparent;
+}
+.hp-header--nav-open .hp-nav-toggle-bars::before {
+  top: 0;
+  transform: rotate(45deg);
+}
+.hp-header--nav-open .hp-nav-toggle-bars::after {
+  top: 0;
+  transform: rotate(-45deg);
+}
 .hp-header-actions {
   margin-left: auto;
   display: flex;
@@ -246,14 +291,14 @@
 }
 .hp-header-actions > a {
   padding-block: 10px;
-  color: #d0ded8;
+  color: var(--hp-ink);
 }
 .hp-sign-in {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  background: #dcece3;
-  color: var(--hp-ink);
+  background: var(--hp-ink);
+  color: var(--hp-paper);
   padding: 10px 18px;
   border-radius: 4px;
   cursor: pointer;
@@ -280,6 +325,8 @@
   display: grid;
   gap: 12px;
   min-width: 230px;
+  max-width: calc(100vw - 40px);
+  overflow-wrap: anywhere;
   background: var(--hp-paper);
   color: var(--hp-ink);
   border: 1px solid var(--hp-line);
@@ -346,15 +393,50 @@
 }
 @media (max-width: 760px) {
   .hp-header {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 12px;
   }
+  .hp-nav-toggle {
+    display: grid;
+  }
   .hp-header-actions {
-    gap: 16px;
-    font-size: 13px;
+    display: none;
+    width: 100%;
+    margin-left: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 4px 0 8px;
+    border-top: 1px solid var(--platform-line);
+    font-size: 15px;
+  }
+  .hp-header--nav-open .hp-header-actions {
+    display: flex;
+  }
+  .hp-header-actions > a,
+  .hp-account-menu summary,
+  .hp-sign-in {
+    min-height: 44px;
+    justify-content: space-between;
+  }
+  .hp-header-actions > a {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+  }
+  .hp-account-menu {
+    width: 100%;
+  }
+  .hp-account-panel {
+    position: static;
+    width: 100%;
+    margin-top: 4px;
+    box-shadow: none;
+    border: 1px solid var(--platform-line);
   }
   .hp-sign-in {
-    padding: 10px 12px;
+    width: 100%;
+    padding: 10px 16px;
     gap: 8px;
   }
   .hp-archive {
@@ -576,4 +658,735 @@
   .hp-event-description {
     padding-left: 0;
   }
+}
+
+/* Focal event card for Hackathon and Demo Day events: a scoreboard whose surface follows the phase. */
+.hp-live-event--card {
+  margin: 28px clamp(12px, 2.5vw, 40px) 12px;
+}
+/* Every card carries the surface and art colors for all three phases of its series; the phase class picks one set.
+   Text and control colors follow the phase only. */
+.hp-event-card,
+.hp-upcoming-card {
+  --pre-bg: var(--platform-ink);
+  --pre-1: var(--platform-teal);
+  --pre-2: var(--platform-focus-on-dark);
+  --pre-3: #0b2e2d;
+  --pre-4: var(--platform-mint);
+  --live-bg: var(--platform-teal);
+  --live-1: var(--platform-focus-on-dark);
+  --live-2: var(--platform-paper);
+  --live-3: var(--platform-ink);
+  --live-4: var(--platform-mint);
+  --post-bg: var(--platform-mint);
+  --post-1: var(--platform-focus-on-dark);
+  --post-2: var(--platform-paper);
+  --post-3: var(--platform-line);
+  --post-4: var(--platform-workspace);
+  --ec-bg: var(--pre-bg);
+  --ec-fg: var(--platform-paper);
+  --ec-soft: var(--platform-mint);
+  --ec-label: var(--platform-focus-on-dark);
+  --ec-line: rgb(168 222 208 / 0.28);
+  --ec-chip-bg: var(--platform-focus-on-dark);
+  --ec-chip-fg: var(--platform-ink);
+  --ec-dot: var(--platform-ink);
+  --ec-btn-bg: var(--platform-focus-on-dark);
+  --ec-btn-fg: var(--platform-ink);
+  --ec-btn-hover: var(--platform-mint);
+  --ec-focus: var(--platform-focus-on-dark);
+  --ec-1: var(--pre-1);
+  --ec-2: var(--pre-2);
+  --ec-3: var(--pre-3);
+  --ec-4: var(--pre-4);
+  --ec-hole: var(--ec-bg);
+}
+.hp-event-card {
+  --ec-pad: clamp(28px, 4vw, 48px);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46%;
+  column-gap: 40px;
+  padding: var(--ec-pad);
+  border-radius: 20px;
+  background: var(--ec-bg);
+  color: var(--ec-fg);
+}
+.hp-event-card--live {
+  --ec-bg: var(--live-bg);
+  --ec-soft: var(--platform-paper);
+  --ec-label: var(--platform-paper);
+  --ec-line: rgb(246 247 242 / 0.35);
+  --ec-chip-bg: var(--platform-paper);
+  --ec-dot: var(--platform-teal);
+  --ec-btn-bg: var(--platform-paper);
+  --ec-1: var(--live-1);
+  --ec-2: var(--live-2);
+  --ec-3: var(--live-3);
+  --ec-4: var(--live-4);
+}
+.hp-event-card--post,
+.hp-event-card--empty {
+  --ec-bg: var(--post-bg);
+  --ec-fg: var(--platform-ink);
+  --ec-soft: var(--platform-muted);
+  --ec-label: var(--platform-muted);
+  --ec-line: var(--platform-line);
+  --ec-chip-bg: var(--platform-paper);
+  --ec-dot: var(--platform-muted);
+  --ec-btn-bg: var(--platform-ink);
+  --ec-btn-fg: var(--platform-paper);
+  --ec-btn-hover: #0b2e2d;
+  --ec-focus: var(--platform-teal);
+  --ec-1: var(--post-1);
+  --ec-2: var(--post-2);
+  --ec-3: var(--post-3);
+  --ec-4: var(--post-4);
+}
+
+/* Series palettes: muted takes on each event's own colors for the surface and art only. */
+.hp-brand-dsx {
+  --pre-bg: #1a3c52;
+  --pre-1: #d9714f;
+  --pre-2: #3fa39a;
+  --pre-3: #cbd98f;
+  --pre-4: #9fd1cb;
+  --live-bg: #0f6e86;
+  --live-1: #f0a58c;
+  --live-2: #e3eee5;
+  --live-3: #cbd98f;
+  --live-4: #123548;
+  --post-bg: #f4e5db;
+  --post-1: #e9b49e;
+  --post-2: #fbf6f1;
+  --post-3: #dfe7b5;
+  --post-4: #a7d1cd;
+}
+.hp-brand-civichacks {
+  --pre-bg: #1f1b22;
+  --pre-1: #8f4f8b;
+  --pre-2: #6cc79a;
+  --pre-3: #120f14;
+  --pre-4: #d9c6d8;
+  --live-bg: #6b3a68;
+  --live-1: #6cc79a;
+  --live-2: var(--platform-paper);
+  --live-3: #1f1b22;
+  --live-4: #b98ab6;
+  --post-bg: #ece4eb;
+  --post-1: #d6bcd4;
+  --post-2: #faf7fa;
+  --post-3: #bfe3cd;
+  --post-4: #ddd0dc;
+}
+.hp-brand-demoday {
+  --pre-bg: #272b5e;
+  --pre-1: #e8897a;
+  --pre-2: #a3acec;
+  --pre-3: #181a3d;
+  --pre-4: #f1dc93;
+  --live-bg: #4a50a8;
+  --live-1: #f1dc93;
+  --live-2: var(--platform-paper);
+  --live-3: #272b5e;
+  --live-4: #e8897a;
+  --post-bg: #e6e7f6;
+  --post-1: #c3c8f0;
+  --post-2: #f7f7fd;
+  --post-3: #f3c8c0;
+  --post-4: #efe3b8;
+}
+
+.hp-event-card-art {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 480px;
+  margin: calc(-1 * var(--ec-pad)) calc(-1 * var(--ec-pad)) 0 0;
+}
+.hp-event-card-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.hp-event-card-art .hp-art-tile {
+  display: none;
+}
+.hp-event-card-art svg > * {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hp-event-art-in 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hp-event-card-art svg > :nth-child(2) { animation-delay: 60ms; }
+.hp-event-card-art svg > :nth-child(3) { animation-delay: 120ms; }
+.hp-event-card-art svg > :nth-child(4) { animation-delay: 180ms; }
+.hp-event-card-art svg > :nth-child(5) { animation-delay: 240ms; }
+.hp-event-card-art svg > :nth-child(n + 6) { animation-delay: 300ms; }
+@keyframes hp-event-art-in {
+  from { opacity: 0; transform: scale(0.9); }
+}
+
+.hp-event-card-body {
+  grid-column: 1;
+  grid-row: 1;
+  max-width: 720px;
+  padding-bottom: 36px;
+}
+.hp-event-card-eyebrow {
+  display: flex;
+  align-items: flex-start;
+  margin: 0 0 20px;
+}
+.hp-event-card-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--ec-chip-bg);
+  color: var(--ec-chip-fg);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.hp-event-card-chip-format::before {
+  content: "·";
+  margin-right: 8px;
+}
+.hp-event-card-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ec-dot);
+}
+.hp-event-card--live .hp-event-card-dot {
+  animation: hp-event-card-pulse 1.8s ease-in-out infinite;
+}
+@keyframes hp-event-card-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(8 127 120 / 0.45); }
+  50% { box-shadow: 0 0 0 6px rgb(8 127 120 / 0); }
+}
+.hp-event-card h1 {
+  margin: 0;
+  font-size: clamp(44px, 6vw, 80px);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.hp-event-card-description {
+  max-width: 52ch;
+  margin: 16px 0 0;
+  color: var(--ec-soft);
+  font-size: 18px;
+  line-height: 1.55;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.hp-event-card-description--empty {
+  font-style: italic;
+}
+.hp-event-card-group h2,
+.hp-event-card-label {
+  display: block;
+  margin: 0 0 10px;
+  color: var(--ec-label);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.hp-event-card-countdown {
+  margin-top: 32px;
+}
+.hp-event-card-countdown-value {
+  display: flex;
+}
+.hp-event-card-countdown-part {
+  padding: 0 clamp(16px, 2.5vw, 32px);
+  border-left: 1px solid var(--ec-line);
+}
+.hp-event-card-countdown-part:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.hp-event-card-countdown-part strong {
+  display: block;
+  font-size: clamp(64px, 8.5vw, 116px);
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+.hp-event-card-countdown-part > span {
+  display: block;
+  margin-top: 10px;
+  color: var(--ec-label);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.hp-event-card-countdown-ended {
+  display: block;
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.hp-event-card-schedule {
+  max-width: 640px;
+  margin-top: 32px;
+}
+.hp-event-card-rail {
+  height: 4px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--ec-line);
+}
+.hp-event-card-rail span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ec-fg);
+}
+.hp-event-card-schedule dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 0;
+}
+.hp-event-card-schedule dl > div {
+  min-width: 0;
+}
+.hp-event-card-schedule dt {
+  color: var(--ec-label);
+  font-size: 13px;
+}
+.hp-event-card-schedule dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.hp-event-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 36px;
+}
+.hp-event-card-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 10px 18px;
+  border: 1px solid var(--ec-btn-bg);
+  border-radius: 6px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.hp-event-card-primary {
+  background: var(--ec-btn-bg);
+  color: var(--ec-btn-fg);
+}
+.hp-event-card-primary:hover {
+  border-color: var(--ec-btn-hover);
+  background: var(--ec-btn-hover);
+}
+.hp-event-card-actions .hp-event-card-secondary {
+  border-color: currentColor;
+  background: transparent;
+  color: var(--ec-fg);
+}
+.hp-event-card-secondary:hover {
+  background: color-mix(in srgb, var(--ec-fg) 10%, transparent);
+}
+.hp-workspace .hp-event-card a:focus-visible {
+  outline-color: var(--ec-focus);
+}
+
+.hp-event-card-details {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--ec-line);
+}
+.hp-event-card-group {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.hp-event-card-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hp-event-card-pills li {
+  max-width: 100%;
+  padding: 5px 14px;
+  border: 1px solid var(--ec-line);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.hp-event-card-criteria {
+  max-width: 60ch;
+  margin: 0;
+  color: var(--ec-soft);
+  font-size: 15px;
+}
+.hp-event-card-criterion {
+  white-space: nowrap;
+}
+
+.hp-event-card--empty h1 {
+  font-size: clamp(36px, 4.5vw, 56px);
+}
+
+.hp-event-card--skeleton {
+  min-height: 560px;
+  background: var(--platform-workspace);
+}
+.hp-event-card--skeleton .hp-event-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hp-skeleton {
+  display: block;
+  height: 16px;
+  width: 100%;
+  max-width: 560px;
+  border-radius: 6px;
+  background: var(--platform-selected);
+  animation: hp-skeleton-fade 1.4s ease-in-out infinite alternate;
+}
+.hp-skeleton--chip { width: 120px; height: 26px; border-radius: 999px; }
+.hp-skeleton--title { width: 60%; height: clamp(48px, 6vw, 80px); margin-bottom: 8px; }
+.hp-skeleton--short { width: 40%; }
+.hp-skeleton--count { width: 70%; height: clamp(64px, 9vw, 116px); margin-top: 20px; }
+@keyframes hp-skeleton-fade {
+  from { opacity: 1; }
+  to { opacity: 0.45; }
+}
+
+@media (max-width: 860px) {
+  .hp-event-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+  .hp-event-card--skeleton {
+    min-height: 0;
+  }
+  /* Art band above the text: a row of whole square tiles, the event's own composition at the right edge. */
+  .hp-event-card > .hp-event-card-art {
+    --band-h: clamp(200px, 64vw, 280px);
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
+    inset: auto;
+    z-index: auto;
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+    width: calc(100% + 2 * var(--ec-pad));
+    max-width: none;
+    height: var(--band-h);
+    min-height: 0;
+    margin: calc(-1 * var(--ec-pad)) calc(-1 * var(--ec-pad)) 0;
+    overflow: hidden;
+    border-bottom: 1px solid var(--ec-line);
+  }
+  .hp-event-card > .hp-event-card-art svg {
+    flex: none;
+    width: var(--band-h);
+    height: 100%;
+  }
+  .hp-event-card > .hp-event-card-art .hp-art-tile {
+    display: block;
+  }
+  .hp-event-card-body {
+    grid-column: 1;
+    grid-row: 2;
+    max-width: none;
+  }
+  .hp-event-card-eyebrow {
+    padding-top: 8px;
+  }
+  .hp-event-card--skeleton .hp-event-card-body {
+    gap: 12px;
+  }
+}
+@media (max-width: 480px) {
+  .hp-event-card-description {
+    font-size: 16px;
+  }
+  .hp-event-card-actions a {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hp-event-card-art svg > *,
+  .hp-event-card--live .hp-event-card-dot,
+  .hp-skeleton {
+    animation: none;
+  }
+}
+
+/* Upcoming events beyond the focal one: two rows of two small cards that reuse the art and series palette.
+   Each card picks its own layout from its width. */
+.hp-upcoming-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+@media (min-width: 860px) {
+  .hp-upcoming-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.hp-upcoming-cards + .hp-event-rows {
+  margin-top: 32px;
+}
+.hp-upcoming-card {
+  container-type: inline-size;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--ec-bg);
+  color: var(--ec-fg);
+}
+.hp-upcoming-card-inner {
+  --uc-art: 232px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--uc-art);
+  height: 100%;
+  min-height: var(--uc-art);
+}
+.hp-upcoming-card .hp-event-card-art {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  grid-area: 1 / 2;
+  width: var(--uc-art);
+  height: 100%;
+  min-height: var(--uc-art);
+  margin: 0;
+}
+.hp-upcoming-card-body {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 20px 8px 14px 22px;
+}
+.hp-upcoming-card-rest {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.hp-upcoming-card .hp-event-card-eyebrow {
+  margin: 0 0 14px;
+  padding: 0;
+}
+.hp-upcoming-card h3 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.hp-upcoming-card .hp-upcoming-card-awards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  margin: -2px 0 14px;
+  padding: 0;
+  list-style: none;
+  color: var(--ec-soft);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.hp-upcoming-card-awards li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.hp-upcoming-card-awards li::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--ec-1);
+  transform: translateY(-1px);
+}
+.hp-upcoming-card-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin: 0 0 18px;
+  color: var(--ec-soft);
+  font-size: 14px;
+  font-weight: 500;
+}
+.hp-upcoming-card-count strong {
+  margin-right: 2px;
+  color: var(--ec-fg);
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.hp-upcoming-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 16px;
+  margin-top: auto;
+  border-top: 1px solid var(--ec-line);
+  min-height: 44px;
+  padding-top: 4px;
+  color: var(--ec-soft);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.hp-upcoming-card-meta time {
+  white-space: nowrap;
+}
+.hp-upcoming-card-meta a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: var(--ec-fg);
+  font-weight: 600;
+}
+.hp-upcoming-card-meta a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.hp-upcoming-card-meta a:focus-visible {
+  outline: 2px solid var(--ec-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.hp-upcoming-card .hp-event-card-chip {
+  white-space: nowrap;
+}
+/* Narrow cards (phones, mid-width columns): the art becomes a corner tile beside the title,
+   and the countdown and date row run full width underneath. */
+@container (max-width: 440px) {
+  .hp-upcoming-card-inner {
+    --uc-art: clamp(120px, 38cqi, 148px);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "head art"
+      "rest rest";
+    min-height: 0;
+  }
+  .hp-upcoming-card .hp-event-card-art {
+    grid-area: art;
+    height: var(--uc-art);
+    min-height: 0;
+    overflow: hidden;
+    border-bottom-left-radius: 24px;
+  }
+  .hp-upcoming-card-body {
+    display: contents;
+  }
+  .hp-upcoming-card-head {
+    grid-area: head;
+    min-width: 0;
+    padding: 20px 10px 0 20px;
+  }
+  .hp-upcoming-card-rest {
+    grid-area: rest;
+    padding: 14px 20px 12px;
+  }
+}
+
+/* Local review gallery for event card art (/event-card-preview). */
+.hp-art-gallery-phases {
+  display: inline-flex;
+  gap: 12px;
+}
+.hp-art-gallery-phases button[aria-pressed="true"] {
+  font-weight: 600;
+  text-decoration-thickness: 2px;
+}
+.hp-art-gallery {
+  padding: 28px clamp(12px, 2.5vw, 40px) 64px;
+}
+.hp-art-gallery h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+.hp-art-gallery h2 span {
+  color: var(--hp-muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+.hp-art-gallery ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hp-art-gallery .hp-event-card {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.hp-art-gallery .hp-event-card[aria-pressed="true"] {
+  outline: 3px solid var(--platform-teal);
+  outline-offset: 3px;
+}
+.hp-art-gallery .hp-event-card-art {
+  position: static;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+}
+.hp-art-gallery .hp-event-card > span {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--platform-paper);
+  color: var(--platform-ink);
+  font-size: 12px;
+  font-weight: 500;
 }

@@ -1,14 +1,12 @@
-/** Keep in sync with public/theme-init.js, which runs before the app loads. */
-export function getBrowserChromeColor(pathname: string) {
-  if (pathname === "/" || pathname === "/vote-test" || pathname === "/homepage-preview" || pathname === "/profile") return "#103c3b";
-  if (/^\/event\/[^/]+\/?$/.test(pathname)) return "#073e39";
-  return "#ddd9d0";
+/** Keep in sync with public/theme-init.js. Every app route shares the platform header. */
+export function getBrowserChromeColor(_pathname: string) {
+  return "#103c3b";
 }
 
 export function syncBrowserChrome(pathname: string) {
   const color = getBrowserChromeColor(pathname);
   const root = document.documentElement;
   root.style.setProperty("--browser-chrome", color);
-  root.style.colorScheme = color === "#ddd9d0" ? "light" : "dark";
+  root.style.colorScheme = "dark";
   document.getElementById("theme-color-meta")?.setAttribute("content", color);
 }

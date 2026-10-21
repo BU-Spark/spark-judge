@@ -22,7 +22,7 @@
 }
 .event-stage,
 .es-home-shell {
-  --es-font: "Bricolage Grotesque", "Helvetica Neue", sans-serif;
+  --es-font: var(--platform-font);
   --es-pad: clamp(1.25rem, 4vw, 4.5rem);
   font-family: var(--es-font);
 }
@@ -45,7 +45,7 @@
   font-family: var(--es-font);
   font-size: 1.65rem;
   letter-spacing: -0.04em;
-  font-weight: 800;
+  font-weight: 600;
 }
 .es-home-shell .fi-brand-mark {
   display: none;
@@ -71,39 +71,30 @@
 }
 
 .event-stage {
-  --es-bg: var(--es-teal);
-  --es-fg: var(--es-citron);
-  --es-muted: #d0e6d2;
-  --es-panel: var(--es-citron);
-  --es-panel-ink: var(--es-evergreen);
-  --es-rule: #77a78b;
+  --es-evergreen: var(--platform-ink);
+  --es-teal: var(--platform-teal);
+  --es-citron: var(--platform-mint);
+  --es-yellow: var(--platform-selected);
+  --es-lilac: var(--platform-workspace);
+  --es-cobalt: var(--platform-teal);
+  --es-bg: var(--platform-paper);
+  --es-fg: var(--platform-ink);
+  --es-muted: var(--platform-muted);
+  --es-panel: var(--platform-workspace);
+  --es-panel-ink: var(--platform-ink);
+  --es-rule: var(--platform-line);
+  --es-action-ink: var(--platform-paper);
+  --es-guide-bg: var(--platform-mint);
+  --es-guide-ink: var(--platform-ink);
+  --es-guide-action-bg: var(--platform-ink);
+  --es-guide-action-ink: var(--platform-paper);
+  --es-art-light: var(--platform-selected);
+  --es-art-strong: var(--platform-teal);
   background: var(--es-bg);
   color: var(--es-fg);
-  min-height: calc(100svh - 76px);
+  min-height: calc(100svh - 68px);
   font-size: 1rem;
   line-height: 1.5;
-}
-.event-stage.es-demo_day {
-  --es-bg: var(--es-yellow);
-  --es-fg: var(--es-evergreen);
-  --es-muted: #354d2e;
-  --es-panel: #e5b84f;
-  --es-rule: #ac913c;
-}
-.event-stage.es-code_and_tell {
-  --es-bg: var(--es-sky);
-  --es-fg: var(--es-evergreen);
-  --es-muted: var(--es-evergreen);
-  --es-panel: var(--es-sky-panel);
-  --es-panel-ink: var(--es-evergreen);
-  --es-rule: var(--es-teal);
-  --es-action-ink: var(--es-citron);
-  --es-guide-bg: var(--es-evergreen);
-  --es-guide-ink: var(--es-sky-light);
-  --es-guide-action-bg: var(--es-citron);
-  --es-guide-action-ink: var(--es-evergreen);
-  --es-art-light: var(--es-sky-panel);
-  --es-art-strong: #2659a6;
 }
 .event-stage h1,
 .event-stage h2,
@@ -266,7 +257,7 @@
 }
 .es-introduction h1 {
   font-size: clamp(2.8rem, 4.5vw, 4.8rem);
-  font-weight: 800;
+  font-weight: 600;
   line-height: 0.99;
   letter-spacing: -0.035em;
   overflow-wrap: anywhere;
@@ -298,7 +289,7 @@
   background: var(--es-fg);
   color: var(--es-action-ink, var(--es-bg)) !important;
   border-radius: 7px;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
   text-decoration: none;
   border: 0;
 }
@@ -425,7 +416,7 @@
 .es-gallery-caption strong {
   font-size: 1.25rem;
   line-height: 1.2;
-  font-weight: 750;
+  font-weight: 600;
 }
 .es-gallery-caption > span > span {
   font-size: 0.8rem;
@@ -470,7 +461,7 @@
 .es-project-copy strong {
   font-size: 1.15rem;
   line-height: 1.2;
-  font-weight: 750;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .es-project-copy > span {
@@ -597,7 +588,7 @@
 .es-empty h1 {
   font-size: clamp(2.5rem, 6vw, 5rem);
   line-height: 1.05;
-  font-weight: 750;
+  font-weight: 600;
   letter-spacing: -0.03em;
 }
 .es-empty p {
@@ -617,7 +608,7 @@
 .es-calendar-intro h2 {
   font-size: clamp(1.8rem, 3vw, 2.6rem);
   line-height: 1.1;
-  font-weight: 750;
+  font-weight: 600;
   letter-spacing: -0.025em;
 }
 .es-calendar-intro p {
@@ -700,7 +691,7 @@
   font-size: 0.8rem;
 }
 .es-footer > span {
-  font-weight: 750;
+  font-weight: 600;
   font-size: 1.2rem;
   letter-spacing: -0.03em;
 }

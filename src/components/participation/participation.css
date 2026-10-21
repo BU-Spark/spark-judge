@@ -1,21 +1,29 @@
+/* Event workflows share the platform identity; their composition stays distinct. */
 .participation {
-  --p-bg: #076b60;
-  --p-ink: #d7ea83;
-  --p-muted: #d0e6d2;
-  --p-panel: #d7ea83;
-  --p-panel-ink: #073e39;
-  --p-line: #77a78b;
-  --p-dark: #073e39;
-  --p-light: #e1edb0;
+  --p-bg: var(--platform-paper);
+  --p-ink: var(--platform-ink);
+  --p-muted: var(--platform-muted);
+  --p-panel: var(--platform-workspace);
+  --p-panel-ink: var(--platform-ink);
+  --p-line: var(--platform-line);
+  --p-dark: var(--platform-ink);
+  --p-light: var(--platform-mint);
+  --p-action-ink: var(--platform-paper);
+  --p-accent-fill: var(--platform-ink);
+  --p-focus: var(--platform-teal);
+  --es-evergreen: var(--platform-ink);
+  --es-citron: var(--platform-mint);
+  --es-lilac: var(--platform-workspace);
+  --es-cobalt: var(--platform-teal);
   --fi-desk: var(--p-bg);
   --fi-chassis: var(--p-bg);
   --fi-panel: var(--p-panel);
   --fi-ink: var(--p-ink);
   --fi-ink-dim: var(--p-muted);
-  --fi-key-white: var(--p-panel);
-  --fi-font-ui: "Bricolage Grotesque", "Helvetica Neue", sans-serif;
-  --fi-font-mono: var(--fi-font-ui);
-  --fi-teal: var(--p-ink);
+  --fi-key-white: var(--p-bg);
+  --fi-font-ui: var(--platform-font);
+  --fi-font-mono: var(--platform-font);
+  --fi-teal: var(--platform-teal);
   --fi-hair: var(--p-line);
   --fi-rule: var(--p-line);
   --fi-key-edge: var(--p-line);
@@ -27,30 +35,8 @@
   font-family: var(--fi-font-ui);
   font-size: 1rem;
   line-height: 1.5;
-  min-height: calc(100svh - 76px);
+  min-height: calc(100svh - 68px);
   width: 100%;
-}
-.participation--code_and_tell {
-  --p-bg: var(--es-sky);
-  --p-ink: var(--es-evergreen);
-  --p-muted: var(--es-evergreen);
-  --p-panel: var(--es-sky-panel);
-  --p-panel-ink: var(--es-evergreen);
-  --p-line: var(--es-teal);
-  --p-dark: var(--es-evergreen);
-  --p-light: var(--es-sky-light);
-  --p-action-ink: var(--es-citron);
-  --p-accent-fill: var(--es-citron);
-}
-.participation--demo_day {
-  --p-bg: #f4c75f;
-  --p-ink: #073e39;
-  --p-muted: #354d2e;
-  --p-panel: #f8d689;
-  --p-panel-ink: #073e39;
-  --p-line: #9c8037;
-  --p-dark: #073e39;
-  --p-light: #f8d689;
 }
 .participation *,
 .participation *::before,
@@ -112,7 +98,7 @@
 }
 .participation-heading h1 {
   font-size: clamp(2rem, 3.5vw, 3.5rem);
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.05;
   max-width: 24ch;
 }
@@ -137,7 +123,7 @@
 }
 .participation-section-title h2 {
   font-size: 1.65rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 .participation-section-title > span {
   font-size: 0.85rem;
@@ -151,7 +137,7 @@
   min-height: 44px;
   padding: 0.7rem 1rem;
   border-radius: 6px;
-  font-weight: 650 !important;
+  font-weight: 500 !important;
   text-decoration: none;
 }
 .participation-primary {
@@ -239,7 +225,7 @@
 .participation .fi-transport {
   background: var(--p-ink);
   color: var(--p-action-ink, var(--p-bg));
-  font-weight: 700;
+  font-weight: 600;
 }
 .participation .ct-fi-page .fi-surface,
 .participation .ct-fi-page .fi-radius-module {
@@ -281,7 +267,7 @@
 }
 .ballot-project h3 {
   font-size: 1.45rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 .ballot-project p {
   font-size: 0.95rem;
@@ -329,7 +315,7 @@
 }
 .ballot-board h2 {
   font-size: 1.8rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 .ballot-board > p {
   font-size: 0.9rem;
@@ -367,7 +353,7 @@
 }
 .ballot-rank {
   font-size: 1.5rem;
-  font-weight: 750;
+  font-weight: 600;
   min-width: 1.5rem;
 }
 .ballot-drag-handle {
@@ -499,7 +485,7 @@
 }
 .demo-budget strong {
   font-size: 2rem;
-  font-weight: 750;
+  font-weight: 600;
   line-height: 1;
   display: inline-block;
   margin-right: 0.5rem;
@@ -588,7 +574,7 @@
 }
 .demo-project h3 {
   font-size: 1.7rem;
-  font-weight: 750;
+  font-weight: 600;
   line-height: 1.15;
   margin-bottom: 0.7rem;
   overflow-wrap: anywhere;
@@ -637,7 +623,7 @@
   background: var(--p-dark);
   color: var(--p-light);
   border-radius: 6px;
-  font-weight: 650 !important;
+  font-weight: 500 !important;
   font-size: 0.85rem !important;
 }
 .demo-mobile-budget {
@@ -685,20 +671,20 @@
   color: var(--p-ink);
 }
 .participation .fi-wiz-rail {
-  background: var(--p-dark);
+  background: var(--p-bg);
   color: var(--p-ink);
   box-shadow: none;
   padding: 1rem clamp(1.25rem, 4vw, 4.5rem);
-  --p-focus: #d7ea83;
+  --p-focus: var(--platform-teal);
 }
 .participation .fi-wiz-rail--head {
-  border-bottom: 1px solid #77a78b;
+  border-bottom: 1px solid var(--platform-line);
 }
 .participation .fi-wiz-rail--foot {
-  border-top: 1px solid #77a78b;
+  border-top: 1px solid var(--platform-line);
 }
 .scoring-session-name {
-  font-weight: 750;
+  font-weight: 600;
   font-size: 1.05rem;
 }
 .participation .fi-wiz-session-line .fi-readout {
@@ -709,14 +695,14 @@
   width: 24px;
   height: 4px;
   border: 0;
-  background: #77a78b;
-  border-radius: 1px;
+  background: var(--platform-line);
+  border-radius: 2px;
 }
 .participation .fi-wiz-step.is-done {
   background: var(--p-ink);
 }
 .participation .fi-wiz-step.is-current {
-  background: var(--p-light);
+  background: var(--platform-teal);
   box-shadow: none;
   animation: none;
   height: 7px;
@@ -745,9 +731,9 @@
   top: 0;
 }
 .participation .fi-wiz-team-name {
-  font-size: clamp(2.5rem, 4vw, 4rem);
+  font-size: clamp(2.25rem, 4vw, 3.5rem);
   color: var(--p-ink);
-  font-weight: 800;
+  font-weight: 600;
   margin: 1rem 0;
   letter-spacing: -0.03em;
 }
@@ -766,7 +752,7 @@
 .scoring-members h3,
 .scoring-guidance h3 {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 0.5rem;
 }
 .scoring-members p {
@@ -787,10 +773,10 @@
 .participation .fi-wiz-criteria {
   background: var(--p-panel);
   color: var(--p-panel-ink);
-  border-radius: 8px;
-  padding: 1.6rem;
+  border-radius: 16px;
+  padding: 1.75rem;
   gap: 1.5rem;
-  --p-focus: #073e39;
+  --p-focus: var(--platform-teal);
 }
 .scoring-rubric-title {
   display: flex;
@@ -800,29 +786,30 @@
 }
 .scoring-rubric-title h3 {
   font-size: 1.4rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 .scoring-rubric-title span {
   font-size: 0.85rem;
 }
 .participation .fi-wiz-criterion {
   border: 0;
-  border-top: 1px solid #8c9d5c;
   border-radius: 0;
   background: transparent;
-  padding: 1.25rem 0 0;
+  padding: 0;
   box-shadow: none;
 }
+.participation .fi-wiz-criterion.is-focused { border: 0; box-shadow: none; }
+.participation .fi-wiz-criterion.is-focused .fi-wiz-criterion-name { color: var(--platform-teal); }
 .participation .fi-wiz-criterion-legend {
   margin-bottom: 0.85rem;
 }
 .participation .fi-wiz-criterion-name {
   color: var(--p-panel-ink);
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .participation .fi-wiz-criterion .fi-readout {
-  color: #354d2e;
+  color: var(--p-muted);
   font-size: 0.8rem;
 }
 .participation .fi-wiz-score-key {
@@ -831,37 +818,37 @@
   min-height: 54px;
   min-width: 0;
   font-family: var(--fi-font-ui);
-  border: 1px solid #6c8146;
-  background: #e1edb0;
-  color: #073e39;
+  border: 1px solid var(--p-line);
+  background: var(--platform-paper);
+  color: var(--platform-ink);
   box-shadow: none;
   border-radius: 6px;
   font-size: 1.2rem;
   transform: none;
 }
 .participation .fi-wiz-score-key:hover {
-  background: #edf4d1;
-  border-color: #073e39;
+  background: var(--platform-hover);
+  border-color: var(--platform-ink);
 }
 .participation .fi-wiz-score-key.is-selected {
-  background: #073e39;
-  color: #d7ea83;
-  border-color: #073e39;
+  background: var(--platform-ink);
+  color: var(--platform-paper);
+  border-color: var(--platform-ink);
   box-shadow: none;
   transform: none;
 }
 .participation .fi-wiz-optout .fi-key {
-  border-color: #6c8146;
-  color: #073e39;
+  border-color: var(--p-line);
+  color: var(--platform-ink);
   background: transparent;
   font-size: 0.8rem;
 }
 .participation .fi-wiz-optout .fi-key.is-latched {
-  background: #073e39;
-  color: #d7ea83;
+  background: var(--platform-ink);
+  color: var(--platform-mint);
 }
 .participation .fi-wiz-optout-note {
-  color: #354d2e;
+  color: var(--p-muted);
   font-family: var(--fi-font-ui);
   font-size: 0.8rem;
   text-transform: none;
@@ -890,6 +877,14 @@
   max-width: 1200px;
   margin: auto;
 }
+.participation .fi-wiz-ledger {
+  display: grid;
+  gap: 12px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.participation .fi-wiz-ledger .fi-wiz-row { border: 0; }
 .participation .fi-wiz-sheet-head {
   background: transparent;
   border: 0;
@@ -920,21 +915,21 @@
   background: transparent;
   border: 0;
   border-radius: 0;
-  border-left: 1px solid #8c9d5c;
+  border-left: 1px solid var(--p-line);
   box-shadow: none;
 }
 .participation .fi-wiz-stamp {
-  color: #073e39;
-  border-color: #6c8146;
-  background: #e1edb0;
+  color: var(--platform-ink);
+  border-color: var(--p-line);
+  background: var(--platform-paper);
   font-family: var(--fi-font-ui);
   letter-spacing: normal;
   font-size: 0.8rem;
   text-transform: none;
 }
 .participation .fi-wiz-stamp.is-done {
-  color: #d7ea83;
-  background: #073e39;
+  color: var(--platform-mint);
+  background: var(--platform-ink);
 }
 .participation .fi-wiz-idle {
   background: var(--p-panel);
@@ -999,9 +994,9 @@
 .participation .fi-ev-filters {
   max-width: 1400px;
   margin: auto;
-  background: var(--p-dark);
+  background: var(--p-panel);
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1.25rem;
 }
 .participation .fi-ev-control input,
@@ -1071,13 +1066,13 @@
   justify-content: space-between;
   gap: 0.75rem 2rem;
   padding: 1rem clamp(1.25rem, 4vw, 4.5rem);
-  background: #073e39;
-  color: #d7ea83;
-  font-family: "Bricolage Grotesque", sans-serif;
+  background: var(--platform-ink);
+  color: var(--platform-paper);
+  font-family: var(--platform-font);
 }
 .preview-brand {
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -0.035em;
 }
 .participation-preview-nav > span {
@@ -1091,16 +1086,16 @@
 .participation-preview-nav > div a {
   padding: 0.6rem 0.8rem;
   min-height: 44px;
-  border: 1px solid #77a78b;
+  border: 1px solid var(--platform-line);
   border-radius: 5px;
   font-size: 0.85rem;
 }
 .participation-preview-nav a[aria-current="page"] {
-  background: #d7ea83;
-  color: #073e39;
+  background: var(--platform-mint);
+  color: var(--platform-ink);
 }
 .participation-preview-nav :focus-visible {
-  outline: 3px solid #d7ea83;
+  outline: 3px solid var(--platform-mint);
   outline-offset: 4px;
 }
 .participation-preview .fi-wiz.participation {
@@ -1111,7 +1106,7 @@
 }
 .preview-receipt h1 {
   font-size: 2.5rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 .preview-receipt p {
   margin-block: 1rem 2rem;
@@ -1150,7 +1145,7 @@
 }
 .participation .fi-ev-key:hover,
 .participation .fi-ev-key:active {
-  background: #e1edb0;
+  background: var(--platform-paper);
   box-shadow: none;
   transform: none;
 }
@@ -1161,7 +1156,7 @@
   display: none;
 }
 .participation .fi-ev-key-num {
-  color: #354d2e;
+  color: var(--p-muted);
   font-size: 0.8rem;
   font-family: var(--fi-font-ui);
   text-transform: none;
@@ -1171,7 +1166,7 @@
   font-size: 1.4rem;
 }
 .participation .fi-ev-key-team {
-  color: #354d2e;
+  color: var(--p-muted);
   font-size: 0.9rem;
   font-family: var(--fi-font-ui);
   text-transform: none;

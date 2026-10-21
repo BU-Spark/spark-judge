@@ -2,13 +2,15 @@ import { eventWebsites } from "../../lib/eventWebsites";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { Link } from "react-router-dom";
-import { Toaster } from "sonner";
+import { PlatformToaster } from "../ui/PlatformToaster";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { CodeAndTellVoteView } from "../code-and-tell/CodeAndTellVoteView";
 import { CodeAndTellVoteTest } from "../code-and-tell/CodeAndTellVoteTest";
 import { DirectionIcon } from "../participation/ParticipationChrome";
 import { PlatformHeader } from "./PlatformHeader";
+import { EventCard, EventCardEmpty, EventCardSkeleton, UpcomingEventCard } from "./EventCard";
+import { eventArtSequence, eventArtVariant } from "./EventCardArt";
 import { getEventDisplayLabel } from "../../lib/eventModes";
 import { CODE_AND_TELL_TITLE, CODE_AND_TELL_SUBTITLE } from "../../lib/codeAndTellPresentation";
 import {
@@ -16,7 +18,10 @@ import {
   selectFocalHomepage,
 } from "../../lib/homepagePhase";
 import type { StageEvent } from "./EventStage";
+import { upcomingItems, type UpcomingItem } from "../../lib/upcomingEvents";
 import "./homepage-workspace.css";
+
+const UPCOMING_CARDS = 4;
 
 const formatDate = (date: number) =>
   new Intl.DateTimeFormat("en-US", {
@@ -36,15 +41,14 @@ export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
-  const groups = groupHomepageEvents<StageEvent>(
-    [
-      ...(events?.active ?? []),
-      ...(events?.upcoming ?? []),
-      ...(events?.past ?? []),
-    ].filter((event) => !event.hidden),
-    now,
-  );
+  const visibleEvents: StageEvent[] = [
+    ...(events?.active ?? []),
+    ...(events?.upcoming ?? []),
+    ...(events?.past ?? []),
+  ].filter((event) => !event.hidden);
+  const groups = groupHomepageEvents<StageEvent>(visibleEvents, now);
   const focal = selectFocalHomepage(groups, now);
+  const artSequence = focal ? eventArtSequence(visibleEvents, focal.event._id) : undefined;
   const event = useQuery(
     api.events.getEvent,
     focal ? { eventId: focal.event._id as Id<"events"> } : "skip",
@@ -79,13 +83,11 @@ export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
       <main>
         <section
           id="current-event"
-          className={`hp-live-event${focal?.event.mode === "code_and_tell" ? " hp-live-event--code-and-tell" : ""}`}
+          className={`hp-live-event${focal?.event.mode === "code_and_tell" ? " hp-live-event--code-and-tell" : " hp-live-event--card"}`}
           aria-label="Current event"
         >
           {events === undefined || (focal && event === undefined) ? (
-            <p role="status" className="hp-loading">
-              Loading events…
-            </p>
+            <EventCardSkeleton />
           ) : event && focal ? (
             focal.event.mode === "code_and_tell" ? (
               <VotingView
@@ -100,28 +102,15 @@ export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
                 }
               />
             ) : (
-              <div className="ct-workspace">
-                <div className="ct-topline">
-                  <span>
-                    {formatDate(event.startDate)} ·{" "}
-                    {getEventDisplayLabel(focal.event.mode)}
-                  </span>
-                </div>
-                <header className="ct-masthead">
-                  <h1>{event.name}</h1>
-                </header>
-                <section className="ct-stage-message">
-                  <EventDescription event={event} />
-                  {focal.phase === "live" && (
-                    <Link className="hp-sign-in" to={`/event/${event._id}`}>
-                      Open event <DirectionIcon />
-                    </Link>
-                  )}
-                </section>
-              </div>
+              <EventCard
+                event={event}
+                phase={focal.phase}
+                now={now}
+                artVariant={eventArtVariant(event._id, artSequence)}
+              />
             )
           ) : (
-            <p className="hp-loading">No upcoming events yet.</p>
+            <EventCardEmpty hasPast={groups.past.length > 0} />
           )}
         </section>
         <section className="hp-directory" id="events" aria-label="Other events">
@@ -130,11 +119,7 @@ export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
               <div className="hp-directory-heading">
                 <h2>Coming up</h2>
               </div>
-              <div className="hp-event-rows">
-                {upcoming.map((event) => (
-                  <UpcomingEventRow key={event._id} event={event} />
-                ))}
-              </div>
+              <UpcomingEvents events={upcoming} artEvents={visibleEvents} now={now} />
             </>
           )}
           <div className="hp-archive" id="past-events">
@@ -155,18 +140,63 @@ export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
           Back to top <DirectionIcon direction="up" />
         </a>
       </footer>
-      <Toaster position="bottom-right" />
+      <PlatformToaster />
     </div>
   );
 }
 
-function EventRowContent({ event }: { event: StageEvent }) {
+/** Cards for the next few upcoming events, then rows for the rest. Demo Day award votes share one entry. */
+export function UpcomingEvents({
+  events,
+  artEvents,
+  now,
+}: {
+  events: StageEvent[];
+  artEvents: StageEvent[];
+  now: number;
+}) {
+  const items = upcomingItems(events);
   return (
     <>
-      <span className="hp-date">{formatDate(event.startDate)}</span>
+      <div className="hp-upcoming-cards">
+        {items.slice(0, UPCOMING_CARDS).map((item) => (
+          <UpcomingEventCard
+            key={item.key}
+            event={item.event}
+            now={now}
+            title={item.title}
+            label={item.label}
+            awards={item.awards}
+            artVariant={eventArtVariant(item.event._id, eventArtSequence(artEvents, item.event._id))}
+          />
+        ))}
+      </div>
+      {items.length > UPCOMING_CARDS && (
+        <div className="hp-event-rows">
+          {items.slice(UPCOMING_CARDS).map((item) => (
+            <UpcomingEventRow key={item.key} item={item} />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function EventRowContent({
+  event,
+  title = event.mode === "code_and_tell" ? CODE_AND_TELL_TITLE : event.name,
+  subtitle = event.mode === "code_and_tell" ? CODE_AND_TELL_SUBTITLE : getEventDisplayLabel(event.mode),
+}: {
+  event: StageEvent;
+  title?: string;
+  subtitle?: string;
+}) {
+  return (
+    <>
+      <span className="hp-date">{event.startDate > 0 ? formatDate(event.startDate) : "Date TBA"}</span>
       <span className="hp-event-name">
-        <span className="hp-event-title">{event.mode === "code_and_tell" ? CODE_AND_TELL_TITLE : event.name}</span>
-        <span>{event.mode === "code_and_tell" ? CODE_AND_TELL_SUBTITLE : getEventDisplayLabel(event.mode)}</span>
+        <span className="hp-event-title">{title}</span>
+        <span>{subtitle}</span>
       </span>
     </>
   );
@@ -180,11 +210,16 @@ function EventRow({ event }: { event: StageEvent }) {
   );
 }
 
-function UpcomingEventRow({ event }: { event: StageEvent }) {
+function UpcomingEventRow({ item }: { item: UpcomingItem<StageEvent> }) {
+  const { event, awards } = item;
   return (
     <details className="hp-upcoming-event">
       <summary>
-        <EventRowContent event={event} />
+        {awards ? (
+          <EventRowContent event={event} title={item.label === item.title ? item.title : `${item.label} ${item.title}`} subtitle={awards.join(" and ")} />
+        ) : (
+          <EventRowContent event={event} title={item.title} subtitle={item.label} />
+        )}
         <DirectionIcon direction="down" />
       </summary>
       <div className="hp-event-description">

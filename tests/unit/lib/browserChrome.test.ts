@@ -15,11 +15,11 @@ describe("browser chrome", () => {
   it.each([
     ["/", "#103c3b"],
     ["/homepage-preview", "#103c3b"],
-    ["/event/event-1", "#073e39"],
-    ["/event/event-1/team/team-1", "#ddd9d0"],
-    ["/admin", "#ddd9d0"],
+    ["/event/event-1", "#103c3b"],
+    ["/event/event-1/team/team-1", "#103c3b"],
+    ["/admin", "#103c3b"],
     ["/profile", "#103c3b"],
-    ["/events", "#ddd9d0"],
+    ["/events", "#103c3b"],
   ])("matches initial and client-side colors for %s", (path, color) => {
     window.history.replaceState({}, "", path);
     window.eval(startup);
@@ -28,7 +28,7 @@ describe("browser chrome", () => {
     expect(document.getElementById("theme-color-meta")).toHaveAttribute("content", color);
     syncBrowserChrome(path);
     expect(document.documentElement.style.getPropertyValue("--browser-chrome")).toBe(color);
-    expect(document.documentElement.style.colorScheme).toBe(color === "#ddd9d0" ? "light" : "dark");
+    expect(document.documentElement.style.colorScheme).toBe("dark");
     expect(document.getElementById("theme-color-meta")).toHaveAttribute("content", color);
   });
 

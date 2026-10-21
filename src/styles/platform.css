@@ -1,0 +1,151 @@
+@import "../components/code-and-tell/ibm-plex.css";
+
+/* Shared foundation, translated from the Code & Tell homepage. */
+:root {
+  /* Focus and route changes are immediate; explicit scroll actions can opt in. */
+  scroll-behavior: auto;
+  --platform-paper: #f6f7f2;
+  --platform-ink: #103c3b;
+  --platform-muted: #506260;
+  --platform-line: #ccd7d1;
+  --platform-teal: #087f78;
+  --platform-mint: #dcece3;
+  --platform-workspace: #eaf1ec;
+  --platform-selected: #d8e9e0;
+  --platform-hover: #e2ece5;
+  --platform-focus-on-dark: #a8ded0;
+  --platform-font: "IBM Plex Sans", "Helvetica Neue", sans-serif;
+  --platform-page-inline: clamp(20px, 5vw, 80px);
+}
+
+.platform-shell {
+  --fi-desk: var(--platform-paper);
+  --fi-chassis: var(--platform-paper);
+  --fi-panel: var(--platform-workspace);
+  --fi-hair: var(--platform-line);
+  --fi-hair-lit: transparent;
+  --fi-ink: var(--platform-ink);
+  --fi-ink-soft: var(--platform-muted);
+  --fi-ink-dim: var(--platform-muted);
+  --fi-key-white: var(--platform-paper);
+  --fi-teal: var(--platform-teal);
+  --fi-teal-deep: var(--platform-ink);
+  --fi-key-edge: var(--platform-line);
+  --fi-rule: var(--platform-line);
+  --fi-row-hover: var(--platform-hover);
+  --fi-font-ui: var(--platform-font);
+  --fi-font-mono: var(--platform-font);
+  --fi-shadow-key: none;
+  --fi-shadow-panel: none;
+  --fi-shadow-module: none;
+  --fi-shadow-unit: none;
+  --background: var(--platform-paper);
+  --foreground: var(--platform-ink);
+  --card: var(--platform-workspace);
+  --card-foreground: var(--platform-ink);
+  --primary: var(--platform-teal);
+  --primary-foreground: var(--platform-paper);
+  --muted: var(--platform-workspace);
+  --muted-foreground: var(--platform-muted);
+  --border: var(--platform-line);
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  background: var(--platform-paper);
+  color: var(--platform-ink);
+  font-family: var(--platform-font);
+  -webkit-font-smoothing: antialiased;
+}
+.platform-main {
+  flex: 1;
+  min-width: 0;
+}
+.platform-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 16px;
+  z-index: 100;
+  padding: 12px 20px;
+  background: var(--platform-paper);
+  border-radius: 6px;
+  transform: translateY(-160%);
+}
+.platform-skip-link:focus {
+  transform: translateY(0);
+}
+.platform-shell :is(button, input, select, textarea) {
+  font-family: inherit;
+}
+.platform-shell :focus-visible {
+  outline: 3px solid var(--platform-teal);
+  outline-offset: 4px;
+}
+.platform-shell :is(.fi-zone, .fi-engraved, .fi-engraved-sm, .fi-readout) {
+  font-family: var(--platform-font);
+  text-transform: none;
+  letter-spacing: normal;
+  text-shadow: none;
+}
+.platform-shell :is(.fi-key, .fi-transport) {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--platform-line);
+  border-radius: 6px;
+  background: var(--platform-paper);
+  color: var(--platform-ink);
+  box-shadow: none;
+  font: 500 14px/1.4 var(--platform-font);
+  text-transform: none;
+  letter-spacing: normal;
+  text-shadow: none;
+}
+.platform-shell .fi-transport {
+  background: var(--platform-ink);
+  border-color: var(--platform-ink);
+  color: var(--platform-paper);
+}
+.platform-shell :is(.fi-key, .fi-transport):hover:not(:disabled) {
+  filter: brightness(0.96);
+  box-shadow: none;
+  transform: none;
+}
+.platform-shell :is(.fi-key, .fi-transport)::before,
+.platform-shell :is(.fi-key, .fi-transport)::after {
+  display: none;
+}
+.platform-shell .fi-panel {
+  background: var(--platform-workspace);
+  border-color: var(--platform-line);
+  box-shadow: none;
+}
+.platform-shell .fi-field {
+  background: var(--platform-paper);
+  min-height: 44px;
+  box-shadow: none;
+}
+.platform-shell .fi-loading {
+  color: var(--platform-muted);
+}
+.platform-shell .fi-readout {
+  font-size: 14px;
+}
+.platform-shell .fi-engraved {
+  font-size: 13px;
+}
+.platform-shell .fi-engraved-sm {
+  font-size: 12px;
+}
+
+.platform-preview-note {
+  padding: 10px var(--platform-page-inline);
+  background: var(--platform-workspace);
+  color: var(--platform-muted);
+  font-size: 13px;
+}
+.platform-toast {
+  font-family: var(--platform-font) !important;
+  background: var(--platform-paper) !important;
+  color: var(--platform-ink) !important;
+  border-color: var(--platform-line) !important;
+  border-radius: 8px !important;
+}

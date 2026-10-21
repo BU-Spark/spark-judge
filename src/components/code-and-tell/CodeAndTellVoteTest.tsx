@@ -38,6 +38,7 @@ export function CodeAndTellVoteTest(props: BallotProps) {
           publicResults={null}
           submittedBallot={ballot}
           votingContext={votingContext}
+          persistDraft={false}
           saveBallot={async ({ rankedTeamIds }) => { setBallot([...rankedTeamIds]); }}
         />
       </CodeAndTellWorkspace>

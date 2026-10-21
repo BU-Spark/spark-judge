@@ -416,7 +416,7 @@ export const setMyTeamPrizeSubmissions = mutation({
         throw new Error("One or more prize selections are invalid for this event");
       }
       if (!isTeamEligibleForPrize(team, prize)) {
-        throw new Error(`Your team is not eligible for the prize \"${prize.name}\"`);
+        throw new Error(`Your team is not eligible for the prize "${prize.name}"`);
       }
     }
 
@@ -478,7 +478,7 @@ export const setTeamPrizeSubmissionsAdmin = mutation({
         throw new Error("One or more prize selections are invalid for this event");
       }
       if (!isTeamEligibleForPrize(team, prize)) {
-        throw new Error(`Team is not eligible for the prize \"${prize.name}\"`);
+        throw new Error(`Team is not eligible for the prize "${prize.name}"`);
       }
     }
 

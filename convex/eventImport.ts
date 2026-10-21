@@ -2,6 +2,7 @@ import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { EMAIL_PATTERN } from "./normalize";
 import { CODE_AND_TELL_PHASE_VALIDATOR } from "./validators";
+import { computeEventStatus } from "./helpers";
 
 /** Retain seeded examples for admin testing without advertising invented events. */
 export const hideSeedExamples = internalMutation({
@@ -67,11 +68,10 @@ export const upsertEvent = internalMutation({
         : {}),
       ...(args.mode === "hackathon"
         ? {
-            status: (args.startDate > Date.now()
-              ? "upcoming"
-              : args.endDate < Date.now()
-                ? "past"
-                : "active") as "upcoming" | "past" | "active",
+            status: computeEventStatus({
+              startDate: args.startDate,
+              endDate: args.endDate,
+            }),
           }
         : {}),
     };

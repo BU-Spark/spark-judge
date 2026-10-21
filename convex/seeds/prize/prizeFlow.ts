@@ -182,7 +182,6 @@ async function seedPrizeJudgingScenario(
     teamIds.push(teamId);
   }
 
-  let assignmentCount = 0;
   if (options.enableCohorts) {
     const teamsPerJudge = 15;
     let teamIndex = 0;
@@ -200,7 +199,6 @@ async function seedPrizeJudgingScenario(
           teamId: teamIds[i],
           addedAt: now - Math.random() * day,
         });
-        assignmentCount++;
       }
 
       // Wrap around for overlap

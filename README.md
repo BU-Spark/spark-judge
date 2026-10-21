@@ -127,7 +127,7 @@ QR generation resolves the public frontend URL from `SITE_URL`,
 | `npm run dev:frontend` | Runs Vite only. |
 | `npm run dev:backend` | Runs `convex dev` only. |
 | `npm run build` | Builds the production frontend into `dist/`. |
-| `npm run lint` | Typechecks the Convex and app TypeScript projects, runs `convex dev --once`, and builds the frontend. Requires configured Convex access. |
+| `npm run lint` | Runs ESLint, typechecks the Convex, app, and test TypeScript projects, runs `convex dev --once`, and builds the frontend. Requires configured Convex access. |
 | `npm test` | Runs the complete Vitest suite once. |
 | `npm run test:watch` | Runs Vitest in watch mode. |
 | `npm run test:coverage` | Runs the suite with coverage reporting. |

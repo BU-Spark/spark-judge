@@ -63,17 +63,18 @@ export function EventView({
   const [sponsorFilter, setSponsorFilter] = useState("");
   const [prizeFilter, setPrizeFilter] = useState("");
   const [myQueueOnly, setMyQueueOnly] = useState(false);
-  const [hoveredTeam, setHoveredTeam] = useState<{
-    name: string;
-    line: string;
-  } | null>(null);
   const [judgeCodeOpen, setJudgeCodeOpen] = useState(false);
   const [joining, setJoining] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const eventPrizes = useQuery(api.prizes.listEventPrizes, { eventId }) || [];
-  const eventPrizeSubmissions =
-    useQuery(api.prizes.getEventPrizeSubmissions, { eventId }) || [];
+  const eventPrizesResult = useQuery(api.prizes.listEventPrizes, { eventId });
+  const eventPrizeSubmissionsResult = useQuery(api.prizes.getEventPrizeSubmissions, { eventId });
+  // Stable empty fallbacks keep the memoized filters below from recomputing every render.
+  const eventPrizes = useMemo(() => eventPrizesResult ?? [], [eventPrizesResult]);
+  const eventPrizeSubmissions = useMemo(
+    () => eventPrizeSubmissionsResult ?? [],
+    [eventPrizeSubmissionsResult],
+  );
 
   const storageKey = judgeStatus
     ? `scoring_draft_${eventId}_${judgeStatus.userId}`
@@ -608,7 +609,6 @@ export function EventView({
           locked={scoringLocked}
           myScores={myScores}
           activeTeamId={initialTeamId}
-          onHover={setHoveredTeam}
         />
       )}
 
@@ -796,7 +796,6 @@ function TeamSelectionSection({
   locked,
   myScores,
   activeTeamId,
-  onHover,
 }: {
   eventId: Id<"events">;
   enableCohorts: boolean;
@@ -820,7 +819,6 @@ function TeamSelectionSection({
   locked: boolean;
   myScores?: Array<any>;
   activeTeamId: Id<"teams"> | null;
-  onHover: (team: { name: string; line: string } | null) => void;
 }) {
   const getTeamScoreStatus = (teamId: Id<"teams">) => {
     if (!myScores) return null;
@@ -948,7 +946,7 @@ function TeamSelectionSection({
           )
         ) : (
           <ul className="fi-ev-keys">
-            {assignedTeams.map((team: any, i: number) => {
+            {assignedTeams.map((team: any) => {
               const score = getTeamScoreStatus(team._id);
               const line = score
                 ? `Scored · ${Number(score.totalScore.toFixed(2))} pts`
@@ -963,10 +961,6 @@ function TeamSelectionSection({
                     className="fi-ev-key"
                     aria-label={`Score ${team.name}${score ? ", already scored" : ""}`}
                     aria-current={isActive ? "page" : undefined}
-                    onMouseEnter={() => onHover({ name: team.name, line })}
-                    onMouseLeave={() => onHover(null)}
-                    onFocus={() => onHover({ name: team.name, line })}
-                    onBlur={() => onHover(null)}
                   >
                     <span className="fi-ev-key-top">
                       <span

@@ -1,5 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Id } from "../../../convex/_generated/dataModel";
+import { describe, it, expect } from "vitest";
 import { filterAppreciationsForVoter } from "../../../convex/appreciations";
 import { getAppreciationVoterKey } from "../../../convex/appreciations";
 

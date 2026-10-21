@@ -112,16 +112,16 @@ export const getUserProfile = query({
     const validEventsData = eventsData.filter((e) => e !== null);
 
     const pastEvents = validEventsData
-      .filter((e) => computeEventStatus(e!.event) === "past")
-      .map(({ scores, ...rest }) => rest);
+      .filter((e) => computeEventStatus(e.event) === "past")
+      .map(({ scores: _scores, ...rest }) => rest);
 
     const activeEvents = validEventsData
-      .filter((e) => computeEventStatus(e!.event) === "active")
-      .map(({ scores, ...rest }) => rest);
+      .filter((e) => computeEventStatus(e.event) === "active")
+      .map(({ scores: _scores, ...rest }) => rest);
 
     const upcomingEvents = validEventsData
-      .filter((e) => computeEventStatus(e!.event) === "upcoming")
-      .map(({ scores, ...rest }) => rest);
+      .filter((e) => computeEventStatus(e.event) === "upcoming")
+      .map(({ scores: _scores, ...rest }) => rest);
 
     // Imported teammates may have only an entrant email, with no participant row.
     const [participantRows, allTeams] = await Promise.all([
@@ -145,7 +145,7 @@ export const getUserProfile = query({
     }))).filter(entry => entry !== null);
 
     // Calculate statistics
-    const allScores = validEventsData.flatMap((e) => e!.scores);
+    const allScores = validEventsData.flatMap((e) => e.scores);
     const totalTeamsScored = new Set(allScores.map((s) => s.teamId)).size;
     const averageScore =
       allScores.length > 0

@@ -617,11 +617,6 @@ export function CodeAndTellBallotView({
     setDraftStatus(result.status === "saved" ? "local" : "local-unavailable");
   }, [hydrated, ballotDraftKey, persistDraft, currentSignature, savedSignature, rankedTeamIds]);
 
-  const rankedProjectSet = useMemo(
-    () => new Set(rankedTeamIds.map((teamId) => String(teamId))),
-    [rankedTeamIds],
-  );
-
   const filteredProjects = useMemo(() => {
     const query = deferredSearchQuery.trim().toLowerCase();
     const projects = votingContext?.projects || [];

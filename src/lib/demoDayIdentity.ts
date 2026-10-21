@@ -232,7 +232,7 @@ export function useAttendeeIdentity(): {
       }
     }
 
-    loadIdentity();
+    void loadIdentity();
 
     return () => {
       mounted = false;

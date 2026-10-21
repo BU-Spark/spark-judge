@@ -31,6 +31,7 @@ export default tseslint.config(
         project: [
           "./tsconfig.node.json",
           "./tsconfig.app.json",
+          "./tsconfig.test.json",
           "./convex/tsconfig.json",
         ],
       },
@@ -68,6 +69,12 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/no-unsafe-return": "off",
       // END: Allow implicit `any`s
+
+      // React event handlers may be async; their promises are handled inside.
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        { checksVoidReturn: { attributes: false } },
+      ],
 
       // Allow async functions without await
       // for consistency (esp. Convex `handler`s)

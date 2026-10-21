@@ -48,7 +48,7 @@ describe("demoDayApi", () => {
         }),
       );
       const [, requestInit] = vi.mocked(global.fetch).mock.calls[0];
-      const body = JSON.parse(String((requestInit as RequestInit).body));
+      const body = JSON.parse((requestInit as RequestInit).body as string);
       expect(body).toMatchObject({
         eventId: "event-id",
         teamId: "team-id",
@@ -119,7 +119,7 @@ describe("demoDayApi", () => {
       expect(result.success).toBe(true);
       expect(global.fetch).toHaveBeenCalledTimes(2);
       const [, retryInit] = vi.mocked(global.fetch).mock.calls[1];
-      const retryBody = JSON.parse(String((retryInit as RequestInit).body));
+      const retryBody = JSON.parse((retryInit as RequestInit).body as string);
       expect(retryBody.turnstileToken).toBe("turnstile-token");
       expect(render).toHaveBeenCalled();
       expect(execute).toHaveBeenCalledWith("widget-id");

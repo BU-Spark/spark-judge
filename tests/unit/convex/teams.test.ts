@@ -156,7 +156,7 @@ describe('teams business logic', () => {
 
     it('should return null for a non-existent team ID', () => {
       // Simulating the getTeamEventId query logic when team doesn't exist
-      const mockTeam = null; // Team not found in database
+      const mockTeam = null as { eventId: string } | null; // Team not found in database
 
       // Simulate database lookup
       const team = mockTeam; // In real handler: ctx.db.get(args.teamId)

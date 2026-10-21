@@ -285,7 +285,7 @@ function normalizeAirtableCell(value: unknown): string {
     if (typeof maybeNamed.text === "string") return maybeNamed.text;
     return JSON.stringify(value);
   }
-  return String(value).trim();
+  return String(value as string | number | boolean).trim();
 }
 
 function getValueByAliases(row: CsvRow, aliases: string[]) {

@@ -36,9 +36,6 @@ describe("demoDayIdentity", () => {
 
     it("should fallback to cookie when localStorage is unavailable", () => {
       // Mock localStorage to throw
-      const originalGetItem = localStorage.getItem;
-      const originalSetItem = localStorage.setItem;
-
       vi.spyOn(localStorage, "getItem").mockImplementation(() => {
         throw new Error("localStorage unavailable");
       });
@@ -52,9 +49,7 @@ describe("demoDayIdentity", () => {
       const id = getAttendeeId();
       expect(id).toBe("test-cookie-id");
 
-      // Restore
-      localStorage.getItem = originalGetItem;
-      localStorage.setItem = originalSetItem;
+      vi.restoreAllMocks();
     });
 
     it("should generate ID in non-browser environment", () => {
@@ -87,7 +82,7 @@ describe("demoDayIdentity", () => {
     });
 
     it("should generate different fingerprint after cache clear", async () => {
-      const fp1 = await getFingerprint();
+      await getFingerprint();
       clearFingerprintCache();
       const fp2 = await getFingerprint();
       // Note: In a real browser, these might be the same due to same device

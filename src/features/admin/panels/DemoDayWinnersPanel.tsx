@@ -99,7 +99,7 @@ export function DemoDayWinnersPanel({
         overallWinner,
         categoryWinners: categories.flatMap((category) =>
           categoryWinners[category]
-            ? [{ category, teamId: categoryWinners[category] as Id<"teams"> }]
+            ? [{ category, teamId: categoryWinners[category] }]
             : [],
         ),
       });

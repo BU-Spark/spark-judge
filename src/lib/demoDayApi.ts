@@ -288,7 +288,7 @@ export async function sendAppreciation(
     result = await postAppreciation(turnstileToken);
   }
 
-  return result as AppreciationResult;
+  return result;
 }
 
 /**

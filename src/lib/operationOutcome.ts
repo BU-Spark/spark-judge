@@ -156,6 +156,5 @@ export function outcomeForFailure(failure: RecoverableFailure): Extract<Operatio
  */
 export function reportFailure(operation: string, reference: string, error: unknown): void {
   const route = typeof window !== "undefined" ? window.location.pathname : "";
-  // eslint-disable-next-line no-console
   console.error(`[hackjudge] ${operation} failed (ref ${reference}) on ${route}`, error);
 }

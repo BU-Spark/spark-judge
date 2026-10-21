@@ -2,6 +2,7 @@ import { CodeAndTellStageControl } from "../codeAndTell/CodeAndTellStageControl"
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import {
+  useCallback,
   useState,
   useEffect,
   useMemo,
@@ -1754,7 +1755,7 @@ function deriveEventSettingsForm(
           weight: typeof cat === "string" ? 1 : (cat.weight ?? 1),
         })),
       ).map((category, index) => {
-        const source = (event.categories || [])[index] as any;
+        const source = (event.categories || [])[index];
         return {
           name: category.name,
           weight: category.weight,
@@ -1905,7 +1906,7 @@ export function EventManagementModal({
   const generateQrZip = useAction(api.qrCodes.generateQrCodeZip);
 
   const [showAddTeam, setShowAddTeam] = useState(false);
-  const [editingTeam, setEditingTeam] = useState<any | null>(null);
+  const [editingTeam, setEditingTeam] = useState<any>(null);
   const [teamPanelMode, setTeamPanelMode] = useState<"manual" | "bulk">(
     "manual",
   );
@@ -1959,11 +1960,14 @@ export function EventManagementModal({
     );
   };
 
-  const updateTab = (tab: EventManagementTab) => {
-    setActiveTab(tab);
-    setLocalScoresView("overview");
-    onTabChange?.(tab);
-  };
+  const updateTab = useCallback(
+    (tab: EventManagementTab) => {
+      setActiveTab(tab);
+      setLocalScoresView("overview");
+      onTabChange?.(tab);
+    },
+    [onTabChange],
+  );
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -2061,7 +2065,7 @@ export function EventManagementModal({
     const server = latestServerFormRef.current[section];
     const baseline = settingsBaselineRef.current;
     if (server === undefined || !baseline) return;
-    applySettingsSection(section, server as SettingsForm[typeof section]);
+    applySettingsSection(section, server);
     baseline.sections[section] = server as any;
   };
 
@@ -2242,7 +2246,7 @@ export function EventManagementModal({
     if (event && !isDemoDayMode && activeTab === "setup") {
       updateTab("details");
     }
-  }, [activeTab, event, isHackathonMode, isDemoDayMode]);
+  }, [activeTab, event, isHackathonMode, isDemoDayMode, updateTab]);
 
   if (event === undefined) {
     return <LoadingState label="Loading event..." />;
@@ -2296,7 +2300,7 @@ export function EventManagementModal({
                   isSelected
                     ? "bg-teal-500/10 border-l-2 border-l-teal-500"
                     : "hover:bg-muted/20 border-l-2 border-l-transparent"
-                } ${(team as any).hidden ? "opacity-50" : ""}`}
+                } ${team.hidden ? "opacity-50" : ""}`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
@@ -2306,26 +2310,26 @@ export function EventManagementModal({
                         onClick={() => { setEditingTeam(team); setTeamPanelMode("manual"); setShowAddTeam(true); }}>
                         {team.name}
                       </button>
-                      {(team as any).hidden && (
+                      {team.hidden && (
                         <span className="px-2 py-0.5 bg-yellow-100  text-yellow-700  text-xs rounded-full">
                           Hidden
                         </span>
                       )}
-                      {isDemoDayMode && (team as any).courseCode && (
+                      {isDemoDayMode && team.courseCode && (
                         <span className="px-2 py-0.5 bg-pink-100  text-pink-700  text-xs rounded-full">
-                          {(team as any).courseCode}
+                          {team.courseCode}
                         </span>
                       )}
-                      {!isDemoDayMode && (team as any).sponsorName && (
+                      {!isDemoDayMode && team.sponsorName && (
                         <span className="px-2 py-0.5 bg-amber-100  text-amber-700  text-xs rounded-full">
-                          {(team as any).sponsorName}
+                          {team.sponsorName}
                         </span>
                       )}
                     </div>
                     <p className="text-sm fi-muted">
                       {isCodeAndTellMode
-                        ? ((team as any).entrantEmails || []).length > 0
-                          ? (team as any).entrantEmails.join(", ")
+                        ? (team.entrantEmails || []).length > 0
+                          ? team.entrantEmails.join(", ")
                           : team.members.join(", ")
                         : team.members.join(", ")}
                     </p>
@@ -2373,10 +2377,10 @@ export function EventManagementModal({
                               try {
                                 await hideTeam({
                                   teamId: team._id,
-                                  hidden: !(team as any).hidden,
+                                  hidden: !team.hidden,
                                 });
                                 toast.success(
-                                  (team as any).hidden
+                                  team.hidden
                                     ? `${entityLabel} unhidden`
                                     : `${entityLabel} hidden`,
                                 );
@@ -2387,7 +2391,7 @@ export function EventManagementModal({
                             }}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors"
                           >
-                            {(team as any).hidden ? "Unhide Team" : "Hide Team"}
+                            {team.hidden ? "Unhide Team" : "Hide Team"}
                           </button>
                           <button
                             onClick={async () => {
@@ -2431,7 +2435,7 @@ export function EventManagementModal({
       if (mode !== "hackathon" && activeTab === "prizes") {
         updateTab("details");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to update mode");
     }
   };
@@ -2963,7 +2967,7 @@ export function EventManagementModal({
                     {getEventDisplayLabel(eventMode)}
                   </span>
                 )}
-                {(event as any).hidden && (
+                {event.hidden && (
                   <span className="badge bg-amber-500/15 text-amber-600  border-amber-500/30">
                     Admin only
                   </span>
@@ -3054,7 +3058,7 @@ export function EventManagementModal({
                         {getEventDisplayLabel(eventMode)}
                       </span>
                     )}
-                    {(event as any).hidden && (
+                    {event.hidden && (
                       <span className="badge bg-amber-500/15 text-amber-600  border-amber-500/30">
                         Admin only
                       </span>
@@ -3441,7 +3445,6 @@ export function EventManagementModal({
                 eventMode={eventMode}
                 eventStatus={event.status as "upcoming" | "active" | "past"}
                 resultsReleased={event.resultsReleased}
-                eventScores={eventScores || undefined}
                 scoringLocked={scoringLocked}
                 lockingScores={lockingScores}
                 onFinishEvent={() => void handleStatusChange("past")}

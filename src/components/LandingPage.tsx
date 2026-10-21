@@ -135,7 +135,7 @@ export function LandingPage({
 
   const handleStartScoring = (event: LandingEvent) => {
     if (demoMode) {
-      navigate(`/participation-preview?mode=${getEventMode(event.mode)}`);
+      void navigate(`/participation-preview?mode=${getEventMode(event.mode)}`);
       return;
     }
     const eventMode = getEventMode(event.mode);

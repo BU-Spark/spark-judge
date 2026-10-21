@@ -8,7 +8,7 @@ vi.mock('convex/react', () => ({
   useMutation: vi.fn(() => vi.fn()),
   useAction: vi.fn(() => vi.fn()),
   Authenticated: ({ children }: { children: React.ReactNode }) => children,
-  Unauthenticated: ({ children }: { children: React.ReactNode }) => null,
+  Unauthenticated: () => null,
 }));
 
 vi.mock('@convex-dev/auth/react', () => ({
@@ -23,6 +23,7 @@ const customRender = (
 ) => render(ui, options);
 
 // Re-export everything from React Testing Library
+// eslint-disable-next-line react-refresh/only-export-components -- test helper module, not a component file
 export * from '@testing-library/react';
 export { customRender as render };
 

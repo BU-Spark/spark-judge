@@ -36,8 +36,8 @@ describe('events business logic', () => {
 
     it('should not require judge code when event is not active', () => {
       const event = {
-        mode: 'hackathon' as const,
-        status: 'upcoming' as const,
+        mode: 'hackathon' as string,
+        status: 'upcoming' as string,
         judgeCode: 'TEST123',
       };
       const requiresJudgeCode =
@@ -62,8 +62,8 @@ describe('events business logic', () => {
 
     it('should not require judge code for Code & Tell events', () => {
       const event = {
-        mode: 'code_and_tell' as const,
-        status: 'active' as const,
+        mode: 'code_and_tell' as string,
+        status: 'active' as string,
         judgeCode: 'TEST123',
       };
       const requiresJudgeCode =
@@ -182,11 +182,6 @@ describe('events business logic', () => {
       const now = Date.now();
       const day = 24 * 60 * 60 * 1000;
       const duration = 5 * day; // 5 day event
-      const event = {
-        startDate: now - 2 * day,
-        endDate: now - 2 * day + duration,
-      };
-
       const updates = {
         startDate: now + day,
         endDate: now + day + duration,
@@ -199,11 +194,6 @@ describe('events business logic', () => {
       const now = Date.now();
       const day = 24 * 60 * 60 * 1000;
       const duration = 6 * 60 * 60 * 1000; // 6 hours (shorter than 2 days)
-      const event = {
-        startDate: now + 3 * day,
-        endDate: now + 3 * day + duration,
-      };
-
       const updates = {
         startDate: now - day,
         endDate: Math.max(now + day, now - day + duration),
@@ -318,7 +308,13 @@ describe('events business logic', () => {
     });
 
     it('should build empty updates object when no fields provided', () => {
-      const args = {
+      const args: {
+        eventId: string;
+        name?: string;
+        description?: string;
+        startDate?: number;
+        endDate?: number;
+      } = {
         eventId: 'event123',
       };
 

@@ -52,7 +52,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
 
     if (typeof fallback === "function") {
-      return (fallback as FallbackRender)({ reference, reset: this.reset });
+      return fallback({ reference, reset: this.reset });
     }
     if (fallback) {
       return fallback;

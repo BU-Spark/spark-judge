@@ -53,7 +53,8 @@ describe("scores business logic", () => {
   ];
 
   describe("server-side score validation", () => {
-    it.each([
+    // Each row is one payload; wrap it so it.each passes the whole array as one argument.
+    const invalidPayloads: Parameters<typeof validateCategoryScores>[0][] = [
       [{ category: "Unknown", score: 3 }],
       [
         { category: "Innovation", score: 3 },
@@ -66,7 +67,8 @@ describe("scores business logic", () => {
       [{ category: "Innovation", score: 6 }, { category: "Execution", score: 3 }],
       [{ category: "Innovation", score: null, optedOut: true }, { category: "Execution", score: 3 }],
       [{ category: "Innovation", score: 3 }, { category: "Execution", score: null }],
-    ])("rejects invalid category payloads", (payload) => {
+    ];
+    it.each(invalidPayloads.map((payload) => [payload]))("rejects invalid category payloads", (payload) => {
       expect(() => validateCategoryScores(payload, categories)).toThrow();
     });
 
@@ -206,7 +208,7 @@ describe("scores business logic", () => {
       const categoryScores = teamScores
         .map((s) => s.categoryScores.find((cs) => cs.category === "Innovation"))
         .filter((cs) => cs !== undefined)
-        .map((cs) => cs!.score);
+        .map((cs) => cs.score);
 
       const avg =
         categoryScores.length > 0

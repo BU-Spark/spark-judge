@@ -133,7 +133,6 @@ export async function seedDemoDayEventHandler(ctx: MutationCtx) {
     const projectsToCreate = Math.max(5, projects.length);
 
     for (let i = 0; i < projectsToCreate; i++) {
-      const projectName = projects[i] || `${courseCode} Project ${i + 1}`;
       const teamName =
         teamNameTemplates[i % teamNameTemplates.length] + ` ${courseCode} ${i + 1}`;
       const description =

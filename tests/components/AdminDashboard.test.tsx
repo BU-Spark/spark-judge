@@ -158,7 +158,7 @@ describe("Unified Admin Workspace Routing", () => {
 
     fireEvent.click(screen.getByText("Back to Workspace"));
 
-    expect(screen.getByRole("heading", { name: "Events", exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Events" })).toBeInTheDocument();
   });
 
   it("renders admin insights loading state", () => {

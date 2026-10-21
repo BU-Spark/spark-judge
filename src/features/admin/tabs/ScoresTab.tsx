@@ -60,7 +60,6 @@ export function ScoresTab({
   eventMode,
   eventStatus,
   resultsReleased,
-  eventScores,
   scoringLocked,
   lockingScores,
   onFinishEvent,
@@ -90,7 +89,6 @@ export function ScoresTab({
   eventMode?: "hackathon" | "demo_day" | "code_and_tell";
   eventStatus: "upcoming" | "active" | "past";
   resultsReleased: boolean;
-  eventScores: any[] | undefined;
   scoringLocked: boolean;
   lockingScores: boolean;
   onFinishEvent: () => void;

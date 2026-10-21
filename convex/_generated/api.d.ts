@@ -27,12 +27,11 @@ import type * as events from "../events.js";
 import type * as helpers from "../helpers.js";
 import type * as http from "../http.js";
 import type * as judgeAssignments from "../judgeAssignments.js";
-import type * as migrations from "../migrations.js";
-import type * as participants from "../participants.js";
+import type * as normalize from "../normalize.js";
 import type * as prizes from "../prizes.js";
 import type * as qrCodes from "../qrCodes.js";
 import type * as qrCodesQueries from "../qrCodesQueries.js";
-import type * as router from "../router.js";
+import type * as resultPublication from "../resultPublication.js";
 import type * as scores from "../scores.js";
 import type * as seed from "../seed.js";
 import type * as seeds_admin_adminAccess from "../seeds/admin/adminAccess.js";
@@ -52,6 +51,7 @@ import type * as seeds_shared_scoring from "../seeds/shared/scoring.js";
 import type * as teamMembership from "../teamMembership.js";
 import type * as teams from "../teams.js";
 import type * as users from "../users.js";
+import type * as validators from "../validators.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -76,12 +76,11 @@ declare const fullApi: ApiFromModules<{
   helpers: typeof helpers;
   http: typeof http;
   judgeAssignments: typeof judgeAssignments;
-  migrations: typeof migrations;
-  participants: typeof participants;
+  normalize: typeof normalize;
   prizes: typeof prizes;
   qrCodes: typeof qrCodes;
   qrCodesQueries: typeof qrCodesQueries;
-  router: typeof router;
+  resultPublication: typeof resultPublication;
   scores: typeof scores;
   seed: typeof seed;
   "seeds/admin/adminAccess": typeof seeds_admin_adminAccess;
@@ -101,6 +100,7 @@ declare const fullApi: ApiFromModules<{
   teamMembership: typeof teamMembership;
   teams: typeof teams;
   users: typeof users;
+  validators: typeof validators;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

@@ -63,7 +63,7 @@ function validateGithubUrl(githubUrl: string | undefined) {
 
 function buildProjectUrlFields(
   projectUrl: string | undefined,
-  githubUrl?: string | undefined,
+  githubUrl?: string,
 ) {
   const normalizedProjectUrl = normalizeOptionalString(projectUrl) || "";
   const normalizedGithubUrl =

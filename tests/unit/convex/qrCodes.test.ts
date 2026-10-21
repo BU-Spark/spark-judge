@@ -168,8 +168,8 @@ describe("qrCodes business logic", () => {
 
   describe("event validation", () => {
     it("should validate event mode is demo_day", () => {
-      const demoDayEvent = { mode: "demo_day" as const };
-      const hackathonEvent = { mode: "hackathon" as const };
+      const demoDayEvent = { mode: "demo_day" as string };
+      const hackathonEvent = { mode: "hackathon" as string };
       const undefinedModeEvent = { mode: undefined };
 
       expect(demoDayEvent.mode === "demo_day").toBe(true);
@@ -328,7 +328,7 @@ describe("qrCodes business logic", () => {
     });
 
     it("should omit course code text element when not present", () => {
-      const courseCode = undefined;
+      const courseCode = undefined as string | undefined;
       const svgWidth = 600;
       const courseElement = courseCode
         ? `<text x="${svgWidth / 2}" y="50" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="bold" fill="#333333">${courseCode}</text>`
@@ -443,7 +443,7 @@ describe("qrCodes business logic", () => {
     });
 
     it("should format project count plural correctly", () => {
-      const count = 5;
+      const count: number = 5;
       const text = `${count} project${count !== 1 ? "s" : ""}`;
 
       expect(text).toBe("5 projects");

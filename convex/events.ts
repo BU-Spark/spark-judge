@@ -358,15 +358,6 @@ async function insertEvent(ctx: MutationCtx, args: CreateEventArgs) {
   });
 }
 
-export const createEvent = mutation({
-  args: CREATE_EVENT_ARGS,
-  returns: v.id("events"),
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    return await insertEvent(ctx, args);
-  },
-});
-
 /**
  * Creates an event and its initial prize catalog in one transaction. If any
  * prize fails validation, the event is not created either, so a retry can

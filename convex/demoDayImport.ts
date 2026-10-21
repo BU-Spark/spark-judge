@@ -1864,64 +1864,6 @@ export const applyBoardAssignmentCsv = action({
   },
 });
 
-export const updateTeamBoardAssignment = mutation({
-  args: {
-    teamId: v.id("teams"),
-    demoDayRound: v.number(),
-    demoDayBoardNumber: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-
-    await ctx.db.patch(args.teamId, {
-      demoDayRound: args.demoDayRound,
-      demoDayBoardNumber: args.demoDayBoardNumber,
-    });
-    return null;
-  },
-});
-
-export const updateEventCourseCodes = mutation({
-  args: {
-    eventId: v.id("events"),
-    courseCodes: v.array(v.string()),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-
-    await ctx.db.patch(args.eventId, { courseCodes: args.courseCodes });
-    return null;
-  },
-});
-
-export const addTeamDirect = mutation({
-  args: {
-    eventId: v.id("events"),
-    name: v.string(),
-    members: v.array(v.string()),
-    courseCode: v.optional(v.string()),
-    githubUrl: v.optional(v.string()),
-  },
-  returns: v.id("teams"),
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-
-    return await ctx.db.insert("teams", {
-      eventId: args.eventId,
-      name: args.name,
-      description: "",
-      members: args.members,
-      githubUrl: args.githubUrl || "",
-      projectUrl: args.githubUrl || "",
-      track: "",
-      courseCode: args.courseCode,
-      submittedAt: Date.now(),
-    });
-  },
-});
-
 export const renameTeam = mutation({
   args: {
     teamId: v.id("teams"),

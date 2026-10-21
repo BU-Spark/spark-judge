@@ -258,26 +258,6 @@ export const updateTeamAdmin = mutation({
   },
 });
 
-export const submitTeam = mutation({
-  args: {
-    eventId: v.id("events"),
-    name: v.string(),
-    description: v.string(),
-    members: v.array(v.string()),
-    githubUrl: v.optional(v.string()),
-    devpostUrl: v.optional(v.string()),
-    track: v.optional(v.string()),
-    courseCode: v.optional(v.string()),
-    logoStorageId: v.optional(v.id("_storage")),
-  },
-  returns: v.id("teams"),
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-    return await insertSubmittedTeam(ctx, userId, args);
-  },
-});
-
 type SubmitTeamArgs = {
   eventId: Id<"events">;
   name: string;
@@ -451,26 +431,6 @@ export const getMyTeam = query({
     }
 
     return { ...team, logoUrl };
-  },
-});
-
-export const updateTeam = mutation({
-  args: {
-    teamId: v.id("teams"),
-    description: v.optional(v.string()),
-    members: v.optional(v.array(v.string())),
-    githubUrl: v.optional(v.string()),
-    devpostUrl: v.optional(v.string()),
-    track: v.optional(v.string()),
-    courseCode: v.optional(v.string()),
-    logoStorageId: v.optional(v.id("_storage")),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-    await patchOwnTeam(ctx, userId, args);
-    return null;
   },
 });
 

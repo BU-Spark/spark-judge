@@ -36,7 +36,7 @@ function renderApp(convex: ConvexReactClient) {
   root.render(
     <ErrorBoundary>
       <ConvexAuthProvider client={convex}>
-        <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <ThemeProvider storageKey="vite-ui-theme">
           <App />
         </ThemeProvider>
       </ConvexAuthProvider>

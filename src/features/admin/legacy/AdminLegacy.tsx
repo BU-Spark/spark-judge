@@ -8,7 +8,6 @@ import {
   useRef,
   Dispatch,
   SetStateAction,
-  type ComponentProps,
 } from "react";
 import { toast } from "sonner";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -36,7 +35,7 @@ import {
   roundRubricPercent,
   rubricPercentToWeight,
 } from "../../../lib/scoringWeights";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { DetailsTab } from "../tabs/DetailsTab";
 import { TeamsTab } from "../tabs/TeamsTab";
 import { ScoresTab } from "../tabs/ScoresTab";
@@ -51,8 +50,7 @@ import {
   type RecoverableFailure,
 } from "../../../lib/operationOutcome";
 import "../judging/judging.css";
-import { EventsList as WorkspaceEventsList } from "../components/EventsList";
-import { ScoringDashboard as WorkspaceScoringDashboard } from "../components/ScoringDashboard";
+import { ScoringDashboard } from "../components/ScoringDashboard";
 import { AddTeamPanel } from "../panels/AddTeamPanel";
 import { escapeCsvCell } from "../panels/teamCsv";
 import { CodeAndTellWinnerPanel } from "../panels/CodeAndTellWinnerPanel";
@@ -746,302 +744,6 @@ function PrizeCatalogEditor({
       )}
     </div>
   );
-}
-
-export function AdminDashboard({
-  onBackToLanding,
-}: {
-  onBackToLanding: () => void;
-}) {
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const isAdmin = useQuery(api.events.isUserAdmin);
-  const navigate = useNavigate();
-
-  // Show loading state while checking admin status
-  if (isAdmin === undefined) {
-    return <LoadingState label="Verifying admin access..." />;
-  }
-
-  // Show error if user is not an admin
-  if (!isAdmin) {
-    return (
-      <ErrorState
-        title="Access denied"
-        description="You need admin privileges to access this dashboard."
-        actionLabel="Back to events"
-        onAction={onBackToLanding}
-      />
-    );
-  }
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {isCreateOpen ? (
-        <div className="fade-in space-y-6">
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(false)}
-            className="flex items-center gap-2 fi-key"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            Back to Dashboard
-          </button>
-          <div>
-            <h1 className="text-3xl fi-zone font-bold fi-ink">
-              Create Event
-            </h1>
-          </div>
-
-          <CreateEventWorkspace onClose={() => setIsCreateOpen(false)} />
-        </div>
-      ) : (
-        <>
-          <button
-            onClick={onBackToLanding}
-            className="flex items-center gap-2 fi-key mb-6 fade-in"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            Back to Events
-          </button>
-
-          <div className="flex justify-between items-center mb-8 fade-in">
-            <div>
-              <h1 className="text-3xl fi-zone font-bold fi-ink mb-2">
-                Admin Dashboard
-              </h1>
-              <p className="fi-muted">
-                Manage your hackathon events and teams
-              </p>
-            </div>
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="fi-transport flex items-center gap-2"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              Create Event
-            </button>
-          </div>
-
-          <EventsList
-            onSelectEvent={(eventId) => {
-              void navigate(`/admin/events/${eventId}`);
-            }}
-          />
-        </>
-      )}
-    </div>
-  );
-}
-
-export function AdminEventDetailsPage({
-  eventId,
-  onBackToDashboard,
-}: {
-  eventId: Id<"events">;
-  onBackToDashboard: () => void;
-}) {
-  const [searchParams] = useSearchParams();
-  const isAdmin = useQuery(api.events.isUserAdmin);
-  const initialTabParam = searchParams.get("tab");
-  const initialTab: EventManagementTab | undefined =
-    initialTabParam === "details" ||
-    initialTabParam === "teams" ||
-    initialTabParam === "scores"
-      ? initialTabParam
-      : undefined;
-
-  if (isAdmin === undefined) {
-    return <LoadingState label="Verifying admin access..." />;
-  }
-
-  if (!isAdmin) {
-    return (
-      <ErrorState
-        title="Access denied"
-        description="You need admin privileges to access this event."
-        actionLabel="Back to admin"
-        onAction={onBackToDashboard}
-      />
-    );
-  }
-
-  return (
-    <EventManagementModal
-      eventId={eventId}
-      onClose={onBackToDashboard}
-      layout="page"
-      initialTab={initialTab}
-    />
-  );
-}
-
-export function AdminPrizeWinnersPage({
-  eventId,
-  onBackToEvent,
-}: {
-  eventId: Id<"events">;
-  onBackToEvent: () => void;
-}) {
-  const isAdmin = useQuery(api.events.isUserAdmin);
-  const event = useQuery(api.events.getEvent, { eventId });
-  const codeAndTellSummary = useQuery(
-    api.codeAndTell.getAdminSummary,
-    event?.mode === "code_and_tell" ? { eventId } : "skip",
-  );
-  const prizeDeliberationData = useQuery(api.prizes.getPrizeDeliberationData, {
-    eventId,
-  });
-  const prizeWinners = useQuery(api.prizes.listPrizeWinners, { eventId });
-  const detailedScores = useQuery(api.scores.getDetailedEventScores, {
-    eventId,
-  });
-  const setPrizeWinners = useMutation(api.prizes.setPrizeWinners);
-  const setWinners = useMutation(api.scores.setWinners);
-  const setCodeAndTellWinner = useMutation(api.codeAndTell.setWinner);
-
-  if (isAdmin === undefined || event === undefined) {
-    return <LoadingState label="Loading winner wizard..." />;
-  }
-
-  if (!isAdmin) {
-    return (
-      <ErrorState
-        title="Access denied"
-        description="You need admin privileges to manage winners."
-        actionLabel="Back to admin"
-        onAction={onBackToEvent}
-      />
-    );
-  }
-
-  if (!event) {
-    return (
-      <ErrorState
-        title="Event not found"
-        description="This event could not be loaded."
-        actionLabel="Back to event"
-        onAction={onBackToEvent}
-      />
-    );
-  }
-
-  const eventMode = getEventMode(event.mode);
-  const isDemoDayMode = eventMode === "demo_day";
-  const isCodeAndTellMode = eventMode === "code_and_tell";
-
-  return (
-    <div className="mx-auto w-full h-[calc(100dvh-5rem)] md:h-[calc(100dvh-4.5rem)] min-h-0 overflow-hidden px-4 sm:px-6 lg:px-8 pt-2 pb-2 fade-in flex flex-col gap-2">
-      <button
-        type="button"
-        onClick={onBackToEvent}
-        className="flex items-center gap-2 fi-key shrink-0"
-      >
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-        Back to Event Scores
-      </button>
-
-      <div className="flex-1 min-h-0">
-        {isDemoDayMode ? (
-          event.teams.length > 0 ? (
-            <DemoDayWinnersPanel
-              eventId={eventId}
-              teams={event.teams}
-              categories={event.categories.map((c: { name: string }) => c.name)}
-              onClose={onBackToEvent}
-              onSubmit={setWinners}
-            />
-          ) : (
-            <div className="fi-panel p-6 fi-surface fi-muted">
-              Add teams first, then select winners.
-            </div>
-          )
-        ) : isCodeAndTellMode ? (
-          codeAndTellSummary === undefined ? (
-            <LoadingState label="Preparing ranked-vote summary..." />
-          ) : (
-            <CodeAndTellWinnerPanel
-              eventId={eventId}
-              standings={codeAndTellSummary?.standings || []}
-              defaultWinnerId={codeAndTellSummary?.defaultWinnerId}
-              selectedWinnerId={codeAndTellSummary?.selectedWinnerId}
-              totalBallots={codeAndTellSummary?.totalBallots || 0}
-              onClose={onBackToEvent}
-              onSubmit={setCodeAndTellWinner}
-            />
-          )
-        ) : prizeWinners === undefined ||
-          detailedScores === undefined ||
-          prizeDeliberationData === undefined ? (
-          <LoadingState label="Preparing winner wizard..." />
-        ) : (
-          <PrizeWinnerWizardPanel
-            eventId={eventId}
-            deliberationData={prizeDeliberationData}
-            existingWinners={prizeWinners || []}
-            detailedScores={detailedScores}
-            onClose={onBackToEvent}
-            onSubmit={setPrizeWinners}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-export function EventsList({
-  onSelectEvent,
-}: {
-  onSelectEvent: (eventId: Id<"events">) => void;
-}) {
-  return <WorkspaceEventsList onSelectEvent={onSelectEvent} />;
 }
 
 export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
@@ -2111,7 +1813,7 @@ function derivePrizeDrafts(eventPrizes: any[]): PrizeDraft[] {
   );
 }
 
-export type ScoringLockResult =
+type ScoringLockResult =
   | { ok: true }
   | { ok: false; failure: RecoverableFailure };
 
@@ -3865,47 +3567,4 @@ export function EventManagementModal({
       </ConfirmDialog>
     </div>
   );
-}
-
-type PrizeWinnerWizardPanelProps = ComponentProps<
-  typeof PrizeWinnerWizardPanel
->;
-
-export function PrizeWinnersWizardModal({
-  layout: _layout,
-  ...props
-}: PrizeWinnerWizardPanelProps & {
-  layout?: "modal" | "inline";
-}) {
-  return <PrizeWinnerWizardPanel {...props} />;
-}
-
-type WorkspaceScoringDashboardProps = ComponentProps<
-  typeof WorkspaceScoringDashboard
->;
-
-export function ScoringDashboard(props: WorkspaceScoringDashboardProps) {
-  return <WorkspaceScoringDashboard {...props} />;
-}
-
-type AddTeamPanelProps = ComponentProps<typeof AddTeamPanel>;
-
-export function AddTeamModal({
-  layout: _layout,
-  ...props
-}: AddTeamPanelProps & {
-  layout?: "modal" | "inline";
-}) {
-  return <AddTeamPanel {...props} />;
-}
-
-type DemoDayWinnersPanelProps = ComponentProps<typeof DemoDayWinnersPanel>;
-
-export function SelectWinnersModal({
-  layout: _layout,
-  ...props
-}: DemoDayWinnersPanelProps & {
-  layout?: "modal" | "inline";
-}) {
-  return <DemoDayWinnersPanel {...props} />;
 }

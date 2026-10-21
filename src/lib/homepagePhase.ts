@@ -145,31 +145,3 @@ export function formatTeletextClock(ms: number): string {
   if (h > 99) return `${h}:${pad(m)}:${pad(s)}`;
   return `${pad(h)}:${pad(m)}:${pad(s)}`;
 }
-
-export function focalCountdownMs(
-  event: HomepageEvent,
-  phase: Exclude<HomepagePhase, "idle">,
-  now = Date.now(),
-): number {
-  switch (phase) {
-    case "pre":
-      return Math.max(0, event.startDate - now);
-    case "live":
-      return Math.max(0, event.endDate - now);
-    case "post":
-      return Math.max(0, now - event.endDate);
-  }
-}
-
-export function countdownCaption(
-  phase: Exclude<HomepagePhase, "idle">,
-): string {
-  switch (phase) {
-    case "pre":
-      return "OPENS IN";
-    case "live":
-      return "CLOSES IN";
-    case "post":
-      return "CLOSED";
-  }
-}

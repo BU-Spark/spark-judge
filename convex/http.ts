@@ -1,7 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -376,81 +376,6 @@ http.route({
         "Access-Control-Max-Age": "86400",
       },
     });
-  }),
-});
-
-/**
- * GET /api/demo-day/:eventId/qr/:teamId
- * Generate and return a QR code PNG for a specific team.
- */
-http.route({
-  path: "/api/demo-day/qr",
-  method: "GET",
-  handler: httpAction(async (ctx, req) => {
-    try {
-      const url = new URL(req.url);
-      const eventId = url.searchParams.get("eventId");
-      const teamId = url.searchParams.get("teamId");
-
-      if (!eventId || !teamId) {
-        return new Response(
-          JSON.stringify({
-            error: "Missing eventId or teamId query parameters",
-          }),
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      // Call the QR code generation action
-      const result = await ctx.runAction(api.qrCodes.generateTeamQrCode, {
-        eventId: eventId as Id<"events">,
-        teamId: teamId as Id<"teams">,
-      });
-
-      if (!result.success || !result.qrCodeBase64) {
-        return new Response(
-          JSON.stringify({
-            error: result.error || "Failed to generate QR code",
-          }),
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      // Convert base64 data URL to binary
-      const base64Data = result.qrCodeBase64.replace(
-        /^data:[^;]+;base64,/,
-        "",
-      );
-      const binaryData = Uint8Array.from(atob(base64Data), (c) =>
-        c.charCodeAt(0),
-      );
-
-      return new Response(binaryData, {
-        status: 200,
-        headers: {
-          "Content-Type": "image/svg+xml",
-          "Content-Disposition": `inline; filename="${result.teamName || "team"}_qr.svg"`,
-          "Cache-Control": "public, max-age=3600",
-        },
-      });
-    } catch (error) {
-      console.error("Error generating QR code:", error);
-      return new Response(
-        JSON.stringify({
-          error: "Internal server error",
-        }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
-    }
   }),
 });
 

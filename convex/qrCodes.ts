@@ -34,15 +34,6 @@ type EventResult = {
   mode?: "hackathon" | "demo_day" | "code_and_tell";
 } | null;
 
-type TeamResult = {
-  _id: Id<"teams">;
-  eventId: Id<"events">;
-  name: string;
-  courseCode?: string;
-  hidden?: boolean;
-  demoDaySignName?: string;
-} | null;
-
 type TeamsResult = Array<{
   _id: Id<"teams">;
   eventId: Id<"events">;
@@ -760,72 +751,6 @@ function generateBoardGroupedHtml(
 </body>
 </html>`;
 }
-
-/**
- * Generate a QR code PNG for a specific team's appreciation URL.
- * Returns a base64-encoded PNG image with labels.
- */
-export const generateTeamQrCode = action({
-  args: {
-    eventId: v.id("events"),
-    teamId: v.id("teams"),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    error: v.optional(v.string()),
-    qrCodeBase64: v.optional(v.string()),
-    teamName: v.optional(v.string()),
-    courseCode: v.optional(v.string()),
-  }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{
-    success: boolean;
-    error?: string;
-    qrCodeBase64?: string;
-    teamName?: string;
-    courseCode?: string;
-  }> => {
-    const authorizedContext = await ctx.runQuery(
-      internal.qrCodesQueries.getAuthorizedTeamQrContext,
-      { eventId: args.eventId, teamId: args.teamId },
-    );
-    if (!authorizedContext) return { success: false, error: "Team not found" };
-    const event = authorizedContext.event as NonNullable<EventResult>;
-    const team = authorizedContext.team as NonNullable<TeamResult>;
-    const baseUrl = getTrustedFrontendBaseUrl();
-
-    // Build the appreciation URL: /event/:eventId/team/:teamId
-    const appreciationUrl: string = `${baseUrl}/event/${args.eventId}/team/${args.teamId}`;
-
-    try {
-      // Generate labeled SVG QR code
-      const svg = await generateLabeledQrSvg(
-        appreciationUrl,
-        team.demoDaySignName || team.name,
-        team.courseCode,
-        event.name,
-      );
-
-      // Convert SVG to base64 data URL
-      const qrCodeBase64 = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
-
-      return {
-        success: true,
-        qrCodeBase64,
-        teamName: team.demoDaySignName || team.name,
-        courseCode: team.courseCode || undefined,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Failed to generate QR code",
-      };
-    }
-  },
-});
 
 /**
  * Generate a ZIP file containing all labeled QR codes for an event.

@@ -16,6 +16,7 @@ export function JudgeCodeModal({ isOpen, onClose, eventId, onSuccess }: JudgeCod
   const [judgeCode, setJudgeCode] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const joinAsJudge = useMutation(api.events.joinAsJudge);
   const verifyCode = useMutation(api.events.verifyJudgeCodeAndStartJudging);
 
   useEffect(() => {
@@ -38,6 +39,17 @@ export function JudgeCodeModal({ isOpen, onClose, eventId, onSuccess }: JudgeCod
 
     setIsSubmitting(true);
     setError("");
+
+    // Register first so a code-only judge never hits "not registered".
+    // joinAsJudge is idempotent and returns the existing seat if present.
+    try {
+      await joinAsJudge({ eventId });
+    } catch (err: any) {
+      setError(err?.message || "Could not register as a judge");
+      toast.error("Could not register as a judge");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       await verifyCode({ eventId, judgeCode: judgeCode.trim() });

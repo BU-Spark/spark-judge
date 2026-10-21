@@ -1,51 +1,72 @@
 import { Component, ReactNode } from "react";
+import { reportFailure } from "../lib/operationOutcome";
+
+type FallbackRender = (props: { reference: string; reset: () => void }) => ReactNode;
 
 interface ErrorBoundaryProps {
   children: ReactNode;
-  fallback?: ReactNode;
+  /** Static fallback, or a render function that receives a retry callback. */
+  fallback?: ReactNode | FallbackRender;
+  /** Name of the contained section, used in diagnostics. */
+  section?: string;
 }
 
 interface ErrorBoundaryState {
   hasError: boolean;
-  error?: Error;
+  reference?: string;
 }
 
+function makeReference(): string {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+/**
+ * Contains render failures. Raw error text never reaches the screen: server
+ * messages can contain validator internals and production redacts them anyway.
+ * Mount route- or section-level instances (keyed by route) so one failure
+ * keeps the header and navigation available.
+ */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = {
     hasError: false,
   };
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true, reference: makeReference() };
   }
 
   componentDidCatch(error: Error, info: unknown) {
-    // eslint-disable-next-line no-console
-    console.error("ErrorBoundary caught an error", error, info);
+    reportFailure(`render:${this.props.section ?? "app"}`, this.state.reference ?? "-", { error, info });
   }
 
+  reset = () => {
+    this.setState({ hasError: false, reference: undefined });
+  };
+
   handleReload = () => {
-    this.setState({ hasError: false, error: undefined });
     window.location.reload();
   };
 
   render() {
-    const { hasError, error } = this.state;
+    const { hasError, reference = "-" } = this.state;
     const { children, fallback } = this.props;
 
     if (!hasError) {
       return children;
     }
 
+    if (typeof fallback === "function") {
+      return (fallback as FallbackRender)({ reference, reset: this.reset });
+    }
     if (fallback) {
       return fallback;
     }
 
     return (
       <div className="min-h-screen flex items-center justify-center fi-app-shell px-4">
-        <div className="fi-panel max-w-md w-full space-y-4 text-center p-8">
+        <div className="fi-panel max-w-md w-full space-y-4 text-center p-8" role="alert">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -55,15 +76,19 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </svg>
           </div>
           <div className="space-y-2">
-            <h2 className="fi-zone">Something went wrong</h2>
+            <h2 className="fi-zone">HackJudge couldn't load</h2>
             <p className="text-sm fi-muted">
-              {error?.message || "An unexpected error occurred. Please try again."}
+              Something went wrong while starting the app. Drafts saved on this device are kept.
             </p>
+            <p className="text-xs fi-muted">Reference {reference}</p>
           </div>
           <div className="flex justify-center gap-3">
             <button onClick={this.handleReload} className="fi-transport">
-              Reload Page
+              Reload
             </button>
+            <a href="/" className="fi-key">
+              Go to events
+            </a>
           </div>
         </div>
       </div>

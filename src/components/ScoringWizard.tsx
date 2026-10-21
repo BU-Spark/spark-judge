@@ -10,6 +10,27 @@ import {
   formatRubricPercent,
   getRubricPercentages,
 } from "../lib/scoringWeights";
+import {
+  quarantineDraft,
+  readDraft,
+  removeDraft,
+  safeGetItem,
+  writeDraft,
+} from "../lib/draftStorage";
+import {
+  SCORING_DRAFT_SCHEMA,
+  isScoringDraft,
+  parseLegacyDraft,
+  scoringDraftKey,
+  type ScoringDraft,
+} from "../lib/scoringDraft";
+import {
+  outcomeForFailure,
+  reportFailure,
+  toRecoverableFailure,
+  type RecoverableFailure,
+} from "../lib/operationOutcome";
+import { InlineFailure, TaskStatus, type TaskSaveState } from "./ui/TaskStatus";
 import "./ScoringWizard.fi.css";
 
 type Team = {
@@ -59,24 +80,94 @@ type ScoringWizardProps = {
   initialTeamId?: Id<"teams"> | null;
 };
 
-type DraftStoragePayload = {
-  scores: Record<string, Record<string, CategoryScoreValue>>;
-  completed: string[];
-  skipped: string[];
-  currentIndex: number;
-  timestamp: number;
+/** How long to wait for live server scores before offering resubmission. */
+const RECONCILE_WINDOW_MS = 5000;
+
+type SubmitEntry = {
+  teamId: Id<"teams">;
+  categoryScores: { category: string; score: number | null; optedOut: boolean }[];
 };
 
-const DEFAULT_SCORE = 3;
+/** True when every submitted team/category is reflected in the server's scores. */
+function serverHasSnapshot(
+  snapshot: SubmitEntry[],
+  serverScores: ExistingScore[],
+): boolean {
+  if (snapshot.length === 0) return false;
+  return snapshot.every((entry) => {
+    const server = serverScores.find((score) => score.teamId === entry.teamId);
+    if (!server) return false;
+    return entry.categoryScores.every((submitted) => {
+      const match = server.categoryScores.find(
+        (cs) => cs.category === submitted.category,
+      );
+      if (!match) return false;
+      return (
+        Boolean(match.optedOut) === submitted.optedOut &&
+        (submitted.optedOut || match.score === submitted.score)
+      );
+    });
+  });
+}
+
+type SubmitFailureState = {
+  failure: RecoverableFailure;
+  outcome: "rejected" | "unknown";
+  snapshot: SubmitEntry[];
+  /** Unknown outcomes: true while we wait for live server scores. */
+  checking: boolean;
+};
+
 const SCORE_VALUES = [1, 2, 3, 4, 5] as const;
 
-type ReviewStatus = "completed" | "skipped" | "pending";
+type ReviewStatus = "completed" | "skipped" | "incomplete" | "pending";
 
 const STAMP_LABEL: Record<ReviewStatus, string> = {
   completed: "Done",
   skipped: "Skipped",
+  incomplete: "Incomplete",
   pending: "Open",
 };
+
+function isValidScore(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    (SCORE_VALUES as readonly number[]).includes(value)
+  );
+}
+
+/**
+ * A category counts as answered only when the judge picked a 1–5 score, or
+ * marked it N/A on a category that allows opting out. There is no default.
+ */
+function isCategoryAnswered(
+  value: CategoryScoreValue | undefined,
+  category: Category,
+): boolean {
+  if (!value) return false;
+  if (value.optedOut) return Boolean(category.optOutAllowed);
+  return isValidScore(value.score);
+}
+
+function countUnanswered(
+  teamScores: Record<string, CategoryScoreValue> | undefined,
+  categories: Category[],
+): number {
+  return categories.reduce(
+    (count, category) =>
+      isCategoryAnswered(teamScores?.[category.name], category)
+        ? count
+        : count + 1,
+    0,
+  );
+}
+
+function isTeamFullyAnswered(
+  teamScores: Record<string, CategoryScoreValue> | undefined,
+  categories: Category[],
+): boolean {
+  return countUnanswered(teamScores, categories) === 0;
+}
 
 function pad2(n: number): string {
   return String(Math.max(0, n)).padStart(2, "0");
@@ -99,20 +190,17 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 function normalizeCategoryValue(value: unknown): CategoryScoreValue | null {
-  if (typeof value === "number") {
+  if (isValidScore(value)) {
     return { score: value, optedOut: false };
   }
-  if (isRecord(value) && "score" in value) {
-    const optedOut = Boolean(value.optedOut) || value.score === null;
-    const scoreRaw = value.score;
-    const score =
-      optedOut || scoreRaw === null
-        ? null
-        : typeof scoreRaw === "number"
-          ? scoreRaw
-          : DEFAULT_SCORE;
-    return { score, optedOut };
+  if (isRecord(value)) {
+    if (value.optedOut === true) return { score: null, optedOut: true };
+    if (isValidScore(value.score)) {
+      return { score: value.score, optedOut: false };
+    }
   }
+  // Anything else (missing score, null without an explicit opt-out, junk)
+  // is treated as unanswered rather than silently defaulted.
   return null;
 }
 
@@ -177,7 +265,15 @@ export function ScoringSession({
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [hadStoredDraft, setHadStoredDraft] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+  const [localState, setLocalState] = useState<
+    "clean" | "local" | "local-unavailable"
+  >("clean");
+  const [draftNotices, setDraftNotices] = useState<string[]>([]);
+  const [submitFailure, setSubmitFailure] =
+    useState<SubmitFailureState | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const submittedRef = useRef(false);
+  const draftStorageKey = storageKey ? scoringDraftKey(storageKey) : null;
   const [navHistory, setNavHistory] = useState<number[]>([]);
   const [focusedCriterionIndex, setFocusedCriterionIndex] = useState(0);
 
@@ -224,6 +320,12 @@ export function ScoringSession({
     };
   }, [embedded]);
 
+  const focusNextPendingRef = useRef(false);
+  const currentTeamScoresRef = useRef<
+    Record<string, CategoryScoreValue> | undefined
+  >(undefined);
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
   const criterionRefs = useRef<Array<HTMLFieldSetElement | null>>([]);
   const nextButtonRef = useRef<HTMLButtonElement | null>(null);
   const initialAppliedRef = useRef(false);
@@ -241,7 +343,17 @@ export function ScoringSession({
       ),
     [categories],
   );
-  const completedCount = completedTeams.size;
+  // Only teams that are fully answered count as completed. A team marked
+  // completed under an older draft (or before a category was added) that is
+  // missing answers is shown as incomplete and never submitted.
+  const effectiveCompleted = useMemo(() => {
+    const next = new Set<string>();
+    completedTeams.forEach((id) => {
+      if (isTeamFullyAnswered(draftScores[id], categories)) next.add(id);
+    });
+    return next;
+  }, [categories, completedTeams, draftScores]);
+  const completedCount = effectiveCompleted.size;
   const hasTeams = totalTeams > 0;
   const currentTeam =
     hasTeams && currentTeamIndex >= 0 && currentTeamIndex < totalTeams
@@ -250,22 +362,27 @@ export function ScoringSession({
   const currentTeamId = currentTeam?._id as string | undefined;
   const anyOptOut = categories.some((category) => category.optOutAllowed);
 
-  const filledScoresForTeam = useCallback(
+  const currentUnansweredCount = currentTeamId
+    ? countUnanswered(draftScores[currentTeamId], categories)
+    : categories.length;
+  const canAdvance = Boolean(currentTeamId) && currentUnansweredCount === 0;
+  currentTeamScoresRef.current = currentTeamId
+    ? draftScores[currentTeamId]
+    : undefined;
+
+  const answeredScoresForTeam = useCallback(
     (teamId: string) => {
       const existing = draftScores[teamId] || {};
-      const filled: Record<string, CategoryScoreValue> = {};
-      categories.forEach(({ name }) => {
-        const current = existing[name];
-        if (current) {
-          filled[name] = {
-            score: current.optedOut ? null : (current.score ?? DEFAULT_SCORE),
-            optedOut: current.optedOut ?? current.score === null,
-          };
-          return;
+      const answered: Record<string, CategoryScoreValue> = {};
+      categories.forEach((category) => {
+        const current = existing[category.name];
+        if (current && isCategoryAnswered(current, category)) {
+          answered[category.name] = current.optedOut
+            ? { score: null, optedOut: true }
+            : { score: current.score, optedOut: false };
         }
-        filled[name] = { score: DEFAULT_SCORE, optedOut: false };
       });
-      return filled;
+      return answered;
     },
     [categories, draftScores],
   );
@@ -273,76 +390,150 @@ export function ScoringSession({
   useEffect(() => {
     if (!draftLoaded || !existingScores || existingScores.length === 0) return;
 
-    setDraftScores((prev) => {
-      if (Object.keys(prev).length > 0) return prev;
-      const next: Record<string, Record<string, CategoryScoreValue>> = {};
-      existingScores.forEach((score) => {
-        const key = score.teamId as string;
-        next[key] = score.categoryScores.reduce<
-          Record<string, CategoryScoreValue>
-        >((acc, cs) => {
-          acc[cs.category] = {
-            score: cs.optedOut ? null : (cs.score ?? DEFAULT_SCORE),
-            optedOut: cs.optedOut ?? cs.score === null,
-          };
-          return acc;
-        }, {});
-      });
-      return next;
+    const seeded: Record<string, Record<string, CategoryScoreValue>> = {};
+    existingScores.forEach((score) => {
+      seeded[score.teamId as string] = score.categoryScores.reduce<
+        Record<string, CategoryScoreValue>
+      >((acc, cs) => {
+        const normalized = normalizeCategoryValue(cs);
+        if (normalized) acc[cs.category] = normalized;
+        return acc;
+      }, {});
     });
+    setDraftScores((prev) => (Object.keys(prev).length > 0 ? prev : seeded));
 
     setCompletedTeams((prev) => {
       if (prev.size > 0) return prev;
-      return new Set(existingScores.map((score) => score.teamId as string));
+      return new Set(
+        existingScores
+          .map((score) => score.teamId as string)
+          .filter((id) =>
+            isTeamFullyAnswered(seeded[id], categoriesRef.current),
+          ),
+      );
     });
   }, [existingScores, draftLoaded]);
 
   useEffect(() => {
     if (draftLoaded) return;
-    if (!storageKey) {
+    if (!storageKey || !draftStorageKey) {
       setDraftLoaded(true);
       return;
     }
     if (typeof window === "undefined") return;
 
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw) as DraftStoragePayload;
-        const normalizedScores: Record<
-          string,
-          Record<string, CategoryScoreValue>
-        > = {};
-        Object.entries(parsed.scores ?? {}).forEach(([teamId, categoryMap]) => {
-          const normalizedCategories: Record<string, CategoryScoreValue> = {};
-          Object.entries(categoryMap ?? {}).forEach(([categoryName, value]) => {
-            const normalized = normalizeCategoryValue(value);
-            if (normalized) {
-              normalizedCategories[categoryName] = normalized;
-            }
-          });
-          normalizedScores[teamId] = normalizedCategories;
-        });
-        setDraftScores(normalizedScores);
-        setCompletedTeams(new Set(parsed.completed ?? []));
-        setSkippedTeams(new Set(parsed.skipped ?? []));
-        setHadStoredDraft(true);
-        if (typeof parsed.timestamp === "number") {
-          setDraftSavedAt(parsed.timestamp);
-        }
-        if (
-          parsed.currentIndex >= 0 &&
-          parsed.currentIndex < sortedTeams.length
-        ) {
-          setCurrentTeamIndex(parsed.currentIndex);
-        }
+    const notices: string[] = [];
+    let draft: ScoringDraft | null = null;
+    let legacyIndex: number | null = null;
+    let savedAt: number | null = null;
+
+    const result = readDraft<ScoringDraft>(
+      draftStorageKey,
+      SCORING_DRAFT_SCHEMA,
+      { isValid: isScoringDraft },
+    );
+    if (result.status === "found") {
+      if (result.data.submittedAt) {
+        // These scores were accepted but cleanup failed; never restore them.
+        removeDraft(draftStorageKey);
+      } else {
+        draft = result.data;
+        savedAt = result.savedAt;
       }
-    } catch (error) {
-      console.error("Failed to load draft scores", error);
-    } finally {
-      setDraftLoaded(true);
+    } else if (result.status === "unreadable") {
+      quarantineDraft(draftStorageKey, result.raw);
+      notices.push(
+        "A saved draft on this device couldn't be read, so it was set aside. Scores already submitted to HackJudge are unaffected.",
+      );
+    } else if (result.status === "unavailable") {
+      setLocalState("local-unavailable");
     }
-  }, [storageKey, sortedTeams.length, draftLoaded]);
+
+    if (!draft && result.status !== "unavailable") {
+      // One-time migration from the unversioned draft kept at `storageKey`.
+      const legacyRaw = safeGetItem(storageKey);
+      const legacy = parseLegacyDraft(legacyRaw);
+      if (legacy) {
+        draft = legacy;
+        legacyIndex = legacy.currentIndex;
+        savedAt = legacy.savedAt;
+        removeDraft(storageKey);
+      } else if (legacyRaw !== null) {
+        quarantineDraft(storageKey, legacyRaw);
+        notices.push(
+          "A saved draft on this device couldn't be read, so it was set aside. Scores already submitted to HackJudge are unaffected.",
+        );
+      }
+    }
+
+    if (draft) {
+      const teamIds = new Set(sortedTeams.map((team) => team._id as string));
+      const categoryNames = new Set(categories.map((c) => c.name));
+      // Only prune when the roster and rubric are actually loaded.
+      const canPrune = teamIds.size > 0 && categoryNames.size > 0;
+      let dropped = 0;
+      const normalizedScores: Record<
+        string,
+        Record<string, CategoryScoreValue>
+      > = {};
+      Object.entries(draft.scores).forEach(([teamId, categoryMap]) => {
+        const normalizedCategories: Record<string, CategoryScoreValue> = {};
+        Object.entries(categoryMap ?? {}).forEach(([categoryName, value]) => {
+          const normalized = normalizeCategoryValue(value);
+          if (!normalized) return;
+          if (
+            canPrune &&
+            (!teamIds.has(teamId) || !categoryNames.has(categoryName))
+          ) {
+            dropped += 1;
+            return;
+          }
+          normalizedCategories[categoryName] = normalized;
+        });
+        if (canPrune && !teamIds.has(teamId)) return;
+        normalizedScores[teamId] = normalizedCategories;
+      });
+      const keepTeam = (id: string) => !canPrune || teamIds.has(id);
+      setDraftScores(normalizedScores);
+      // Older drafts could mark a team completed while relying on the
+      // implicit default; drop those so the judge finishes them explicitly.
+      setCompletedTeams(
+        new Set(
+          draft.completed.filter(
+            (id) =>
+              keepTeam(id) &&
+              isTeamFullyAnswered(normalizedScores[id], categoriesRef.current),
+          ),
+        ),
+      );
+      setSkippedTeams(new Set(draft.skipped.filter(keepTeam)));
+      setHadStoredDraft(true);
+      if (savedAt !== null) setDraftSavedAt(savedAt);
+      const restoredIndex = findTeamIndex(
+        sortedTeams,
+        draft.currentTeamId as Id<"teams"> | null,
+      );
+      if (restoredIndex >= 0) {
+        setCurrentTeamIndex(restoredIndex);
+      } else if (
+        legacyIndex !== null &&
+        legacyIndex >= 0 &&
+        legacyIndex < sortedTeams.length
+      ) {
+        setCurrentTeamIndex(legacyIndex);
+      }
+      if (dropped > 0) {
+        notices.push(
+          `${dropped} saved score${dropped === 1 ? " was" : "s were"} removed from your draft because the project or category is no longer part of this event.`,
+        );
+      }
+    }
+
+    if (notices.length > 0) setDraftNotices(notices);
+    setDraftLoaded(true);
+    // Restores once per mount; later roster changes must not reload the draft.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey, draftStorageKey, draftLoaded]);
 
   useEffect(() => {
     if (initialAppliedRef.current) return;
@@ -366,29 +557,32 @@ export function ScoringSession({
   }, [storageKey, draftLoaded, hadStoredDraft, initialTeamId, sortedTeams]);
 
   useEffect(() => {
-    if (!draftLoaded || !storageKey) return;
+    if (!draftLoaded || !draftStorageKey) return;
     if (typeof window === "undefined") return;
+    // Once the server accepted the batch, never write the draft back.
+    if (submittedRef.current) return;
 
-    const payload: DraftStoragePayload = {
+    const payload: ScoringDraft = {
       scores: draftScores,
       completed: Array.from(completedTeams),
       skipped: Array.from(skippedTeams),
-      currentIndex: currentTeamIndex,
-      timestamp: Date.now(),
+      currentTeamId: (sortedTeams[currentTeamIndex]?._id as string) ?? null,
     };
 
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(payload));
-      setDraftSavedAt(payload.timestamp);
-    } catch (error) {
-      console.error("Failed to persist scoring draft", error);
+    const result = writeDraft(draftStorageKey, SCORING_DRAFT_SCHEMA, payload);
+    if (result.status === "saved") {
+      setDraftSavedAt(result.savedAt);
+      setLocalState("local");
+    } else {
+      setLocalState("local-unavailable");
     }
   }, [
     draftScores,
     completedTeams,
     skippedTeams,
     currentTeamIndex,
-    storageKey,
+    sortedTeams,
+    draftStorageKey,
     draftLoaded,
   ]);
 
@@ -413,10 +607,12 @@ export function ScoringSession({
         const next = { ...prev };
         const existing = { ...(next[currentTeamId] ?? {}) };
         const current = existing[category];
-        const isCurrentlyOptedOut = current?.optedOut;
-        existing[category] = isCurrentlyOptedOut
-          ? { score: current?.score ?? DEFAULT_SCORE, optedOut: false }
-          : { score: null, optedOut: true };
+        if (current?.optedOut) {
+          // Un-marking N/A leaves the category unanswered again.
+          delete existing[category];
+        } else {
+          existing[category] = { score: null, optedOut: true };
+        }
         next[currentTeamId] = existing;
         return next;
       });
@@ -443,6 +639,7 @@ export function ScoringSession({
 
   const handleAdvance = useCallback(() => {
     if (!currentTeam || !currentTeamId) return;
+    if (!isTeamFullyAnswered(draftScores[currentTeamId], categories)) return;
     setNavHistory((prev) => [...prev, currentTeamIndex]);
 
     const nextCompleted = new Set(completedTeams);
@@ -450,10 +647,6 @@ export function ScoringSession({
     const nextSkipped = new Set(skippedTeams);
     nextSkipped.delete(currentTeamId);
 
-    setDraftScores((prev) => ({
-      ...prev,
-      [currentTeamId]: filledScoresForTeam(currentTeamId),
-    }));
     setCompletedTeams(nextCompleted);
     setSkippedTeams(nextSkipped);
 
@@ -461,12 +654,13 @@ export function ScoringSession({
     if (nextIdx === -1) setIsReviewing(true);
     else setCurrentTeamIndex(nextIdx);
   }, [
+    categories,
     completedTeams,
     computeNextIndex,
     currentTeam,
     currentTeamId,
     currentTeamIndex,
-    filledScoresForTeam,
+    draftScores,
     skippedTeams,
   ]);
 
@@ -533,99 +727,191 @@ export function ScoringSession({
     [currentTeamIndex, totalTeams],
   );
 
-  const handleSubmitAll = useCallback(async () => {
-    if (completedCount === 0) {
-      toast.error("Score at least one team before submitting.");
-      return;
+  const buildPayload = useCallback((): SubmitEntry[] => {
+    // effectiveCompleted only holds fully answered teams, so every
+    // category below has a real 1–5 score or an explicit N/A.
+    return sortedTeams
+      .filter((team) => effectiveCompleted.has(team._id as string))
+      .map((team) => {
+        const teamId = team._id as string;
+        const scores = answeredScoresForTeam(teamId);
+        return {
+          teamId: team._id,
+          categoryScores: categories.map(({ name }) => {
+            const entry = scores[name];
+            const optedOut = entry.optedOut === true;
+            return {
+              category: name,
+              score: optedOut ? null : entry.score,
+              optedOut,
+            };
+          }),
+        };
+      });
+  }, [answeredScoresForTeam, categories, effectiveCompleted, sortedTeams]);
+
+  /**
+   * Runs only after the server accepted the batch. Local cleanup and the
+   * caller's callback are separate steps: neither can turn a confirmed
+   * submission into a reported failure.
+   */
+  const finishSubmitted = useCallback(() => {
+    submittedRef.current = true;
+    setSubmitFailure(null);
+
+    let cleanupFailed = false;
+    if (draftStorageKey) {
+      if (removeDraft(draftStorageKey).status !== "removed") {
+        // Removal failed: mark the draft as submitted so it is never restored.
+        const marker = writeDraft<ScoringDraft>(
+          draftStorageKey,
+          SCORING_DRAFT_SCHEMA,
+          {
+            scores: {},
+            completed: [],
+            skipped: [],
+            currentTeamId: null,
+            submittedAt: Date.now(),
+          },
+        );
+        cleanupFailed = marker.status !== "saved";
+      }
     }
 
-    const incompleteCount = totalTeams - completedCount;
-    if (incompleteCount > 0) {
-      const confirmed = window.confirm(
-        `You have ${incompleteCount} incomplete team${incompleteCount === 1 ? "" : "s"}. These teams will not be scored. Submit anyway?`,
+    toast.success("Scores submitted to HackJudge.");
+    if (cleanupFailed) {
+      toast.warning(
+        "Your scores are saved. This browser couldn't clear its local draft, so an old draft may appear next time; your submitted scores are not affected.",
       );
-      if (!confirmed) return;
     }
 
-    setSubmitting(true);
     try {
-      const payload = sortedTeams
-        .filter((team) => completedTeams.has(team._id as string))
-        .map((team) => {
-          const teamId = team._id as string;
-          const scores = filledScoresForTeam(teamId);
-          return {
-            teamId: team._id,
-            categoryScores: categories.map(({ name }) => {
-              const entry = scores[name];
-              const optedOut = entry?.optedOut ?? false;
-              const scoreValue =
-                optedOut || entry?.score === null
-                  ? null
-                  : (entry?.score ?? DEFAULT_SCORE);
-              return {
-                category: name,
-                score: scoreValue,
-                optedOut,
-              };
-            }),
-          };
-        });
+      onSubmitted();
+    } catch (error) {
+      reportFailure("scoring_after_submit", "local", error);
+    }
+  }, [draftStorageKey, onSubmitted]);
 
+  const handleSubmitAll = useCallback(
+    async (options: { skipConfirm?: boolean } = {}) => {
+      if (submitting) return;
+      if (completedCount === 0) {
+        toast.error("Score at least one team before submitting.");
+        return;
+      }
+
+      const incompleteCount = totalTeams - completedCount;
+      if (incompleteCount > 0 && !options.skipConfirm) {
+        const confirmed = window.confirm(
+          `You have ${incompleteCount} incomplete team${incompleteCount === 1 ? "" : "s"}. These teams will not be scored. Submit anyway?`,
+        );
+        if (!confirmed) return;
+      }
+
+      const payload = buildPayload();
       if (payload.length === 0) {
         toast.error("No completed teams to submit.");
         return;
       }
 
-      await submitBatchScores({ eventId, scores: payload });
-
-      if (storageKey && typeof window !== "undefined") {
-        window.localStorage.removeItem(storageKey);
+      setSubmitting(true);
+      setSubmitFailure(null);
+      try {
+        await submitBatchScores({ eventId, scores: payload });
+      } catch (error: unknown) {
+        // Every score stays in memory and in the local draft.
+        const failure = toRecoverableFailure(error, "submit_scores");
+        const outcome = outcomeForFailure(failure);
+        setSubmitFailure({
+          failure,
+          outcome,
+          snapshot: payload,
+          checking: outcome === "unknown",
+        });
+        setSubmitting(false);
+        return;
       }
-
-      toast.success("Scores submitted successfully!");
-      onSubmitted();
-    } catch (error: unknown) {
-      console.error(error);
-      const message =
-        error instanceof Error ? error.message : "Failed to submit scores";
-      toast.error(message);
-    } finally {
       setSubmitting(false);
+      finishSubmitted();
+    },
+    [
+      buildPayload,
+      completedCount,
+      eventId,
+      finishSubmitted,
+      submitBatchScores,
+      submitting,
+      totalTeams,
+    ],
+  );
+
+  // Uncertain outcome: the write may have landed. Reconcile against the live
+  // server scores before offering a resubmit.
+  const checkingSave = submitFailure?.checking === true;
+  useEffect(() => {
+    if (!checkingSave) return;
+    const timer = window.setTimeout(() => {
+      setSubmitFailure((prev) => (prev ? { ...prev, checking: false } : prev));
+    }, RECONCILE_WINDOW_MS);
+    return () => window.clearTimeout(timer);
+  }, [checkingSave]);
+
+  useEffect(() => {
+    if (submitFailure?.outcome !== "unknown" || !existingScores) return;
+    if (!serverHasSnapshot(submitFailure.snapshot, existingScores)) return;
+    const current = buildPayload();
+    if (JSON.stringify(current) === JSON.stringify(submitFailure.snapshot)) {
+      finishSubmitted();
+    } else {
+      // The earlier batch landed, but the judge has edited since; keep the
+      // newer changes and ask for another submit rather than clearing them.
+      setSubmitFailure(null);
+      setDraftNotices((prev) => [
+        ...prev,
+        "Your earlier submission reached HackJudge. You've changed scores since then; submit again to save the latest version.",
+      ]);
     }
-  }, [
-    categories,
-    completedTeams,
-    completedCount,
-    eventId,
-    filledScoresForTeam,
-    onSubmitted,
-    sortedTeams,
-    storageKey,
-    submitBatchScores,
-    totalTeams,
-  ]);
+  }, [buildPayload, existingScores, finishSubmitted, submitFailure]);
 
   const summaryEntries = useMemo(
     () =>
       sortedTeams.map((team, index) => {
         const id = team._id as string;
+        const scores = answeredScoresForTeam(id);
+        const hasAnswers = Object.keys(scores).length > 0;
         let status: ReviewStatus = "pending";
-        if (completedTeams.has(id)) status = "completed";
+        if (effectiveCompleted.has(id)) status = "completed";
         else if (skippedTeams.has(id)) status = "skipped";
+        else if (completedTeams.has(id) || hasAnswers) status = "incomplete";
         return {
           team,
           index,
           status,
-          scores: filledScoresForTeam(id),
+          scores,
+          missing: countUnanswered(draftScores[id], categories),
         };
       }),
-    [sortedTeams, completedTeams, skippedTeams, filledScoresForTeam],
+    [
+      sortedTeams,
+      completedTeams,
+      effectiveCompleted,
+      skippedTeams,
+      answeredScoresForTeam,
+      draftScores,
+      categories,
+    ],
   );
 
   useEffect(() => {
     setFocusedCriterionIndex(0);
+    focusNextPendingRef.current = false;
   }, [currentTeamId]);
+
+  useEffect(() => {
+    if (!focusNextPendingRef.current || !canAdvance) return;
+    focusNextPendingRef.current = false;
+    nextButtonRef.current?.focus();
+  }, [canAdvance]);
 
   const focusCriterion = useCallback(
     (index: number) => {
@@ -657,7 +943,20 @@ export function ScoringSession({
         const nextIndex = focusedCriterionIndexRef.current + 1;
         if (nextIndex < categories.length) {
           focusCriterion(nextIndex);
+          return;
+        }
+        // Last criterion: jump back to the first one still unanswered, or
+        // hand focus to Next once it enables after this render.
+        const teamScores = currentTeamScoresRef.current;
+        const firstOpen = categories.findIndex(
+          (c) =>
+            c.name !== category.name &&
+            !isCategoryAnswered(teamScores?.[c.name], c),
+        );
+        if (firstOpen !== -1) {
+          focusCriterion(firstOpen);
         } else {
+          focusNextPendingRef.current = true;
           nextButtonRef.current?.focus();
         }
         return;
@@ -694,6 +993,75 @@ export function ScoringSession({
   ]);
 
   const sessionReadout = `${pad2(completedCount)} of ${pad2(totalTeams)} scored`;
+
+  let taskState: TaskSaveState = storageKey ? localState : "clean";
+  let taskLabel: string | undefined;
+  if (submitting) taskState = "saving";
+  else if (submitFailure) taskState = submitFailure.outcome;
+  else if (taskState === "local" && draftSavedAt !== null) {
+    taskLabel = `Draft saved on this device · ${formatDraftTime(draftSavedAt)}`;
+  }
+
+  const keptCount = submitFailure?.snapshot.length ?? 0;
+  const keptCopy = `Your scores for ${keptCount} project${keptCount === 1 ? "" : "s"} are kept${
+    localState === "local" ? " on this device" : " in this tab"
+  }.`;
+  const failurePanel = submitFailure ? (
+    submitFailure.outcome === "unknown" ? (
+      <InlineFailure
+        title={
+          submitFailure.checking
+            ? "Checking whether your scores saved…"
+            : "We couldn't confirm your scores saved"
+        }
+        failure={submitFailure.failure}
+        onRetry={
+          submitFailure.checking
+            ? undefined
+            : () => void handleSubmitAll({ skipConfirm: true })
+        }
+        retryLabel="Submit again"
+        busy={submitting}
+      >
+        <p className="inline-failure-body">
+          {submitFailure.checking
+            ? "The connection dropped before HackJudge replied. We're comparing your scores with what HackJudge has."
+            : "Submitting again is safe: it replaces your earlier scores rather than adding duplicates."}{" "}
+          {keptCopy}
+        </p>
+      </InlineFailure>
+    ) : (
+      <InlineFailure
+        title="Scores not submitted"
+        failure={submitFailure.failure}
+        onRetry={
+          submitFailure.failure.retryable
+            ? () => void handleSubmitAll({ skipConfirm: true })
+            : undefined
+        }
+        busy={submitting}
+        onDismiss={() => setSubmitFailure(null)}
+      >
+        <p className="inline-failure-body">{keptCopy}</p>
+      </InlineFailure>
+    )
+  ) : null;
+
+  const noticesPanel =
+    draftNotices.length > 0 ? (
+      <div className="fi-wiz-notices">
+        <InlineFailure
+          title="Your draft changed"
+          onDismiss={() => setDraftNotices([])}
+        >
+          {draftNotices.map((notice) => (
+            <p key={notice} className="inline-failure-body">
+              {notice}
+            </p>
+          ))}
+        </InlineFailure>
+      </div>
+    ) : null;
 
   if (!hasTeams) {
     return (
@@ -769,11 +1137,7 @@ export function ScoringSession({
           <div className="fi-wiz-session-line">
             <strong className="scoring-session-name">{eventName}</strong>
             <span className="fi-readout">{sessionReadout}</span>
-            {storageKey && draftSavedAt !== null && (
-              <span className="fi-readout fi-wiz-draft" aria-live="polite">
-                Draft · saved {formatDraftTime(draftSavedAt)}
-              </span>
-            )}
+            <TaskStatus state={taskState} label={taskLabel} />
           </div>
           <div
             className="fi-wiz-steps"
@@ -782,7 +1146,7 @@ export function ScoringSession({
           >
             {sortedTeams.map((team, index) => {
               const id = team._id as string;
-              const isDone = completedTeams.has(id);
+              const isDone = effectiveCompleted.has(id);
               const isSkipped = skippedTeams.has(id);
               const isCurrent = !isReviewing && index === currentTeamIndex;
               return (
@@ -822,6 +1186,8 @@ export function ScoringSession({
           </button>
         </div>
       </header>
+
+      {noticesPanel}
 
       <div className="fi-wiz-body">
         {isReviewing ? (
@@ -863,8 +1229,8 @@ export function ScoringSession({
                     </div>
                   )}
                   <p>
-                    Score each criterion from 1 to 5. Scores begin at 3. Adjust
-                    them, then choose Next to add this project to your review.
+                    Score every criterion from 1 to 5, then choose Next to add
+                    this project to your review. Skip leaves it unscored.
                   </p>
                   <p>
                     Your draft is submitted only when you choose Submit scores.
@@ -882,9 +1248,9 @@ export function ScoringSession({
                   const selection = draftScores[teamId]?.[name];
                   const isOptedOut = Boolean(selection?.optedOut);
                   const selected =
-                    isOptedOut || selection?.score === null
+                    isOptedOut || !isValidScore(selection?.score)
                       ? null
-                      : (selection?.score ?? DEFAULT_SCORE);
+                      : selection.score;
                   const isFocused = index === focusedCriterionIndex;
                   return (
                     <fieldset
@@ -963,6 +1329,8 @@ export function ScoringSession({
         )}
       </div>
 
+      {failurePanel && <div className="fi-wiz-failure">{failurePanel}</div>}
+
       {isReviewing ? (
         <footer className="fi-wiz-rail fi-wiz-rail--foot">
           <p className="scoring-footer-note">
@@ -984,7 +1352,7 @@ export function ScoringSession({
                 void handleSubmitAll();
               }}
               className="fi-transport"
-              disabled={submitting || completedCount === 0}
+              disabled={submitting || checkingSave || completedCount === 0}
             >
               {submitting ? "Submitting…" : "Submit scores"}
             </button>
@@ -992,10 +1360,10 @@ export function ScoringSession({
         </footer>
       ) : (
         <footer className="fi-wiz-rail fi-wiz-rail--foot">
-          <p className="scoring-footer-note">
-            {isReviewing
-              ? `${completedCount} project${completedCount === 1 ? "" : "s"} ready to submit`
-              : "Review all scores before submitting."}
+          <p className="scoring-footer-note" aria-live="polite">
+            {canAdvance
+              ? "Review all scores before submitting."
+              : `Score every category to continue · ${currentUnansweredCount} left`}
           </p>
           <div className="fi-wiz-nav">
             <button
@@ -1014,6 +1382,7 @@ export function ScoringSession({
               ref={nextButtonRef}
               onClick={handleAdvance}
               className="fi-key"
+              disabled={!canAdvance}
             >
               Next <DirectionIcon />
             </button>
@@ -1029,6 +1398,7 @@ type ReviewEntry = {
   index: number;
   status: ReviewStatus;
   scores: Record<string, CategoryScoreValue>;
+  missing: number;
 };
 
 function ReviewPanel({
@@ -1059,7 +1429,7 @@ function ReviewPanel({
       </div>
 
       <div className="fi-wiz-ledger">
-        {entries.map(({ team, index, status, scores }) => (
+        {entries.map(({ team, index, status, scores, missing }) => (
           <div key={team._id} className="fi-wiz-row">
             <h3 className="fi-wiz-row-name">{team.name}</h3>
             <span
@@ -1067,12 +1437,18 @@ function ReviewPanel({
                 "fi-wiz-stamp",
                 status === "completed" && "is-done",
                 status === "skipped" && "is-skipped",
+                status === "incomplete" && "is-incomplete",
               )}
             >
               {STAMP_LABEL[status]}
             </span>
             <div className="fi-wiz-readouts">
-              {status !== "pending" ? (
+              {status === "incomplete" ? (
+                <p className="fi-wiz-open-copy">
+                  {missing} {missing === 1 ? "category" : "categories"} left ·
+                  Not submitted
+                </p>
+              ) : status !== "pending" && Object.keys(scores).length > 0 ? (
                 Object.entries(scores).map(([category, scoreValue]) => {
                   const isOptedOut = Boolean(scoreValue.optedOut);
                   const displayScore =

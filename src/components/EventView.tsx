@@ -4,6 +4,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ScoringWizard } from "./ScoringWizard";
+import { readScoringDraftSummary } from "../lib/scoringDraft";
 import { LoadingState } from "./ui/LoadingState";
 import { ProjectDescription } from "./ui/ProjectDescription";
 import { ErrorState } from "./ui/ErrorState";
@@ -91,24 +92,9 @@ export function EventView({
       return;
     }
     if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-      if (raw) {
-        setHasDraft(true);
-        const parsed = JSON.parse(raw);
-        if (parsed.completed && Array.isArray(parsed.completed)) {
-          setDraftCompletedCount(parsed.completed.length);
-        } else {
-          setDraftCompletedCount(0);
-        }
-      } else {
-        setHasDraft(false);
-        setDraftCompletedCount(0);
-      }
-    } catch {
-      setHasDraft(false);
-      setDraftCompletedCount(0);
-    }
+    const summary = readScoringDraftSummary(storageKey);
+    setHasDraft(summary.hasDraft);
+    setDraftCompletedCount(summary.completedCount);
   }, [storageKey, showWizard, myScores?.length]);
 
   const enableCohorts = event?.enableCohorts || false;

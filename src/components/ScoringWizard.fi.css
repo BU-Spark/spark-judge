@@ -60,6 +60,23 @@
   color: var(--fi-ink-dim);
 }
 
+.fi-wiz-notices,
+.fi-wiz-failure {
+  flex: none;
+  padding: 0.75rem var(--fi-pad-x) 0;
+}
+
+.fi-wiz-failure {
+  padding-bottom: 0.75rem;
+  border-top: 1px solid var(--fi-hair);
+}
+
+.fi-wiz-notices > .inline-failure,
+.fi-wiz-failure > .inline-failure {
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
 .fi-wiz-steps {
   display: flex;
   flex-wrap: wrap;
@@ -500,6 +517,12 @@
 
 .fi-wiz-stamp.is-skipped {
   color: var(--fi-ink-soft);
+  border-color: var(--fi-step-past-edge);
+}
+
+.fi-wiz-stamp.is-incomplete {
+  color: var(--fi-ink-soft);
+  border-style: dashed;
   border-color: var(--fi-step-past-edge);
 }
 

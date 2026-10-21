@@ -1,11 +1,3 @@
-@font-face {
-  font-family: "Bricolage Grotesque";
-  src: url("/fonts/bricolage-grotesque-latin.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 400 800;
-  font-display: swap;
-}
-
 .event-stage,
 .es-home-shell,
 .participation {

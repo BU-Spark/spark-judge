@@ -1,34 +1,29 @@
 import { MutationCtx } from "../../_generated/server";
 
 export async function clearAllDataHandler(ctx: MutationCtx) {
-  // Clear events
-  const events = await ctx.db.query("events").collect();
-  for (const event of events) {
-    await ctx.db.delete(event._id);
-  }
-
-  // Clear teams
-  const teams = await ctx.db.query("teams").collect();
-  for (const team of teams) {
-    await ctx.db.delete(team._id);
-  }
-
-  // Clear scores
-  const scores = await ctx.db.query("scores").collect();
-  for (const score of scores) {
-    await ctx.db.delete(score._id);
-  }
-
-  // Clear judges
-  const judges = await ctx.db.query("judges").collect();
-  for (const judge of judges) {
-    await ctx.db.delete(judge._id);
-  }
-
-  // Clear participants
-  const participants = await ctx.db.query("participants").collect();
-  for (const participant of participants) {
-    await ctx.db.delete(participant._id);
+  // Child tables first so no row is left pointing at a deleted parent.
+  const appTables = [
+    "appreciations",
+    "demoDayCaptchaPasses",
+    "demoDayIntegrityFindings",
+    "prizeWinners",
+    "teamPrizeSubmissions",
+    "prizes",
+    "rankedVotes",
+    "scores",
+    "judgeAssignments",
+    "judges",
+    "participants",
+    "teams",
+    "events",
+  ] as const;
+  const cleared: Record<string, number> = {};
+  for (const table of appTables) {
+    const rows = await ctx.db.query(table).collect();
+    for (const row of rows) {
+      await ctx.db.delete(row._id);
+    }
+    cleared[table] = rows.length;
   }
 
   // Clear ALL auth-related tables
@@ -87,13 +82,6 @@ export async function clearAllDataHandler(ctx: MutationCtx) {
 
   return {
     message: "All data cleared successfully including all auth data",
-    cleared: {
-      events: events.length,
-      teams: teams.length,
-      scores: scores.length,
-      judges: judges.length,
-      participants: participants.length,
-      users: users.length,
-    },
+    cleared: { ...cleared, users: users.length },
   };
 }

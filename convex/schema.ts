@@ -215,6 +215,7 @@ const applicationTables = {
       v.literal("track_sponsor"),
     ),
     track: v.optional(v.string()),
+    entryMode: v.optional(v.union(v.literal("automatic"), v.literal("opt_in"))),
     sponsorName: v.optional(v.string()),
     // How to surface scoring insight when deliberating this prize
     scoreBasis: v.optional(

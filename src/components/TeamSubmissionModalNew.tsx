@@ -1,9 +1,25 @@
 import "./TeamSubmissionModal.fi.css";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { isAutomaticPrize } from "../../shared/prizeEntries";
+import { PrizeEntryPicker } from "./ui/PrizeEntryPicker";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
+import { InlineFailure, TaskStatus, type TaskSaveState } from "./ui/TaskStatus";
+import {
+  draftKey,
+  quarantineDraft,
+  readDraft,
+  removeDraft,
+  writeDraft,
+} from "../lib/draftStorage";
+import {
+  outcomeForFailure,
+  toRecoverableFailure,
+  type RecoverableFailure,
+} from "../lib/operationOutcome";
 
 interface TeamSubmissionModalProps {
   isOpen: boolean;
@@ -15,6 +31,78 @@ interface TeamSubmissionModalProps {
   existingTeam?: any;
 }
 
+/** Form fields persisted in the local draft. The logo file is never stored. */
+export type ProjectFormValues = {
+  name: string;
+  description: string;
+  members: string[];
+  githubUrl: string;
+  devpostUrl: string;
+  track: string;
+  courseCode: string;
+  prizeIds: string[];
+};
+
+export const PROJECT_DRAFT_SCHEMA = 1;
+export const MAX_LOGO_BYTES = 5 * 1024 * 1024;
+export const ALLOWED_LOGO_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+];
+
+export function projectDraftKey(
+  eventId: string,
+  userId: string | undefined,
+  teamId: string | undefined,
+) {
+  return draftKey("project", eventId, userId, teamId ?? "new");
+}
+
+function isProjectFormValues(data: unknown): data is ProjectFormValues {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  const isStringArray = (value: unknown) =>
+    Array.isArray(value) && value.every((item) => typeof item === "string");
+  return (
+    ["name", "description", "githubUrl", "devpostUrl", "track", "courseCode"].every(
+      (field) => typeof d[field] === "string",
+    ) &&
+    isStringArray(d.members) &&
+    isStringArray(d.prizeIds)
+  );
+}
+
+function snapshotFromServer(
+  team: any,
+  prizeIds: readonly unknown[] | undefined,
+): ProjectFormValues {
+  return {
+    name: team?.name || "",
+    description: team?.description || "",
+    members: team?.members?.length ? [...team.members] : [""],
+    githubUrl: team?.githubUrl || "",
+    devpostUrl: team?.devpostUrl || "",
+    track: team?.track || "",
+    courseCode: team?.courseCode || "",
+    prizeIds: (prizeIds ?? []).map((id) => String(id)),
+  };
+}
+
+function valuesSignature(values: ProjectFormValues) {
+  return JSON.stringify({ ...values, prizeIds: [...values.prizeIds].sort() });
+}
+
+function logoUploadFailure(error: unknown): RecoverableFailure {
+  return {
+    ...toRecoverableFailure(error, "upload project logo"),
+    code: "logo_upload_failed",
+    message:
+      "Your logo couldn't be uploaded, so the project wasn't saved. Your other details are kept. Try again, choose another image, or remove the logo.",
+  };
+}
+
 export function TeamSubmissionModal({
   isOpen,
   onClose,
@@ -22,66 +110,235 @@ export function TeamSubmissionModal({
   tracks,
   courseCodes = [],
   eventMode = "hackathon",
-  existingTeam: existingTeamProp
+  existingTeam: existingTeamProp,
 }: TeamSubmissionModalProps) {
   const myTeam = useQuery(api.teams.getMyTeam, isOpen ? { eventId } : "skip");
+  const loggedInUser = useQuery(api.auth.loggedInUser, isOpen ? {} : "skip");
   const availablePrizes = useQuery(
     api.prizes.listEventPrizes,
-    isOpen && eventMode === "hackathon" ? { eventId } : "skip"
+    isOpen && eventMode === "hackathon" ? { eventId } : "skip",
   );
   const myPrizeSubmissions = useQuery(
     api.prizes.getMyTeamPrizeSubmissions,
-    isOpen && eventMode === "hackathon" ? { eventId } : "skip"
+    isOpen && eventMode === "hackathon" ? { eventId } : "skip",
   );
   const existingTeam = existingTeamProp || myTeam;
   const isDemoDay = eventMode === "demo_day";
   const isCodeAndTell = eventMode === "code_and_tell";
   const [name, setName] = useState(existingTeam?.name || "");
-  const [description, setDescription] = useState(existingTeam?.description || "");
-  const [members, setMembers] = useState<string[]>(existingTeam?.members || [""]);
+  const [description, setDescription] = useState(
+    existingTeam?.description || "",
+  );
+  const [members, setMembers] = useState<string[]>(
+    existingTeam?.members || [""],
+  );
   const [githubUrl, setGithubUrl] = useState(existingTeam?.githubUrl || "");
   const [devpostUrl, setDevpostUrl] = useState(existingTeam?.devpostUrl || "");
   const [track, setTrack] = useState(existingTeam?.track || "");
   const [courseCode, setCourseCode] = useState(existingTeam?.courseCode || "");
   const [selectedPrizeIds, setSelectedPrizeIds] = useState<string[]>([]);
-  const [sponsorFilter, setSponsorFilter] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const submitTeam = useMutation(api.teams.submitTeam);
-  const updateTeam = useMutation(api.teams.updateTeam);
-  const generateUploadUrl = useMutation(api.teams.generateUploadUrl);
-  const setMyTeamPrizeSubmissions = useMutation(
-    api.prizes.setMyTeamPrizeSubmissions
+  const [failure, setFailure] = useState<RecoverableFailure | null>(null);
+  const [failureOutcome, setFailureOutcome] = useState<
+    "rejected" | "unknown" | null
+  >(null);
+  // Server copy the form was last hydrated from; dirtiness is measured against it.
+  const [baseline, setBaseline] = useState<ProjectFormValues | null>(null);
+  const [hydratedKey, setHydratedKey] = useState<string | null>(null);
+  const [restoredDraft, setRestoredDraft] = useState(false);
+  const [serverUpdate, setServerUpdate] = useState<ProjectFormValues | null>(
+    null,
   );
+  const [localDraftStatus, setLocalDraftStatus] = useState<
+    "none" | "saved" | "unavailable"
+  >("none");
+  const [confirmingClose, setConfirmingClose] = useState(false);
+  // Upload receipt: a retry after a failed project save reuses this storage ID
+  // instead of uploading the same file again.
+  const logoReceiptRef = useRef<{
+    file: File;
+    storageId: Id<"_storage">;
+  } | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const saveMyProject = useMutation(api.teams.saveMyProject);
+  const generateUploadUrl = useMutation(api.teams.generateUploadUrl);
 
   const isEditMode = !!existingTeam;
 
-  // Update form when existingTeam is loaded
-  useEffect(() => {
-    if (existingTeam) {
-      setName(existingTeam.name || "");
-      setDescription(existingTeam.description || "");
-      setMembers(existingTeam.members || [""]);
-      setGithubUrl(existingTeam.githubUrl || "");
-      setDevpostUrl(existingTeam.devpostUrl || "");
-      setTrack(existingTeam.track || "");
-      setCourseCode(existingTeam.courseCode || "");
-    }
-  }, [existingTeam]);
+  const userId: string | undefined =
+    (loggedInUser && typeof loggedInUser === "object" && "_id" in loggedInUser
+      ? String((loggedInUser as { _id: string })._id)
+      : undefined) ??
+    (existingTeam?.submittedBy ? String(existingTeam.submittedBy) : undefined);
+  const teamId: string | undefined = existingTeam?._id
+    ? String(existingTeam._id)
+    : undefined;
+  const recordKey = userId ? projectDraftKey(eventId, userId, teamId) : null;
+  const newRecordKey = userId ? projectDraftKey(eventId, userId, undefined) : null;
 
-  useEffect(() => {
-    if (isDemoDay) return;
-    if (myPrizeSubmissions !== undefined) {
-      setSelectedPrizeIds(myPrizeSubmissions.map((id) => String(id)));
-    }
-  }, [isDemoDay, myPrizeSubmissions]);
+  const values = useMemo<ProjectFormValues>(
+    () => ({
+      name,
+      description,
+      members,
+      githubUrl,
+      devpostUrl,
+      track,
+      courseCode,
+      prizeIds: selectedPrizeIds,
+    }),
+    [
+      name,
+      description,
+      members,
+      githubUrl,
+      devpostUrl,
+      track,
+      courseCode,
+      selectedPrizeIds,
+    ],
+  );
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
 
+  const applyValues = useCallback((next: ProjectFormValues) => {
+    setName(next.name);
+    setDescription(next.description);
+    setMembers(next.members.length ? next.members : [""]);
+    setGithubUrl(next.githubUrl);
+    setDevpostUrl(next.devpostUrl);
+    setTrack(next.track);
+    setCourseCode(next.courseCode);
+    setSelectedPrizeIds(next.prizeIds);
+  }, []);
+
+  const serverReady =
+    isOpen &&
+    !isCodeAndTell &&
+    (existingTeamProp || myTeam !== undefined) &&
+    loggedInUser !== undefined &&
+    (isDemoDay || myPrizeSubmissions !== undefined);
+  const serverSnapshot = useMemo(
+    () =>
+      serverReady
+        ? snapshotFromServer(existingTeam, isDemoDay ? [] : myPrizeSubmissions)
+        : null,
+    [serverReady, existingTeam, isDemoDay, myPrizeSubmissions],
+  );
+  const serverSignature = serverSnapshot ? valuesSignature(serverSnapshot) : null;
+  const hydrationKey = `${eventId}:${userId ?? "-"}:${teamId ?? "new"}`;
+
+  // Hydrate once per record. Later server changes never overwrite edits: a
+  // clean form follows the server; a dirty form keeps its values and offers
+  // the latest version instead.
+  useEffect(() => {
+    if (!serverSnapshot) return;
+    const current = valuesRef.current;
+    if (hydratedKey === hydrationKey) {
+      if (!baseline || valuesSignature(baseline) === serverSignature) return;
+      if (
+        valuesSignature(current) === valuesSignature(baseline) ||
+        valuesSignature(current) === serverSignature
+      ) {
+        applyValues(serverSnapshot);
+        setBaseline(serverSnapshot);
+        setServerUpdate(null);
+      } else {
+        setServerUpdate(serverSnapshot);
+      }
+      return;
+    }
+
+    const previousWasNew =
+      hydratedKey !== null &&
+      hydratedKey === `${eventId}:${userId ?? "-"}:new` &&
+      teamId !== undefined;
+    setHydratedKey(hydrationKey);
+    setBaseline(serverSnapshot);
+    setServerUpdate(null);
+    if (
+      previousWasNew &&
+      baseline &&
+      valuesSignature(current) !== valuesSignature(baseline)
+    ) {
+      // The project now exists (for example a save whose outcome was
+      // uncertain). Keep what the user is editing; drop the "new" draft.
+      if (newRecordKey) removeDraft(newRecordKey);
+      return;
+    }
+
+    setRestoredDraft(false);
+    if (recordKey) {
+      const stored = readDraft<ProjectFormValues>(
+        recordKey,
+        PROJECT_DRAFT_SCHEMA,
+        { isValid: isProjectFormValues },
+      );
+      if (stored.status === "unreadable") {
+        quarantineDraft(recordKey, stored.raw);
+      } else if (
+        stored.status === "found" &&
+        valuesSignature(stored.data) !== serverSignature
+      ) {
+        applyValues(stored.data);
+        setRestoredDraft(true);
+        setLocalDraftStatus("saved");
+        return;
+      }
+    }
+    applyValues(serverSnapshot);
+    setLocalDraftStatus("none");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverSignature, hydrationKey]);
+
+  // Reset hydration when the dialog closes so reopening restores the draft.
+  useEffect(() => {
+    if (!isOpen) {
+      setHydratedKey(null);
+      setBaseline(null);
+      setServerUpdate(null);
+      setRestoredDraft(false);
+      setFailure(null);
+      setFailureOutcome(null);
+      setErrors({});
+      setConfirmingClose(false);
+    }
+  }, [isOpen]);
+
+  const isDirty =
+    baseline !== null && valuesSignature(values) !== valuesSignature(baseline);
+  const hasUnsavedWork = isDirty || logoFile !== null;
+
+  // Persist dirty form fields locally. "Draft saved on this device" is only
+  // shown after the write succeeded.
+  useEffect(() => {
+    if (!recordKey || hydratedKey !== hydrationKey || !baseline) return;
+    if (!isDirty) {
+      removeDraft(recordKey);
+      setLocalDraftStatus("none");
+      return;
+    }
+    const result = writeDraft(recordKey, PROJECT_DRAFT_SCHEMA, values);
+    setLocalDraftStatus(result.status === "saved" ? "saved" : "unavailable");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values, isDirty, recordKey, hydratedKey]);
+
+  // Warn before leaving the page when edits exist only in memory.
   useEffect(() => {
     if (!isOpen) return;
-    setSponsorFilter("");
-  }, [isOpen]);
+    const mustWarn =
+      isSubmitting || (isDirty && localDraftStatus !== "saved");
+    if (!mustWarn) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isOpen, isSubmitting, isDirty, localDraftStatus]);
 
   const eligiblePrizes = useMemo(() => {
     if (isDemoDay || !availablePrizes) return [];
@@ -94,32 +351,21 @@ export function TeamSubmissionModal({
     });
   }, [isDemoDay, availablePrizes, track]);
 
-  useEffect(() => {
-    if (isDemoDay) return;
-    const allowedIds = new Set(eligiblePrizes.map((prize: any) => String(prize._id)));
-    setSelectedPrizeIds((prev) =>
-      prev.filter((id) => allowedIds.has(id))
-    );
-  }, [isDemoDay, eligiblePrizes]);
-
-  const sponsorOptions = useMemo(
-    () =>
-      Array.from(
-        new Set<string>(
-          eligiblePrizes
-            .map((prize: any) => (prize.sponsorName || "").trim())
-            .filter(Boolean)
-        )
-      ).sort((a, b) => a.localeCompare(b)),
-    [eligiblePrizes]
+  const optionalPrizes = useMemo(
+    () => eligiblePrizes.filter((prize) => !isAutomaticPrize(prize)),
+    [eligiblePrizes],
   );
 
-  const filteredPrizes = useMemo(() => {
-    if (!sponsorFilter) return eligiblePrizes;
-    return eligiblePrizes.filter(
-      (prize: any) => (prize.sponsorName || "").trim() === sponsorFilter
-    );
-  }, [eligiblePrizes, sponsorFilter]);
+  // Derive eligibility without clearing stored selections while queries load.
+  const allowedPrizeIds = new Set(
+    optionalPrizes.map((prize: any) => String(prize._id)),
+  );
+  const selectedEligiblePrizeIds = selectedPrizeIds.filter((id) =>
+    allowedPrizeIds.has(id),
+  );
+  const prizesLoading =
+    eventMode === "hackathon" &&
+    (availablePrizes === undefined || myPrizeSubmissions === undefined);
 
   const addMember = () => {
     setMembers([...members, ""]);
@@ -135,13 +381,43 @@ export function TeamSubmissionModal({
     setMembers(newMembers);
   };
 
+  const clearLogo = () => {
+    setLogoFile(null);
+    if (logoInputRef.current) logoInputRef.current.value = "";
+  };
+
+  const handleLogoChange = (file: File | null) => {
+    setErrors((prev) => ({ ...prev, logo: "" }));
+    if (!file) {
+      setLogoFile(null);
+      return;
+    }
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+      clearLogo();
+      setErrors((prev) => ({
+        ...prev,
+        logo: "Choose a PNG, JPEG, WebP, or GIF image, or continue without a logo.",
+      }));
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      clearLogo();
+      setErrors((prev) => ({
+        ...prev,
+        logo: "This image is larger than 5 MB. Choose a smaller file, or continue without a logo.",
+      }));
+      return;
+    }
+    setLogoFile(file);
+  };
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
     if (!isEditMode && !name.trim()) {
       newErrors.name = "Team name is required";
     }
-    if (members.filter(m => m.trim()).length === 0) {
+    if (members.filter((m) => m.trim()).length === 0) {
       newErrors.members = "At least one team member is required";
     }
     // GitHub URL is required for hackathon, optional for Demo Day
@@ -151,7 +427,10 @@ export function TeamSubmissionModal({
       } else if (!githubUrl.startsWith("https://github.com/")) {
         newErrors.githubUrl = "GitHub URL must start with https://github.com/";
       }
-    } else if (githubUrl.trim() && !githubUrl.startsWith("https://github.com/")) {
+    } else if (
+      githubUrl.trim() &&
+      !githubUrl.startsWith("https://github.com/")
+    ) {
       // For Demo Day, only validate format if URL is provided
       newErrors.githubUrl = "GitHub URL must start with https://github.com/";
     }
@@ -175,91 +454,149 @@ export function TeamSubmissionModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const uploadLogo = async (file: File): Promise<Id<"_storage">> => {
+    const receipt = logoReceiptRef.current;
+    if (receipt && receipt.file === file) return receipt.storageId;
+    const uploadUrl = await generateUploadUrl({ eventId });
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    if (!response.ok) {
+      throw new Error(`Logo upload failed with status ${response.status}`);
+    }
+    const body: unknown = await response.json().catch(() => null);
+    const storageId =
+      body && typeof body === "object"
+        ? (body as { storageId?: unknown }).storageId
+        : undefined;
+    if (typeof storageId !== "string" || !storageId) {
+      throw new Error("Logo upload returned no storage ID");
+    }
+    logoReceiptRef.current = { file, storageId: storageId as Id<"_storage"> };
+    return storageId as Id<"_storage">;
+  };
 
+  const save = async () => {
+    if (isSubmitting) return;
     if (!validate()) return;
 
     setIsSubmitting(true);
+    setFailure(null);
+    setFailureOutcome(null);
+
+    let logoStorageId: Id<"_storage"> | undefined;
+    if (logoFile && !isDemoDay) {
+      try {
+        logoStorageId = await uploadLogo(logoFile);
+      } catch (err) {
+        setFailure(logoUploadFailure(err));
+        setFailureOutcome("rejected");
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     try {
-      let logoStorageId: Id<"_storage"> | undefined;
-
-      // Upload logo if provided
-      if (logoFile) {
-        const uploadUrl = await generateUploadUrl({ eventId });
-        const result = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": logoFile.type },
-          body: logoFile,
-        });
-        const { storageId } = await result.json();
-        logoStorageId = storageId;
-      }
-
-      const filteredMembers = members.filter(m => m.trim());
-
-      if (isEditMode) {
-        await updateTeam({
-          teamId: existingTeam._id,
-          description: description.trim(),
-          members: filteredMembers,
-          githubUrl: githubUrl.trim(),
-          devpostUrl: devpostUrl.trim(),
-          ...(isDemoDay ? { courseCode } : { track }),
-          ...(logoStorageId && { logoStorageId }),
-        });
-        if (!isDemoDay) {
-          await setMyTeamPrizeSubmissions({
-            eventId,
-            prizeIds: selectedPrizeIds as Id<"prizes">[],
-          });
-        }
-        toast.success("Team updated successfully!");
-      } else {
-        await submitTeam({
-          eventId,
-          name: name.trim(),
-          description: description.trim(),
-          members: filteredMembers,
-          githubUrl: githubUrl.trim(),
-          devpostUrl: devpostUrl.trim(),
-          ...(isDemoDay ? { courseCode } : { track }),
-          logoStorageId,
-        });
-        if (!isDemoDay) {
-          await setMyTeamPrizeSubmissions({
-            eventId,
-            prizeIds: selectedPrizeIds as Id<"prizes">[],
-          });
-        }
-        toast.success("Team submitted successfully!");
-      }
-
+      const filteredMembers = members.filter((m) => m.trim());
+      await saveMyProject({
+        eventId,
+        ...(isEditMode
+          ? { teamId: existingTeam._id as Id<"teams"> }
+          : { name: name.trim() }),
+        description: description.trim(),
+        members: filteredMembers,
+        githubUrl: githubUrl.trim(),
+        devpostUrl: devpostUrl.trim(),
+        ...(isDemoDay ? { courseCode } : { track }),
+        ...(logoStorageId && { logoStorageId }),
+        ...(!isDemoDay && {
+          prizeIds: selectedEligiblePrizeIds as Id<"prizes">[],
+        }),
+      });
+      // Confirmed: the project and its prize entries are saved together.
+      if (recordKey) removeDraft(recordKey);
+      if (newRecordKey) removeDraft(newRecordKey);
+      logoReceiptRef.current = null;
+      setLogoFile(null);
+      setLocalDraftStatus("none");
+      setRestoredDraft(false);
+      setHydratedKey(null);
+      setBaseline(null);
+      toast.success(
+        isEditMode ? "Team updated successfully!" : "Team submitted successfully!",
+      );
       onClose();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to submit team");
+    } catch (err) {
+      const recoverable = toRecoverableFailure(err, "save project");
+      setFailure(recoverable);
+      setFailureOutcome(outcomeForFailure(recoverable));
+      toast.error(recoverable.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleClose = () => {
-    if (!isEditMode) {
-      setName("");
-      setDescription("");
-      setMembers([""]);
-      setGithubUrl("");
-      setDevpostUrl("");
-      setTrack("");
-      setCourseCode("");
-      setSelectedPrizeIds([]);
-      setSponsorFilter("");
-      setLogoFile(null);
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void save();
+  };
+
+  const finishClose = () => {
+    setConfirmingClose(false);
+    setLogoFile(null);
+    logoReceiptRef.current = null;
+    setHydratedKey(null);
+    setBaseline(null);
     setErrors({});
     onClose();
   };
+
+  const handleClose = () => {
+    // Closing never cancels a save already sent to the server.
+    if (isSubmitting) return;
+    if (hasUnsavedWork) {
+      setConfirmingClose(true);
+      return;
+    }
+    finishClose();
+  };
+
+  const discardDraft = () => {
+    if (recordKey) removeDraft(recordKey);
+    if (baseline) applyValues(baseline);
+    clearLogo();
+    setRestoredDraft(false);
+    setLocalDraftStatus("none");
+    setFailure(null);
+    setFailureOutcome(null);
+  };
+
+  const loadLatestVersion = () => {
+    if (!serverUpdate) return;
+    applyValues(serverUpdate);
+    setBaseline(serverUpdate);
+    setServerUpdate(null);
+    setRestoredDraft(false);
+  };
+
+  const keepMyEdits = () => {
+    if (serverUpdate) setBaseline(serverUpdate);
+    setServerUpdate(null);
+  };
+
+  const taskState: TaskSaveState = isSubmitting
+    ? "saving"
+    : failureOutcome
+      ? failureOutcome
+      : isDirty
+        ? localDraftStatus === "saved"
+          ? "local"
+          : localDraftStatus === "unavailable"
+            ? "local-unavailable"
+            : "unsaved"
+        : "clean";
 
   if (!isOpen) return null;
 
@@ -275,15 +612,26 @@ export function TeamSubmissionModal({
             onClick={handleClose}
             className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
           <h2 className="text-2xl fi-zone font-bold mb-4 fi-ink">
             Code &amp; Tell Projects
           </h2>
           <p className="text-sm fi-muted">
-            Code &amp; Tell projects are managed by admins from the event workspace. Participant self-submission is disabled for this mode.
+            Code &amp; Tell projects are managed by admins from the event
+            workspace. Participant self-submission is disabled for this mode.
           </p>
         </div>
       </div>
@@ -291,18 +639,32 @@ export function TeamSubmissionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="tsm-root fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       />
       <div className="tsm-dialog relative fi-surface fi-radius-panel p-8 max-w-2xl w-full fi-elevation-panel fi-panel-enter border border-border my-8">
         <button
+          type="button"
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors"
+          disabled={isSubmitting}
+          aria-label="Close"
+          title={isSubmitting ? "Wait for the save to finish" : undefined}
+          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
 
@@ -315,6 +677,32 @@ export function TeamSubmissionModal({
             <p className="text-sm text-yellow-800 ">
               ⚠️ Team name is permanent and must match your DevPost submission!
             </p>
+          </div>
+        )}
+
+        {restoredDraft && (
+          <div className="tsm-notice mb-6" role="status">
+            <p>Restored your unsaved draft from this device.</p>
+            <button type="button" className="tsm-notice-action" onClick={discardDraft}>
+              Discard draft
+            </button>
+          </div>
+        )}
+
+        {serverUpdate && (
+          <div className="tsm-notice mb-6" role="status">
+            <p>
+              This project was changed somewhere else while you were editing.
+              Your edits are kept.
+            </p>
+            <div className="tsm-notice-actions">
+              <button type="button" className="tsm-notice-action" onClick={loadLatestVersion}>
+                Load latest version
+              </button>
+              <button type="button" className="tsm-notice-action" onClick={keepMyEdits}>
+                Keep my edits
+              </button>
+            </div>
           </div>
         )}
 
@@ -335,12 +723,17 @@ export function TeamSubmissionModal({
                 placeholder="Enter team name..."
                 className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               />
-              {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+              )}
             </div>
           )}
 
           <div>
-            <label htmlFor="description" className="block text-sm font-medium mb-2">
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium mb-2"
+            >
               Description <span className="fi-muted text-xs">(optional)</span>
             </label>
             <textarea
@@ -388,13 +781,20 @@ export function TeamSubmissionModal({
                 + Add Member
               </button>
             </div>
-            {errors.members && <p className="mt-1 text-sm text-red-500">{errors.members}</p>}
+            {errors.members && (
+              <p className="mt-1 text-sm text-red-500">{errors.members}</p>
+            )}
           </div>
 
           <div>
-            <label htmlFor="githubUrl" className="block text-sm font-medium mb-2">
+            <label
+              htmlFor="githubUrl"
+              className="block text-sm font-medium mb-2"
+            >
               GitHub URL {!isDemoDay && <span className="text-red-500">*</span>}
-              {isDemoDay && <span className="fi-muted text-xs ml-1">(optional)</span>}
+              {isDemoDay && (
+                <span className="fi-muted text-xs ml-1">(optional)</span>
+              )}
             </label>
             <input
               id="githubUrl"
@@ -407,13 +807,19 @@ export function TeamSubmissionModal({
               placeholder="https://github.com/..."
               className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
             />
-            {errors.githubUrl && <p className="mt-1 text-sm text-red-500">{errors.githubUrl}</p>}
+            {errors.githubUrl && (
+              <p className="mt-1 text-sm text-red-500">{errors.githubUrl}</p>
+            )}
           </div>
 
           {!isDemoDay && (
             <div>
-              <label htmlFor="devpostUrl" className="block text-sm font-medium mb-2">
-                Devpost URL <span className="fi-muted text-xs">(recommended)</span>
+              <label
+                htmlFor="devpostUrl"
+                className="block text-sm font-medium mb-2"
+              >
+                Devpost URL{" "}
+                <span className="fi-muted text-xs">(recommended)</span>
               </label>
               <input
                 id="devpostUrl"
@@ -426,14 +832,19 @@ export function TeamSubmissionModal({
                 placeholder="https://devpost.com/software/..."
                 className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               />
-              {errors.devpostUrl && <p className="mt-1 text-sm text-red-500">{errors.devpostUrl}</p>}
+              {errors.devpostUrl && (
+                <p className="mt-1 text-sm text-red-500">{errors.devpostUrl}</p>
+              )}
             </div>
           )}
 
           {/* Track (hackathon) or Course (demo day) */}
           {isDemoDay ? (
             <div>
-              <label htmlFor="courseCode" className="block text-sm font-medium mb-2">
+              <label
+                htmlFor="courseCode"
+                className="block text-sm font-medium mb-2"
+              >
                 Course <span className="text-red-500">*</span>
               </label>
               <select
@@ -452,7 +863,9 @@ export function TeamSubmissionModal({
                   </option>
                 ))}
               </select>
-              {errors.courseCode && <p className="mt-1 text-sm text-red-500">{errors.courseCode}</p>}
+              {errors.courseCode && (
+                <p className="mt-1 text-sm text-red-500">{errors.courseCode}</p>
+              )}
             </div>
           ) : (
             <div>
@@ -475,7 +888,9 @@ export function TeamSubmissionModal({
                   </option>
                 ))}
               </select>
-              {errors.track && <p className="mt-1 text-sm text-red-500">{errors.track}</p>}
+              {errors.track && (
+                <p className="mt-1 text-sm text-red-500">{errors.track}</p>
+              )}
             </div>
           )}
 
@@ -487,104 +902,77 @@ export function TeamSubmissionModal({
               </label>
               <input
                 id="logo"
+                ref={logoInputRef}
                 type="file"
-                accept="image/*"
-                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                accept={ALLOWED_LOGO_TYPES.join(",")}
+                disabled={isSubmitting}
+                aria-describedby="logo-hint"
+                onChange={(e) => handleLogoChange(e.target.files?.[0] || null)}
                 className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-500/10 file:text-primary hover:file:bg-teal-500/20"
               />
+              <p id="logo-hint" className="mt-1 text-xs fi-muted">
+                PNG, JPEG, WebP, or GIF up to 5 MB. Not kept in your draft; choose it again if you leave.
+              </p>
+              {logoFile && (
+                <button
+                  type="button"
+                  onClick={clearLogo}
+                  disabled={isSubmitting}
+                  className="mt-1 text-sm text-primary hover:underline"
+                >
+                  Remove logo
+                </button>
+              )}
+              {errors.logo && (
+                <p className="mt-1 text-sm text-red-500" role="alert">
+                  {errors.logo}
+                </p>
+              )}
             </div>
           )}
 
           {!isDemoDay && (
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Prize Submissions
-              </label>
-              <div className="mb-2">
-                <label className="block text-xs font-medium fi-muted mb-1">
-                  Sponsor Filter
-                </label>
-                <select
-                  value={sponsorFilter}
-                  onChange={(e) => setSponsorFilter(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-border fi-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                >
-                  <option value="">All sponsors</option>
-                  {sponsorOptions.map((sponsorName) => (
-                    <option key={sponsorName} value={sponsorName}>
-                      {sponsorName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="rounded-xl border border-border fi-surface/60 p-3 space-y-2 max-h-56 overflow-auto">
-                {availablePrizes === undefined && (
-                  <p className="text-sm fi-muted">Loading prizes...</p>
-                )}
-                {availablePrizes && availablePrizes.length === 0 && (
-                  <p className="text-sm fi-muted">
-                    No prizes configured yet for this event.
-                  </p>
-                )}
-                {availablePrizes && eligiblePrizes.length === 0 && availablePrizes.length > 0 && (
-                  <p className="text-sm fi-muted">
-                    Select a track to see track-specific prizes.
-                  </p>
-                )}
-                {availablePrizes && eligiblePrizes.length > 0 && filteredPrizes.length === 0 && (
-                  <p className="text-sm fi-muted">
-                    No prizes match this sponsor filter.
-                  </p>
-                )}
-                {filteredPrizes.map((prize: any) => {
-                  const checked = selectedPrizeIds.includes(String(prize._id));
-                  return (
-                    <label
-                      key={prize._id}
-                      className="flex items-start gap-3 rounded-lg border border-border/70 fi-surface px-3 py-2 hover:bg-muted/30 transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => {
-                          const id = String(prize._id);
-                          if (e.target.checked) {
-                            setSelectedPrizeIds((prev) =>
-                              prev.includes(id) ? prev : [...prev, id]
-                            );
-                          } else {
-                            setSelectedPrizeIds((prev) =>
-                              prev.filter((value) => value !== id)
-                            );
-                          }
-                        }}
-                        className="mt-1 w-4 h-4 text-primary border-border rounded"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium fi-ink">
-                          {prize.name}
-                        </p>
-                        <p className="text-xs fi-muted">
-                          {prize.type === "general" && "General prize"}
-                          {prize.type === "track" && `Track prize${prize.track ? ` · ${prize.track}` : ""}`}
-                          {prize.type === "sponsor" && `Sponsor prize${prize.sponsorName ? ` · ${prize.sponsorName}` : ""}`}
-                          {prize.type === "track_sponsor" &&
-                            `Track + Sponsor${prize.track ? ` · ${prize.track}` : ""}${prize.sponsorName ? ` · ${prize.sponsorName}` : ""}`}
-                        </p>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="mt-2 text-xs fi-muted">
-                You can update prize submissions any time before admin locks scoring.
-              </p>
-            </div>
+            <PrizeEntryPicker
+              prizes={availablePrizes}
+              track={track}
+              selectedPrizeIds={selectedPrizeIds}
+              onSelectionChange={setSelectedPrizeIds}
+              disabled={isSubmitting}
+            />
           )}
+
+          {failure && (
+            <InlineFailure
+              failure={failure}
+              title={
+                failureOutcome === "unknown"
+                  ? "We couldn't confirm your project saved"
+                  : "Your project wasn't saved"
+              }
+              onRetry={() => void save()}
+              retryLabel={failureOutcome === "unknown" ? "Check and save again" : "Try again"}
+              busy={isSubmitting}
+              onDismiss={() => {
+                setFailure(null);
+                setFailureOutcome(null);
+              }}
+            >
+              {failureOutcome === "unknown" && (
+                <p className="inline-failure-body">
+                  Saving again is safe: it updates the same project rather than
+                  creating another.
+                </p>
+              )}
+            </InlineFailure>
+          )}
+
+          <div className="tsm-status">
+            <TaskStatus state={taskState} />
+          </div>
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || prizesLoading}
             className="fi-transport w-full mt-6"
           >
             {isSubmitting ? (
@@ -592,12 +980,45 @@ export function TeamSubmissionModal({
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                 {isEditMode ? "Updating..." : "Submitting..."}
               </span>
+            ) : isEditMode ? (
+              "Update Team"
             ) : (
-              isEditMode ? "Update Team" : "Submit Team"
+              "Submit Team"
             )}
           </button>
         </form>
       </div>
+      <ConfirmDialog
+        open={confirmingClose}
+        title="Close without submitting?"
+        confirmLabel={localDraftStatus === "saved" ? "Close and keep draft" : "Discard and close"}
+        cancelLabel="Keep editing"
+        tone={localDraftStatus === "saved" ? "default" : "danger"}
+        onConfirm={() => {
+          if (localDraftStatus !== "saved") discardDraft();
+          finishClose();
+        }}
+        onCancel={() => setConfirmingClose(false)}
+      >
+        <p>
+          {localDraftStatus === "saved"
+            ? "Your changes are saved as a draft on this device and will be restored when you come back."
+            : "This browser couldn't keep a draft, so closing will discard your changes."}
+          {logoFile && " The selected logo isn't part of the draft; you'll need to choose it again."}
+        </p>
+        {localDraftStatus === "saved" && (
+          <button
+            type="button"
+            className="tsm-notice-action"
+            onClick={() => {
+              discardDraft();
+              finishClose();
+            }}
+          >
+            Discard draft and close
+          </button>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }

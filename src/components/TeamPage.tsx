@@ -1,221 +1,240 @@
 import "./TeamPage.fi.css";
 import { useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
-import { useState } from "react";
+import type { Id } from "../../convex/_generated/dataModel";
+import { useState, type ReactNode } from "react";
 import { useAttendeeIdentity } from "../lib/demoDayIdentity";
 import { useAppreciation } from "../lib/demoDayApi";
+import {
+  getEventMode,
+  isDemoDayMode,
+  getEventDisplayLabel,
+} from "../lib/eventModes";
 import { toast } from "sonner";
 import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
-import { Link } from "react-router-dom";
+import { DirectionIcon, HeartIcon } from "./participation/ParticipationChrome";
+import { Link, useNavigate } from "react-router-dom";
 
-interface TeamPageProps {
+type ProjectTeam = NonNullable<
+  FunctionReturnType<typeof api.teams.getTeamById>
+>;
+type ProjectEvent = {
+  name: string;
+  status: string;
+  mode?: string;
+  venueLocationEnabled?: boolean;
+};
+type AppreciationData = FunctionReturnType<
+  typeof api.appreciations.getSingleTeamAppreciation
+>;
+
+export function TeamPage({
+  eventId,
+  teamId,
+}: {
   eventId: Id<"events">;
   teamId: Id<"teams">;
+}) {
+  const event = useQuery(api.events.getEvent, { eventId });
+  const team = useQuery(api.teams.getTeamById, { teamId });
+  const navigate = useNavigate();
+
+  if (team === undefined || event === undefined)
+    return <LoadingState label="Loading project…" />;
+  if (!event || !team || team.eventId !== eventId || team.hidden) {
+    return (
+      <ErrorState
+        title="Project unavailable"
+        description="This project is unavailable or you don't have access to its event."
+        actionLabel="Back to event"
+        onAction={() => void navigate(`/event/${eventId}`)}
+      />
+    );
+  }
+
+  // Appreciation endpoints only support Demo Day. Other formats use their event workflow.
+  return isDemoDayMode(event.mode) ? (
+    <DemoDayProject key={teamId} event={event} team={team} />
+  ) : (
+    <TeamPageView event={event} team={team} />
+  );
 }
 
-export function TeamPage({ eventId, teamId }: TeamPageProps) {
-  // Get attendee identity
-  const { attendeeId, isLoading: identityLoading } = useAttendeeIdentity();
-
-  // Fetch event status to gate appreciations
-  const event = useQuery(api.events.getEvent, { eventId });
-
-  // Fetch team data
-  const team = useQuery(api.teams.getTeamById, { teamId });
-
-  // Fetch appreciation data
+function DemoDayProject({
+  event,
+  team,
+}: {
+  event: ProjectEvent;
+  team: ProjectTeam;
+}) {
+  const { attendeeId, isLoading } = useAttendeeIdentity();
   const appreciationData = useQuery(
     api.appreciations.getSingleTeamAppreciation,
-    attendeeId ? { eventId, teamId, attendeeId } : { eventId, teamId },
+    {
+      eventId: team.eventId,
+      teamId: team._id,
+      ...(attendeeId ? { attendeeId } : {}),
+    },
   );
-
-  if (
-    identityLoading ||
-    team === undefined ||
-    appreciationData === undefined ||
-    event === undefined
-  ) {
-    return <LoadingState label="Loading project..." />;
-  }
-
-  if (team === null) {
-    return (
-      <ErrorState
-        title="Project Not Found"
-        description="This project doesn't exist or has been removed."
-        actionLabel="Browse All Projects"
-        onAction={() => (window.location.href = `/event/${eventId}`)}
-      />
-    );
-  }
-
-  if (team.hidden) {
-    return (
-      <ErrorState
-        title="Project Unavailable"
-        description="This project is currently not available for viewing."
-        actionLabel="Browse All Projects"
-        onAction={() => (window.location.href = `/event/${eventId}`)}
-      />
-    );
-  }
-
-  if (event === null) {
-    return (
-      <ErrorState
-        title="Event Not Found"
-        description="The event for this project is unavailable."
-        actionLabel="Browse All Projects"
-        onAction={() => (window.location.href = `/event/${eventId}`)}
-      />
-    );
-  }
-
-  const isEventLive = event.status === "active";
-  const githubUrl =
-    typeof team.githubUrl === "string" ? team.githubUrl.trim() : "";
-
+  if (isLoading || appreciationData === undefined)
+    return <LoadingState label="Loading project…" />;
   return (
-    <div className="team-fi-page max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Back Link */}
-      <Link
-        to={`/event/${eventId}`}
-        className="inline-flex items-center gap-2 fi-key mb-6 text-sm"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M10 19l-7-7m0 0l7-7m-7 7h18"
-          />
-        </svg>
-        Browse All Projects
-      </Link>
-
-      {/* Main Card */}
-      <div className="fi-panel fi-surface overflow-hidden">
-        {/* Header with appreciation count */}
-        <div className="fi-accent-surface   px-6 py-8 text-white">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              {team.courseCode && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm font-medium rounded-full">
-                    {team.courseCode}
-                  </span>
-                </div>
-              )}
-              <h1 className="text-2xl sm:text-3xl fi-zone font-bold mb-2">
-                {team.name}
-              </h1>
-              <p className="text-white/80 text-sm">{team.event.name}</p>
-            </div>
-            <div className="flex flex-col items-center bg-white/20 backdrop-blur-sm rounded-xl px-4 py-3">
-              <span className="text-3xl mb-1">❤️</span>
-              <span className="text-2xl font-bold">
-                {appreciationData.totalCount}
-              </span>
-              <span className="text-xs text-white/80">appreciations</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Description */}
-          <div>
-            <h2 className="text-sm font-semibold fi-muted uppercase tracking-wide mb-2">
-              About This Project
-            </h2>
-            <p className="fi-ink leading-relaxed">
-              {team.description}
-            </p>
-          </div>
-
-          {/* Team Members */}
-          {team.members.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold fi-muted uppercase tracking-wide mb-2">
-                Team Members
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {team.members.map((member, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-3 py-1.5 bg-muted fi-ink text-sm rounded-full"
-                  >
-                    {member}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* GitHub Link */}
-          {githubUrl !== "" && (
-            <div>
-              <h2 className="text-sm font-semibold fi-muted uppercase tracking-wide mb-2">
-                Project Link
-              </h2>
-              <a
-                href={githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-primary hover:underline"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                </svg>
-                View on GitHub
-              </a>
-            </div>
-          )}
-        </div>
-
-        {/* Appreciation Section */}
-        <div className="border-t border-border p-6 bg-muted/30">
-          <AppreciationSection
-            eventId={eventId}
-            teamId={teamId}
-            teamName={team.name}
-            attendeeId={attendeeId}
-            appreciationData={appreciationData}
-            isEventLive={isEventLive}
-            requestLocation={event.venueLocationEnabled === true}
-          />
-        </div>
-      </div>
-    </div>
+    <TeamPageView
+      event={event}
+      team={team}
+      appreciationCount={appreciationData.totalCount}
+      activity={
+        <AppreciationSection
+          key={team._id}
+          eventId={team.eventId}
+          teamId={team._id}
+          teamName={team.name}
+          attendeeId={attendeeId}
+          appreciationData={appreciationData}
+          isEventLive={event.status === "active"}
+          requestLocation={event.venueLocationEnabled === true}
+        />
+      }
+    />
   );
 }
 
-interface AppreciationSectionProps {
-  eventId: Id<"events">;
-  teamId: Id<"teams">;
-  teamName: string;
-  attendeeId: string | null;
-  appreciationData: {
-    totalCount: number;
-    attendeeCount: number;
-    attendeeTotalCount: number;
-    attendeeRemainingBudget: number;
-    maxPerAttendee: number;
-    maxPerTeam: number;
-  };
-  isEventLive: boolean;
-  requestLocation: boolean;
+/** Shared project presentation, also used by the sample-data design preview. */
+export function TeamPageView({
+  event,
+  team,
+  activity,
+  appreciationCount,
+  eventHref = `/event/${team.eventId}`,
+}: {
+  event: ProjectEvent;
+  team: Pick<
+    ProjectTeam,
+    | "eventId"
+    | "name"
+    | "description"
+    | "members"
+    | "courseCode"
+    | "track"
+    | "prizeEntries"
+    | "githubUrl"
+    | "projectUrl"
+  >;
+  activity?: ReactNode;
+  appreciationCount?: number;
+  eventHref?: string;
+}) {
+  const mode = getEventMode(event.mode);
+  const projectTag =
+    mode === "hackathon"
+      ? team.track?.trim()
+      : mode === "demo_day"
+        ? team.courseCode?.trim()
+        : undefined;
+  const tagLabel = mode === "hackathon" ? "Track" : "Course";
+  const prizeEntries = mode === "hackathon" ? (team.prizeEntries ?? []) : [];
+  const projectUrl = team.projectUrl?.trim();
+  const githubUrl = team.githubUrl?.trim();
+  const links = [
+    { label: "Open project", url: projectUrl },
+    { label: "View on GitHub", url: githubUrl },
+  ].filter((link) => link.url && /^https?:\/\//i.test(link.url));
+  return (
+    <article className="project-page">
+      <Link to={eventHref} className="project-back">
+        <DirectionIcon direction="left" /> Back to event
+      </Link>
+      <header className="project-heading">
+        <div>
+          <p className="project-event">
+            {event.name} <span aria-hidden="true">·</span>{" "}
+            {getEventDisplayLabel(event.mode)}
+          </p>
+          <h1>{team.name}</h1>
+          {prizeEntries.length > 0 ? (
+            <div className="project-prize-submissions">
+              <p>Entered for</p>
+              <ul className="project-prize-tags" aria-label="Prize entries">
+                {prizeEntries.map((prize) => (
+                  <li key={prize._id} className="project-tag">
+                    <span>{prize.name}</span>
+                    {prize.automatic && (
+                      <span className="project-tag-source">Automatic</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : projectTag ? (
+            <span
+              className="project-tag"
+              aria-label={`${tagLabel}: ${projectTag}`}
+            >
+              {projectTag}
+            </span>
+          ) : null}
+        </div>
+        {appreciationCount !== undefined && (
+          <div className="project-appreciation-count">
+            <HeartIcon />
+            <strong>{appreciationCount}</strong>
+            <span>appreciations</span>
+          </div>
+        )}
+      </header>
+      <div className="project-layout">
+        <section
+          className="project-about"
+          aria-labelledby="project-about-title"
+        >
+          <h2 id="project-about-title">About the project</h2>
+          <p>
+            {team.description.trim() ||
+              "The team hasn't added a project description yet."}
+          </p>
+        </section>
+        <aside className="project-sidebar" aria-label="Team and project links">
+          {team.members.length > 0 && (
+            <section>
+              <h2>The team</h2>
+              <ul className="project-members">
+                {team.members.map((member, index) => (
+                  <li key={`${member}-${index}`}>{member}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {links.length > 0 && (
+            <section>
+              <h2>Explore the work</h2>
+              <div className="project-links">
+                {links.map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {link.label}
+                    <DirectionIcon />
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+          {activity ? (
+            <section className="project-activity">{activity}</section>
+          ) : (
+            <Link className="project-event-link" to={eventHref}>
+              Open event <DirectionIcon />
+            </Link>
+          )}
+        </aside>
+      </div>
+    </article>
+  );
 }
 
 function AppreciationSection({
@@ -226,128 +245,94 @@ function AppreciationSection({
   appreciationData,
   isEventLive,
   requestLocation,
-}: AppreciationSectionProps) {
+}: {
+  eventId: Id<"events">;
+  teamId: Id<"teams">;
+  teamName: string;
+  attendeeId: string | null;
+  appreciationData: AppreciationData;
+  isEventLive: boolean;
+  requestLocation: boolean;
+}) {
   const { appreciate, isLoading, isAuthenticated } = useAppreciation();
-  const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
-
-  const attendeeCount = optimisticCount ?? appreciationData.attendeeCount;
-  const maxPerTeam = appreciationData.maxPerTeam ?? 10;
-  const maxPerAttendee = appreciationData.maxPerAttendee ?? 100;
-  const remainingBudget =
-    appreciationData.attendeeRemainingBudget -
-    (optimisticCount !== null ? 1 : 0);
+  const [pending, setPending] = useState(false);
+  const [receipt, setReceipt] = useState<{
+    count: number;
+    remaining: number;
+  } | null>(null);
+  const attendeeCount = Math.max(
+    appreciationData.attendeeCount,
+    receipt?.count ?? 0,
+  );
+  const remainingBudget = Math.min(
+    appreciationData.attendeeRemainingBudget,
+    receipt?.remaining ?? Infinity,
+  );
+  const maxPerTeam = appreciationData.maxPerTeam;
   const canAppreciate =
     isEventLive &&
-    isAuthenticated !== false &&
-    attendeeId &&
+    !!attendeeId &&
     attendeeCount < maxPerTeam &&
     remainingBudget > 0;
+  const signedOut = isAuthenticated === false;
 
   const handleAppreciate = async () => {
-    if (!attendeeId || !canAppreciate) return;
-
-    // Optimistic update
-    setOptimisticCount((prev) => (prev ?? appreciationData.attendeeCount) + 1);
-
-    const result = await appreciate(
-      eventId,
-      teamId,
-      () => {
-        toast.success(`Appreciated ${teamName}! ❤️`);
-      },
-      (error) => {
-        // Revert optimistic update
-        setOptimisticCount(null);
-        toast.error(error);
-      },
-      { requestLocation },
-    );
-
-    // If successful, the query will refresh and we can clear optimistic state
-    if (result.success) {
-      setTimeout(() => setOptimisticCount(null), 500);
+    if (signedOut) {
+      window.dispatchEvent(new CustomEvent("hackjudge:open-signin"));
+      return;
+    }
+    if (!canAppreciate || pending || isLoading) return;
+    setPending(true);
+    try {
+      const result = await appreciate(eventId, teamId, undefined, undefined, {
+        requestLocation,
+      });
+      if (result.success) {
+        setReceipt({
+          count: maxPerTeam - result.remainingForTeam,
+          remaining: result.remainingTotal,
+        });
+        toast.success(`Appreciation sent to ${teamName}.`);
+      } else {
+        toast.error(
+          result.error ||
+            "Your appreciation could not be sent. Please try again.",
+        );
+      }
+    } finally {
+      setPending(false);
     }
   };
 
+  const label = !isEventLive
+    ? "Appreciations closed"
+    : signedOut
+      ? "Sign in to appreciate"
+      : attendeeCount >= maxPerTeam
+        ? "Project limit reached"
+        : remainingBudget <= 0
+          ? "No appreciations left"
+          : "Give appreciation";
   return (
-    <div className="text-center">
-      <h2 className="text-lg fi-zone font-semibold fi-ink mb-2">
-        Show Your Appreciation
-      </h2>
-      <p className="text-sm fi-muted mb-4">
-        You can give up to {maxPerTeam} appreciations to this project. You have{" "}
-        <span className="font-semibold fi-ink">{remainingBudget}</span>{" "}
-        of {maxPerAttendee} remaining overall.
+    <div className="project-appreciation">
+      <h2>Show your appreciation</h2>
+      <p>
+        {remainingBudget} left to share across the event. Up to {maxPerTeam} per
+        project.
       </p>
-      {!isEventLive && (
-        <p className="text-sm text-amber-600  font-medium mb-3">
-          Appreciations open once the event is live.
-        </p>
-      )}
-
-      {/* Progress indicator */}
-      <div className="flex justify-center items-center gap-2 mb-4">
-        {[...Array(maxPerTeam)].map((_, i) => (
-          <div
-            key={i}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-              i < attendeeCount
-                ? "bg-pink-500 text-white scale-110"
-                : "bg-muted fi-muted"
-            }`}
-          >
-            ❤️
-          </div>
-        ))}
-      </div>
-
       <button
-        onClick={handleAppreciate}
-        disabled={!canAppreciate || isLoading}
-        className={`
-          inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl text-lg font-semibold transition-all shadow-lg
-          ${
-            canAppreciate
-              ? "fi-accent-surface     text-white hover:shadow-xl hover:scale-105 active:scale-100"
-              : "bg-muted fi-muted cursor-not-allowed shadow-none"
-          }
-          ${isLoading ? "opacity-70" : ""}
-        `}
+        type="button"
+        onClick={() => void handleAppreciate()}
+        disabled={
+          pending || isLoading || !isEventLive || (!signedOut && !canAppreciate)
+        }
       >
-        {isLoading ? (
-          <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <svg
-            className="w-6 h-6"
-            fill={canAppreciate ? "currentColor" : "none"}
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-            />
-          </svg>
-        )}
-            {isAuthenticated === false
-              ? "Sign in to vote"
-              : !isEventLive
-              ? "Opens when live"
-          : attendeeCount >= maxPerTeam
-            ? "Max Appreciations Given"
-            : remainingBudget <= 0
-              ? "No Appreciations Left"
-              : "Give Appreciation"}
+        <HeartIcon />
+        {pending || isLoading ? "Sending…" : label}
       </button>
-
-      {attendeeCount > 0 && (
-        <p className="text-sm text-pink-500 mt-3 font-medium">
-          You've given {attendeeCount} appreciation
-          {attendeeCount !== 1 ? "s" : ""} to this project!
-        </p>
-      )}
+      <p className="project-appreciation-progress" aria-live="polite">
+        {attendeeCount} / {maxPerTeam} given to this project
+      </p>
     </div>
   );
 }

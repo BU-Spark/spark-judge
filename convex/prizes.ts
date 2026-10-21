@@ -11,6 +11,11 @@ import {
 import { shapeTeamForPublic } from "./helpers";
 import { Doc, Id } from "./_generated/dataModel";
 import { isHackathonMode } from "./eventModes";
+import {
+  getEffectivePrizeSubmissions,
+  isAutomaticPrize,
+  isPrizeEligibleForTrack,
+} from "../shared/prizeEntries";
 
 const PRIZE_TYPE = v.union(
   v.literal("general"),
@@ -31,6 +36,7 @@ const PRIZE_INPUT = v.object({
   description: v.optional(v.string()),
   type: PRIZE_TYPE,
   track: v.optional(v.string()),
+  entryMode: v.optional(v.union(v.literal("automatic"), v.literal("opt_in"))),
   sponsorName: v.optional(v.string()),
   scoreBasis: v.optional(SCORE_BASIS),
   scoreCategoryNames: v.optional(v.array(v.string())),
@@ -59,17 +65,20 @@ function normalizeOptionalString(value?: string) {
 }
 
 function isTeamEligibleForPrize(team: Doc<"teams">, prize: Doc<"prizes">) {
-  if (prize.isActive === false) return false;
-  if (prize.type === "track" || prize.type === "track_sponsor") {
-    return !!prize.track && !!team.track && team.track === prize.track;
-  }
-  return true;
+  return isPrizeEligibleForTrack(prize, team.track);
 }
 
 function validatePrizeConfig(prize: any, event: any) {
   const name = prize.name?.trim();
   if (!name) {
     throw new Error("Prize name is required");
+  }
+  if (
+    prize.entryMode === "automatic" &&
+    prize.type !== "track" &&
+    prize.type !== "track_sponsor"
+  ) {
+    throw new Error(`Prize "${name}" must be track-linked for automatic entry`);
   }
 
   const eventTracks =
@@ -128,6 +137,7 @@ export function shapePrizeForPublic(prize: any) {
     description: prize.description,
     type: prize.type,
     track: prize.track,
+    entryMode: prize.entryMode ?? "opt_in",
     sponsorName: prize.sponsorName,
     scoreBasis: prize.scoreBasis,
     scoreCategoryNames: prize.scoreCategoryNames,
@@ -142,6 +152,61 @@ export function shapePrizeSubmissionForJudge(submission: any) {
     teamId: submission.teamId,
     prizeId: submission.prizeId,
   };
+}
+
+/** Shared prize input shape, reused by event creation so validation stays identical. */
+export const PRIZE_INPUT_VALIDATOR = PRIZE_INPUT;
+
+/**
+ * Validates and inserts the initial prize catalog for a freshly created
+ * hackathon event. Runs inside the caller's mutation, so any validation error
+ * rolls back the event insert as well.
+ */
+export async function insertInitialPrizes(
+  ctx: MutationCtx,
+  event: Doc<"events">,
+  prizes: Array<{
+    name: string;
+    description?: string;
+    type: "general" | "track" | "sponsor" | "track_sponsor";
+    track?: string;
+    entryMode?: "automatic" | "opt_in";
+    sponsorName?: string;
+    scoreBasis?: "overall" | "categories" | "none";
+    scoreCategoryNames?: string[];
+    isActive?: boolean;
+    sortOrder?: number;
+  }>,
+  adminId: Id<"users">,
+) {
+  if (prizes.length === 0) return;
+  if (!isHackathonMode(event.mode)) {
+    throw new Error("Prize workflows are only supported for hackathon events");
+  }
+  const now = Date.now();
+  for (let index = 0; index < prizes.length; index += 1) {
+    const incoming = prizes[index];
+    validatePrizeConfig(incoming, event);
+    await ctx.db.insert("prizes", {
+      eventId: event._id,
+      name: incoming.name.trim(),
+      description: normalizeOptionalString(incoming.description),
+      type: incoming.type,
+      track: normalizeOptionalString(incoming.track),
+      entryMode: incoming.entryMode ?? "opt_in",
+      sponsorName: normalizeOptionalString(incoming.sponsorName),
+      scoreBasis: incoming.scoreBasis ?? "none",
+      scoreCategoryNames:
+        incoming.scoreBasis === "categories"
+          ? (incoming.scoreCategoryNames || []).map((c) => c.trim()).filter(Boolean)
+          : undefined,
+      isActive: incoming.isActive ?? true,
+      sortOrder: incoming.sortOrder ?? index,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: adminId,
+    });
+  }
 }
 
 export const listEventPrizes = query({
@@ -190,6 +255,7 @@ export const saveEventPrizes = mutation({
         description: normalizeOptionalString(incoming.description),
         type: incoming.type,
         track: normalizeOptionalString(incoming.track),
+        entryMode: incoming.entryMode ?? "opt_in",
         sponsorName: normalizeOptionalString(incoming.sponsorName),
         scoreBasis: incoming.scoreBasis ?? "none",
         scoreCategoryNames:
@@ -305,9 +371,14 @@ export const getEventPrizeSubmissions = query({
       .query("teamPrizeSubmissions")
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
-    return admin
-      ? submissions
-      : submissions.map(shapePrizeSubmissionForJudge);
+    const [prizes, teams] = await Promise.all([
+      ctx.db.query("prizes")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId)).collect(),
+      ctx.db.query("teams")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId)).collect(),
+    ]);
+    const entries = getEffectivePrizeSubmissions(prizes, teams, submissions);
+    return admin ? entries : entries.map(shapePrizeSubmissionForJudge);
   },
 });
 
@@ -364,7 +435,9 @@ export const setMyTeamPrizeSubmissions = mutation({
 
     const now = Date.now();
     await Promise.all(
-      uniquePrizeIds.map((prizeId) =>
+      uniquePrizeIds
+        .filter((prizeId) => !isAutomaticPrize(eventPrizesById.get(prizeId)!))
+        .map((prizeId) =>
         ctx.db.insert("teamPrizeSubmissions", {
           eventId: args.eventId,
           teamId: team._id,
@@ -424,7 +497,9 @@ export const setTeamPrizeSubmissionsAdmin = mutation({
 
     const now = Date.now();
     await Promise.all(
-      uniquePrizeIds.map((prizeId) =>
+      uniquePrizeIds
+        .filter((prizeId) => !isAutomaticPrize(eventPrizesById.get(prizeId)!))
+        .map((prizeId) =>
         ctx.db.insert("teamPrizeSubmissions", {
           eventId: args.eventId,
           teamId: args.teamId,
@@ -480,10 +555,16 @@ export const getPrizeDeliberationData = query({
       });
     }
 
-    const teamsById = new Map(teams.map((team) => [team._id, team]));
-    const prizesById = new Map(prizes.map((prize) => [prize._id, prize]));
+    const teamsById = new Map<string, Doc<"teams">>(
+      teams.map((team) => [team._id, team]),
+    );
+    const prizesById = new Map<string, Doc<"prizes">>(
+      prizes.map((prize) => [prize._id, prize]),
+    );
     const submissionsByPrize = new Map<any, any[]>();
-    for (const submission of submissions) {
+    for (const submission of getEffectivePrizeSubmissions(
+      prizes, teams, submissions,
+    )) {
       const prize = prizesById.get(submission.prizeId);
       const team = teamsById.get(submission.teamId);
       if (!prize || !team) continue;
@@ -548,6 +629,7 @@ export const setPrizeWinners = mutation({
     if (!event.scoringLockedAt) {
       throw new Error("Lock scoring before assigning prize winners");
     }
+    if (event.resultsReleased) throw new Error("Withdraw results before changing winners");
 
     const [prizes, teams, submissions] = await Promise.all([
       ctx.db
@@ -565,12 +647,16 @@ export const setPrizeWinners = mutation({
     ]);
 
     const validPrizeIds = new Set(prizes.map((prize) => prize._id));
-    const validTeamIds = new Set(teams.map((team) => team._id));
+    const validTeamIds = new Set(teams.filter((team) => !team.hidden).map((team) => team._id));
     const submissionKeys = new Set(
-      submissions.map((submission) => `${submission.prizeId}:${submission.teamId}`)
+      getEffectivePrizeSubmissions(prizes, teams, submissions)
+        .map((submission) => `${submission.prizeId}:${submission.teamId}`)
     );
 
+    const assignedPrizes = new Set<string>();
     for (const winner of args.winners) {
+      if (assignedPrizes.has(winner.prizeId)) throw new Error("Select one winner per prize");
+      assignedPrizes.add(winner.prizeId);
       if (!validPrizeIds.has(winner.prizeId)) {
         throw new Error("One or more winners reference an invalid prize");
       }

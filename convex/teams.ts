@@ -1,5 +1,11 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import {
+  getEffectivePrizeSubmissions,
+  isAutomaticPrize,
+  isPrizeEligibleForTrack,
+} from "../shared/prizeEntries";
+import { query, mutation, MutationCtx } from "./_generated/server";
+import { Doc, Id } from "./_generated/dataModel";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   canAccessEvent,
@@ -268,7 +274,28 @@ export const submitTeam = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    return await insertSubmittedTeam(ctx, userId, args);
+  },
+});
 
+type SubmitTeamArgs = {
+  eventId: Id<"events">;
+  name: string;
+  description: string;
+  members: string[];
+  githubUrl?: string;
+  devpostUrl?: string;
+  track?: string;
+  courseCode?: string;
+  logoStorageId?: Id<"_storage">;
+};
+
+async function insertSubmittedTeam(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  args: SubmitTeamArgs,
+): Promise<Id<"teams">> {
+  {
     // Verify event is active (computed from dates)
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
@@ -395,8 +422,8 @@ export const submitTeam = mutation({
       submittedBy: userId,
       submittedAt: Date.now(),
     });
-  },
-});
+  }
+}
 
 export const getMyTeam = query({
   args: { eventId: v.id("events") },
@@ -442,7 +469,28 @@ export const updateTeam = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    await patchOwnTeam(ctx, userId, args);
+    return null;
+  },
+});
 
+type UpdateTeamArgs = {
+  teamId: Id<"teams">;
+  description?: string;
+  members?: string[];
+  githubUrl?: string;
+  devpostUrl?: string;
+  track?: string;
+  courseCode?: string;
+  logoStorageId?: Id<"_storage">;
+};
+
+async function patchOwnTeam(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  args: UpdateTeamArgs,
+): Promise<void> {
+  {
     const team = await ctx.db.get(args.teamId);
     if (!team) throw new Error("Team not found");
 
@@ -493,7 +541,148 @@ export const updateTeam = mutation({
       updates.logoStorageId = args.logoStorageId;
 
     await ctx.db.patch(args.teamId, updates);
-    return null;
+  }
+}
+
+/**
+ * Replaces the caller's opt-in prize entries for `team`. Mirrors
+ * `prizes.setMyTeamPrizeSubmissions` but takes the already-written team so it
+ * runs inside the same transaction as the project save.
+ */
+async function replaceOwnPrizeEntries(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  team: Doc<"teams">,
+  prizeIds: Id<"prizes">[],
+) {
+  const event = await ctx.db.get(team.eventId);
+  if (!event) throw new Error("Event not found");
+  if (!isHackathonMode(event.mode)) {
+    throw new Error("Prize workflows are only supported for hackathon events");
+  }
+  if (computeEventStatus(event) === "past") {
+    throw new Error("Prize selection is closed for this event");
+  }
+
+  const uniquePrizeIds = Array.from(new Set(prizeIds));
+  const eventPrizes = await ctx.db
+    .query("prizes")
+    .withIndex("by_event", (q) => q.eq("eventId", team.eventId))
+    .collect();
+  const eventPrizesById = new Map(eventPrizes.map((prize) => [prize._id, prize]));
+
+  for (const prizeId of uniquePrizeIds) {
+    const prize = eventPrizesById.get(prizeId);
+    if (!prize) {
+      throw new Error("One or more prize selections are invalid for this event");
+    }
+    if (!isPrizeEligibleForTrack(prize, team.track)) {
+      throw new Error(`Your team is not eligible for the prize "${prize.name}"`);
+    }
+  }
+
+  const existing = await ctx.db
+    .query("teamPrizeSubmissions")
+    .withIndex("by_event_and_team", (q) =>
+      q.eq("eventId", team.eventId).eq("teamId", team._id)
+    )
+    .collect();
+  await Promise.all(existing.map((row) => ctx.db.delete(row._id)));
+
+  const now = Date.now();
+  await Promise.all(
+    uniquePrizeIds
+      .filter((prizeId) => !isAutomaticPrize(eventPrizesById.get(prizeId)!))
+      .map((prizeId) =>
+        ctx.db.insert("teamPrizeSubmissions", {
+          eventId: team.eventId,
+          teamId: team._id,
+          prizeId,
+          submittedAt: now,
+          submittedBy: userId,
+        })
+      )
+  );
+}
+
+/**
+ * Participant project save: creates or updates the caller's project and
+ * replaces its prize entries in one transaction, so a failure leaves neither
+ * step half-applied. A create retried after an uncertain outcome (same name,
+ * project already recorded for this user) is applied as an update instead of
+ * failing or creating a duplicate.
+ */
+export const saveMyProject = mutation({
+  args: {
+    eventId: v.id("events"),
+    teamId: v.optional(v.id("teams")),
+    name: v.optional(v.string()),
+    description: v.string(),
+    members: v.array(v.string()),
+    githubUrl: v.optional(v.string()),
+    devpostUrl: v.optional(v.string()),
+    track: v.optional(v.string()),
+    courseCode: v.optional(v.string()),
+    logoStorageId: v.optional(v.id("_storage")),
+    prizeIds: v.optional(v.array(v.id("prizes"))),
+  },
+  returns: v.object({ teamId: v.id("teams"), created: v.boolean() }),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    let teamId = args.teamId;
+    if (!teamId) {
+      const existing = await ctx.db
+        .query("teams")
+        .withIndex("by_event_and_submitter", (q) =>
+          q.eq("eventId", args.eventId).eq("submittedBy", userId)
+        )
+        .first();
+      const name = args.name?.trim() ?? "";
+      if (existing && name && existing.name.toLowerCase() === name.toLowerCase()) {
+        teamId = existing._id;
+      }
+    }
+
+    let created = false;
+    if (teamId) {
+      const team = await ctx.db.get(teamId);
+      if (!team || team.eventId !== args.eventId) throw new Error("Team not found");
+      await patchOwnTeam(ctx, userId, {
+        teamId,
+        description: args.description,
+        members: args.members,
+        githubUrl: args.githubUrl,
+        devpostUrl: args.devpostUrl,
+        track: args.track,
+        courseCode: args.courseCode,
+        logoStorageId: args.logoStorageId,
+      });
+    } else {
+      const name = args.name?.trim();
+      if (!name) throw new Error("Team name is required");
+      teamId = await insertSubmittedTeam(ctx, userId, {
+        eventId: args.eventId,
+        name,
+        description: args.description,
+        members: args.members,
+        githubUrl: args.githubUrl,
+        devpostUrl: args.devpostUrl,
+        track: args.track,
+        courseCode: args.courseCode,
+        logoStorageId: args.logoStorageId,
+      });
+      created = true;
+    }
+
+    if (args.prizeIds !== undefined) {
+      const savedTeam = await ctx.db.get(teamId);
+      if (!savedTeam) throw new Error("Team not found");
+      await replaceOwnPrizeEntries(ctx, userId, savedTeam, args.prizeIds);
+    }
+
+    return { teamId, created };
   },
 });
 
@@ -644,9 +833,15 @@ export const getTeamById = query({
       members: v.array(v.string()),
       githubUrl: v.optional(v.string()),
       projectUrl: v.optional(v.string()),
+      track: v.optional(v.string()),
       courseCode: v.optional(v.string()),
       hidden: v.optional(v.boolean()),
       logoUrl: v.union(v.null(), v.string()),
+      prizeEntries: v.array(v.object({
+        _id: v.id("prizes"),
+        name: v.string(),
+        automatic: v.boolean(),
+      })),
       event: v.object({
         _id: v.id("events"),
         name: v.string(),
@@ -675,6 +870,31 @@ export const getTeamById = query({
       logoUrl = await ctx.storage.getUrl(team.logoStorageId);
     }
 
+    // Public project metadata contains names and entry source, not submission actors.
+    const [prizes, submissions] = isHackathonMode(event.mode)
+      ? await Promise.all([
+          ctx.db.query("prizes")
+            .withIndex("by_event", (q) => q.eq("eventId", team.eventId)).collect(),
+          ctx.db.query("teamPrizeSubmissions")
+            .withIndex("by_event_and_team", (q) =>
+              q.eq("eventId", team.eventId).eq("teamId", team._id),
+            ).collect(),
+        ])
+      : [[], []];
+    const entryIds = new Set(
+      getEffectivePrizeSubmissions(prizes, [team], submissions)
+        .map((entry) => entry.prizeId),
+    );
+    const prizeEntries = prizes
+      .filter((prize) => entryIds.has(prize._id))
+      .sort((a, b) =>
+        (a.sortOrder ?? Number.MAX_SAFE_INTEGER) -
+        (b.sortOrder ?? Number.MAX_SAFE_INTEGER) || a.name.localeCompare(b.name),
+      )
+      .map((prize) => ({
+        _id: prize._id, name: prize.name, automatic: isAutomaticPrize(prize),
+      }));
+
     return {
       _id: team._id,
       eventId: team.eventId,
@@ -683,9 +903,11 @@ export const getTeamById = query({
       members: team.members,
       githubUrl: team.githubUrl,
       projectUrl: team.projectUrl,
+      track: team.track,
       courseCode: team.courseCode,
       hidden: team.hidden,
       logoUrl,
+      prizeEntries,
       event: {
         _id: event._id,
         name: event.name,

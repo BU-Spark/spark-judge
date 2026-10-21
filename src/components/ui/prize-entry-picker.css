@@ -1,0 +1,130 @@
+.prize-entry-picker {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: var(--platform-ink);
+  font-family: var(--platform-font);
+}
+.prize-entry-picker > legend {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
+}
+.prize-entry-picker > p {
+  font-size: 14px;
+  color: var(--platform-muted);
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
+.prize-entry-picker h3 {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 12px;
+}
+.prize-entry-picker .prize-entry-option {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  padding: 12px;
+  font: 400 14px/1.5 var(--platform-font);
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+}
+.prize-entry-option input {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--platform-teal);
+  flex-shrink: 0;
+}
+.prize-entry-option strong {
+  font-weight: 500;
+}
+.prize-entry-option small {
+  display: block;
+  color: var(--platform-muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+.prize-entry-automatic {
+  padding: 16px;
+  background: var(--platform-workspace);
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+.prize-entry-automatic .prize-entry-option {
+  padding: 8px 0;
+  cursor: default;
+}
+.prize-entry-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.prize-entry-heading > span {
+  font-size: 13px;
+  color: var(--platform-muted);
+  font-variant-numeric: tabular-nums;
+}
+.prize-entry-picker .prize-entry-sponsor {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  font: 400 13px/1.5 var(--platform-font);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.prize-entry-sponsor select {
+  min-height: 44px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--platform-paper);
+  border: 1px solid var(--platform-line);
+  border-radius: 6px;
+  color: var(--platform-ink);
+  font: inherit;
+}
+.prize-entry-options {
+  max-height: 280px;
+  overflow-y: auto;
+}
+.prize-entry-options > label {
+  border-top: 1px solid var(--platform-line);
+}
+.prize-entry-options > label:hover {
+  background: var(--platform-workspace);
+}
+.prize-entry-picker .prize-entry-note {
+  font-size: 13px;
+  margin: 16px 0 0;
+}
+.prize-entry-picker :focus-visible {
+  outline: 3px solid var(--platform-teal);
+  outline-offset: 3px;
+}
+.platform-preview-controls {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 12px var(--platform-page-inline);
+  font-family: var(--platform-font);
+  color: var(--platform-ink);
+}
+.platform-preview-controls > summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  font-size: 14px;
+}
+.platform-preview-controls .prize-entry-picker {
+  max-width: 600px;
+  margin-top: 16px;
+  padding: 24px;
+  border: 1px solid var(--platform-line);
+  border-radius: 12px;
+}

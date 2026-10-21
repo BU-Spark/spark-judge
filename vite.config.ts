@@ -9,6 +9,31 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
+    {
+      name: "canonical-local-auth-origin",
+      configureServer(server) {
+        server.middlewares.use((request, response, next) => {
+          const host = request.headers.host ?? "";
+          // Auth callbacks must return to the same origin as the local session.
+          // Keep loopback navigation on the localhost origin configured in SITE_URL.
+          if (
+            (request.method === "GET" || request.method === "HEAD") &&
+            request.headers.accept?.includes("text/html") &&
+            /^127\.0\.0\.1(?::\d+)?$/.test(host)
+          ) {
+            const origin = `http://${host.replace("127.0.0.1", "localhost")}`;
+            const path = request.url?.startsWith("/") ? request.url : "/";
+            response.writeHead(307, {
+              Location: `${origin}${path}`,
+              "Cache-Control": "no-store",
+            });
+            response.end();
+            return;
+          }
+          next();
+        });
+      },
+    },
     // The code below enables dev tools like taking screenshots of your site
     // while it is being developed on chef.convex.dev.
     // Feel free to remove this code if you're no longer developing your app with Chef.

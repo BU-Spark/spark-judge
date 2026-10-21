@@ -36,6 +36,9 @@ docs/
 # Local design-decision server process state
 .impeccable/questions/
 
+# Impeccable design mocks (large generated images; kept locally)
+.impeccable/mocks/
+
 # Local screenshots and audit output
 output/
 audits/

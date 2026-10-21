@@ -137,12 +137,7 @@ const applicationTables = {
     demoDayCourseName: v.optional(v.string()), // Human-readable course name from board assignment sheet
   })
     .index("by_event", ["eventId"])
-    .index("by_submitter", ["submittedBy"])
-    .index("by_event_and_submitter", ["eventId", "submittedBy"])
-    .index("by_event_and_project_instance", [
-      "eventId",
-      "demoDayProjectInstance",
-    ]),
+    .index("by_event_and_submitter", ["eventId", "submittedBy"]),
 
   rankedVotes: defineTable({
     eventId: v.id("events"),
@@ -181,7 +176,6 @@ const applicationTables = {
     teamId: v.id("teams"),
     addedAt: v.number(),
   })
-    .index("by_judge", ["judgeId"])
     .index("by_event", ["eventId"])
     .index("by_judge_and_event", ["judgeId", "eventId"])
     .index("by_judge_and_team", ["judgeId", "teamId"]),
@@ -228,10 +222,7 @@ const applicationTables = {
     updatedAt: v.number(),
     createdBy: v.id("users"),
   })
-    .index("by_event", ["eventId"])
-    .index("by_event_and_active", ["eventId", "isActive"])
-    .index("by_event_and_track", ["eventId", "track"])
-    .index("by_event_and_sponsor", ["eventId", "sponsorName"]),
+    .index("by_event", ["eventId"]),
 
   teamPrizeSubmissions: defineTable({
     eventId: v.id("events"),
@@ -243,9 +234,7 @@ const applicationTables = {
     .index("by_event", ["eventId"])
     .index("by_team", ["teamId"])
     .index("by_prize", ["prizeId"])
-    .index("by_team_and_prize", ["teamId", "prizeId"])
-    .index("by_event_and_team", ["eventId", "teamId"])
-    .index("by_event_and_prize", ["eventId", "prizeId"]),
+    .index("by_event_and_team", ["eventId", "teamId"]),
 
   prizeWinners: defineTable({
     eventId: v.id("events"),
@@ -257,8 +246,7 @@ const applicationTables = {
     selectedBy: v.id("users"),
   })
     .index("by_event", ["eventId"])
-    .index("by_prize", ["prizeId"])
-    .index("by_event_and_prize", ["eventId", "prizeId"]),
+    .index("by_prize", ["prizeId"]),
 
   // Demo Day appreciations table
   appreciations: defineTable({
@@ -281,12 +269,6 @@ const applicationTables = {
   })
     .index("by_event", ["eventId"])
     .index("by_team", ["teamId"])
-    .index("by_event_and_attendee", ["eventId", "attendeeId"])
-    .index("by_event_and_team_and_attendee", [
-      "eventId",
-      "teamId",
-      "attendeeId",
-    ])
     .index("by_event_and_voter", ["eventId", "voterUserId"])
     .index("by_event_and_team_and_voter", [
       "eventId",
@@ -294,8 +276,7 @@ const applicationTables = {
       "voterUserId",
     ])
     .index("by_ip_and_timestamp", ["ipAddress", "timestamp"])
-    .index("by_event_and_review_status", ["eventId", "reviewStatus"])
-    .index("by_integrity_finding", ["integrityFindingId"]),
+    .index("by_event_and_review_status", ["eventId", "reviewStatus"]),
 
   demoDayCaptchaPasses: defineTable({
     eventId: v.id("events"),
@@ -319,18 +300,12 @@ const applicationTables = {
     lastFailureAt: v.optional(v.number()),
     failureCount: v.optional(v.number()),
   })
-    .index("by_event_and_attendee_fingerprint", [
-      "eventId",
-      "attendeeId",
-      "fingerprintKey",
-    ])
     .index("by_event_and_voter_fingerprint", [
       "eventId",
       "voterUserId",
       "fingerprintKey",
     ])
-    .index("by_event_and_ip", ["eventId", "ipAddress"])
-    .index("by_event_and_fingerprint", ["eventId", "fingerprintKey"]),
+    .index("by_event_and_ip", ["eventId", "ipAddress"]),
 
   demoDayIntegrityFindings: defineTable({
     eventId: v.id("events"),
@@ -352,7 +327,6 @@ const applicationTables = {
     reviewNote: v.optional(v.string()),
   })
     .index("by_event", ["eventId"])
-    .index("by_event_and_status", ["eventId", "status"])
     .index("by_event_and_dedupe_key", ["eventId", "dedupeKey"]),
 };
 

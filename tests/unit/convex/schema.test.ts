@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import schema from "../../../convex/schema";
 
 describe("schema validation logic", () => {
   describe("event mode values", () => {
@@ -136,115 +137,45 @@ describe("schema validation logic", () => {
   });
 
   describe("index requirements", () => {
-    it("should define proper index fields for appreciation queries", () => {
-      // These are the indexes defined in the schema
-      const appreciationIndexes = {
+    // Read from the real schema so these fail if an index the code queries is removed.
+    function indexesOf(table: keyof typeof schema.tables) {
+      const exported = (schema.tables[table] as any).export();
+      return Object.fromEntries(
+        exported.indexes.map((index: { indexDescriptor: string; fields: string[] }) => [
+          index.indexDescriptor,
+          index.fields,
+        ]),
+      );
+    }
+
+    it("defines the appreciation indexes used for quotas and review", () => {
+      expect(indexesOf("appreciations")).toEqual({
         by_event: ["eventId"],
         by_team: ["teamId"],
-        by_event_and_attendee: ["eventId", "attendeeId"],
-        by_event_and_team_and_attendee: ["eventId", "teamId", "attendeeId"],
         by_event_and_voter: ["eventId", "voterUserId"],
-        by_event_and_team_and_voter: [
-          "eventId",
-          "teamId",
-          "voterUserId",
-        ],
+        by_event_and_team_and_voter: ["eventId", "teamId", "voterUserId"],
         by_ip_and_timestamp: ["ipAddress", "timestamp"],
         by_event_and_review_status: ["eventId", "reviewStatus"],
-        by_integrity_finding: ["integrityFindingId"],
-      };
-
-      // Verify index names and fields
-      expect(appreciationIndexes.by_event).toEqual(["eventId"]);
-      expect(appreciationIndexes.by_team).toEqual(["teamId"]);
-      expect(appreciationIndexes.by_event_and_attendee).toEqual([
-        "eventId",
-        "attendeeId",
-      ]);
-      expect(appreciationIndexes.by_event_and_team_and_attendee).toEqual([
-        "eventId",
-        "teamId",
-        "attendeeId",
-      ]);
-      expect(appreciationIndexes.by_event_and_voter).toEqual([
-        "eventId",
-        "voterUserId",
-      ]);
-      expect(appreciationIndexes.by_event_and_team_and_voter).toEqual([
-        "eventId",
-        "teamId",
-        "voterUserId",
-      ]);
-      expect(appreciationIndexes.by_ip_and_timestamp).toEqual([
-        "ipAddress",
-        "timestamp",
-      ]);
-      expect(appreciationIndexes.by_event_and_review_status).toEqual([
-        "eventId",
-        "reviewStatus",
-      ]);
-      expect(appreciationIndexes.by_integrity_finding).toEqual([
-        "integrityFindingId",
-      ]);
+      });
     });
 
-    it("should define integrity table indexes", () => {
-      const passIndexes = {
-        by_event_and_attendee_fingerprint: [
-          "eventId",
-          "attendeeId",
-          "fingerprintKey",
-        ],
-        by_event_and_voter_fingerprint: [
-          "eventId",
-          "voterUserId",
-          "fingerprintKey",
-        ],
+    it("defines the integrity table indexes", () => {
+      expect(indexesOf("demoDayCaptchaPasses")).toEqual({
+        by_event_and_voter_fingerprint: ["eventId", "voterUserId", "fingerprintKey"],
         by_event_and_ip: ["eventId", "ipAddress"],
-        by_event_and_fingerprint: ["eventId", "fingerprintKey"],
-      };
-      const findingIndexes = {
+      });
+      expect(indexesOf("demoDayIntegrityFindings")).toEqual({
         by_event: ["eventId"],
-        by_event_and_status: ["eventId", "status"],
         by_event_and_dedupe_key: ["eventId", "dedupeKey"],
-      };
-
-      expect(passIndexes.by_event_and_attendee_fingerprint).toEqual([
-        "eventId",
-        "attendeeId",
-        "fingerprintKey",
-      ]);
-      expect(passIndexes.by_event_and_voter_fingerprint).toEqual([
-        "eventId",
-        "voterUserId",
-        "fingerprintKey",
-      ]);
-      expect(passIndexes.by_event_and_ip).toEqual(["eventId", "ipAddress"]);
-      expect(passIndexes.by_event_and_fingerprint).toEqual([
-        "eventId",
-        "fingerprintKey",
-      ]);
-      expect(findingIndexes.by_event).toEqual(["eventId"]);
-      expect(findingIndexes.by_event_and_status).toEqual(["eventId", "status"]);
-      expect(findingIndexes.by_event_and_dedupe_key).toEqual([
-        "eventId",
-        "dedupeKey",
-      ]);
+      });
     });
 
-    it("should define ranked vote indexes for event and voter lookups", () => {
-      const rankedVoteIndexes = {
+    it("defines ranked vote indexes for event and voter lookups", () => {
+      expect(indexesOf("rankedVotes")).toMatchObject({
         by_event: ["eventId"],
         by_voter: ["voterUserId"],
         by_event_and_voter: ["eventId", "voterUserId"],
-      };
-
-      expect(rankedVoteIndexes.by_event).toEqual(["eventId"]);
-      expect(rankedVoteIndexes.by_voter).toEqual(["voterUserId"]);
-      expect(rankedVoteIndexes.by_event_and_voter).toEqual([
-        "eventId",
-        "voterUserId",
-      ]);
+      });
     });
   });
 });

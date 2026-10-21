@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { WinnersSection } from "../sections/WinnersSection";
+import type { ScorePrizeFilter } from "../components/ScoringDashboard";
 import { getEventMode } from "../../../lib/eventModes";
 import {
   CODE_AND_TELL_RANK_HEADERS,
@@ -63,16 +63,9 @@ export function ScoresTab({
   eventScores,
   scoringLocked,
   lockingScores,
-  hasConfiguredPrizes,
-  prizeDeliberationReady,
   onFinishEvent,
   onToggleScoringLock,
   onOpenWinners,
-  onReleaseResults,
-  isPageLayout,
-  scoresView,
-  onBackToScores,
-  winnersContent,
   appreciationSummary,
   integritySummary,
   isScanningIntegrity,
@@ -85,6 +78,7 @@ export function ScoresTab({
   onDownloadQrCodes,
   isGeneratingQr,
   detailedScores,
+  prizeFilters,
   codeAndTellSummary,
   viewMode,
   setViewMode,
@@ -99,16 +93,9 @@ export function ScoresTab({
   eventScores: any[] | undefined;
   scoringLocked: boolean;
   lockingScores: boolean;
-  hasConfiguredPrizes: boolean;
-  prizeDeliberationReady: boolean;
   onFinishEvent: () => void;
   onToggleScoringLock: () => void;
   onOpenWinners: () => void;
-  onReleaseResults: () => void;
-  isPageLayout: boolean;
-  scoresView: "overview" | "winners";
-  onBackToScores: () => void;
-  winnersContent: ReactNode;
   appreciationSummary: any;
   integritySummary: IntegritySummary;
   isScanningIntegrity: boolean;
@@ -124,6 +111,7 @@ export function ScoresTab({
   onDownloadQrCodes: () => void;
   isGeneratingQr: boolean;
   detailedScores: any;
+  prizeFilters?: ScorePrizeFilter[];
   codeAndTellSummary: CodeAndTellSummary;
   viewMode: "table" | "chart";
   setViewMode: (mode: "table" | "chart") => void;
@@ -136,181 +124,23 @@ export function ScoresTab({
   const isHackathon = mode === "hackathon";
   const isDemoDay = mode === "demo_day";
   const isCodeAndTell = mode === "code_and_tell";
-  const canOpenWinners =
-    isDemoDay ||
-    (isCodeAndTell
-      ? eventStatus === "past"
-      : scoringLocked && hasConfiguredPrizes && prizeDeliberationReady);
-  const canReleaseResults =
-    !resultsReleased &&
-    (isDemoDay || isCodeAndTell ? eventStatus === "past" : scoringLocked);
+  const statusLabel = resultsReleased ? "Results published" : eventStatus === "upcoming" ? "Event upcoming"
+    : eventStatus === "past" ? "Event finished" : isHackathon && scoringLocked ? "Scoring locked"
+    : isCodeAndTell ? "Balloting open" : isDemoDay ? "Appreciations open" : "Judging open";
 
   return (
     <>
-      <div className="flex flex-col md:flex-row md:items-center justify-between p-4 mb-6 rounded-lg border border-border fi-surface shadow-sm">
-        <div className="flex items-center gap-3 mb-4 md:mb-0">
-          <div
-            className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-              resultsReleased
-                ? "bg-slate-400"
-                : isDemoDay
-                  ? "bg-pink-500 animate-pulse"
-                  : isCodeAndTell
-                    ? "bg-amber-500 animate-pulse"
-                    : !scoringLocked
-                      ? "bg-teal-500 animate-pulse"
-                      : "bg-amber-500"
-            }`}
-          />
-          <div>
-            <h3 className="text-sm font-semibold fi-ink">
-              {resultsReleased
-                ? "Event Complete"
-                : isDemoDay
-                  ? "Demo Day Active"
-                  : isCodeAndTell
-                    ? eventStatus === "past"
-                      ? "Ready For Final Winner"
-                      : "Balloting In Progress"
-                    : scoringLocked
-                      ? "Scoring Locked"
-                      : "Judging in Progress"}
-            </h3>
-            <p className="text-xs fi-muted mt-0.5">
-              {resultsReleased
-                ? "Results have been released."
-                : isDemoDay
-                  ? "Review appreciations, select winners, and release results."
-                  : isCodeAndTell
-                    ? eventStatus === "past"
-                      ? "Review Borda standings, choose the final winner, and release results."
-                      : "Signed-in users can edit ranked ballots while the event is active."
-                    : scoringLocked
-                      ? hasConfiguredPrizes
-                        ? "Run the winner wizard to assign prizes, then release results."
-                        : "Add at least one prize in the Prizes tab to run the winner wizard."
-                      : "Lock scoring before selecting winners or releasing results."}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-          {eventStatus === "active" && (
-            <button
-              onClick={onFinishEvent}
-              className="px-3 py-1.5 text-xs font-medium fi-muted hover:fi-ink hover:bg-muted/50 rounded-md transition-colors"
-            >
-              Finish Event
-            </button>
-          )}
-
-          {isHackathon && scoringLocked && (
-            <button
-              onClick={onToggleScoringLock}
-              disabled={lockingScores}
-              className="px-3 py-1.5 text-xs font-medium text-amber-600  hover:bg-amber-50  rounded-md transition-colors disabled:opacity-50"
-            >
-              {lockingScores ? "Unlocking..." : "Unlock Scores"}
-            </button>
-          )}
-
-          {isHackathon && !scoringLocked && (
-            <button
-              onClick={onToggleScoringLock}
-              disabled={lockingScores}
-              className="px-4 py-1.5 text-sm font-medium bg-foreground text-background hover:bg-foreground/90 rounded-md transition-colors disabled:opacity-50 shadow-sm flex items-center gap-2"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 11c1.105 0 2-.895 2-2V7a2 2 0 10-4 0v2c0 1.105.895 2 2 2zm-6 2a2 2 0 012-2h8a2 2 0 012 2v6H6v-6z"
-                />
-              </svg>
-              {lockingScores ? "Locking..." : "Lock Scores"}
-            </button>
-          )}
-
-          {canOpenWinners && !resultsReleased && (
-            <button
-              onClick={onOpenWinners}
-              disabled={!canOpenWinners}
-              className="px-4 py-1.5 text-sm font-medium border border-border fi-surface fi-ink hover:bg-muted/50 rounded-md transition-colors disabled:opacity-50 shadow-sm flex items-center gap-2"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-                />
-              </svg>
-              {isDemoDay
-                ? "Select Winners"
-                : isCodeAndTell
-                  ? "Select Final Winner"
-                  : "Winner Wizard"}
-            </button>
-          )}
-
-          {canReleaseResults && (
-            <button
-              onClick={onReleaseResults}
-              disabled={!canReleaseResults}
-              className="px-4 py-1.5 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50 shadow-sm flex items-center gap-2"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Release Results
-            </button>
-          )}
-
-          {resultsReleased && (
-            <span className="px-4 py-1.5 text-sm font-medium border border-border bg-muted/30 fi-muted rounded-md flex items-center gap-2">
-              <svg
-                className="w-4 h-4 text-green-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Results Released
-            </span>
-          )}
+      <div className="admin-scores-toolbar">
+        <div><h3>{statusLabel}</h3><p className="fi-muted">{isHackathon ? (scoringLocked ? "Scores are locked for deliberation." : "Review judge scores and lock scoring when judging is complete.") : "Review standings here. Choose winners and publish in Results."}</p></div>
+        <div className="admin-results-actions">
+          {eventStatus === "active" && !resultsReleased && <button className="fi-key" onClick={onFinishEvent}>Finish event</button>}
+          {isHackathon && !resultsReleased && <button className="fi-key" onClick={onToggleScoringLock} disabled={lockingScores}>
+            {lockingScores ? "Updating…" : scoringLocked ? "Unlock scoring" : "Lock scoring"}
+          </button>}
+          <button className="fi-transport" onClick={onOpenWinners}>Go to results</button>
         </div>
       </div>
-
-      {isPageLayout && scoresView === "winners" ? (
-        <WinnersSection>{winnersContent}</WinnersSection>
-      ) : isDemoDay ? (
+      {isDemoDay ? (
         appreciationSummary ? (
           <div className="space-y-6">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm bg-muted/30 px-4 py-3 rounded-lg border border-border">
@@ -615,6 +445,7 @@ export function ScoresTab({
       ) : detailedScores ? (
         <ScoringDashboard
           scores={detailedScores}
+          prizeFilters={prizeFilters}
           viewMode={viewMode}
           setViewMode={setViewMode}
         />
@@ -726,7 +557,7 @@ function DemoDayIntegrityPanel({
                       {finding.status}
                     </span>
                     <span className="text-xs font-mono fi-muted">
-                      {finding.type.replaceAll("_", " ")} · risk{" "}
+                      {finding.type.replace(/_/g, " ")} · risk{" "}
                       {finding.riskScore}
                     </span>
                   </div>

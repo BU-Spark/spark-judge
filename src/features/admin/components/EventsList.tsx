@@ -1,5 +1,4 @@
-import { useMutation, useQuery } from "convex/react";
-import { toast } from "sonner";
+import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { ErrorState } from "../../../components/ui/ErrorState";
@@ -109,10 +108,8 @@ export function EventsList({
   onSelectEvent: (eventId: Id<"events">) => void;
 }) {
   const events = useQuery(api.events.listEvents);
-  const removeEvent = useMutation(api.events.removeEvent);
-  const duplicateEvent = useMutation(api.events.duplicateEvent);
-  const [removingEventId, setRemovingEventId] = useState<Id<"events"> | null>(null);
-  const [duplicatingEventId, setDuplicatingEventId] = useState<Id<"events"> | null>(null);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
   const [sortConfig, setSortConfig] = useState<{ field: SortField; direction: SortDirection }>({
     field: "status",
     direction: "asc",
@@ -141,41 +138,11 @@ export function EventsList({
     past: "bg-zinc-500/10 text-zinc-600  border-zinc-500/20",
   };
 
-  const handleRemoveEvent = async (eventId: Id<"events">, name: string) => {
-    const confirmed = window.confirm(
-      `Remove "${name}"? This will delete teams, scores, and access for this event.`
-    );
-    if (!confirmed) return;
+  const sortedEvents = allEvents.filter((event) => event.name.toLowerCase().includes(search.toLowerCase()) &&
+    (filter === "all" || (filter === "unpublished" ? event.status === "past" && !event.resultsReleased : filter === "published" ? event.resultsReleased : event.status === filter)))
+    .sort((a, b) => compareEvents(a, b, sortConfig));
 
-    try {
-      setRemovingEventId(eventId);
-      await removeEvent({ eventId });
-      toast.success("Event removed successfully");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to remove event");
-    } finally {
-      setRemovingEventId(null);
-    }
-  };
-
-  const handleDuplicateEvent = async (eventId: Id<"events">, name: string) => {
-    try {
-      setDuplicatingEventId(eventId);
-      const newEventId = await duplicateEvent({ eventId, hidden: true });
-      toast.success(`Created hidden testing clone of "${name}"`);
-      onSelectEvent(newEventId);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to clone event");
-    } finally {
-      setDuplicatingEventId(null);
-    }
-  };
-
-  const sortedEvents = [...allEvents].sort((a, b) => compareEvents(a, b, sortConfig));
-
-  if (sortedEvents.length === 0) {
+  if (allEvents.length === 0) {
     return (
       <div className="fi-panel text-center py-12 fade-in">
         <div className="mb-4 flex justify-center">
@@ -188,7 +155,15 @@ export function EventsList({
   }
 
   return (
-    <div className="fi-panel overflow-hidden fade-in p-0 fi-surface shadow-sm border border-border rounded-lg max-w-full">
+    <div className="admin-events-list fi-panel overflow-hidden p-0 fi-surface border border-border max-w-full">
+      <div className="admin-event-filters">
+        <label className="admin-search">Find an event<input type="search" placeholder="Search events" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
+        <label className="admin-search">Show<select value={filter} onChange={(event) => setFilter(event.target.value)}>
+          <option value="all">All events</option><option value="unpublished">Finished · results unpublished</option><option value="published">Results published</option><option value="active">Active</option><option value="upcoming">Upcoming</option>
+        </select></label>
+        <p className="fi-muted" aria-live="polite">{sortedEvents.length} events</p>
+      </div>
+      {sortedEvents.length === 0 && <p className="p-6 fi-muted">No events match these filters.</p>}
       <div className="max-w-full overflow-x-auto">
         <table className="min-w-full table-fixed md:table-auto">
           <thead className="bg-muted border-b border-border">
@@ -236,6 +211,7 @@ export function EventsList({
                   <span className={`badge ${statusStyles[event.status as "upcoming" | "active" | "past"]}`}>
                     {event.status}
                   </span>
+                  <p className="text-xs fi-muted mt-2">{event.resultsReleased ? "Results published" : event.status === "past" ? "Results unpublished" : "Results draft"}</p>
                 </td>
                 <td className="hidden sm:table-cell px-4 sm:px-6 py-4 whitespace-nowrap">
                   <span className="text-sm fi-muted">
@@ -292,50 +268,6 @@ export function EventsList({
                           strokeLinejoin="round"
                           strokeWidth={1.8}
                           d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleDuplicateEvent(event._id, event.name);
-                      }}
-                      disabled={duplicatingEventId === event._id}
-                      className={`inline-flex items-center justify-center p-2 rounded-md transition-colors text-blue-500 hover:bg-blue-500/10 ${
-                        duplicatingEventId === event._id ? "opacity-60 cursor-not-allowed" : ""
-                      }`}
-                      title="Clone for testing"
-                    >
-                      <span className="sr-only">Clone event for testing</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h6a2 2 0 002-2v-8a2 2 0 00-2-2h-6a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleRemoveEvent(event._id, event.name);
-                      }}
-                      disabled={removingEventId === event._id}
-                      className={`inline-flex items-center justify-center p-2 rounded-md transition-colors text-red-500 hover:bg-red-500/10 ${
-                        removingEventId === event._id ? "opacity-60 cursor-not-allowed" : ""
-                      }`}
-                      title="Remove event"
-                    >
-                      <span className="sr-only">Remove event</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                         />
                       </svg>
                     </button>

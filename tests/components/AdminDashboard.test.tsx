@@ -130,7 +130,7 @@ describe("Unified Admin Workspace Routing", () => {
 
     renderAdmin("/admin/events/event123?tab=scores&scoresView=winners");
 
-    expect(screen.getByText("Mock Event Workspace:scores:winners")).toBeInTheDocument();
+    expect(screen.getByText("Mock Event Workspace:winners:winners")).toBeInTheDocument();
   });
 
   it("maps prizes tab query param correctly", () => {
@@ -150,7 +150,7 @@ describe("Unified Admin Workspace Routing", () => {
 
     fireEvent.click(screen.getByText("Mock Events List"));
 
-    expect(screen.getByText("Mock Event Workspace:details:overview")).toBeInTheDocument();
+    expect(screen.getByText("Mock Event Workspace:overview:overview")).toBeInTheDocument();
   });
 
   it("navigates to insights route from admin home", () => {
@@ -164,7 +164,7 @@ describe("Unified Admin Workspace Routing", () => {
 
     renderAdmin("/admin");
 
-    fireEvent.click(screen.getByText("View Insights"));
+    fireEvent.click(screen.getByRole("button", { name: "View insights" }));
 
     expect(screen.getByText("Platform Insights")).toBeInTheDocument();
   });
@@ -182,7 +182,7 @@ describe("Unified Admin Workspace Routing", () => {
 
     fireEvent.click(screen.getByText("Back to Workspace"));
 
-    expect(screen.getByText("Admin Workspace")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Events", exact: true })).toBeInTheDocument();
   });
 
   it("renders admin insights loading state", () => {

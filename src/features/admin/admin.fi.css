@@ -1,4 +1,4 @@
-/* Organizer workbench: a denser expression of the Field Instrument chassis. */
+/* Admin uses the platform foundation with compact forms and tables. */
 .fi-admin-shell { min-height: 100%; background: var(--fi-desk); color: var(--fi-ink); }
 .fi-admin-shell input, .fi-admin-shell textarea, .fi-admin-shell select {
   border-color: var(--fi-hair); background: var(--fi-key-white); color: var(--fi-ink);
@@ -7,5 +7,104 @@
   outline: 2px solid var(--fi-teal); outline-offset: 2px;
 }
 .fi-admin-shell table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.fi-admin-shell th { font-family: var(--fi-font-mono); font-size: .625rem; letter-spacing: .13em; text-transform: uppercase; color: var(--fi-ink-dim); }
+.fi-admin-shell th { font-family: var(--platform-font); font-size: .8rem; font-weight: 500; letter-spacing: normal; text-transform: none; color: var(--fi-ink-dim); }
 .fi-admin-shell th, .fi-admin-shell td { border-bottom: 1px solid var(--fi-hair); }
+.admin-context { color: var(--platform-muted); font-size: 13px; margin-bottom: 12px; }
+.admin-home-heading h1 { font-size: clamp(32px, 4vw, 44px); font-weight: 600; letter-spacing: -.035em; line-height: 1.15; margin-bottom: 12px; }
+.admin-home-heading > div > p:last-child { font-size: 16px; }
+.fi-admin-shell .admin-events-list { border: 0; border-radius: 16px; padding: 8px 12px; }
+.admin-events-list thead { background: transparent; }
+.admin-events-list th { padding-block: 16px; }
+.admin-events-list td { padding-block: 22px; }
+.admin-events-list tbody tr:last-child td { border-bottom: 0; }
+.admin-events-list td:first-child > div > span:first-child { font-size: 17px; font-weight: 500; }
+.admin-events-list td:last-child button { min-width: 44px; min-height: 44px; }
+@media (max-width: 600px) {
+  .fi-admin-shell .admin-events-list { padding-inline: 0; }
+  .admin-events-list td, .admin-events-list th { padding-inline: 10px; }
+}
+
+.admin-event-nav button { min-height: 44px; flex-shrink: 0; }
+.admin-event-nav [aria-current="page"] { background: var(--platform-selected, #d8e9e0); box-shadow: none; }
+.admin-results { max-width: 1080px; padding: 24px; background: var(--fi-key-white); border-radius: 12px; }
+.admin-results h2, .admin-winner-editor h2 { font-size: 24px; font-weight: 600; line-height: 1.25; }
+.admin-results h3, .admin-scores-toolbar h3 { font-size: 18px; font-weight: 600; }
+.admin-results p { line-height: 1.6; max-width: 72ch; }
+.admin-results-heading { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 16px; margin-bottom: 28px; }
+.admin-results-heading p { color: var(--fi-ink-dim); margin-top: 8px; }
+.admin-results h2, .admin-results h3, .admin-winner-editor { scroll-margin-top: 90px; }
+.admin-code-winners { margin-block: 24px; min-width: 0; }
+.admin-result-status { padding: 6px 12px; background: var(--platform-selected, #d8e9e0); color: var(--fi-ink); border-radius: 6px; font-size: 14px; font-weight: 500; }
+.admin-results-preparation { background: var(--platform-workspace, #eaf1ec); padding: 20px; border-radius: 12px; margin-bottom: 28px; }
+.admin-results-preparation ul { list-style: disc; padding-left: 20px; margin-top: 8px; }
+.admin-results-preparation li + li { margin-top: 4px; }
+.admin-results-preparation .admin-results-actions { margin-top: 16px; }
+.admin-results-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.admin-results-actions button, .admin-results-actions a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+.admin-results-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.admin-results-review { margin-block: 24px; padding-block: 20px; border-block: 1px solid var(--fi-hair); }
+.admin-results-review p { margin-top: 8px; }
+.admin-results-review .admin-results-actions { margin-top: 16px; }
+.admin-result-error { color: #8d2424; background: #fbe9e6; padding: 14px 16px; border-radius: 6px; margin-block: 16px; overflow-wrap: anywhere; }
+.admin-result-notice { color: var(--fi-ink-dim); margin-bottom: 20px; }
+.admin-results-awards { margin-block: 28px; }
+.admin-results-awards-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--fi-hair); }
+.admin-results-awards-heading span { font-size: 14px; color: var(--fi-ink-dim); }
+.admin-award-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(0, 1fr); gap: 24px; padding-block: 18px; border-bottom: 1px solid var(--fi-hair); overflow-wrap: anywhere; }
+.admin-award-row dt { font-weight: 500; }
+.admin-award-row dt span { display: block; font-weight: 400; font-size: 13px; color: var(--fi-ink-dim); margin-top: 4px; }
+.admin-award-row dd { font-weight: 600; }
+.admin-scores-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--fi-hair); }
+.admin-scores-toolbar p { font-size: 14px; margin-top: 4px; max-width: 60ch; }
+.admin-winner-layout { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 28px; margin-block: 24px; min-width: 0; }
+.admin-award-choices h3, .admin-winner-candidates h3 { margin-bottom: 12px; }
+.admin-award-choices button { display: block; width: 100%; text-align: left; padding: 12px; border-radius: 6px; border: 1px solid transparent; margin-bottom: 4px; }
+.admin-award-choices button:hover { background: var(--platform-hover, #e2ece5); }
+.admin-award-choices button[aria-pressed="true"] { background: var(--platform-selected, #d8e9e0); border-color: var(--fi-teal); }
+.admin-award-choices button span { font-weight: 500; }
+.admin-award-choices small, .admin-candidate small { display: block; color: var(--fi-ink-dim); font-size: 13px; margin-top: 4px; }
+.admin-search { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 500; }
+.admin-search input, .admin-search select { min-height: 44px; border: 1px solid var(--fi-hair); border-radius: 6px; padding: 10px 12px; width: 100%; min-width: 0; font-weight: 400; }
+.admin-winner-candidates .admin-search { margin-block: 16px; }
+.admin-candidate-list { max-height: 520px; overflow-y: auto; margin-top: 16px; }
+.admin-candidate { display: flex; align-items: center; gap: 12px; padding: 16px 8px; border-bottom: 1px solid var(--fi-hair); cursor: pointer; }
+.admin-candidate:hover, .admin-candidate:has(input:checked) { background: var(--platform-selected, #d8e9e0); }
+.admin-candidate input { flex-shrink: 0; width: 20px; height: 20px; accent-color: var(--fi-teal); }
+.admin-candidate > span:nth-child(2) { min-width: 0; overflow-wrap: anywhere; flex: 1; }
+.admin-candidate strong { font-weight: 500; }
+.admin-candidate-score { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.admin-candidate-tools { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-block: 16px; }
+.admin-candidate-tools .admin-search { flex: 1; min-width: 140px; margin: 0; }
+.admin-candidate-tools button { min-height: 44px; }
+.admin-candidate-filters summary { cursor: pointer; padding-block: 12px; color: var(--fi-ink-dim); }
+.admin-candidate-table { overflow: auto; max-height: 480px; margin-block: 12px; }
+.admin-candidate-table table { min-width: 100%; }
+.admin-candidate-table th, .admin-candidate-table td { padding: 12px; white-space: nowrap; text-align: left; }
+.admin-candidate-table th { position: sticky; top: 0; background: var(--fi-key-white); z-index: 1; }
+.admin-candidate-table input[type="radio"] { width: 20px; height: 20px; accent-color: var(--fi-teal); }
+.admin-candidate-table tr[data-selected="true"] { background: var(--platform-selected, #d8e9e0); }
+.admin-candidate-table label { cursor: pointer; }
+.admin-candidate-table small { display: block; color: var(--fi-ink-dim); }
+.admin-search textarea { border: 1px solid var(--fi-hair); border-radius: 6px; padding: 12px; font-weight: 400; resize: vertical; }
+.admin-award-choices > .admin-search { margin-bottom: 12px; grid-column: 1 / -1; }
+.admin-award-picker { display: none; }
+.admin-event-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; padding: 20px 12px; }
+.admin-event-filters .admin-search:first-child { flex: 1; min-width: 200px; }
+.admin-event-filters p { padding-bottom: 12px; }
+.fi-admin-shell table th button { min-height: 44px; text-align: left; }
+.fi-admin-shell .admin-settings .fi-panel { box-shadow: none; }
+.fi-admin-shell .admin-settings { gap: 28px; }
+@media (max-width: 700px) {
+  .admin-results { padding: 16px; }
+  .admin-winner-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .admin-award-choices { display: none; }
+  .admin-award-picker { display: flex; }
+  .admin-award-choices h3 { grid-column: 1 / -1; }
+  .admin-award-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .admin-result-status { font-size: 13px; }
+  .admin-results-preparation { padding: 16px; }
+  .admin-results-actions { gap: 8px; }
+  .admin-event-filters { padding-inline: 12px; }
+  .admin-event-filters .admin-search { flex: 1 1 100%; }
+  .admin-candidate-score small { max-width: 80px; }
+}

@@ -1,14 +1,29 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
-type PrizeType = "general" | "track" | "sponsor" | "track_sponsor";
-
-const PRIZE_TYPE_LABELS: Record<PrizeType, string> = {
-  general: "General",
-  track: "Track",
-  sponsor: "Sponsor",
-  track_sponsor: "Track + Sponsor",
+type Winner = {
+  prizeId: Id<"prizes">;
+  teamId: Id<"teams">;
+  placement?: number;
+  notes?: string;
+};
+type Candidate = {
+  teamId: Id<"teams">;
+  teamName: string;
+  track?: string;
+  averageScore: number;
+  judgeCount: number;
+};
+type PrizeEntry = {
+  prize: {
+    _id: Id<"prizes">;
+    name: string;
+    sponsorName?: string;
+    description?: string;
+    isActive?: boolean;
+  };
+  candidates: Candidate[];
 };
 
 export function PrizeWinnerWizardPanel({
@@ -20,804 +35,469 @@ export function PrizeWinnerWizardPanel({
   onSubmit,
 }: {
   eventId: Id<"events">;
-  deliberationData: any;
-  existingWinners: any[];
-  detailedScores?: any;
+  deliberationData: { prizes: PrizeEntry[] } | null | undefined;
+  existingWinners: Winner[];
+  detailedScores?: {
+    categories?: string[];
+    teamRankings?: Array<{
+      team: { _id: string };
+      categoryAverages: Record<string, number>;
+    }>;
+  } | null;
   onClose: () => void;
   onSubmit: (args: {
     eventId: Id<"events">;
-    winners: Array<{
-      prizeId: Id<"prizes">;
-      teamId: Id<"teams">;
-      placement?: number;
-      notes?: string;
-    }>;
-  }) => Promise<any>;
+    winners: Winner[];
+  }) => Promise<unknown>;
 }) {
-  const prizes = deliberationData?.prizes || [];
-  const [selectedByPrize, setSelectedByPrize] = useState<Record<string, string>>({});
-  const [notesByPrize, setNotesByPrize] = useState<Record<string, string>>({});
-  const [savedByPrize, setSavedByPrize] = useState<Record<string, string>>({});
-  const [savedNotesByPrize, setSavedNotesByPrize] = useState<Record<string, string>>({});
-  const [currentPrizeIndex, setCurrentPrizeIndex] = useState(0);
-  const [activeFilters, setActiveFilters] = useState<
-    { id: string; field: string; value: string }[]
-  >([]);
-  const [sortField, setSortField] = useState<string>("score");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [sponsorFilter, setSponsorFilter] = useState("");
+  const prizes = (deliberationData?.prizes ?? []).filter(
+    (entry) => entry.prize.isActive !== false,
+  );
+  const [selected, setSelected] = useState<Record<string, string>>(() =>
+    Object.fromEntries(existingWinners.map((row) => [row.prizeId, row.teamId])),
+  );
+  const [notes, setNotes] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      existingWinners.map((row) => [row.prizeId, row.notes ?? ""]),
+    ),
+  );
+  const [saved, setSaved] = useState(() => JSON.stringify({ selected, notes }));
+  const [prizeId, setPrizeId] = useState<string>(prizes[0]?.prize._id ?? "");
+  const [sponsor, setSponsor] = useState("");
+  const [search, setSearch] = useState("");
+  const [track, setTrack] = useState("");
+  const [minimumScore, setMinimumScore] = useState("");
+  const [minimumJudges, setMinimumJudges] = useState("");
+  const [categoryMinimums, setCategoryMinimums] = useState<
+    Record<string, string>
+  >({});
+  const [sort, setSort] = useState("score");
+  const [direction, setDirection] = useState("desc");
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    const selected: Record<string, string> = {};
-    const notes: Record<string, string> = {};
-    for (const winner of existingWinners || []) {
-      selected[String(winner.prizeId)] = String(winner.teamId);
-      notes[String(winner.prizeId)] = winner.notes || "";
-    }
-    setSelectedByPrize(selected);
-    setNotesByPrize(notes);
-    setSavedByPrize(selected);
-    setSavedNotesByPrize(notes);
-  }, [existingWinners]);
-
-  const assignedCount = Object.values(selectedByPrize).filter(Boolean).length;
-  const completionPercent =
-    prizes.length > 0 ? Math.round((assignedCount / prizes.length) * 100) : 0;
-  const categories = detailedScores?.categories || [];
-
-  const categoryAveragesByTeamId = useMemo(() => {
-    const map = new Map<string, Record<string, number>>();
-    for (const ranking of detailedScores?.teamRankings || []) {
-      if (!ranking?.team?._id) continue;
-      map.set(String(ranking.team._id), ranking.categoryAverages || {});
-    }
-    return map;
-  }, [detailedScores]);
-
-  const hasUnsavedChanges = useMemo(() => {
-    const prizeIds = prizes.map((entry: any) => String(entry.prize._id));
-    for (const prizeId of prizeIds) {
-      const currentWinner = selectedByPrize[prizeId] || "";
-      const savedWinner = savedByPrize[prizeId] || "";
-      if (currentWinner !== savedWinner) return true;
-
-      const currentNotes = (notesByPrize[prizeId] || "").trim();
-      const savedNotes = (savedNotesByPrize[prizeId] || "").trim();
-      if (currentNotes !== savedNotes) return true;
-    }
-    return false;
-  }, [notesByPrize, prizes, savedByPrize, savedNotesByPrize, selectedByPrize]);
-
-  const sponsorOptions = useMemo(
-    () =>
-      Array.from(
-        new Set<string>(
-          prizes
-            .map((entry: any) => (entry?.prize?.sponsorName || "").trim())
-            .filter(Boolean)
-        )
-      ).sort((a, b) => a.localeCompare(b)),
-    [prizes]
+  const [error, setError] = useState("");
+  const entry = prizes.find((row) => row.prize._id === prizeId);
+  const categories = detailedScores?.categories ?? [];
+  const categoryScores = new Map(
+    (detailedScores?.teamRankings ?? []).map((row) => [
+      String(row.team._id),
+      row.categoryAverages,
+    ]),
   );
-
-  const visiblePrizes = useMemo(() => {
-    if (!sponsorFilter) return prizes;
-    return prizes.filter(
-      (entry: any) => (entry?.prize?.sponsorName || "").trim() === sponsorFilter
-    );
-  }, [prizes, sponsorFilter]);
-
-  useEffect(() => {
-    if (currentPrizeIndex >= visiblePrizes.length) {
-      setCurrentPrizeIndex(Math.max(0, visiblePrizes.length - 1));
-    }
-  }, [currentPrizeIndex, visiblePrizes.length]);
-
-  const currentEntry = visiblePrizes[currentPrizeIndex] || null;
-  const currentPrizeId = currentEntry ? String(currentEntry.prize._id) : "";
-  const selectedTeamId = currentPrizeId ? selectedByPrize[currentPrizeId] || "" : "";
-  const scoreHintCategories = useMemo(() => {
-    const preferred = currentEntry?.prize?.scoreCategoryNames || [];
-    if (preferred.length > 0) return preferred;
-    return categories;
-  }, [categories, currentEntry]);
-
-  const trackOptions = useMemo(
-    () =>
-      Array.from(
-        new Set<string>(
-          (currentEntry?.candidates || [])
-            .map((candidate: any) => candidate.track as string)
-            .filter(Boolean)
-        )
-      ).sort((a, b) => a.localeCompare(b)),
-    [currentEntry]
-  );
-
-
-  const filteredCandidates = useMemo(() => {
-    if (!currentEntry) return [];
-
-    const candidates = [...(currentEntry.candidates || [])]
-      .filter((candidate: any) => {
-        const teamCategoryAverages =
-          categoryAveragesByTeamId.get(String(candidate.teamId)) || {};
-
-        for (const filter of activeFilters) {
-          if (!filter.field || !filter.value) continue;
-
-          if (filter.field === "track") {
-            if (candidate.track !== filter.value) return false;
-          } else if (filter.field === "min_score") {
-            if ((candidate.averageScore || 0) < Number(filter.value)) return false;
-          } else if (filter.field === "min_judges") {
-            if ((candidate.judgeCount || 0) < Number(filter.value)) return false;
-          } else if (filter.field.startsWith("category_")) {
-            const categoryName = filter.field.replace("category_", "");
-            if ((teamCategoryAverages[categoryName] ?? 0) < Number(filter.value)) return false;
-          }
-        }
-
-        return true;
-      });
-
-    return candidates.sort((a: any, b: any) => {
-      let comparison = 0;
-      if (sortField === "name") {
-        comparison = (a.teamName || "").localeCompare(b.teamName || "");
-      } else if (sortField === "judges") {
-        comparison = (a.judgeCount || 0) - (b.judgeCount || 0);
-      } else if (sortField.startsWith("cat_")) {
-        const categoryName = sortField.replace("cat_", "");
-        const aScore = (categoryAveragesByTeamId.get(String(a.teamId)) || {})[categoryName] || 0;
-        const bScore = (categoryAveragesByTeamId.get(String(b.teamId)) || {})[categoryName] || 0;
-        comparison = aScore - bScore;
-      } else {
-        comparison = (a.averageScore || 0) - (b.averageScore || 0);
-      }
-      return sortDirection === "asc" ? comparison : -comparison;
+  const assignedCount = prizes.filter((row) => selected[row.prize._id]).length;
+  const dirty = saved !== JSON.stringify({ selected, notes });
+  const sponsors = [
+    ...new Set(
+      prizes
+        .map((row) => row.prize.sponsorName)
+        .filter((value): value is string => !!value),
+    ),
+  ];
+  const tracks = [
+    ...new Set(
+      (entry?.candidates ?? [])
+        .map((row) => row.track)
+        .filter((value): value is string => !!value),
+    ),
+  ];
+  const candidates = (entry?.candidates ?? [])
+    .filter(
+      (row) =>
+        row.teamName.toLowerCase().includes(search.toLowerCase()) &&
+        (!track || row.track === track) &&
+        (!minimumScore || row.averageScore >= Number(minimumScore)) &&
+        (!minimumJudges || row.judgeCount >= Number(minimumJudges)) &&
+        Object.entries(categoryMinimums).every(
+          ([category, value]) =>
+            !value ||
+            (categoryScores.get(String(row.teamId))?.[category] ?? 0) >=
+              Number(value),
+        ),
+    )
+    .sort((a, b) => {
+      const comparison =
+        sort === "name"
+          ? a.teamName.localeCompare(b.teamName)
+          : sort === "judges"
+            ? a.judgeCount - b.judgeCount
+            : sort === "score"
+              ? a.averageScore - b.averageScore
+              : (categoryScores.get(String(a.teamId))?.[sort] ?? 0) -
+                (categoryScores.get(String(b.teamId))?.[sort] ?? 0);
+      return direction === "asc" ? comparison : -comparison;
     });
-  }, [currentEntry, categoryAveragesByTeamId, activeFilters, sortDirection, sortField]);
-
-  const activeFilterCount = activeFilters.length;
-
-  const handleSave = async (closeOnSuccess: boolean = true) => {
-    if (prizes.length === 0) {
-      toast.error("No prizes configured for this event.");
-      return;
-    }
-
-    const winners = prizes
-      .map((entry: any) => {
-        const prizeId = String(entry.prize._id);
-        const selectedWinnerTeamId = selectedByPrize[prizeId];
-        if (!selectedWinnerTeamId) return null;
-        return {
-          prizeId: entry.prize._id as Id<"prizes">,
-          teamId: selectedWinnerTeamId as Id<"teams">,
-          placement: 1,
-          notes: notesByPrize[prizeId]?.trim() || undefined,
-        };
-      })
-      .filter(Boolean) as Array<{
-        prizeId: Id<"prizes">;
-        teamId: Id<"teams">;
-        placement?: number;
-        notes?: string;
-      }>;
-
-    if (winners.length === 0) {
-      toast.error("Select at least one prize winner.");
-      return;
-    }
-
+  const activeFilters = [
+    track,
+    minimumScore,
+    minimumJudges,
+    ...Object.values(categoryMinimums),
+  ].filter(Boolean).length;
+  const clearFilters = () => {
+    setTrack("");
+    setMinimumScore("");
+    setMinimumJudges("");
+    setCategoryMinimums({});
+    setSearch("");
+  };
+  const close = () => {
+    if (
+      !saving &&
+      (!dirty || window.confirm("Discard unsaved winner selections?"))
+    )
+      onClose();
+  };
+  const save = async (review: boolean) => {
+    if (saving) return;
     setSaving(true);
+    setError("");
     try {
       await onSubmit({
         eventId,
-        winners,
+        winners: prizes.flatMap(({ prize }) =>
+          selected[prize._id]
+            ? [
+                {
+                  prizeId: prize._id,
+                  teamId: selected[prize._id] as Id<"teams">,
+                  placement: 1,
+                  notes: notes[prize._id]?.trim() || undefined,
+                },
+              ]
+            : [],
+        ),
       });
-      toast.success(closeOnSuccess ? "Prize winners submitted" : "Progress saved");
-      setSavedByPrize({ ...selectedByPrize });
-      setSavedNotesByPrize({ ...notesByPrize });
-      if (closeOnSuccess) onClose();
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to save prize winners");
+      setSaved(JSON.stringify({ selected, notes }));
+      toast.success(
+        review
+          ? "Winners saved. Review them before publishing."
+          : "Progress saved",
+      );
+      if (review) onClose();
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Could not save winners. Try again.",
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  const handleClose = () => {
-    if (saving) return;
-    if (hasUnsavedChanges) {
-      const confirmed = window.confirm(
-        "You have unsaved winner selections. Discard changes and close?"
-      );
-      if (!confirmed) return;
-    }
-    onClose();
-  };
-
-  const SortIcon = ({ field }: { field: string }) => {
-    if (sortField !== field) {
-      return (
-        <svg className="w-3.5 h-3.5 inline-block ml-1 opacity-0 group-hover:opacity-40 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
-    }
-    return sortDirection === "asc" ? (
-      <svg className="w-3.5 h-3.5 inline-block ml-1 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
-    ) : (
-      <svg className="w-3.5 h-3.5 inline-block ml-1 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    );
-  };
-
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("desc");
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-[100] fi-surface/80 backdrop-blur-sm p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
-      <div className="w-full h-full flex flex-col fi-surface rounded-xl border border-border fi-elevation-panel overflow-hidden relative">
-        <button
-          onClick={handleClose}
-          className="absolute top-4 right-4 p-2 fi-muted hover:bg-muted rounded-full transition-colors z-10"
-          aria-label="Close Winner Wizard"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <div className="bg-muted/10 border-b border-border px-6 py-5 pr-16 space-y-3 shrink-0">
-          <h2 className="text-2xl fi-zone font-bold fi-ink">
-            Prize Winner Wizard
-          </h2>
-          <p className="text-sm fi-muted mt-1">
-            Assign one winner per prize. {assignedCount}/{prizes.length} assigned.
+    <section className="admin-winner-editor" aria-busy={saving}>
+      <header className="admin-results-heading">
+        <div>
+          <h2>Choose prize winners</h2>
+          <p>
+            {assignedCount} of {prizes.length} selected. Choose a prize, compare
+            its entrants, and save your selections.
           </p>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs fi-muted">
-              <span>Completion</span>
-              <span className="font-medium fi-ink">{completionPercent}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all"
-                style={{ width: `${completionPercent}%` }}
-              />
-            </div>
-          </div>
         </div>
-
-        <div className="flex-1 min-h-0 overflow-auto px-4 py-3">
-          {prizes.length === 0 && (
-            <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm fi-muted">
-              No prizes configured yet.
-            </div>
-          )}
-
-          {prizes.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-4">
-              <aside className="rounded-lg border border-border fi-surface overflow-hidden h-fit lg:sticky lg:top-4">
-                <div className="px-4 py-3 border-b border-border bg-muted/20">
-                  <p className="text-xs uppercase tracking-wide fi-muted">
-                    Prize Queue
-                  </p>
-                  <div className="mt-2">
-                    <select
-                      value={sponsorFilter}
-                      onChange={(e) => {
-                        setSponsorFilter(e.target.value);
-                        setCurrentPrizeIndex(0);
-                      }}
-                      className="input w-full"
-                    >
-                      <option value="">All sponsors</option>
-                      {sponsorOptions.map((sponsorName) => (
-                        <option key={sponsorName} value={sponsorName}>
-                          {sponsorName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="max-h-[55vh] overflow-y-auto">
-                  {visiblePrizes.length === 0 && (
-                    <div className="p-4 text-sm fi-muted">
-                      No prizes match this sponsor filter.
-                    </div>
-                  )}
-                  {visiblePrizes.map((entry: any, index: number) => {
-                    const prizeId = String(entry.prize._id);
-                    const isSelected = index === currentPrizeIndex;
-                    const isAssigned = !!selectedByPrize[prizeId];
-                    return (
-                      <button
-                        key={prizeId}
-                        type="button"
-                        onClick={() => setCurrentPrizeIndex(index)}
-                        className={`w-full px-4 py-3 text-left transition-colors border-t border-border first:border-t-0 ${isSelected
-                          ? "bg-primary/10 border-l-2 border-l-primary"
-                          : "hover:bg-muted/20 border-l-2 border-l-transparent"
-                          }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold fi-ink truncate">
-                              {index + 1}. {entry.prize.name}
-                            </p>
-                            <p className="text-xs fi-muted">
-                              {(entry.candidates || []).length} candidates
-                            </p>
-                          </div>
-                          <span
-                            className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-medium ${isAssigned
-                              ? "bg-emerald-500/15 text-emerald-700 "
-                              : "bg-zinc-500/15 text-zinc-700 "
-                              }`}
-                          >
-                            {isAssigned ? "Done" : "Open"}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </aside>
-
-              <section className="min-w-0 rounded-lg border border-border fi-surface p-4 space-y-4">
-                {currentEntry && (
-                  <>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <h3 className="text-xl fi-zone font-bold fi-ink">
-                          {currentPrizeIndex + 1}. {currentEntry.prize.name}
-                        </h3>
-                        <p className="text-xs fi-muted">
-                          {PRIZE_TYPE_LABELS[currentEntry.prize.type as PrizeType]}
-                          {currentEntry.prize.track ? ` · Track: ${currentEntry.prize.track}` : ""}
-                          {currentEntry.prize.sponsorName
-                            ? ` · Sponsor: ${currentEntry.prize.sponsorName}`
-                            : ""}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className="text-xs fi-muted">
-                          {(currentEntry.candidates || []).length} candidates
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setIsFilterDrawerOpen(true)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-muted/20 hover:bg-muted/40 text-xs font-medium fi-ink transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5 fi-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                          </svg>
-                          Filters
-                          {activeFilterCount > 0 && (
-                            <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary/10 px-1 text-[10px] font-bold text-primary">
-                              {activeFilterCount}
-                            </span>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    {currentEntry.prize.description && (
-                      <p className="text-sm fi-muted">
-                        {currentEntry.prize.description}
-                      </p>
-                    )}
-
-                    <div className="rounded-lg border border-border fi-surface overflow-hidden">
-                      <div className="w-full overflow-x-auto">
-                        <table className="w-full min-w-max text-left">
-                          <thead className="bg-muted/30 border-b border-border">
-                            <tr>
-                              <th className="px-4 py-3 text-xs uppercase tracking-wide fi-muted sticky left-0 z-20 fi-surface shadow-[1px_0_0_0_var(--border)] w-[100px] min-w-[100px] max-w-[100px]">
-                                Pick
-                              </th>
-                              <th className="px-4 py-3 sticky left-[100px] z-20 fi-surface shadow-[1px_0_0_0_var(--border)]">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSort("name")}
-                                  className="group flex items-center text-xs uppercase tracking-wide fi-muted hover:fi-ink transition-colors whitespace-nowrap"
-                                >
-                                  Team
-                                  <SortIcon field="name" />
-                                </button>
-                              </th>
-                              <th className="px-4 py-3 text-xs uppercase tracking-wide fi-muted whitespace-nowrap">
-                                Track
-                              </th>
-                              <th className="px-4 py-3 whitespace-nowrap">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSort("score")}
-                                  className="group flex items-center text-xs uppercase tracking-wide fi-muted hover:fi-ink transition-colors"
-                                >
-                                  Avg Score
-                                  <SortIcon field="score" />
-                                </button>
-                              </th>
-                              <th className="px-4 py-3 whitespace-nowrap">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSort("judges")}
-                                  className="group flex items-center text-xs uppercase tracking-wide fi-muted hover:fi-ink transition-colors"
-                                >
-                                  Judges
-                                  <SortIcon field="judges" />
-                                </button>
-                              </th>
-                              {scoreHintCategories.map((catName: string) => (
-                                <th key={catName} className="px-4 py-3 whitespace-nowrap">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSort(`cat_${catName}`)}
-                                    className="group flex items-center text-xs uppercase tracking-wide fi-muted hover:fi-ink transition-colors"
-                                  >
-                                    {catName}
-                                    <SortIcon field={`cat_${catName}`} />
-                                  </button>
-                                </th>
-                              ))}
-                              <th className="px-4 py-3 text-xs uppercase tracking-wide fi-muted whitespace-nowrap">
-                                Devpost
-                              </th>
-                              <th className="px-4 py-3 text-xs uppercase tracking-wide fi-muted whitespace-nowrap">
-                                GitHub
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-border">
-                            {filteredCandidates.length === 0 && (
-                              <tr>
-                                <td
-                                  colSpan={8}
-                                  className="px-4 py-8 text-center text-sm fi-muted"
-                                >
-                                  No candidates match these filters.
-                                </td>
-                              </tr>
-                            )}
-                            {filteredCandidates.map((candidate: any) => {
-                              const isSelected = selectedTeamId === String(candidate.teamId);
-                              const categoryAverages =
-                                categoryAveragesByTeamId.get(String(candidate.teamId)) || {};
-                              const visibleCategories = scoreHintCategories.slice(0, 4);
-                              const hiddenCategoryCount = Math.max(
-                                scoreHintCategories.length - visibleCategories.length,
-                                0
-                              );
-                              const github =
-                                typeof candidate.githubUrl === "string"
-                                  ? candidate.githubUrl.trim()
-                                  : "";
-                              return (
-                                <tr
-                                  key={`${currentPrizeId}-${candidate.teamId}`}
-                                  className={`transition-colors ${isSelected ? "bg-emerald-500/10" : "hover:bg-muted/20"
-                                    }`}
-                                >
-                                  <td className="px-4 py-3 sticky left-0 z-20 fi-surface shadow-[1px_0_0_0_var(--border)] w-[100px] min-w-[100px] max-w-[100px]">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setSelectedByPrize((prev) => ({
-                                          ...prev,
-                                          [currentPrizeId]: String(candidate.teamId),
-                                        }))
-                                      }
-                                      className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${isSelected
-                                        ? "border-emerald-500/40 bg-emerald-500/20 text-emerald-700 "
-                                        : "border-border fi-surface fi-muted hover:fi-ink"
-                                        }`}
-                                    >
-                                      {isSelected ? "Selected" : "Select"}
-                                    </button>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm font-semibold fi-ink sticky left-[100px] z-20 fi-surface shadow-[1px_0_0_0_var(--border)] whitespace-nowrap">
-                                    {candidate.teamName}
-                                  </td>
-                                  <td className="px-4 py-3 text-sm fi-muted whitespace-nowrap">
-                                    {candidate.track || "-"}
-                                  </td>
-                                  <td className="px-4 py-3 text-sm font-mono fi-ink whitespace-nowrap">
-                                    {Number(candidate.averageScore || 0).toFixed(2)}
-                                  </td>
-                                  <td className="px-4 py-3 text-sm fi-muted whitespace-nowrap">
-                                    {candidate.judgeCount}
-                                  </td>
-                                  {scoreHintCategories.map((catName: string) => (
-                                    <td key={catName} className="px-4 py-3 text-sm font-mono fi-muted whitespace-nowrap group-hover:fi-ink transition-colors">
-                                      {categoryAverages[catName] !== undefined
-                                        ? Number(categoryAverages[catName]).toFixed(2)
-                                        : "-"}
-                                    </td>
-                                  ))}
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    {candidate.devpostUrl ? (
-                                      <a
-                                        href={candidate.devpostUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center rounded-md border border-border fi-surface px-2 py-1 text-xs fi-muted hover:fi-ink"
-                                      >
-                                        Open
-                                      </a>
-                                    ) : (
-                                      <span className="text-xs fi-muted">-</span>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    {github !== "" ? (
-                                      <a
-                                        href={github}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center rounded-md border border-border fi-surface px-2 py-1 text-xs fi-muted hover:fi-ink"
-                                      >
-                                        Open
-                                      </a>
-                                    ) : (
-                                      <span className="text-xs fi-muted">-</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium fi-muted">
-                        Notes (optional)
-                      </label>
-                      <textarea
-                        value={notesByPrize[currentPrizeId] || ""}
-                        onChange={(e) =>
-                          setNotesByPrize((prev) => ({
-                            ...prev,
-                            [currentPrizeId]: e.target.value,
-                          }))
-                        }
-                        className="input h-auto resize-y"
-                        rows={3}
-                        placeholder="Decision notes"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setCurrentPrizeIndex((prev) => Math.max(0, prev - 1))}
-                        disabled={currentPrizeIndex === 0}
-                        className="fi-key disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Previous Prize
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCurrentPrizeIndex((prev) =>
-                            Math.min(visiblePrizes.length - 1, prev + 1)
-                          )
-                        }
-                        disabled={currentPrizeIndex >= visiblePrizes.length - 1}
-                        className="fi-key disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Next Prize
-                      </button>
-                    </div>
-                  </>
-                )}
-                {!currentEntry && (
-                  <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm fi-muted">
-                    Select a sponsor filter with matching prizes to continue.
-                  </div>
-                )}
-              </section>
-            </div>
-          )}
-        </div>
-
-        <div className="sticky bottom-0 z-20 shrink-0 border-t border-border fi-surface/95 px-6 py-4 backdrop-blur flex justify-end gap-3">
-          <button
-            onClick={() => handleSave(false)}
-            className="fi-key disabled:opacity-60 disabled:cursor-not-allowed min-w-[100px]"
-            disabled={saving}
+        <button className="fi-key" onClick={close} disabled={saving}>
+          Back to results
+        </button>
+      </header>
+      {error && (
+        <p role="alert" className="admin-result-error">
+          {error}
+        </p>
+      )}
+      <fieldset className="admin-winner-layout" disabled={saving}>
+        <label className="admin-search admin-award-picker">
+          Prize
+          <select
+            value={prizeId}
+            onChange={(event) => {
+              setPrizeId(event.target.value);
+              clearFilters();
+            }}
           >
-            {saving ? "Saving..." : "Save"}
-          </button>
-          <button
-            onClick={() => handleSave(true)}
-            className="fi-transport disabled:opacity-60 disabled:cursor-not-allowed min-w-[100px]"
-            disabled={saving}
-          >
-            {saving ? "Submitting..." : "Submit"}
-          </button>
-        </div>
-      </div>
-
-      {isFilterDrawerOpen && (
-        <div className="fixed inset-0 z-[110] flex justify-end">
-          <div
-            className="absolute inset-0 fi-surface/40 backdrop-blur-sm transition-opacity"
-            onClick={() => setIsFilterDrawerOpen(false)}
-          />
-          <div className="relative w-full max-w-sm h-full fi-surface fi-elevation-panel border-l border-border flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="flex items-center justify-between p-4 border-b border-border bg-muted/10">
-              <div className="space-y-0.5">
-                <h3 className="text-lg fi-zone font-bold fi-ink">Filters</h3>
-                <p className="text-xs fi-muted">{activeFilterCount} active filters</p>
-              </div>
-              <button
-                onClick={() => setIsFilterDrawerOpen(false)}
-                className="p-2 fi-muted hover:bg-muted rounded-full transition-colors"
+            {prizes.map(({ prize }) => (
+              <option key={prize._id} value={prize._id}>
+                {prize.name}
+                {selected[prize._id] ? " · selected" : " · winner needed"}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="admin-award-choices">
+          <h3>Prizes</h3>
+          {sponsors.length > 0 && (
+            <label className="admin-search">
+              Sponsor
+              <select
+                value={sponsor}
+                onChange={(event) => {
+                  setSponsor(event.target.value);
+                  const first = prizes.find(
+                    (row) =>
+                      !event.target.value ||
+                      row.prize.sponsorName === event.target.value,
+                  );
+                  if (first) {
+                    setPrizeId(first.prize._id);
+                    clearFilters();
+                  }
+                }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <option value="">All sponsors</option>
+                {sponsors.map((name) => (
+                  <option key={name}>{name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          {prizes
+            .filter((row) => !sponsor || row.prize.sponsorName === sponsor)
+            .map(({ prize, candidates: entrants }) => (
+              <button
+                key={prize._id}
+                aria-pressed={prizeId === prize._id}
+                onClick={() => {
+                  setPrizeId(prize._id);
+                  clearFilters();
+                }}
+              >
+                <span>{prize.name}</span>{" "}
+                <small>
+                  {entrants.find((row) => row.teamId === selected[prize._id])
+                    ?.teamName ??
+                    (selected[prize._id]
+                      ? "Selection unavailable · choose again"
+                      : "Winner needed")}
+                </small>
+              </button>
+            ))}
+        </div>
+        {entry ? (
+          <div className="admin-winner-candidates">
+            <h3>{entry.prize.name}</h3>
+            {entry.prize.description && (
+              <p className="fi-muted">{entry.prize.description}</p>
+            )}
+            <p className="fi-muted">
+              {entry.candidates.length} eligible entrants ·{" "}
+              {selected[prizeId]
+                ? `Selected: ${entry.candidates.find((row) => row.teamId === selected[prizeId])?.teamName ?? "Unavailable entrant"}`
+                : "No winner selected"}
+            </p>
+            <div className="admin-candidate-tools">
+              <label className="admin-search">
+                Find an entrant
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search team name"
+                />
+              </label>
+              <label className="admin-search">
+                Sort by
+                <select
+                  value={sort}
+                  onChange={(event) => {
+                    setSort(event.target.value);
+                    setDirection(
+                      event.target.value === "name" ? "asc" : "desc",
+                    );
+                  }}
+                >
+                  <option value="score">Average score</option>
+                  <option value="name">Team name</option>
+                  <option value="judges">Judge count</option>
+                  {categories.map((category) => (
+                    <option key={category}>{category}</option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="fi-key"
+                onClick={() =>
+                  setDirection(direction === "asc" ? "desc" : "asc")
+                }
+              >
+                {direction === "asc" ? "Ascending" : "Descending"}
               </button>
             </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              <div className="flex flex-col gap-4">
-                {activeFilterCount > 0 && (
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setActiveFilters([])}
-                      className="text-[13px] font-medium fi-muted hover:fi-ink transition-colors"
-                    >
-                      Clear all filters
-                    </button>
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  {activeFilters.length > 0 ? (
-                    activeFilters.map((filter, index) => (
-                      <div
-                        key={filter.id}
-                        className="flex flex-col gap-3 p-4 rounded-xl bg-muted/30 border border-border/50 relative group"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newFilters = activeFilters.filter((f) => f.id !== filter.id);
-                            setActiveFilters(newFilters);
-                          }}
-                          className="absolute -top-2 -right-2 p-1.5 fi-surface border border-border rounded-full fi-muted hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
-                          title="Remove filter"
-                        >
-                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium fi-muted">Field</label>
-                          <select
-                            value={filter.field}
-                            onChange={(e) => {
-                              const newFilters = [...activeFilters];
-                              newFilters[index].field = e.target.value;
-                              newFilters[index].value = "";
-                              setActiveFilters(newFilters);
-                            }}
-                            className="input w-full shadow-none fi-surface py-1.5 text-sm"
-                          >
-                            <option value="" disabled>Select filter...</option>
-                            <option value="track">Track</option>
-                            <option value="min_score">Overall Min Score</option>
-                            <option value="min_judges">Min Judges Count</option>
-                            {categories.map((cat: string) => (
-                              <option key={`category_${cat}`} value={`category_${cat}`}>
-                                Category: {cat}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium fi-muted">Condition</label>
-                          {filter.field === "track" ? (
-                            <select
-                              value={filter.value}
-                              onChange={(e) => {
-                                const newFilters = [...activeFilters];
-                                newFilters[index].value = e.target.value;
-                                setActiveFilters(newFilters);
-                              }}
-                              className="input w-full shadow-none fi-surface py-1.5 text-sm"
-                            >
-                              <option value="" disabled>Select track...</option>
-                              {trackOptions.map((track) => (
-                                <option key={track} value={track}>
-                                  {track}
-                                </option>
-                              ))}
-                            </select>
-                          ) : filter.field === "min_judges" ? (
-                            <input
-                              type="number"
-                              value={filter.value}
-                              onChange={(e) => {
-                                const newFilters = [...activeFilters];
-                                newFilters[index].value = e.target.value;
-                                setActiveFilters(newFilters);
-                              }}
-                              className="input w-full shadow-none fi-surface py-1.5 text-sm"
-                              min={1}
-                              step={1}
-                              placeholder="Enter min judges count..."
-                            />
-                          ) : filter.field ? (
-                            <input
-                              type="number"
-                              value={filter.value}
-                              onChange={(e) => {
-                                const newFilters = [...activeFilters];
-                                newFilters[index].value = e.target.value;
-                                setActiveFilters(newFilters);
-                              }}
-                              className="input w-full shadow-none fi-surface py-1.5 text-sm"
-                              min={0}
-                              step={0.1}
-                              placeholder="Enter min score..."
-                            />
-                          ) : (
-                            <div className="w-full h-[34px] rounded-md border border-dashed border-border/50 fi-surface/50 flex items-center px-3 text-sm fi-muted/50">
-                              Select a field first
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 border border-dashed text-sm fi-muted bg-muted/10 rounded-xl border-border/60">
-                      No active filters. Adjust your view to refine candidates.
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveFilters([
-                        ...activeFilters,
-                        { id: crypto.randomUUID(), field: "", value: "" },
-                      ]);
-                    }}
-                    className="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-emerald-600  bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors py-2.5 rounded-lg border border-emerald-500/20"
+            <details className="admin-candidate-filters">
+              <summary>
+                Filter entrants
+                {activeFilters ? ` · ${activeFilters} active` : ""}
+              </summary>
+              <div className="admin-candidate-tools">
+                <label className="admin-search">
+                  Track
+                  <select
+                    value={track}
+                    onChange={(event) => setTrack(event.target.value)}
                   >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add Filter
-                  </button>
-                </div>
+                    <option value="">All tracks</option>
+                    {tracks.map((name) => (
+                      <option key={name}>{name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="admin-search">
+                  Minimum average
+                  <input
+                    type="number"
+                    min="0"
+                    max="5"
+                    step="0.1"
+                    value={minimumScore}
+                    onChange={(event) => setMinimumScore(event.target.value)}
+                  />
+                </label>
+                <label className="admin-search">
+                  Minimum judges
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={minimumJudges}
+                    onChange={(event) => setMinimumJudges(event.target.value)}
+                  />
+                </label>
+                {categories.map((category) => (
+                  <label key={category} className="admin-search">
+                    Minimum {category}
+                    <input
+                      type="number"
+                      min="0"
+                      max="5"
+                      step="0.1"
+                      value={categoryMinimums[category] ?? ""}
+                      onChange={(event) =>
+                        setCategoryMinimums((current) => ({
+                          ...current,
+                          [category]: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                ))}
+                <button className="fi-key" onClick={clearFilters}>
+                  Clear filters
+                </button>
               </div>
+            </details>
+            <div
+              className="admin-candidate-table"
+              role="region"
+              aria-label="Eligible entrant scores"
+              tabIndex={0}
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th>Winner</th>
+                    <th>Team</th>
+                    <th>Average</th>
+                    <th>Judges</th>
+                    {categories.map((category) => (
+                      <th key={category}>{category}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {candidates.map((candidate) => (
+                    <tr
+                      key={candidate.teamId}
+                      data-selected={selected[prizeId] === candidate.teamId}
+                    >
+                      <td>
+                        <input
+                          type="radio"
+                          name="prize-winner"
+                          id={`prize-candidate-${candidate.teamId}`}
+                          aria-label={`Choose ${candidate.teamName}`}
+                          checked={selected[prizeId] === candidate.teamId}
+                          onChange={() =>
+                            setSelected((current) => ({
+                              ...current,
+                              [prizeId]: candidate.teamId,
+                            }))
+                          }
+                        />
+                      </td>
+                      <td>
+                        <label htmlFor={`prize-candidate-${candidate.teamId}`}>
+                          {candidate.teamName}
+                        </label>
+                        <small>{candidate.track}</small>
+                      </td>
+                      <td>
+                        {candidate.judgeCount
+                          ? candidate.averageScore.toFixed(2)
+                          : "Unscored"}
+                      </td>
+                      <td>{candidate.judgeCount}</td>
+                      {categories.map((category) => (
+                        <td key={category}>
+                          {categoryScores
+                            .get(String(candidate.teamId))
+                            ?.[category]?.toFixed(2) ?? "—"}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {candidates.length === 0 && (
+                <p className="p-4 fi-muted">
+                  {entry.candidates.length
+                    ? "No entrants match these filters."
+                    : "No teams are entered for this prize. Review prize entries before choosing a winner."}
+                </p>
+              )}
             </div>
+            {selected[prizeId] && (
+              <button
+                className="fi-key mt-3"
+                onClick={() =>
+                  setSelected((current) => ({ ...current, [prizeId]: "" }))
+                }
+              >
+                Clear this winner
+              </button>
+            )}
+            <label className="admin-search mt-4">
+              Selection notes, optional
+              <textarea
+                rows={2}
+                value={notes[prizeId] ?? ""}
+                onChange={(event) =>
+                  setNotes((current) => ({
+                    ...current,
+                    [prizeId]: event.target.value,
+                  }))
+                }
+              />
+            </label>
           </div>
-        </div>
-      )}
-    </div>
+        ) : (
+          <p>No prizes are configured.</p>
+        )}
+      </fieldset>
+      <footer className="admin-results-actions">
+        <span className="fi-muted" role="status">
+          {dirty ? "Unsaved changes" : "Selections saved"}
+        </span>
+        <button
+          className="fi-key"
+          disabled={saving || !prizes.length}
+          onClick={() => void save(false)}
+        >
+          {saving ? "Saving…" : "Save progress"}
+        </button>
+        <button
+          className="fi-transport"
+          disabled={saving || !prizes.length}
+          onClick={() => void save(true)}
+        >
+          {saving ? "Saving…" : "Save and review"}
+        </button>
+      </footer>
+    </section>
   );
 }

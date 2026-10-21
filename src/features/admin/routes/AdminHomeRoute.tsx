@@ -6,9 +6,10 @@ export function AdminHomeRoute() {
 
   return (
     <div className="h-full min-h-[24rem] flex flex-col p-4 sm:p-6 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="admin-home-heading flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div className="space-y-1">
-          <h1 className="text-2xl fi-zone font-bold fi-ink">Admin Workspace</h1>
+          <p className="admin-context">Admin</p>
+          <h1 className="text-2xl fi-zone font-bold fi-ink">Events</h1>
           <p className="text-sm fi-muted">
             Manage events, teams, scoring, and winner selection.
           </p>
@@ -19,14 +20,14 @@ export function AdminHomeRoute() {
             onClick={() => void navigate("/admin/insights")}
             className="fi-key w-full sm:w-auto"
           >
-            View Insights
+            View insights
           </button>
           <button
             type="button"
             onClick={() => void navigate("/admin/events/new")}
             className="fi-transport w-full sm:w-auto"
           >
-            Create Event
+            Create event
           </button>
         </div>
       </div>
@@ -34,7 +35,7 @@ export function AdminHomeRoute() {
       <div className="flex-1 min-h-0">
         <EventsList
           onSelectEvent={(id) => {
-            void navigate(`/admin/events/${id}?tab=details`);
+            void navigate(`/admin/events/${id}`);
           }}
         />
       </div>

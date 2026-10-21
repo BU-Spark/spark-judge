@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import type { EventManagementTab, ScoresView } from "../types";
 
 const VALID_TABS: readonly EventManagementTab[] = [
+  "overview",
   "setup",
   "details",
   "teams",
@@ -13,10 +14,12 @@ const VALID_TABS: readonly EventManagementTab[] = [
 const VALID_SCORES_VIEWS: readonly ScoresView[] = ["overview", "winners"];
 
 function normalizeTab(raw: string | null): EventManagementTab {
+  if (raw === "results") return "winners";
   if (raw && VALID_TABS.includes(raw as EventManagementTab)) {
     return raw as EventManagementTab;
   }
-  return "details";
+  // Hackathons land on Overview; other formats redirect it to Settings.
+  return "overview";
 }
 
 function normalizeScoresView(raw: string | null): ScoresView {
@@ -30,12 +33,19 @@ export function useEventWorkspaceState() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tab = useMemo(
-    () => normalizeTab(searchParams.get("tab")),
+    () =>
+      searchParams.get("tab") === "scores" &&
+      searchParams.get("scoresView") === "winners"
+        ? "winners"
+        : normalizeTab(searchParams.get("tab")),
     [searchParams],
   );
 
   const scoresView = useMemo(
-    () => normalizeScoresView(searchParams.get("scoresView")),
+    () =>
+      searchParams.get("resultView") === "choose"
+        ? "winners"
+        : normalizeScoresView(searchParams.get("scoresView")),
     [searchParams],
   );
 
@@ -43,10 +53,9 @@ export function useEventWorkspaceState() {
     (nextTab: EventManagementTab) => {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
-        next.set("tab", nextTab);
-        if (nextTab !== "scores") {
-          next.delete("scoresView");
-        }
+        next.set("tab", nextTab === "winners" ? "results" : nextTab);
+        next.delete("resultView");
+        next.delete("scoresView");
         return next;
       });
     },
@@ -57,11 +66,12 @@ export function useEventWorkspaceState() {
     (nextView: ScoresView) => {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
-        next.set("tab", "scores");
+        next.set("tab", "results");
+        next.delete("scoresView");
         if (nextView === "overview") {
-          next.delete("scoresView");
+          next.delete("resultView");
         } else {
-          next.set("scoresView", nextView);
+          next.set("resultView", "choose");
         }
         return next;
       });

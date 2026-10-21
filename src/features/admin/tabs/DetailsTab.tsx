@@ -68,6 +68,7 @@ export function DetailsTab({
   codeAndTellMaxBallotsInput,
   setCodeAndTellMaxBallotsInput,
   codeAndTellRankedVoteRowCount,
+  modeLocked = false,
 }: {
   derivedStatus: "active" | "upcoming" | "past";
   eventName: string;
@@ -120,6 +121,7 @@ export function DetailsTab({
   codeAndTellMaxBallotsInput?: string;
   setCodeAndTellMaxBallotsInput?: (value: string) => void;
   codeAndTellRankedVoteRowCount?: number;
+  modeLocked?: boolean;
 }) {
   const mode = getEventMode(eventMode);
   const isHackathon = mode === "hackathon";
@@ -129,7 +131,7 @@ export function DetailsTab({
   const rubricPercentTotalValid = isRubricPercentTotalValid(rubricPercentTotal);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(22rem,28rem)_1fr] xl:grid-cols-[minmax(24rem,32rem)_1fr] gap-6 items-start w-full">
+    <div className="admin-settings grid grid-cols-1 gap-6 items-start w-full max-w-5xl">
       <div className="space-y-6 min-w-0">
         <div className="fi-panel p-6 fi-surface space-y-4">
           <div className="flex items-center justify-between gap-4">
@@ -169,7 +171,7 @@ export function DetailsTab({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium fi-ink">
                 Event Title <span className="text-red-500">*</span>
@@ -332,6 +334,8 @@ export function DetailsTab({
           <div className="flex gap-3 flex-wrap">
             <button
               onClick={() => handleModeChange("hackathon")}
+              disabled={modeLocked && mode !== "hackathon"}
+              aria-pressed={mode === "hackathon"}
               className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                 isHackathon
                   ? "bg-primary text-white shadow-md"
@@ -343,6 +347,8 @@ export function DetailsTab({
             </button>
             <button
               onClick={() => handleModeChange("demo_day")}
+              disabled={modeLocked && mode !== "demo_day"}
+              aria-pressed={mode === "demo_day"}
               className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                 isDemoDay
                   ? "bg-pink-500 text-white shadow-md"
@@ -353,6 +359,8 @@ export function DetailsTab({
             </button>
             <button
               onClick={() => handleModeChange("code_and_tell")}
+              disabled={modeLocked && mode !== "code_and_tell"}
+              aria-pressed={mode === "code_and_tell"}
               className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                 isCodeAndTell
                   ? "bg-amber-500 text-white shadow-md"
@@ -362,6 +370,11 @@ export function DetailsTab({
               Code &amp; Tell
             </button>
           </div>
+          {modeLocked && (
+            <p className="text-sm fi-muted mt-3">
+              The format is locked because this event already has teams or scores. Clone the event to try another format.
+            </p>
+          )}
           <p className="text-xs fi-muted mt-3">
             {mode === "hackathon"
               ? "Traditional judging with scores, tracks, prizes, and judge registration."
@@ -374,7 +387,8 @@ export function DetailsTab({
 
       <div className="space-y-6 min-w-0">
         {isHackathon && (
-          <div className="fi-panel p-6 fi-surface space-y-4">
+          <details className="fi-panel p-6 fi-surface space-y-4">
+            <summary className="font-semibold cursor-pointer">Judging settings and rubric</summary>
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg fi-zone font-semibold fi-ink flex items-center gap-2">
                 <svg
@@ -407,7 +421,7 @@ export function DetailsTab({
               </p>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium fi-ink">
                   Judge Code{" "}
@@ -587,16 +601,7 @@ export function DetailsTab({
                 )}
               </button>
             </div>
-          </div>
-        )}
-
-        {isHackathon && (
-          <div className="fi-panel p-6 fi-surface space-y-4">
-            <p className="text-sm fi-muted">
-              Prize configuration lives in the Prizes tab once the event is
-              saved.
-            </p>
-          </div>
+          </details>
         )}
 
         {isDemoDay && (
@@ -619,7 +624,7 @@ export function DetailsTab({
                 Appreciation Settings (Demo Day)
               </h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium fi-ink">
                   Total appreciations per attendee
@@ -658,7 +663,7 @@ export function DetailsTab({
               </div>
             </div>
             <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <StyledCheckbox
                     checked={captchaEnabled}

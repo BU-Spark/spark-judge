@@ -471,6 +471,7 @@ export const setWinner = mutation({
     await requireAdmin(ctx);
 
     const summary = await buildStandings(ctx, args.eventId);
+    if (summary.event.resultsReleased) throw new Error("Withdraw results before changing winners");
     if (computeEventStatus(summary.event) !== "past") {
       throw new Error("The event must be past before selecting a winner");
     }

@@ -1,4 +1,5 @@
 export type EventManagementTab =
+  | "overview"
   | "setup"
   | "details"
   | "teams"

@@ -41,7 +41,16 @@ import { DetailsTab } from "../tabs/DetailsTab";
 import { TeamsTab } from "../tabs/TeamsTab";
 import { ScoresTab } from "../tabs/ScoresTab";
 import { PrizesTab } from "../tabs/PrizesTab";
-import { WinnersSummaryTab } from "../tabs/WinnersSummaryTab";
+import { ResultsTab } from "../tabs/ResultsTab";
+import { HackathonOverviewTab } from "../tabs/HackathonOverviewTab";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { InlineFailure } from "../../../components/ui/TaskStatus";
+import {
+  outcomeForFailure,
+  toRecoverableFailure,
+  type RecoverableFailure,
+} from "../../../lib/operationOutcome";
+import "../judging/judging.css";
 import { EventsList as WorkspaceEventsList } from "../components/EventsList";
 import { ScoringDashboard as WorkspaceScoringDashboard } from "../components/ScoringDashboard";
 import { AddTeamPanel } from "../panels/AddTeamPanel";
@@ -71,6 +80,7 @@ type PrizeDraft = {
   description: string;
   type: PrizeType;
   track: string;
+  entryMode: "automatic" | "opt_in";
   sponsorName: string;
   scoreBasis: PrizeScoreBasis;
   scoreCategoryNames: string[];
@@ -100,6 +110,7 @@ function createPrizeDraft(
     description: "",
     type: "general",
     track: "",
+    entryMode: "opt_in",
     sponsorName: "",
     scoreBasis: "none",
     scoreCategoryNames: [],
@@ -117,6 +128,7 @@ function normalizePrizeDraftsForSave(prizes: PrizeDraft[]) {
       description: prize.description.trim() || undefined,
       type: prize.type,
       track: prize.track.trim() || undefined,
+      entryMode: prize.type === "track" || prize.type === "track_sponsor" ? prize.entryMode : "opt_in",
       sponsorName: prize.sponsorName.trim() || undefined,
       scoreBasis: prize.scoreBasis,
       scoreCategoryNames:
@@ -555,6 +567,7 @@ function PrizeCatalogEditor({
                         updatePrize(selectedPrizeIndex, (item) => ({
                           ...item,
                           type: e.target.value as PrizeType,
+                          entryMode: e.target.value === "track" || e.target.value === "track_sponsor" ? item.entryMode : "opt_in",
                         }))
                       }
                       className="input"
@@ -594,6 +607,18 @@ function PrizeCatalogEditor({
                           </option>
                         ))}
                       </select>
+                    </div>
+                  )}
+
+                  {(selectedPrize.type === "track" || selectedPrize.type === "track_sponsor") && (
+                    <div className="space-y-1">
+                      <label htmlFor="prize-entry-mode" className="text-xs font-medium fi-muted">Entry</label>
+                      <select id="prize-entry-mode" className="input" value={selectedPrize.entryMode} disabled={disabled}
+                        onChange={e => updatePrize(selectedPrizeIndex, item => ({ ...item, entryMode: e.target.value as PrizeDraft["entryMode"] }))}>
+                        <option value="opt_in">Team chooses entry</option>
+                        <option value="automatic">Automatic for this track</option>
+                      </select>
+                      <p className="text-xs fi-muted">Automatic entry includes every eligible team in this track, including existing teams.</p>
                     </div>
                   )}
 
@@ -969,7 +994,7 @@ export function AdminPrizeWinnersPage({
             <DemoDayWinnersPanel
               eventId={eventId}
               teams={event.teams}
-              categories={event.categories.map((c) => c.name)}
+              categories={event.categories.map((c: { name: string }) => c.name)}
               onClose={onBackToEvent}
               onSubmit={setWinners}
             />
@@ -1020,9 +1045,11 @@ export function EventsList({
 }
 
 export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
-  const createEvent = useMutation(api.events.createEvent);
-  const saveEventPrizes = useMutation(api.prizes.saveEventPrizes);
+  const createEventWithPrizes = useMutation(api.events.createEventWithPrizes);
   const [submitting, setSubmitting] = useState(false);
+  const [createFailure, setCreateFailure] = useState<RecoverableFailure | null>(
+    null,
+  );
   const [useTracksAsAwards, setUseTracksAsAwards] = useState(true);
   const [categories, setCategories] = useState<CategoryDraft[]>([
     { name: "Innovation", weight: 1, rubricPercent: 20, optOutAllowed: false },
@@ -1282,7 +1309,9 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
             : parsedTracks
           : [];
 
-      const eventId = await createEvent({
+      // Event and initial prizes commit in one transaction, so a failure means
+      // nothing was created and retrying cannot duplicate the event.
+      await createEventWithPrizes({
         name: trimmedName,
         description: trimmedDescription || undefined,
         status: computedStatus,
@@ -1300,28 +1329,15 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
             : undefined,
         mode: formData.mode,
         courseCodes: formData.mode === "demo_day" ? courseCodes : undefined,
+        prizes: preparedPrizes,
       });
 
-      if (formData.mode === "hackathon") {
-        try {
-          await saveEventPrizes({
-            eventId,
-            prizes: preparedPrizes,
-          });
-        } catch (error: any) {
-          toast.error(
-            error?.message ||
-              "Event created, but saving prizes failed. Re-open the event to configure prizes.",
-          );
-          onClose();
-          return;
-        }
-      }
-
+      setCreateFailure(null);
       toast.success("Event created successfully!");
       onClose();
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to create event");
+    } catch (error: unknown) {
+      // Keep every entered field; show the failure beside the submit button.
+      setCreateFailure(toRecoverableFailure(error, "create event"));
     } finally {
       setSubmitting(false);
     }
@@ -1909,6 +1925,25 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="sticky bottom-4 z-20 rounded-lg border border-border fi-surface/95 px-4 py-3 shadow-sm backdrop-blur">
+        {createFailure && (
+          <div className="mb-3">
+            <InlineFailure
+              failure={createFailure}
+              title={
+                outcomeForFailure(createFailure) === "unknown"
+                  ? "We couldn't confirm the event was created"
+                  : "Event not created"
+              }
+              onDismiss={() => setCreateFailure(null)}
+            >
+              <p className="inline-failure-body">
+                {outcomeForFailure(createFailure) === "unknown"
+                  ? "Check the events list before creating it again. Your details and prizes are still here."
+                  : "Nothing was saved. Your details and prizes are still here; fix anything flagged and create the event again."}
+              </p>
+            </InlineFailure>
+          </div>
+        )}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
@@ -1937,6 +1972,148 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
     </form>
   );
 }
+
+type SettingsSection = "details" | "judging" | "appreciation" | "prizes";
+const SETTINGS_SECTIONS: SettingsSection[] = [
+  "details",
+  "judging",
+  "appreciation",
+  "prizes",
+];
+const SETTINGS_SECTION_LABELS: Record<SettingsSection, string> = {
+  details: "event details",
+  judging: "judging settings",
+  appreciation: "appreciation settings",
+  prizes: "prize catalog",
+};
+
+type DetailsForm = {
+  name: string;
+  description: string;
+  start: string;
+  end: string;
+  hidden: boolean;
+  tracks: string;
+  codeAndTellMaxBallots: string;
+};
+type JudgingForm = {
+  categories: CategoryDraft[];
+  enableCohorts: boolean;
+  judgeCode: string;
+};
+type AppreciationForm = {
+  budget: number;
+  maxPerTeam: number;
+  captchaEnabled: boolean;
+  venueLocationEnabled: boolean;
+  venueLatitude: string;
+  venueLongitude: string;
+  venueRadiusMeters: number;
+};
+type SettingsForm = {
+  details: DetailsForm;
+  judging: JudgingForm;
+  appreciation: AppreciationForm;
+  prizes: PrizeDraft[];
+};
+
+/** Order-insensitive serialization so key order never looks like an edit. */
+function stableKey(value: unknown): string {
+  return JSON.stringify(value, (_key, inner) =>
+    inner && typeof inner === "object" && !Array.isArray(inner)
+      ? Object.fromEntries(
+          Object.keys(inner)
+            .sort()
+            .map((key) => [key, (inner as Record<string, unknown>)[key]]),
+        )
+      : inner,
+  );
+}
+
+function deriveEventSettingsForm(
+  event: any,
+): Omit<SettingsForm, "prizes"> {
+  const cap = (event as { codeAndTellMaxBallots?: number })
+    .codeAndTellMaxBallots;
+  return {
+    details: {
+      name: event.name || "",
+      description: event.description || "",
+      start: formatDateTimeInput(event.startDate),
+      end: formatDateTimeInput(event.endDate),
+      hidden: Boolean(event.hidden),
+      tracks: event.tracks?.join(", ") || "",
+      codeAndTellMaxBallots: typeof cap === "number" ? String(cap) : "",
+    },
+    judging: {
+      categories: getRubricPercentages(
+        (event.categories || []).map((cat: any) => ({
+          name: typeof cat === "string" ? cat : cat.name,
+          weight: typeof cat === "string" ? 1 : (cat.weight ?? 1),
+        })),
+      ).map((category, index) => {
+        const source = (event.categories || [])[index] as any;
+        return {
+          name: category.name,
+          weight: category.weight,
+          rubricPercent: category.percent,
+          optOutAllowed:
+            typeof source === "string"
+              ? false
+              : (source?.optOutAllowed ?? false),
+        };
+      }),
+      enableCohorts: !!event.enableCohorts,
+      judgeCode: event.judgeCode || "",
+    },
+    appreciation: {
+      budget:
+        typeof event.appreciationBudgetPerAttendee === "number"
+          ? event.appreciationBudgetPerAttendee
+          : 100,
+      maxPerTeam:
+        typeof event.appreciationMaxPerTeam === "number"
+          ? event.appreciationMaxPerTeam
+          : 10,
+      captchaEnabled: event.captchaEnabled === true,
+      venueLocationEnabled: event.venueLocationEnabled === true,
+      venueLatitude:
+        typeof event.venueLatitude === "number"
+          ? String(event.venueLatitude)
+          : "",
+      venueLongitude:
+        typeof event.venueLongitude === "number"
+          ? String(event.venueLongitude)
+          : "",
+      venueRadiusMeters:
+        typeof event.venueRadiusMeters === "number"
+          ? event.venueRadiusMeters
+          : 100,
+    },
+  };
+}
+
+function derivePrizeDrafts(eventPrizes: any[]): PrizeDraft[] {
+  return eventPrizes.map((prize: any, index: number) =>
+    createPrizeDraft(index, {
+      prizeId: prize._id,
+      name: prize.name || "",
+      description: prize.description || "",
+      type: prize.type || "general",
+      entryMode: prize.entryMode ?? "opt_in",
+      track: prize.track || "",
+      sponsorName: prize.sponsorName || "",
+      scoreBasis: prize.scoreBasis || "none",
+      scoreCategoryNames: prize.scoreCategoryNames || [],
+      isActive: prize.isActive !== false,
+      sortOrder: prize.sortOrder ?? index,
+    }),
+  );
+}
+
+export type ScoringLockResult =
+  | { ok: true }
+  | { ok: false; failure: RecoverableFailure };
 
 export function EventManagementModal({
   eventId,
@@ -1978,9 +2155,21 @@ export function EventManagementModal({
     eventId,
   });
   const prizeWinners = useQuery(api.prizes.listPrizeWinners, { eventId });
+  const scorePrizeFilters = useMemo(
+    () =>
+      (prizeDeliberationData?.prizes ?? [])
+        .filter((card: any) => card.prize.isActive !== false)
+        .map((card: any) => ({
+          id: String(card.prize._id),
+          name: card.prize.name as string,
+          teamIds: card.candidates.map((candidate: any) => String(candidate.teamId)),
+          categoryNames:
+            card.prize.scoreBasis === "categories" ? (card.prize.scoreCategoryNames ?? []) : [],
+        })),
+    [prizeDeliberationData],
+  );
   const updateEventDetails = useMutation(api.events.updateEventDetails);
-  const updateEventCategories = useMutation(api.events.updateEventCategories);
-  const updateEventCohorts = useMutation(api.events.updateEventCohorts);
+  const updateJudgingSettings = useMutation(api.events.updateJudgingSettings);
   const updateEventMode = useMutation(api.events.updateEventMode);
   const updateEventStatus = useMutation(api.events.updateEventStatus);
   const duplicateEvent = useMutation(api.events.duplicateEvent);
@@ -1992,6 +2181,7 @@ export function EventManagementModal({
   const saveEventPrizes = useMutation(api.prizes.saveEventPrizes);
   const setPrizeWinners = useMutation(api.prizes.setPrizeWinners);
   const releaseResults = useMutation(api.scores.releaseResults);
+  const withdrawResults = useMutation(api.scores.withdrawResults);
   const releaseCodeAndTellResults = useMutation(api.codeAndTell.releaseResults);
   const setScoringLock = useMutation(api.events.setScoringLock);
   const runIntegrityScan = useMutation(api.demoDayIntegrity.runIntegrityScan);
@@ -2023,6 +2213,8 @@ export function EventManagementModal({
     useState<ScoresSubview>(scoresView);
   const [viewMode, setViewMode] = useState<"table" | "chart">("table");
   const [isRemovingEvent, setIsRemovingEvent] = useState(false);
+  const [confirmRemoveEvent, setConfirmRemoveEvent] = useState(false);
+  const [confirmUnlock, setConfirmUnlock] = useState(false);
   const [isDuplicatingEvent, setIsDuplicatingEvent] = useState(false);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
   const [isScanningIntegrity, setIsScanningIntegrity] = useState(false);
@@ -2052,6 +2244,12 @@ export function EventManagementModal({
     useState("");
   const [savingAppreciationSettings, setSavingAppreciationSettings] =
     useState(false);
+  const [sectionFailures, setSectionFailures] = useState<
+    Partial<Record<SettingsSection, RecoverableFailure>>
+  >({});
+  const [lockFailure, setLockFailure] = useState<RecoverableFailure | null>(
+    null,
+  );
   const handleEventStartChange = (nextStartDate: string) => {
     setEventStart(nextStartDate);
     setEventEnd((currentEnd) =>
@@ -2061,6 +2259,7 @@ export function EventManagementModal({
 
   const updateTab = (tab: EventManagementTab) => {
     setActiveTab(tab);
+    setLocalScoresView("overview");
     onTabChange?.(tab);
   };
 
@@ -2079,90 +2278,218 @@ export function EventManagementModal({
       return;
     }
     setLocalScoresView(view);
+    setActiveTab("winners");
   };
 
-  // Sync editable fields when event changes
-  useEffect(() => {
-    if (event) {
-      setEventName(event.name || "");
-      setEventDescription(event.description || "");
-      setEventStart(formatDateTimeInput(event.startDate));
-      setEventEnd(formatDateTimeInput(event.endDate));
-      setEventHidden(Boolean((event as any).hidden));
-      setCategoriesEdit(
-        getRubricPercentages(
-          (event.categories || []).map((cat: any) => ({
-            name: typeof cat === "string" ? cat : cat.name,
-            weight: typeof cat === "string" ? 1 : (cat.weight ?? 1),
-          })),
-        ).map((category, index) => {
-          const source = (event.categories || [])[index] as any;
-          return {
-            name: category.name,
-            weight: category.weight,
-            rubricPercent: category.percent,
-            optOutAllowed:
-              typeof source === "string"
-                ? false
-                : (source?.optOutAllowed ?? false),
-          };
-        }),
-      );
-      setEnableCohorts(!!event.enableCohorts);
-      setJudgeCodeEdit(event.judgeCode || "");
-      setAppreciationBudget(
-        typeof event.appreciationBudgetPerAttendee === "number"
-          ? event.appreciationBudgetPerAttendee
-          : 100,
-      );
-      setAppreciationMaxPerTeam(
-        typeof event.appreciationMaxPerTeam === "number"
-          ? event.appreciationMaxPerTeam
-          : 10,
-      );
-      setCaptchaEnabled(event.captchaEnabled === true);
-      setVenueLocationEnabled(event.venueLocationEnabled === true);
-      setVenueLatitude(
-        typeof event.venueLatitude === "number"
-          ? String(event.venueLatitude)
-          : "",
-      );
-      setVenueLongitude(
-        typeof event.venueLongitude === "number"
-          ? String(event.venueLongitude)
-          : "",
-      );
-      setVenueRadiusMeters(
-        typeof event.venueRadiusMeters === "number"
-          ? event.venueRadiusMeters
-          : 100,
-      );
-      setTracksEdit(event.tracks?.join(", ") || "");
-      const cap = (event as { codeAndTellMaxBallots?: number })
-        .codeAndTellMaxBallots;
-      setCodeAndTellMaxBallotsInput(typeof cap === "number" ? String(cap) : "");
+  // Organizer edits are hydrated once per event id. Later server changes are
+  // applied silently only to sections without unsaved edits; otherwise the
+  // edits are kept and a "changed elsewhere" notice offers to load the latest.
+  const currentSettingsForm: SettingsForm = {
+    details: {
+      name: eventName,
+      description: eventDescription,
+      start: eventStart,
+      end: eventEnd,
+      hidden: eventHidden,
+      tracks: tracksEdit,
+      codeAndTellMaxBallots: codeAndTellMaxBallotsInput,
+    },
+    judging: {
+      categories: categoriesEdit,
+      enableCohorts,
+      judgeCode: judgeCodeEdit,
+    },
+    appreciation: {
+      budget: appreciationBudget,
+      maxPerTeam: appreciationMaxPerTeam,
+      captchaEnabled,
+      venueLocationEnabled,
+      venueLatitude,
+      venueLongitude,
+      venueRadiusMeters,
+    },
+    prizes: prizesEdit,
+  };
+  const serverSettingsForm: Partial<SettingsForm> = {
+    ...(event ? deriveEventSettingsForm(event) : {}),
+    ...(eventPrizes ? { prizes: derivePrizeDrafts(eventPrizes) } : {}),
+  };
+  const latestServerFormRef = useRef(serverSettingsForm);
+  latestServerFormRef.current = serverSettingsForm;
+  const settingsBaselineRef = useRef<{
+    eventId: Id<"events">;
+    sections: Partial<SettingsForm>;
+  } | null>(null);
+  const savingSectionsRef = useRef(new Set<SettingsSection>());
+  const acceptNextServerRef = useRef(new Set<SettingsSection>());
+
+  const applySettingsSection = <K extends SettingsSection>(
+    section: K,
+    values: SettingsForm[K],
+  ) => {
+    if (section === "details") {
+      const v = values as DetailsForm;
+      setEventName(v.name);
+      setEventDescription(v.description);
+      setEventStart(v.start);
+      setEventEnd(v.end);
+      setEventHidden(v.hidden);
+      setTracksEdit(v.tracks);
+      setCodeAndTellMaxBallotsInput(v.codeAndTellMaxBallots);
+    } else if (section === "judging") {
+      const v = values as JudgingForm;
+      setCategoriesEdit(v.categories);
+      setEnableCohorts(v.enableCohorts);
+      setJudgeCodeEdit(v.judgeCode);
+    } else if (section === "appreciation") {
+      const v = values as AppreciationForm;
+      setAppreciationBudget(v.budget);
+      setAppreciationMaxPerTeam(v.maxPerTeam);
+      setCaptchaEnabled(v.captchaEnabled);
+      setVenueLocationEnabled(v.venueLocationEnabled);
+      setVenueLatitude(v.venueLatitude);
+      setVenueLongitude(v.venueLongitude);
+      setVenueRadiusMeters(v.venueRadiusMeters);
+    } else {
+      setPrizesEdit(values as PrizeDraft[]);
     }
-  }, [event]);
+  };
+
+  const adoptServerSection = (section: SettingsSection) => {
+    const server = latestServerFormRef.current[section];
+    const baseline = settingsBaselineRef.current;
+    if (server === undefined || !baseline) return;
+    applySettingsSection(section, server as SettingsForm[typeof section]);
+    baseline.sections[section] = server as any;
+  };
 
   useEffect(() => {
-    if (!eventPrizes) return;
-    setPrizesEdit(
-      eventPrizes.map((prize: any, index: number) =>
-        createPrizeDraft(index, {
-          prizeId: prize._id,
-          name: prize.name || "",
-          description: prize.description || "",
-          type: prize.type || "general",
-          track: prize.track || "",
-          sponsorName: prize.sponsorName || "",
-          scoreBasis: prize.scoreBasis || "none",
-          scoreCategoryNames: prize.scoreCategoryNames || [],
-          isActive: prize.isActive !== false,
-          sortOrder: prize.sortOrder ?? index,
-        }),
-      ),
+    let baseline = settingsBaselineRef.current;
+    if (!baseline || baseline.eventId !== eventId) {
+      baseline = { eventId, sections: {} };
+      settingsBaselineRef.current = baseline;
+      savingSectionsRef.current.clear();
+      acceptNextServerRef.current.clear();
+    }
+    for (const section of SETTINGS_SECTIONS) {
+      const server = serverSettingsForm[section];
+      if (server === undefined) continue;
+      const base = baseline.sections[section];
+      if (base === undefined) {
+        // First data for this event: hydrate once.
+        applySettingsSection(section, server as any);
+        baseline.sections[section] = server as any;
+        continue;
+      }
+      if (savingSectionsRef.current.has(section)) continue;
+      const serverKey = stableKey(server);
+      const baseKey = stableKey(base);
+      if (serverKey === baseKey) continue;
+      const localKey = stableKey(currentSettingsForm[section]);
+      if (
+        acceptNextServerRef.current.has(section) ||
+        localKey === baseKey ||
+        localKey === serverKey
+      ) {
+        acceptNextServerRef.current.delete(section);
+        if (localKey !== serverKey) applySettingsSection(section, server as any);
+        baseline.sections[section] = server as any;
+      }
+      // Otherwise keep the organizer's edits; the notice below offers a reload.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event, eventPrizes, eventId]);
+
+  const externallyChangedSections = SETTINGS_SECTIONS.filter((section) => {
+    const baseline = settingsBaselineRef.current;
+    if (!baseline || baseline.eventId !== eventId) return false;
+    const server = serverSettingsForm[section];
+    const base = baseline.sections[section];
+    if (server === undefined || base === undefined) return false;
+    if (
+      savingSectionsRef.current.has(section) ||
+      acceptNextServerRef.current.has(section)
+    ) {
+      return false;
+    }
+    const serverKey = stableKey(server);
+    return (
+      serverKey !== stableKey(base) &&
+      serverKey !== stableKey(currentSettingsForm[section])
     );
-  }, [eventPrizes]);
+  });
+
+  /** Call after a section saves so the server's normalized values become the new baseline. */
+  const markSectionSaved = (section: SettingsSection) => {
+    savingSectionsRef.current.delete(section);
+    setSectionFailures(({ [section]: _cleared, ...rest }) => rest);
+    const baseline = settingsBaselineRef.current;
+    const server = latestServerFormRef.current[section];
+    if (!baseline) return;
+    if (
+      server !== undefined &&
+      stableKey(server) !== stableKey(baseline.sections[section])
+    ) {
+      adoptServerSection(section);
+    } else {
+      // The query update for this save hasn't rendered yet; accept it when it does.
+      acceptNextServerRef.current.add(section);
+    }
+  };
+
+  const markSectionFailed = (section: SettingsSection, error: unknown) => {
+    savingSectionsRef.current.delete(section);
+    setSectionFailures((current) => ({
+      ...current,
+      [section]: toRecoverableFailure(
+        error,
+        `save ${SETTINGS_SECTION_LABELS[section]}`,
+      ),
+    }));
+  };
+
+  const renderExternalChangeNotice = (sections: SettingsSection[]) => {
+    const changed = externallyChangedSections.filter((section) =>
+      sections.includes(section),
+    );
+    if (changed.length === 0) return null;
+    return (
+      <InlineFailure
+        title="Settings changed elsewhere"
+        retryLabel="Load latest"
+        onRetry={() => changed.forEach(adoptServerSection)}
+      >
+        <p className="inline-failure-body">
+          Someone updated the {changed.map((s) => SETTINGS_SECTION_LABELS[s]).join(", ")} while you were editing.
+          Your edits are kept. Load latest to replace them with the saved version.
+        </p>
+      </InlineFailure>
+    );
+  };
+
+  const renderSectionFailures = (
+    entries: Array<{ section: SettingsSection; onRetry: () => void; busy: boolean }>,
+  ) =>
+    entries.map(({ section, onRetry, busy }) => {
+      const failure = sectionFailures[section];
+      if (!failure) return null;
+      return (
+        <InlineFailure
+          key={section}
+          failure={failure}
+          title={
+            outcomeForFailure(failure) === "unknown"
+              ? `We couldn't confirm the ${SETTINGS_SECTION_LABELS[section]} saved`
+              : `${SETTINGS_SECTION_LABELS[section].replace(/^./, (c) => c.toUpperCase())} not saved`
+          }
+          onRetry={onRetry}
+          busy={busy}
+          onDismiss={() =>
+            setSectionFailures(({ [section]: _cleared, ...rest }) => rest)
+          }
+        />
+      );
+    });
 
   const categoriesForPrizeEditor = useMemo(
     () =>
@@ -2207,7 +2534,7 @@ export function EventManagementModal({
   const entityLabel = isCodeAndTellMode ? "Project" : "Team";
 
   useEffect(() => {
-    if (event && !isHackathonMode && activeTab === "prizes") {
+    if (event && !isHackathonMode && (activeTab === "prizes" || activeTab === "overview")) {
       updateTab("details");
     }
     if (event && !isDemoDayMode && activeTab === "setup") {
@@ -2215,8 +2542,18 @@ export function EventManagementModal({
     }
   }, [activeTab, event, isHackathonMode, isDemoDayMode]);
 
-  if (!event) {
-    return null;
+  if (event === undefined) {
+    return <LoadingState label="Loading event..." />;
+  }
+  if (event === null) {
+    return (
+      <ErrorState
+        title="Event not found"
+        description="It may have been removed, or you may not have access."
+        actionLabel="Back to events"
+        onAction={onClose}
+      />
+    );
   }
 
   const derivedStatus = (() => {
@@ -2240,7 +2577,6 @@ export function EventManagementModal({
     : null;
   const isPageLayout = layout === "page";
   const canEditJudgeSettings = !hasScores && !scoringLocked;
-  const hasConfiguredPrizes = (eventPrizes?.length || 0) > 0;
   const teamListContent = (
     <>
       {event.teams.length === 0 ? (
@@ -2249,7 +2585,7 @@ export function EventManagementModal({
         </div>
       ) : (
         <div className="w-full">
-          {event.teams.map((team, index) => {
+          {event.teams.map((team: any) => {
             const isSelected = editingTeam?._id === team._id;
             return (
               <div
@@ -2263,9 +2599,11 @@ export function EventManagementModal({
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold fi-ink">
+                      <button type="button" className="font-semibold fi-ink text-left underline-offset-4 hover:underline"
+                        aria-label={`Edit ${team.name}`}
+                        onClick={() => { setEditingTeam(team); setTeamPanelMode("manual"); setShowAddTeam(true); }}>
                         {team.name}
-                      </h4>
+                      </button>
                       {(team as any).hidden && (
                         <span className="px-2 py-0.5 bg-yellow-100  text-yellow-700  text-xs rounded-full">
                           Hidden
@@ -2290,7 +2628,7 @@ export function EventManagementModal({
                         : team.members.join(", ")}
                     </p>
                   </div>
-                  <div className="relative ml-2 opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100">
+                  <div className="relative ml-2">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -2298,7 +2636,9 @@ export function EventManagementModal({
                           teamMenuOpen === team._id ? null : team._id,
                         );
                       }}
-                      className="p-1 rounded-md hover:bg-muted/80 fi-muted hover:fi-ink transition-colors"
+                      aria-label={`Actions for ${team.name}`}
+                      aria-expanded={teamMenuOpen === team._id}
+                      className="p-3 rounded-md hover:bg-muted/80 fi-muted hover:fi-ink transition-colors"
                     >
                       <svg
                         className="w-4 h-4"
@@ -2585,6 +2925,7 @@ export function EventManagementModal({
     }
 
     setSavingDetails(true);
+    savingSectionsRef.current.add("details");
     try {
       await updateEventDetails({
         eventId,
@@ -2608,9 +2949,10 @@ export function EventManagementModal({
             }
           : {}),
       });
+      markSectionSaved("details");
       toast.success("Event details saved");
     } catch (error) {
-      toast.error("Failed to save details");
+      markSectionFailed("details", error);
     } finally {
       setSavingDetails(false);
     }
@@ -2662,18 +3004,19 @@ export function EventManagementModal({
     }));
 
     setSavingJudgeSettings(true);
+    savingSectionsRef.current.add("judging");
     try {
-      await Promise.all([
-        updateEventCategories({ eventId, categories: cleanedCategories }),
-        updateEventCohorts({ eventId, enableCohorts }),
-        updateEventDetails({
-          eventId,
-          judgeCode: judgeCodeEdit.trim() || null,
-        }),
-      ]);
+      // One mutation: categories, cohorts, and judge code commit together or not at all.
+      await updateJudgingSettings({
+        eventId,
+        categories: cleanedCategories,
+        enableCohorts,
+        judgeCode: judgeCodeEdit.trim() || null,
+      });
+      markSectionSaved("judging");
       toast.success("Judging settings updated");
     } catch (error) {
-      toast.error("Failed to save judging settings");
+      markSectionFailed("judging", error);
     } finally {
       setSavingJudgeSettings(false);
     }
@@ -2689,22 +3032,35 @@ export function EventManagementModal({
     }
 
     setSavingPrizes(true);
+    savingSectionsRef.current.add("prizes");
     try {
       await saveEventPrizes({
         eventId,
         prizes: normalizedPrizes,
       });
+      markSectionSaved("prizes");
       toast.success("Prize catalog saved");
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to save prizes");
+    } catch (error: unknown) {
+      markSectionFailed("prizes", error);
     } finally {
       setSavingPrizes(false);
     }
   };
 
-  const handleSetScoringLock = async (locked: boolean) => {
-    if (!isHackathonMode) return;
+  const handleSetScoringLock = async (
+    locked: boolean,
+  ): Promise<ScoringLockResult> => {
+    if (!isHackathonMode) {
+      return {
+        ok: false,
+        failure: toRecoverableFailure(
+          new Error("Scoring lock is only available for hackathon events"),
+          locked ? "lock scoring" : "unlock scoring",
+        ),
+      };
+    }
     setLockingScores(true);
+    setLockFailure(null);
     try {
       const reason = locked
         ? "Deliberation in progress"
@@ -2714,11 +3070,22 @@ export function EventManagementModal({
       if (!locked && activeScoresView === "winners") {
         updateScoresView("overview");
       }
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to update scoring lock");
+      return { ok: true };
+    } catch (error: unknown) {
+      const failure = toRecoverableFailure(
+        error,
+        locked ? "lock scoring" : "unlock scoring",
+      );
+      setLockFailure(failure);
+      return { ok: false, failure };
     } finally {
       setLockingScores(false);
     }
+  };
+
+  const confirmUnlockScoring = async () => {
+    const result = await handleSetScoringLock(false);
+    if (result.ok) setConfirmUnlock(false);
   };
 
   const handleSaveAppreciationSettings = async () => {
@@ -2743,6 +3110,7 @@ export function EventManagementModal({
       return;
     }
     setSavingAppreciationSettings(true);
+    savingSectionsRef.current.add("appreciation");
     try {
       await updateEventDetails({
         eventId,
@@ -2754,24 +3122,21 @@ export function EventManagementModal({
         venueLongitude: longitudeValue,
         venueRadiusMeters: venueLocationEnabled ? venueRadiusMeters : null,
       });
+      markSectionSaved("appreciation");
       toast.success("Appreciation settings saved");
     } catch (error) {
-      toast.error("Failed to save appreciation settings");
+      markSectionFailed("appreciation", error);
     } finally {
       setSavingAppreciationSettings(false);
     }
   };
 
   const handleRemoveEvent = async () => {
-    const confirmed = window.confirm(
-      `Remove "${event.name}"? This will delete teams, scores, and access for this event.`,
-    );
-    if (!confirmed) return;
-
     try {
       setIsRemovingEvent(true);
       await removeEvent({ eventId });
       toast.success("Event removed");
+      setConfirmRemoveEvent(false);
       onClose();
     } catch (error) {
       console.error(error);
@@ -2805,17 +3170,42 @@ export function EventManagementModal({
   };
 
   const handleReleaseResults = async () => {
-    try {
-      if (isCodeAndTellMode) {
-        await releaseCodeAndTellResults({ eventId });
-      } else {
-        await releaseResults({ eventId });
-      }
-      toast.success("Results released!");
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to release results");
-    }
+    if (isCodeAndTellMode) await releaseCodeAndTellResults({ eventId });
+    else await releaseResults({ eventId });
+    toast.success("Results published");
   };
+
+  const winnersEditor = isDemoDayMode ? (
+    <DemoDayWinnersPanel
+      eventId={eventId}
+      teams={event.teams}
+      categories={event.categories.map((category: { name: string }) => category.name)}
+      existingOverallWinner={event.overallWinner}
+      existingCategoryWinners={event.categoryWinners}
+      rankings={appreciationSummary?.teams}
+      onClose={() => updateScoresView("overview")}
+      onSubmit={setWinners}
+    />
+  ) : isCodeAndTellMode ? (
+    <CodeAndTellWinnerPanel
+      eventId={eventId}
+      standings={codeAndTellSummary?.standings || []}
+      defaultWinnerId={codeAndTellSummary?.defaultWinnerId}
+      selectedWinnerId={codeAndTellSummary?.selectedWinnerId}
+      totalBallots={codeAndTellSummary?.totalBallots || 0}
+      onClose={() => updateScoresView("overview")}
+      onSubmit={setCodeAndTellWinner}
+    />
+  ) : (
+    <PrizeWinnerWizardPanel
+      eventId={eventId}
+      deliberationData={prizeDeliberationData}
+      existingWinners={prizeWinners || []}
+      detailedScores={detailedScores}
+      onClose={() => updateScoresView("overview")}
+      onSubmit={setPrizeWinners}
+    />
+  );
 
   return (
     <div
@@ -2878,10 +3268,10 @@ export function EventManagementModal({
                 )}
               </div>
               <p className="fi-muted">
-                Manage event settings and teams
+                Manage projects, judging, and results
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            {activeTab === "details" && <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={handleDuplicateEvent}
@@ -2907,32 +3297,7 @@ export function EventManagementModal({
                 </svg>
                 {isDuplicatingEvent ? "Cloning..." : "Clone for testing"}
               </button>
-              <button
-                type="button"
-                onClick={handleRemoveEvent}
-                disabled={isRemovingEvent}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                  isRemovingEvent
-                    ? "border-red-400 text-red-400 cursor-not-allowed"
-                    : "border-red-500/40 text-red-500 hover:bg-red-500/10"
-                }`}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-                {isRemovingEvent ? "Removing..." : "Remove"}
-              </button>
-            </div>
+            </div>}
           </div>
         </>
       )}
@@ -2994,7 +3359,7 @@ export function EventManagementModal({
                     )}
                   </div>
                   <p className="fi-muted">
-                    Manage event settings and teams
+                    Manage projects, judging, and results
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-nowrap">
@@ -3025,7 +3390,7 @@ export function EventManagementModal({
                   </button>
                   <button
                     type="button"
-                    onClick={handleRemoveEvent}
+                    onClick={() => setConfirmRemoveEvent(true)}
                     disabled={isRemovingEvent}
                     className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
                       isRemovingEvent
@@ -3057,12 +3422,26 @@ export function EventManagementModal({
           <div
             className={
               isPageLayout
-                ? "inline-flex w-fit gap-1 rounded-lg border border-border fi-surface/70 p-1"
-                : "flex gap-1 px-6 mt-4"
+                ? "admin-event-nav flex flex-wrap w-full gap-1 border-b border-border pb-2"
+                : "admin-event-nav flex flex-wrap gap-1 px-6 mt-4"
             }
           >
+            {isHackathonMode && (
+              <button
+                aria-current={activeTab === "overview" ? "page" : undefined}
+                onClick={() => updateTab("overview")}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeTab === "overview"
+                    ? "fi-surface fi-ink shadow-sm"
+                    : "fi-muted hover:fi-ink hover:bg-muted/40"
+                }`}
+              >
+                Overview
+              </button>
+            )}
             {isDemoDayMode && (
               <button
+                aria-current={activeTab === "setup" ? "page" : undefined}
                 onClick={() => updateTab("setup")}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   isPageLayout
@@ -3078,6 +3457,7 @@ export function EventManagementModal({
               </button>
             )}
             <button
+              aria-current={activeTab === "details" ? "page" : undefined}
               onClick={() => updateTab("details")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 isPageLayout
@@ -3089,9 +3469,10 @@ export function EventManagementModal({
                     : "fi-muted hover:fi-ink"
               }`}
             >
-              Details
+              Settings
             </button>
             <button
+              aria-current={activeTab === "teams" ? "page" : undefined}
               onClick={() => updateTab("teams")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 isPageLayout
@@ -3107,6 +3488,7 @@ export function EventManagementModal({
             </button>
             {isHackathonMode && (
               <button
+                aria-current={activeTab === "prizes" ? "page" : undefined}
                 onClick={() => updateTab("prizes")}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   isPageLayout
@@ -3122,6 +3504,7 @@ export function EventManagementModal({
               </button>
             )}
             <button
+              aria-current={activeTab === "scores" ? "page" : undefined}
               onClick={() => updateTab("scores")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 isPageLayout
@@ -3136,6 +3519,7 @@ export function EventManagementModal({
               Scores
             </button>
             <button
+              aria-current={activeTab === "winners" ? "page" : undefined}
               onClick={() => updateTab("winners")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 isPageLayout
@@ -3147,7 +3531,7 @@ export function EventManagementModal({
                     : "fi-muted hover:fi-ink"
               }`}
             >
-              Winners
+              Results
             </button>
           </div>
         </div>
@@ -3173,6 +3557,38 @@ export function EventManagementModal({
                 onDownloadQrCodes={() => void handleDownloadQrCodes()}
                 isGeneratingQr={isGeneratingQr}
               />
+            )}
+
+            {activeTab === "overview" && isHackathonMode && (
+              <HackathonOverviewTab
+                event={event}
+                status={derivedStatus}
+                prizes={eventPrizes}
+                detailedScores={detailedScores}
+                locking={lockingScores}
+                onNavigate={(target) =>
+                  updateTab(target === "results" ? "winners" : target)
+                }
+                onLockScoring={async () => {
+                  const result = await handleSetScoringLock(true);
+                  if (!result.ok) toast.error(result.failure.message);
+                }}
+              />
+            )}
+
+            {activeTab === "details" && (
+              <div className="space-y-3">
+                {renderExternalChangeNotice(["details", "judging", "appreciation"])}
+                {renderSectionFailures([
+                  { section: "details", onRetry: () => void handleSaveDetails(), busy: savingDetails },
+                  { section: "judging", onRetry: () => void handleSaveJudgeSettings(), busy: savingJudgeSettings },
+                  {
+                    section: "appreciation",
+                    onRetry: () => void handleSaveAppreciationSettings(),
+                    busy: savingAppreciationSettings,
+                  },
+                ])}
+              </div>
             )}
 
             {activeTab === "details" && (
@@ -3230,14 +3646,36 @@ export function EventManagementModal({
                 codeAndTellRankedVoteRowCount={
                   codeAndTellSummary?.rankedVoteRowCount
                 }
+                modeLocked={event.teams.length > 0 || hasScores}
               />
+            )}
+
+            {activeTab === "details" && isPageLayout && (
+              <section className="admin-danger-zone" aria-labelledby="danger-zone-title">
+                <div>
+                  <h2 id="danger-zone-title">Remove this event</h2>
+                  <p>
+                    Permanently deletes the event with its {event.teams.length}{" "}
+                    {entityLabel.toLowerCase()}
+                    {event.teams.length === 1 ? "" : "s"}, scores, ballots, and judge access. This can't be undone.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="fi-key admin-danger-outline"
+                  onClick={() => setConfirmRemoveEvent(true)}
+                  disabled={isRemovingEvent}
+                >
+                  Remove event…
+                </button>
+              </section>
             )}
 
             {activeTab === "teams" && (
               <TeamsTab
+                isPageLayout={isPageLayout}
                 teamCount={event.teams.length}
                 entityLabel={entityLabel}
-                isPageLayout={isPageLayout}
                 showAddTeam={showAddTeam}
                 onOpenCreateTeam={() => {
                   setEditingTeam(null);
@@ -3274,6 +3712,15 @@ export function EventManagementModal({
             )}
 
             {activeTab === "prizes" && isHackathonMode && (
+              <div className="space-y-3">
+                {renderExternalChangeNotice(["prizes"])}
+                {renderSectionFailures([
+                  { section: "prizes", onRetry: () => void handleSavePrizes(), busy: savingPrizes },
+                ])}
+              </div>
+            )}
+
+            {activeTab === "prizes" && isHackathonMode && (
               <PrizesTab
                 eventMode={eventMode}
                 savingPrizes={savingPrizes}
@@ -3295,69 +3742,13 @@ export function EventManagementModal({
                 eventScores={eventScores || undefined}
                 scoringLocked={scoringLocked}
                 lockingScores={lockingScores}
-                hasConfiguredPrizes={hasConfiguredPrizes}
-                prizeDeliberationReady={!!prizeDeliberationData}
                 onFinishEvent={() => void handleStatusChange("past")}
                 onToggleScoringLock={() =>
-                  void handleSetScoringLock(!scoringLocked)
+                  scoringLocked
+                    ? (setLockFailure(null), setConfirmUnlock(true))
+                    : void handleSetScoringLock(true)
                 }
-                onOpenWinners={() => updateScoresView("winners")}
-                onReleaseResults={handleReleaseResults}
-                isPageLayout={isPageLayout}
-                scoresView={activeScoresView}
-                onBackToScores={() => updateScoresView("overview")}
-                winnersContent={
-                  isDemoDayMode ? (
-                    event.teams.length > 0 ? (
-                      <DemoDayWinnersPanel
-                        eventId={eventId}
-                        teams={event.teams}
-                        categories={event.categories.map((c) => c.name)}
-                        onClose={() => updateScoresView("overview")}
-                        onSubmit={setWinners}
-                      />
-                    ) : (
-                      <div className="fi-panel p-6 fi-surface fi-muted">
-                        Add teams first, then select winners.
-                      </div>
-                    )
-                  ) : isCodeAndTellMode ? (
-                    codeAndTellSummary === undefined ? (
-                      <LoadingState label="Preparing ranked-vote summary..." />
-                    ) : (
-                      <CodeAndTellWinnerPanel
-                        eventId={eventId}
-                        standings={codeAndTellSummary?.standings || []}
-                        defaultWinnerId={codeAndTellSummary?.defaultWinnerId}
-                        selectedWinnerId={codeAndTellSummary?.selectedWinnerId}
-                        totalBallots={codeAndTellSummary?.totalBallots || 0}
-                        onClose={() => updateScoresView("overview")}
-                        onSubmit={async ({ eventId, winnerTeamId }) => {
-                          await setCodeAndTellWinner({ eventId, winnerTeamId });
-                          updateScoresView("overview");
-                          updateTab("winners");
-                        }}
-                      />
-                    )
-                  ) : prizeWinners === undefined ||
-                    detailedScores === undefined ||
-                    prizeDeliberationData === undefined ? (
-                    <LoadingState label="Preparing winner wizard..." />
-                  ) : (
-                    <PrizeWinnerWizardPanel
-                      eventId={eventId}
-                      deliberationData={prizeDeliberationData}
-                      existingWinners={prizeWinners || []}
-                      detailedScores={detailedScores || []}
-                      onClose={() => updateScoresView("overview")}
-                      onSubmit={async (args) => {
-                        await setPrizeWinners(args);
-                        updateScoresView("overview");
-                        updateTab("winners");
-                      }}
-                    />
-                  )
-                }
+                onOpenWinners={() => updateTab("winners")}
                 appreciationSummary={appreciationSummary}
                 integritySummary={integritySummary}
                 isScanningIntegrity={isScanningIntegrity}
@@ -3381,7 +3772,8 @@ export function EventManagementModal({
                 onDownloadQrCodes={() => void handleDownloadQrCodes()}
                 isGeneratingQr={isGeneratingQr}
                 detailedScores={detailedScores}
-                codeAndTellSummary={codeAndTellSummary}
+                prizeFilters={scorePrizeFilters}
+                codeAndTellSummary={codeAndTellSummary ?? null}
                 viewMode={viewMode}
                 setViewMode={setViewMode}
                 ScoringDashboard={ScoringDashboard}
@@ -3391,26 +3783,86 @@ export function EventManagementModal({
               />
             )}
             {activeTab === "winners" && (
-              <WinnersSummaryTab
-                eventMode={eventMode}
-                eventPrizes={eventPrizes || []}
-                eventTeams={event?.teams || []}
-                prizeWinners={prizeWinners || []}
-                overallWinnerId={
-                  event.overallWinner ? String(event.overallWinner) : null
-                }
-                categoryWinners={
-                  event.categoryWinners?.map((winner: any) => ({
-                    category: winner.category,
-                    teamId: String(winner.teamId),
-                  })) || []
-                }
-                codeAndTellSummary={codeAndTellSummary}
+              <ResultsTab
+                key={eventId}
+                input={{
+                  mode: eventMode,
+                  status: event.status as "upcoming" | "active" | "past",
+                  scoringLocked,
+                  teams: event.teams,
+                  prizes: eventPrizes || [],
+                  prizeWinners: prizeWinners || [],
+                  overallWinnerId: event.overallWinner,
+                  categories: event.categories.map((category: { name: string }) => category.name),
+                  categoryWinners: event.categoryWinners || [],
+                  eligibleEntries: isHackathonMode ? (prizeDeliberationData?.prizes || []).flatMap((entry: any) =>
+                    entry.candidates.map((candidate: any) => ({ prizeId: String(entry.prize._id), teamId: String(candidate.teamId) }))) : undefined,
+                }}
+                eventName={event.name}
+                publicUrl={`/event/${eventId}`}
+                published={event.resultsReleased}
+                hidden={event.hidden}
+                loading={isHackathonMode
+                  ? eventPrizes === undefined || prizeWinners === undefined || prizeDeliberationData === undefined
+                  : isCodeAndTellMode ? codeAndTellSummary === undefined : appreciationSummary === undefined}
+                editing={activeScoresView === "winners"}
+                editor={winnersEditor}
+                onEdit={() => updateScoresView("winners")}
+                onScores={() => updateTab("scores")}
+                onPrizes={() => updateTab("prizes")}
+                onTeams={() => updateTab("teams")}
+                onFinish={async () => { await updateEventStatus({ eventId, status: "past" }); }}
+                onLock={async () => { await setScoringLock({ eventId, locked: true, reason: "Deliberation in progress" }); }}
+                locking={lockingScores}
+                onPublish={handleReleaseResults}
+                onWithdraw={async () => {
+                  await withdrawResults({ eventId });
+                  toast.success("Results withdrawn. Saved winners are ready to edit.");
+                }}
               />
             )}
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmRemoveEvent}
+        title={`Remove ${event.name}?`}
+        confirmLabel="Remove event"
+        tone="danger"
+        confirmText={event.name}
+        busy={isRemovingEvent}
+        onCancel={() => setConfirmRemoveEvent(false)}
+        onConfirm={() => void handleRemoveEvent()}
+      >
+        <p>
+          This deletes every {entityLabel.toLowerCase()}, score, ballot, and judge registration for the event.
+          To keep a copy for testing, use “Clone for testing” first.
+        </p>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={confirmUnlock}
+        title="Unlock scoring?"
+        confirmLabel="Unlock scoring"
+        busy={lockingScores}
+        onCancel={() => {
+          setConfirmUnlock(false);
+          setLockFailure(null);
+        }}
+        onConfirm={() => void confirmUnlockScoring()}
+      >
+        <p>
+          Judges will be able to submit and change scores again until you lock it or the event ends.
+          Rankings may move while it's unlocked.
+        </p>
+        {lockFailure && (
+          <InlineFailure
+            failure={lockFailure}
+            title="Scoring is still locked"
+            onRetry={() => void confirmUnlockScoring()}
+            busy={lockingScores}
+          />
+        )}
+      </ConfirmDialog>
     </div>
   );
 }

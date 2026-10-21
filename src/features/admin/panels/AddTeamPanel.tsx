@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { toast } from "sonner";
+import { isAutomaticPrize } from "../../../../shared/prizeEntries";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { InlineFailure } from "../../../components/ui/TaskStatus";
 import {
   createTeamCsvTemplate,
   parseTeamCsv,
@@ -11,15 +13,49 @@ import {
 
 type PreparedTeamCsvRow = ParsedTeamCsvRow & {
   prizeIds: Id<"prizes">[];
+  /**
+   * Checkpoint: set once the team exists on the server. A retry then only
+   * assigns prizes and never creates the team a second time.
+   */
+  createdTeamId?: Id<"teams">;
 };
 
 type CsvImportNotice = {
   tone: "neutral" | "success" | "error";
   summary: string;
+  /** Rows whose team was not created. */
   details: string[];
+  /** Rows whose team was created but whose prize entries were not saved. */
+  partialDetails?: string[];
 };
 
 const MAX_VISIBLE_IMPORT_DETAILS = 5;
+
+function ImportDetailGroup({
+  title,
+  hint,
+  details,
+}: {
+  title: string;
+  hint?: string;
+  details: string[];
+}) {
+  const hidden = details.length - MAX_VISIBLE_IMPORT_DETAILS;
+  return (
+    <div className="mt-2 space-y-1 text-xs fi-muted">
+      <p className="font-medium fi-ink">{title}</p>
+      {hint && <p>{hint}</p>}
+      {details.slice(0, MAX_VISIBLE_IMPORT_DETAILS).map((detail) => (
+        <p key={detail}>{detail}</p>
+      ))}
+      {hidden > 0 && (
+        <p>
+          +{hidden} more row{hidden === 1 ? "" : "s"}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function normalizeLookupKey(value: string) {
   return value.trim().toLowerCase();
@@ -78,6 +114,12 @@ export function AddTeamPanel({
   } | null>(null);
   const [csvImportNotice, setCsvImportNotice] =
     useState<CsvImportNotice | null>(null);
+  // Manual add: remembers a team that was created when its prize save failed,
+  // so resubmitting retries prizes only instead of creating a duplicate.
+  const [createdTeamCheckpoint, setCreatedTeamCheckpoint] = useState<{
+    teamId: Id<"teams">;
+    prizeError: string;
+  } | null>(null);
   const setTeamPrizeSubmissionsAdmin = useMutation(
     api.prizes.setTeamPrizeSubmissionsAdmin,
   );
@@ -164,6 +206,7 @@ export function AddTeamPanel({
   useEffect(() => {
     setCsvImportPlan(null);
     setCsvImportNotice(null);
+    setCreatedTeamCheckpoint(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -304,74 +347,89 @@ export function AddTeamPanel({
 
     setImportingCsv(true);
     const failures: string[] = [];
+    const partialFailures: string[] = [];
     const failedRows: PreparedTeamCsvRow[] = [];
     let importedCount = 0;
+    const label = entityLabel.toLowerCase();
 
     try {
       for (const row of csvImportPlan.rows) {
-        try {
-          const teamId = await onSubmit({
-            eventId,
-            name: row.name,
-            description: row.description,
-            members: row.members,
-            entrantEmails: row.entrantEmails,
-            projectUrl: row.projectUrl || undefined,
-            githubUrl: row.githubUrl || undefined,
-            ...(isDemoDay
-              ? { courseCode: row.courseCode || undefined }
-              : isHackathon
-                ? {
-                    track: row.track || undefined,
-                  }
-                : {}),
-          });
+        let teamId = row.createdTeamId;
+        if (!teamId) {
+          try {
+            teamId = (await onSubmit({
+              eventId,
+              name: row.name,
+              description: row.description,
+              members: row.members,
+              entrantEmails: row.entrantEmails,
+              projectUrl: row.projectUrl || undefined,
+              githubUrl: row.githubUrl || undefined,
+              ...(isDemoDay
+                ? { courseCode: row.courseCode || undefined }
+                : isHackathon
+                  ? {
+                      track: row.track || undefined,
+                    }
+                  : {}),
+            })) as Id<"teams">;
+          } catch (error: any) {
+            failures.push(
+              `Row ${row.rowNumber} (${row.name}): ${error?.message || `Failed to create ${label}`}`,
+            );
+            failedRows.push(row);
+            continue;
+          }
+        }
 
-          if (isHackathon && row.prizeIds.length > 0) {
+        if (isHackathon && row.prizeIds.length > 0) {
+          try {
             await setTeamPrizeSubmissionsAdmin({
               eventId,
               teamId,
               prizeIds: row.prizeIds,
             });
+          } catch (error: any) {
+            partialFailures.push(
+              `Row ${row.rowNumber} (${row.name}): ${error?.message || "Failed to save prize entries"}`,
+            );
+            failedRows.push({ ...row, createdTeamId: teamId });
+            continue;
           }
-
-          importedCount += 1;
-        } catch (error: any) {
-          failures.push(
-            `Row ${row.rowNumber} (${row.name}): ${error?.message || "Failed to import team"}`,
-          );
-          failedRows.push(row);
         }
+
+        importedCount += 1;
       }
 
+      const failedCount = failures.length + partialFailures.length;
       setCsvImportPlan(
-        failures.length === 0
+        failedCount === 0
           ? null
           : {
               fileName: csvImportPlan.fileName,
               rows: failedRows,
             },
       );
-      if (failures.length === 0 && fileInputRef.current) {
+      if (failedCount === 0 && fileInputRef.current) {
         fileInputRef.current.value = "";
       }
 
+      const plural = (n: number) => `${n} ${label}${n === 1 ? "" : "s"}`;
       setCsvImportNotice({
-        tone: failures.length === 0 ? "success" : "error",
+        tone: failedCount === 0 ? "success" : "error",
         summary:
-          failures.length === 0
-            ? `Imported ${importedCount} ${entityLabel.toLowerCase()}${importedCount === 1 ? "" : "s"} from ${csvImportPlan.fileName}.`
-            : `Imported ${importedCount} of ${csvImportPlan.rows.length} ${entityLabel.toLowerCase()}${csvImportPlan.rows.length === 1 ? "" : "s"} from ${csvImportPlan.fileName}.`,
+          failedCount === 0
+            ? `Imported ${plural(importedCount)} from ${csvImportPlan.fileName}.`
+            : `Imported ${importedCount} of ${plural(csvImportPlan.rows.length)} from ${csvImportPlan.fileName}.`,
         details: failures,
+        partialDetails: partialFailures,
       });
 
-      if (failures.length === 0) {
-        toast.success(
-          `Imported ${importedCount} ${entityLabel.toLowerCase()}${importedCount === 1 ? "" : "s"}.`,
-        );
+      if (failedCount === 0) {
+        toast.success(`Imported ${plural(importedCount)}.`);
       } else {
         toast.error(
-          `Imported ${importedCount} ${entityLabel.toLowerCase()}${importedCount === 1 ? "" : "s"}. ${failures.length} row${failures.length === 1 ? "" : "s"} failed.`,
+          `Imported ${plural(importedCount)}. ${failedCount} row${failedCount === 1 ? "" : "s"} need attention.`,
         );
       }
     } finally {
@@ -458,29 +516,43 @@ export function AddTeamPanel({
         }
         toast.success(`${entityLabel} updated successfully!`);
       } else {
-        teamId = await onSubmit({
-          eventId,
-          name,
-          description: formData.description.trim(),
-          members,
-          entrantEmails,
-          projectUrl: projectUrl || undefined,
-          githubUrl: githubUrl || undefined,
-          ...(isDemoDay
-            ? { courseCode: formData.courseCode || undefined }
-            : isHackathon
-              ? {
-                  track: formData.track || undefined,
-                }
-              : {}),
-        });
-        if (isHackathon) {
-          await setTeamPrizeSubmissionsAdmin({
+        if (createdTeamCheckpoint) {
+          // The team already exists from the previous attempt; only prizes are retried.
+          teamId = createdTeamCheckpoint.teamId;
+        } else {
+          teamId = await onSubmit({
             eventId,
-            teamId,
-            prizeIds: selectedPrizeIds as Id<"prizes">[],
+            name,
+            description: formData.description.trim(),
+            members,
+            entrantEmails,
+            projectUrl: projectUrl || undefined,
+            githubUrl: githubUrl || undefined,
+            ...(isDemoDay
+              ? { courseCode: formData.courseCode || undefined }
+              : isHackathon
+                ? {
+                    track: formData.track || undefined,
+                  }
+                : {}),
           });
         }
+        if (isHackathon) {
+          try {
+            await setTeamPrizeSubmissionsAdmin({
+              eventId,
+              teamId,
+              prizeIds: selectedPrizeIds as Id<"prizes">[],
+            });
+          } catch (error: any) {
+            setCreatedTeamCheckpoint({
+              teamId,
+              prizeError: error?.message || "Prize entries weren't saved.",
+            });
+            return;
+          }
+        }
+        setCreatedTeamCheckpoint(null);
         toast.success(`${entityLabel} added successfully!`);
       }
       onClose();
@@ -624,7 +696,11 @@ export function AddTeamPanel({
                       >
                         {importingCsv
                           ? "Importing..."
-                          : `Import ${csvImportPlan.rows.length} ${entityLabel}${csvImportPlan.rows.length === 1 ? "" : "s"}`}
+                          : csvImportPlan.rows.every((row) => row.createdTeamId)
+                            ? "Retry prize entries"
+                            : csvImportPlan.rows.some((row) => row.createdTeamId)
+                              ? `Retry ${csvImportPlan.rows.length} row${csvImportPlan.rows.length === 1 ? "" : "s"}`
+                              : `Import ${csvImportPlan.rows.length} ${entityLabel}${csvImportPlan.rows.length === 1 ? "" : "s"}`}
                       </button>
                       <button
                         type="button"
@@ -651,6 +727,7 @@ export function AddTeamPanel({
                 )}
                 {csvImportNotice && (
                   <div
+                    role={csvImportNotice.tone === "error" ? "alert" : "status"}
                     className={`rounded-lg border p-3 ${
                       csvImportNotice.tone === "error"
                         ? "border-red-500/30 bg-red-500/5"
@@ -663,27 +740,17 @@ export function AddTeamPanel({
                       {csvImportNotice.summary}
                     </p>
                     {csvImportNotice.details.length > 0 && (
-                      <div className="mt-2 space-y-1 text-xs fi-muted">
-                        {csvImportNotice.details
-                          .slice(0, MAX_VISIBLE_IMPORT_DETAILS)
-                          .map((detail) => (
-                            <p key={detail}>{detail}</p>
-                          ))}
-                        {csvImportNotice.details.length >
-                          MAX_VISIBLE_IMPORT_DETAILS && (
-                          <p>
-                            +
-                            {csvImportNotice.details.length -
-                              MAX_VISIBLE_IMPORT_DETAILS}{" "}
-                            more row
-                            {csvImportNotice.details.length -
-                              MAX_VISIBLE_IMPORT_DETAILS ===
-                            1
-                              ? ""
-                              : "s"}
-                          </p>
-                        )}
-                      </div>
+                      <ImportDetailGroup
+                        title={`Not created (${csvImportNotice.details.length})`}
+                        details={csvImportNotice.details}
+                      />
+                    )}
+                    {(csvImportNotice.partialDetails?.length ?? 0) > 0 && (
+                      <ImportDetailGroup
+                        title={`Created, but prizes not saved (${csvImportNotice.partialDetails!.length})`}
+                        hint={`These ${entityLabel.toLowerCase()}s exist. Retrying only saves their prize entries.`}
+                        details={csvImportNotice.partialDetails!}
+                      />
                     )}
                   </div>
                 )}
@@ -863,9 +930,8 @@ export function AddTeamPanel({
                               </div>
                             )}
                           {filteredPrizes.map((prize: any) => {
-                            const checked = selectedPrizeIds.includes(
-                              String(prize._id),
-                            );
+                            const automatic = isAutomaticPrize(prize);
+                            const checked = automatic || selectedPrizeIds.includes(String(prize._id));
                             return (
                               <label
                                 key={prize._id}
@@ -878,6 +944,7 @@ export function AddTeamPanel({
                                 <input
                                   type="checkbox"
                                   checked={checked}
+                                  disabled={automatic}
                                   onChange={(e) => {
                                     const id = String(prize._id);
                                     if (e.target.checked) {
@@ -897,6 +964,7 @@ export function AddTeamPanel({
                                 <div className="flex-1">
                                   <p className="text-sm font-medium fi-ink">
                                     {prize.name}
+                                    {automatic && <span className="ml-2 text-xs fi-muted">Entered automatically</span>}
                                   </p>
                                   <p className="text-xs fi-muted">
                                     {prize.type === "general" &&
@@ -919,12 +987,26 @@ export function AddTeamPanel({
                         </div>
                       </div>
                       <p className="mt-2 text-xs fi-muted">
-                        Select every prize this team is applying for.
+                        Track-linked automatic entries are included. Select any additional prizes this team is applying for.
                       </p>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">{renderUrlFields()}</div>
+                )}
+                {createdTeamCheckpoint && !editingTeam && (
+                  <InlineFailure
+                    title={`${entityLabel} created, but prizes not saved`}
+                    onDismiss={() => {
+                      setCreatedTeamCheckpoint(null);
+                      onClose();
+                    }}
+                  >
+                    <p className="inline-failure-body">
+                      {createdTeamCheckpoint.prizeError} The {entityLabel.toLowerCase()} already exists;
+                      saving again only updates its prize entries.
+                    </p>
+                  </InlineFailure>
                 )}
                 <div className="flex gap-3 pt-2">
                   <button
@@ -939,6 +1021,8 @@ export function AddTeamPanel({
                       </span>
                     ) : editingTeam ? (
                       "Save Changes"
+                    ) : createdTeamCheckpoint ? (
+                      "Retry prize entries"
                     ) : (
                       `Create ${entityLabel}`
                     )}

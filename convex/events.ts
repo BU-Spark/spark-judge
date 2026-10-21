@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { query, mutation, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
@@ -20,6 +20,7 @@ import {
   isCodeAndTellMode,
   isHackathonMode,
 } from "./eventModes";
+import { insertInitialPrizes, PRIZE_INPUT_VALIDATOR } from "./prizes";
 
 const EVENT_MODE_VALIDATOR = v.union(
   v.literal("hackathon"),
@@ -311,52 +312,84 @@ export const getJudgeStatus = query({
   },
 });
 
+const CREATE_EVENT_ARGS = {
+  name: v.string(),
+  description: v.optional(v.string()),
+  status: v.union(
+    v.literal("upcoming"),
+    v.literal("active"),
+    v.literal("past"),
+  ),
+  startDate: v.number(),
+  endDate: v.number(),
+  categories: v.array(
+    v.object({
+      name: v.string(),
+      weight: v.number(),
+      optOutAllowed: v.optional(v.boolean()),
+    }),
+  ),
+  tracks: v.optional(v.array(v.string())),
+  judgeCode: v.optional(v.string()),
+  enableCohorts: v.optional(v.boolean()),
+  mode: v.optional(EVENT_MODE_VALIDATOR),
+  courseCodes: v.optional(v.array(v.string())),
+};
+
+type CreateEventArgs = ObjectType<typeof CREATE_EVENT_ARGS>;
+
+async function insertEvent(ctx: MutationCtx, args: CreateEventArgs) {
+  if (args.startDate >= args.endDate) {
+    throw new Error("End date must be after start date");
+  }
+
+  const computedStatus = computeEventStatus({
+    startDate: args.startDate,
+    endDate: args.endDate,
+  });
+
+  return await ctx.db.insert("events", {
+    ...args,
+    description: args.description ?? "",
+    status: computedStatus,
+    resultsReleased: false,
+    ...(args.mode === "code_and_tell" ? { codeAndTellPhase: "submissions" as const } : {}),
+    mode: getEventMode(args.mode),
+  });
+}
+
 export const createEvent = mutation({
-  args: {
-    name: v.string(),
-    description: v.optional(v.string()),
-    status: v.union(
-      v.literal("upcoming"),
-      v.literal("active"),
-      v.literal("past"),
-    ),
-    startDate: v.number(),
-    endDate: v.number(),
-    categories: v.array(
-      v.object({
-        name: v.string(),
-        weight: v.number(),
-        optOutAllowed: v.optional(v.boolean()),
-      }),
-    ),
-    tracks: v.optional(v.array(v.string())),
-    judgeCode: v.optional(v.string()),
-    enableCohorts: v.optional(v.boolean()),
-    mode: v.optional(EVENT_MODE_VALIDATOR),
-    courseCodes: v.optional(v.array(v.string())),
-  },
+  args: CREATE_EVENT_ARGS,
   returns: v.id("events"),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    return await insertEvent(ctx, args);
+  },
+});
 
-    if (args.startDate >= args.endDate) {
-      throw new Error("End date must be after start date");
+/**
+ * Creates an event and its initial prize catalog in one transaction. If any
+ * prize fails validation, the event is not created either, so a retry can
+ * never produce a duplicate event.
+ */
+export const createEventWithPrizes = mutation({
+  args: {
+    ...CREATE_EVENT_ARGS,
+    prizes: v.array(PRIZE_INPUT_VALIDATOR),
+  },
+  returns: v.id("events"),
+  handler: async (ctx, args) => {
+    const adminId = await requireAdmin(ctx);
+    const { prizes, ...eventArgs } = args;
+    if (prizes.length > 0 && !isHackathonMode(eventArgs.mode)) {
+      throw new Error("Prizes are only supported for hackathon events");
     }
-
-    const computedStatus = computeEventStatus({
-      startDate: args.startDate,
-      endDate: args.endDate,
-    });
-
-    const eventId = await ctx.db.insert("events", {
-      ...args,
-      description: args.description ?? "",
-      status: computedStatus,
-      resultsReleased: false,
-      ...(args.mode === "code_and_tell" ? { codeAndTellPhase: "submissions" as const } : {}),
-      mode: getEventMode(args.mode),
-    });
-
+    const eventId = await insertEvent(ctx, eventArgs);
+    if (prizes.length > 0) {
+      const event = await ctx.db.get(eventId);
+      if (!event) throw new Error("Event not found");
+      await insertInitialPrizes(ctx, event, prizes, adminId);
+    }
     return eventId;
   },
 });
@@ -691,6 +724,7 @@ export const duplicateEvent = mutation({
         description: prize.description,
         type: prize.type,
         track: prize.track,
+        entryMode: prize.entryMode,
         sponsorName: prize.sponsorName,
         scoreBasis: prize.scoreBasis,
         scoreCategoryNames: prize.scoreCategoryNames,
@@ -849,6 +883,71 @@ export const updateEventCategories = mutation({
   },
 });
 
+/**
+ * Saves rubric categories, cohort setting, and judge code together. Convex
+ * commits all three or none, so organizers never see a half-applied setup.
+ */
+export const updateJudgingSettings = mutation({
+  args: {
+    eventId: v.id("events"),
+    categories: v.array(
+      v.object({
+        name: v.string(),
+        weight: v.number(),
+        optOutAllowed: v.optional(v.boolean()),
+      }),
+    ),
+    enableCohorts: v.boolean(),
+    judgeCode: v.union(v.string(), v.null()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event) throw new Error("Event not found");
+    if (!isHackathonMode(event.mode)) {
+      throw new Error("Judging settings are only available for hackathon events");
+    }
+    if (event.scoringLockedAt) {
+      throw new Error("Judging settings are locked while scoring is locked");
+    }
+    const existingScore = await ctx.db
+      .query("scores")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .first();
+    if (existingScore) {
+      throw new Error("Judging settings are locked once scoring has started");
+    }
+
+    const categories = args.categories.map((category) => ({
+      ...category,
+      name: category.name.trim(),
+    }));
+    if (categories.length === 0 || categories.some((category) => !category.name)) {
+      throw new Error("Every judging category must have a name");
+    }
+    const names = new Set(categories.map((category) => category.name.toLowerCase()));
+    if (names.size !== categories.length) {
+      throw new Error("Judging category names must be unique");
+    }
+    if (categories.some((category) => !Number.isFinite(category.weight) || category.weight < 0)) {
+      throw new Error("Judging category weights must be zero or more");
+    }
+
+    const judgeCode = args.judgeCode?.trim() ?? "";
+    await ctx.db.patch(args.eventId, {
+      categories,
+      enableCohorts: args.enableCohorts,
+      judgeCode,
+    });
+    if (shouldInvalidateJudgeCodeState(event.judgeCode, judgeCode)) {
+      await invalidateJudgeCodeState(ctx, args.eventId);
+    }
+    return null;
+  },
+});
+
 export const updateEventCourseCodes = mutation({
   args: {
     eventId: v.id("events"),
@@ -890,6 +989,17 @@ export const updateEventCohorts = mutation({
   },
 });
 
+export function assertEventModeChangeAllowed(state: {
+  hasTeams: boolean;
+  hasActivity: boolean;
+}) {
+  if (state.hasTeams || state.hasActivity) {
+    throw new Error(
+      "Event format can't change once teams, projects, scores, ballots, or appreciations exist. Clone the event to try another format.",
+    );
+  }
+}
+
 export const updateEventMode = mutation({
   args: {
     eventId: v.id("events"),
@@ -910,24 +1020,30 @@ export const updateEventMode = mutation({
       return null;
     }
 
-    if (isCodeAndTellMode(currentMode) || isCodeAndTellMode(nextMode)) {
-      const [teams, rankedVotes] = await Promise.all([
-        ctx.db
-          .query("teams")
-          .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
-          .collect(),
-        ctx.db
-          .query("rankedVotes")
-          .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
-          .collect(),
-      ]);
-
-      if (teams.length > 0 || rankedVotes.length > 0) {
-        throw new Error(
-          "Code & Tell mode cannot be switched once projects or ballots exist for the event",
-        );
-      }
-    }
+    // Changing format reinterprets teams, scores, ballots, and appreciations,
+    // so it is only allowed while the event is still empty.
+    const [team, score, ballot, appreciation] = await Promise.all([
+      ctx.db
+        .query("teams")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+        .first(),
+      ctx.db
+        .query("scores")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+        .first(),
+      ctx.db
+        .query("rankedVotes")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+        .first(),
+      ctx.db
+        .query("appreciations")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+        .first(),
+    ]);
+    assertEventModeChangeAllowed({
+      hasTeams: team !== null,
+      hasActivity: score !== null || ballot !== null || appreciation !== null,
+    });
 
     const updates: {
       mode: typeof nextMode;

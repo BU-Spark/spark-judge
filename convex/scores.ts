@@ -9,6 +9,7 @@ import {
   requireAdmin,
 } from "./helpers";
 import { isDemoDayMode, isHackathonMode } from "./eventModes";
+import { assertResultsReady } from "./resultPublication";
 
 type EventCategory = {
   name: string;
@@ -409,10 +410,11 @@ export const getEventScores = query({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
     const userIsAdmin = await isAdmin(ctx);
-    if (!userIsAdmin) return null;
-
     const event = await ctx.db.get(args.eventId);
     if (!event || !isHackathonMode(event.mode)) return null;
+    if (!userIsAdmin && (
+      !event.resultsReleased || computeEventStatus(event) !== "past" || !(await canAccessEvent(ctx, event))
+    )) return null;
 
     const scores = await ctx.db
       .query("scores")
@@ -424,7 +426,7 @@ export const getEventScores = query({
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
 
-    const teamScores = teams.map((team) => {
+    const teamScores = teams.filter((team) => userIsAdmin || !team.hidden).map((team) => {
       const teamScoresList = scores.filter((s) => s.teamId === team._id);
       const avgTotal =
         teamScoresList.length > 0
@@ -432,6 +434,11 @@ export const getEventScores = query({
             teamScoresList.length
           : 0;
 
+      if (!userIsAdmin) return {
+        team: { _id: team._id, name: team.name },
+        averageScore: avgTotal,
+        judgeCount: teamScoresList.length,
+      };
       return {
         team,
         averageScore: avgTotal,
@@ -463,6 +470,7 @@ export const setWinners = mutation({
     if (!isDemoDayMode(event.mode)) {
       throw new Error("Winner selection is only available for Demo Day events");
     }
+    if (event.resultsReleased) throw new Error("Withdraw results before changing winners");
 
     const eventTeamIds = new Set(
       (
@@ -470,14 +478,20 @@ export const setWinners = mutation({
           .query("teams")
           .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
           .collect()
-      ).map((team) => team._id),
+      ).filter((team) => !team.hidden).map((team) => team._id),
     );
 
     if (!eventTeamIds.has(args.overallWinner)) {
       throw new Error("Overall winner must be a team in this event");
     }
 
+    const categoryNames = new Set(event.categories.map((category) => category.name));
+    const seenCategories = new Set<string>();
     for (const winner of args.categoryWinners) {
+      if (!categoryNames.has(winner.category) || seenCategories.has(winner.category)) {
+        throw new Error("Category winners must use unique event categories");
+      }
+      seenCategories.add(winner.category);
       if (!eventTeamIds.has(winner.teamId)) {
         throw new Error(
           `Category winner for ${winner.category} must be a team in this event`,
@@ -499,14 +513,22 @@ export const releaseResults = mutation({
 
     const event = await ctx.db.get(args.eventId);
     if (!event) throw new Error("Event not found");
-    if (isHackathonMode(event.mode) && !event.scoringLockedAt) {
-      throw new Error("Lock scoring before releasing results");
-    }
     if (!isHackathonMode(event.mode) && !isDemoDayMode(event.mode)) {
       throw new Error("Release results from the mode-specific workflow");
     }
-
+    if (event.resultsReleased) return;
+    await assertResultsReady(ctx, event);
     await ctx.db.patch(args.eventId, { resultsReleased: true });
+  },
+});
+
+export const withdrawResults = mutation({
+  args: { eventId: v.id("events") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const event = await ctx.db.get(args.eventId);
+    if (!event) throw new Error("Event not found");
+    await ctx.db.patch(args.eventId, { resultsReleased: false });
   },
 });
 
@@ -644,6 +666,7 @@ export const getDetailedEventScores = query({
       const judgeScores = scores.filter((s) => s.judgeId === j._id);
       const judgeInfo = judgeMap.get(j._id);
       return {
+        judgeId: j._id,
         judgeName: judgeInfo?.name || "Unknown",
         isAdmin: judgeInfo?.isAdmin || false,
         teamsScored: judgeScores.length,

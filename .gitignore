@@ -35,3 +35,7 @@ docs/
 
 # Local design-decision server process state
 .impeccable/questions/
+
+# Local screenshots and audit output
+output/
+audits/

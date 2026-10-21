@@ -32,6 +32,7 @@ import {
   toRecoverableFailure,
   type RecoverableFailure,
 } from "../../lib/operationOutcome";
+import { requestSignIn as requestSignInDialog } from "../../lib/signIn";
 
 const BALLOT_DRAFT_WORKFLOW = "code-and-tell-ballot";
 const BALLOT_DRAFT_SCHEMA = 1;
@@ -678,7 +679,7 @@ export function CodeAndTellBallotView({
   const requestSignIn = () => {
     if (onPreviewSignIn) onPreviewSignIn();
     else if (onSignIn) onSignIn();
-    else window.dispatchEvent(new CustomEvent("hackjudge:open-signin"));
+    else requestSignInDialog();
   };
 
   const renderBallot = () => !loggedInUser ? (

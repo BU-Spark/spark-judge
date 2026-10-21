@@ -17,12 +17,9 @@ import {
 } from "./home/EventStage";
 import { getStagePreview } from "../lib/eventStagePreview";
 import "./home/event-stage.css";
+import { requestSignIn } from "../lib/signIn";
 
 type LandingEvent = StageEvent;
-export function requestSignIn() {
-  window.dispatchEvent(new CustomEvent("hackjudge:open-signin"));
-}
-
 export function LandingPage({
   onSelectEvent,
 }: {

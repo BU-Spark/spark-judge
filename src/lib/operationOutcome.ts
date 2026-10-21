@@ -66,7 +66,8 @@ const DEFAULT_COPY: Record<FailureCategory, string> = {
   unexpected: "Something went wrong. Your changes are kept; try again.",
 };
 
-function makeReference(): string {
+/** Short support reference shown to users and logged with the failure. */
+export function makeReference(): string {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 

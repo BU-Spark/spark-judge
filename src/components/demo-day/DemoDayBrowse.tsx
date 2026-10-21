@@ -16,6 +16,7 @@ import {
   HeartIcon,
   DirectionIcon,
 } from "../participation/ParticipationChrome";
+import { requestSignIn } from "../../lib/signIn";
 
 type DemoTeam = {
   _id: Id<"teams">;
@@ -138,7 +139,7 @@ export function DemoDayBrowseView({
 
   const appreciateTeam = async (team: DemoTeam) => {
     if (appreciation.isAuthenticated === false) {
-      window.dispatchEvent(new CustomEvent("hackjudge:open-signin"));
+      requestSignIn();
       return;
     }
     const count = Math.max(

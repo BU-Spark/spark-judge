@@ -1,5 +1,6 @@
-function pad(value: number) {
-  return String(value).padStart(2, "0");
+/** Two-digit zero padding for clock and date parts; negatives clamp to 00. */
+export function pad2(value: number) {
+  return String(Math.max(0, value)).padStart(2, "0");
 }
 
 export function parseDateTimeInput(value: string) {
@@ -36,7 +37,7 @@ export function parseDateTimeInput(value: string) {
 export function formatDateTimeInput(value: number | Date) {
   const date = value instanceof Date ? value : new Date(value);
 
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 }
 
 export function getAutoAdjustedEndDateTime(

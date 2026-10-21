@@ -6,6 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import { DirectionIcon } from "../participation/ParticipationChrome";
 import { SignInDialog } from "../auth/SignInDialog";
 import "./homepage-workspace.css";
+import { OPEN_SIGN_IN_EVENT } from "../../lib/signIn";
 
 export function PlatformHeader({ homepage = false }: { homepage?: boolean }) {
   const user = useQuery(api.auth.loggedInUser);
@@ -17,8 +18,8 @@ export function PlatformHeader({ homepage = false }: { homepage?: boolean }) {
   const toggleRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const open = () => setSignInOpen(true);
-    window.addEventListener("hackjudge:open-signin", open);
-    return () => window.removeEventListener("hackjudge:open-signin", open);
+    window.addEventListener(OPEN_SIGN_IN_EVENT, open);
+    return () => window.removeEventListener(OPEN_SIGN_IN_EVENT, open);
   }, []);
   useEffect(() => {
     if (user) setSignInOpen(false);

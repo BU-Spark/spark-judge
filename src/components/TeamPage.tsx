@@ -16,6 +16,7 @@ import { LoadingState } from "./ui/LoadingState";
 import { ErrorState } from "./ui/ErrorState";
 import { DirectionIcon, HeartIcon } from "./participation/ParticipationChrome";
 import { Link, useNavigate } from "react-router-dom";
+import { requestSignIn } from "../lib/signIn";
 
 type ProjectTeam = NonNullable<
   FunctionReturnType<typeof api.teams.getTeamById>
@@ -278,7 +279,7 @@ function AppreciationSection({
 
   const handleAppreciate = async () => {
     if (signedOut) {
-      window.dispatchEvent(new CustomEvent("hackjudge:open-signin"));
+      requestSignIn();
       return;
     }
     if (!canAppreciate || pending || isLoading) return;

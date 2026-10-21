@@ -13,18 +13,12 @@ import { DemoDayBrowse } from "./demo-day";
 import { JudgeCodeModal } from "./JudgeCodeModal";
 import { getEventDisplayLabel, getEventMode } from "../lib/eventModes";
 import { formatDateTime } from "../lib/utils";
+import { pad2 } from "../lib/dateTimeInput";
 import { MODE_THEME } from "./home/modeTheme";
 import { toast } from "sonner";
 import "./EventView.fi.css";
 import "./participation/participation.css";
-
-function pad2(n: number): string {
-  return String(Math.max(0, n)).padStart(2, "0");
-}
-
-function requestSignIn() {
-  window.dispatchEvent(new CustomEvent("hackjudge:open-signin"));
-}
+import { requestSignIn } from "../lib/signIn";
 
 function IdleSteps({ count = 8 }: { count?: number }) {
   return (

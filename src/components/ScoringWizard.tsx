@@ -17,8 +17,10 @@ import {
   safeGetItem,
   writeDraft,
 } from "../lib/draftStorage";
+import { pad2 } from "../lib/dateTimeInput";
 import {
   SCORING_DRAFT_SCHEMA,
+  isRecord,
   isScoringDraft,
   parseLegacyDraft,
   scoringDraftKey,
@@ -169,17 +171,9 @@ function isTeamFullyAnswered(
   return countUnanswered(teamScores, categories) === 0;
 }
 
-function pad2(n: number): string {
-  return String(Math.max(0, n)).padStart(2, "0");
-}
-
 function formatDraftTime(timestamp: number): string {
   const d = new Date(timestamp);
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {

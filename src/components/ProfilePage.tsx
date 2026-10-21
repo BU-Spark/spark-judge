@@ -9,6 +9,7 @@ import { useState } from "react";
 import { getEventDisplayLabel } from "../lib/eventModes";
 import { DirectionIcon } from "./participation/ParticipationChrome";
 import "./ProfilePage.fi.css";
+import { requestSignIn } from "../lib/signIn";
 
 interface ProfilePageProps {
   onSelectEvent: (eventId: Id<"events">) => void;
@@ -48,7 +49,7 @@ export function ProfilePageView({
           <button
             className="pp-primary"
             onClick={() =>
-              window.dispatchEvent(new CustomEvent("hackjudge:open-signin"))
+              requestSignIn()
             }
           >
             Sign in <DirectionIcon />

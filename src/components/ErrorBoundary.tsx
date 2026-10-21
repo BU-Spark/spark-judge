@@ -1,5 +1,5 @@
 import { Component, ReactNode } from "react";
-import { reportFailure } from "../lib/operationOutcome";
+import { makeReference, reportFailure } from "../lib/operationOutcome";
 
 type FallbackRender = (props: { reference: string; reset: () => void }) => ReactNode;
 
@@ -14,10 +14,6 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean;
   reference?: string;
-}
-
-function makeReference(): string {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
 /**

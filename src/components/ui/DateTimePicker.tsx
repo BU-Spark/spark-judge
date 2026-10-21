@@ -9,6 +9,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
+import { formatDateTimeInput, pad2, parseDateTimeInput } from "@/lib/dateTimeInput";
 
 import { CalendarIcon } from "./AppIcons";
 
@@ -24,53 +25,8 @@ type DateTimePickerProps = {
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour);
 
-function pad(value: number) {
-  return String(value).padStart(2, "0");
-}
-
-function parseDateTimeValue(value: string) {
-  if (!value) return null;
-
-  const match = value.match(
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/
-  );
-
-  if (!match) return null;
-
-  const [, year, month, day, hour, minute] = match;
-  const parsed = new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hour),
-    Number(minute),
-    0,
-    0
-  );
-
-  if (
-    parsed.getFullYear() !== Number(year) ||
-    parsed.getMonth() !== Number(month) - 1 ||
-    parsed.getDate() !== Number(day) ||
-    parsed.getHours() !== Number(hour) ||
-    parsed.getMinutes() !== Number(minute)
-  ) {
-    return null;
-  }
-
-  return parsed;
-}
-
-function formatDateValue(date: Date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
 function formatTimeValue(date: Date) {
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function formatDateTimeValue(date: Date) {
-  return `${formatDateValue(date)}T${formatTimeValue(date)}`;
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 }
 
 function roundToStep(date: Date, stepMinutes: number) {
@@ -137,7 +93,7 @@ export function DateTimePicker({
   const timePopoverRef = useRef<HTMLDivElement>(null);
   const hourListRef = useRef<HTMLDivElement>(null);
   const minuteListRef = useRef<HTMLDivElement>(null);
-  const selectedDate = useMemo(() => parseDateTimeValue(value), [value]);
+  const selectedDate = useMemo(() => parseDateTimeInput(value), [value]);
   const fallbackDate = useMemo(
     () => roundToStep(new Date(), stepMinutes),
     [stepMinutes]
@@ -295,7 +251,7 @@ export function DateTimePicker({
   const selectedMinute = selectedDate?.getMinutes() ?? fallbackDate.getMinutes();
 
   const updateDate = (nextDate: Date) => {
-    onChange(formatDateTimeValue(nextDate));
+    onChange(formatDateTimeInput(nextDate));
   };
 
   const handleSelectDay = (day: Date) => {
@@ -532,7 +488,7 @@ export function DateTimePicker({
                           : "fi-ink hover:bg-muted"
                       )}
                     >
-                      {pad(hour)}
+                      {pad2(hour)}
                     </button>
                   ))}
                 </div>
@@ -559,7 +515,7 @@ export function DateTimePicker({
                           : "fi-ink hover:bg-muted"
                       )}
                     >
-                      {pad(minute)}
+                      {pad2(minute)}
                     </button>
                   ))}
                 </div>

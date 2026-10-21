@@ -27,22 +27,16 @@ function InsightCard({ label, value, subtitle }: InsightCardProps) {
 }
 
 export function AdminInsightsRoute() {
-  const latestEvent = useQuery(api.events.getDefaultEventForInsights);
-  const insights = useQuery(
-    api.events.getAdminInsights,
-    latestEvent
-      ? {
-          eventId: latestEvent.eventId,
-          paginationOpts: { numItems: 256, cursor: null },
-        }
-      : "skip"
-  );
+  // With no eventId, the server picks the most relevant active, upcoming, or past event.
+  const insights = useQuery(api.events.getAdminInsights, {
+    paginationOpts: { numItems: 256, cursor: null },
+  });
 
-  if (latestEvent === undefined || (latestEvent && insights === undefined)) {
+  if (insights === undefined) {
     return <LoadingState label="Loading platform insights..." />;
   }
 
-  if (!latestEvent || !insights) {
+  if (!insights) {
     return (
       <ErrorState
         title="Insights unavailable"
@@ -59,7 +53,7 @@ export function AdminInsightsRoute() {
             Platform Insights
           </h1>
           <p className="text-sm fi-muted">
-            Snapshot for {latestEvent.eventName}.
+            Snapshot for {insights.eventName}.
           </p>
         </div>
         <Link

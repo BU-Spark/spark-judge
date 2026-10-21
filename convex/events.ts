@@ -1262,6 +1262,7 @@ export const getAdminInsights = query({
   returns: v.union(
     v.null(),
     v.object({
+      eventName: v.string(),
       totalEvents: v.number(),
       upcomingEvents: v.number(),
       activeEvents: v.number(),
@@ -1368,6 +1369,7 @@ export const getAdminInsights = query({
     } while (appreciationsCursor !== null);
 
     return {
+      eventName: event.name,
       totalEvents: 1,
       upcomingEvents: eventStatus === "upcoming" ? 1 : 0,
       activeEvents: eventStatus === "active" ? 1 : 0,

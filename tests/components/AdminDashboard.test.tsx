@@ -10,9 +10,6 @@ import { AdminInsightsRoute } from "@/features/admin/routes/AdminInsightsRoute";
 
 const mockLoggedInUser = vi.hoisted(() => ({ _name: "loggedInUser" }));
 const mockIsUserAdmin = vi.hoisted(() => ({ _name: "isUserAdmin" }));
-const mockGetDefaultEventForInsights = vi.hoisted(() => ({
-  _name: "getDefaultEventForInsights",
-}));
 const mockGetAdminInsights = vi.hoisted(() => ({ _name: "getAdminInsights" }));
 
 const queryResults = vi.hoisted(() => new Map<string, unknown>());
@@ -36,20 +33,6 @@ vi.mock("../../convex/_generated/api", () => ({
     },
     events: {
       isUserAdmin: mockIsUserAdmin,
-      getDefaultEventForInsights: mockGetDefaultEventForInsights,
-      getAdminInsights: mockGetAdminInsights,
-    },
-  },
-}));
-
-vi.mock("../../../../convex/_generated/api", () => ({
-  api: {
-    auth: {
-      loggedInUser: mockLoggedInUser,
-    },
-    events: {
-      isUserAdmin: mockIsUserAdmin,
-      getDefaultEventForInsights: mockGetDefaultEventForInsights,
       getAdminInsights: mockGetAdminInsights,
     },
   },
@@ -87,6 +70,7 @@ function renderAdmin(path: string) {
 
 describe("Unified Admin Workspace Routing", () => {
   const mockInsights = {
+    eventName: "Spring Showcase",
     totalEvents: 5,
     upcomingEvents: 2,
     activeEvents: 1,
@@ -156,10 +140,6 @@ describe("Unified Admin Workspace Routing", () => {
   it("navigates to insights route from admin home", () => {
     queryResults.set("loggedInUser", { _id: "user123" });
     queryResults.set("isUserAdmin", true);
-    queryResults.set("getDefaultEventForInsights", {
-      eventId: "event123",
-      eventName: "Spring Showcase",
-    });
     queryResults.set("getAdminInsights", mockInsights);
 
     renderAdmin("/admin");
@@ -172,10 +152,6 @@ describe("Unified Admin Workspace Routing", () => {
   it("navigates back to admin home from insights page", () => {
     queryResults.set("loggedInUser", { _id: "user123" });
     queryResults.set("isUserAdmin", true);
-    queryResults.set("getDefaultEventForInsights", {
-      eventId: "event123",
-      eventName: "Spring Showcase",
-    });
     queryResults.set("getAdminInsights", mockInsights);
 
     renderAdmin("/admin/insights");
@@ -188,7 +164,7 @@ describe("Unified Admin Workspace Routing", () => {
   it("renders admin insights loading state", () => {
     queryResults.set("loggedInUser", { _id: "user123" });
     queryResults.set("isUserAdmin", true);
-    queryResults.set("getDefaultEventForInsights", undefined);
+    queryResults.set("getAdminInsights", undefined);
 
     renderAdmin("/admin/insights");
 
@@ -198,10 +174,6 @@ describe("Unified Admin Workspace Routing", () => {
   it("renders neutral unavailable message when insights are null", () => {
     queryResults.set("loggedInUser", { _id: "user123" });
     queryResults.set("isUserAdmin", true);
-    queryResults.set("getDefaultEventForInsights", {
-      eventId: "event123",
-      eventName: "Spring Showcase",
-    });
     queryResults.set("getAdminInsights", null);
 
     renderAdmin("/admin/insights");
@@ -215,10 +187,6 @@ describe("Unified Admin Workspace Routing", () => {
   it("renders admin insights success state with real component", () => {
     queryResults.set("loggedInUser", { _id: "user123" });
     queryResults.set("isUserAdmin", true);
-    queryResults.set("getDefaultEventForInsights", {
-      eventId: "event123",
-      eventName: "Spring Showcase",
-    });
     queryResults.set("getAdminInsights", mockInsights);
 
     renderAdmin("/admin/insights");

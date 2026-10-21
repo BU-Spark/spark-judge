@@ -4,7 +4,7 @@ import {
   internalQuery,
   mutation,
 } from "./_generated/server";
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 import { requireAdmin } from "./helpers";
 import { internal } from "./_generated/api";
 import { isDemoDayMode } from "./eventModes";
@@ -1718,7 +1718,7 @@ export const listDemoDayImportSemesters = action({
   },
 });
 
-export const previewDemoDayImport: any = action({
+export const previewDemoDayImport = action({
   args: {
     eventId: v.id("events"),
     semester: v.string(),
@@ -1727,7 +1727,7 @@ export const previewDemoDayImport: any = action({
     projectsCsv: v.optional(v.string()),
   },
   returns: importPreviewReturnValidator,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Infer<typeof importPreviewReturnValidator>> => {
     await ctx.runQuery(internal.demoDayImport.requireDemoDayImportAdmin, {});
 
     try {
@@ -1766,7 +1766,7 @@ export const previewDemoDayImport: any = action({
   },
 });
 
-export const applyDemoDayImport: any = action({
+export const applyDemoDayImport = action({
   args: {
     eventId: v.id("events"),
     semester: v.string(),
@@ -1775,7 +1775,7 @@ export const applyDemoDayImport: any = action({
     projectsCsv: v.optional(v.string()),
   },
   returns: importPreviewReturnValidator,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Infer<typeof importPreviewReturnValidator>> => {
     await ctx.runQuery(internal.demoDayImport.requireDemoDayImportAdmin, {});
 
     try {
@@ -1814,14 +1814,14 @@ export const applyDemoDayImport: any = action({
   },
 });
 
-export const previewBoardAssignmentCsv: any = action({
+export const previewBoardAssignmentCsv = action({
   args: {
     eventId: v.id("events"),
     csv: v.string(),
     manualMatches: v.optional(v.array(boardManualMatchValidator)),
   },
   returns: boardPreviewReturnValidator,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Infer<typeof boardPreviewReturnValidator>> => {
     await ctx.runQuery(internal.demoDayImport.requireDemoDayImportAdmin, {});
 
     const parsed = parseBoardAssignmentCsv(args.csv);
@@ -1838,7 +1838,7 @@ export const previewBoardAssignmentCsv: any = action({
   },
 });
 
-export const applyBoardAssignmentCsv: any = action({
+export const applyBoardAssignmentCsv = action({
   args: {
     eventId: v.id("events"),
     csv: v.string(),
@@ -1846,7 +1846,7 @@ export const applyBoardAssignmentCsv: any = action({
     createTeams: v.optional(v.array(boardCreateTeamValidator)),
   },
   returns: boardPreviewReturnValidator,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Infer<typeof boardPreviewReturnValidator>> => {
     await ctx.runQuery(internal.demoDayImport.requireDemoDayImportAdmin, {});
 
     const parsed = parseBoardAssignmentCsv(args.csv);

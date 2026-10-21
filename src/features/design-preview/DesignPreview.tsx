@@ -301,15 +301,14 @@ function CreateScreen({ direction }: { direction: Direction }) {
     );
   }
 
-  const heading = direction === "control" ? "Launch event" : direction === "festival" ? "Make some noise" : "Create event";
-  const subheading = direction === "control" ? "Set the foundation for a fair, successful evaluation." : direction === "festival" ? "Set the stage for a weekend worth remembering." : "Set the stage for something meaningful.";
+  const heading = direction === "control" ? "Launch event" : "Create event";
+  const subheading = direction === "control" ? "Set the foundation for a fair, successful evaluation." : "Set the stage for something meaningful.";
   return (
     <ScreenShell active="create" direction={direction}>
       <div className="dp-create-head">
         <span className="dp-kicker">New event</span>
         <h1>{heading}</h1>
         <p>{subheading}</p>
-        {direction === "festival" && <span className="dp-sticker">LET&apos;S GO!</span>}
       </div>
       <Steps direction={direction} />
       <div className="dp-create-layout">
@@ -324,7 +323,6 @@ function CreateScreen({ direction }: { direction: Direction }) {
           <div className="dp-form-actions"><button type="button" className="dp-secondary">Save draft</button><button type="button" className="dp-primary">Continue <Glyph name="arrow" /></button></div>
         </form>
         {direction === "control" && <aside className="dp-checklist"><span className="dp-kicker">Readiness checklist</span><h3>3 of 5 ready</h3>{["Event details", "Rubric defined", "Teams imported", "Judges invited", "Test scoring"].map((item, index) => <div key={item} className={index < 3 ? "is-done" : ""}><span><Glyph name={index < 3 ? "check" : "clock"} /></span>{item}<small>{index < 3 ? "Complete" : "Pending"}</small></div>)}</aside>}
-        {direction === "festival" && <aside className="dp-poster-preview"><span className="dp-tape">EVENT POSTER</span><div className="dp-burst">69</div><h3>CIVIC<br />FUTURES</h3><p>Build something that matters.</p><span className="dp-sticker">MAY 24</span></aside>}
         {direction === "gallery" && <aside className="dp-cover-preview"><ProjectArt mark="route" large /><small>Event cover preview</small><h3>Civic Futures</h3><p>A showcase of projects for stronger communities.</p></aside>}
       </div>
     </ScreenShell>
@@ -404,7 +402,7 @@ function ScoreScreen({ direction }: { direction: Direction }) {
   return (
     <ScreenShell active="score" direction={direction}>
       <div className="dp-score-head">
-        <div><span className="dp-kicker">{direction === "control" ? "Team dossier / GR-17" : direction === "festival" ? "Judging passport · Stop 5" : "Private scoring"}</span><h1>{direction === "control" ? "Team dossier" : direction === "festival" ? "Score GreenRoute" : "Score GreenRoute"}</h1><p>{direction === "control" ? "Review the evidence. Record a fair decision." : "Your scores stay private until you submit."}</p></div>
+        <div><span className="dp-kicker">{direction === "control" ? "Team dossier / GR-17" : "Private scoring"}</span><h1>{direction === "control" ? "Team dossier" : "Score GreenRoute"}</h1><p>{direction === "control" ? "Review the evidence. Record a fair decision." : "Your scores stay private until you submit."}</p></div>
         <Progress />
       </div>
       <div className="dp-score-layout">
@@ -414,7 +412,6 @@ function ScoreScreen({ direction }: { direction: Direction }) {
           <h2>GreenRoute</h2>
           <p>Smarter school commutes through real-time routing, community partnerships, and cleaner mobility.</p>
           <dl><div><dt>Team</dt><dd>Metropolis University</dd></div><div><dt>Track</dt><dd>Climate & mobility</dd></div><div><dt>Stack</dt><dd>React · Mapbox · Python</dd></div></dl>
-          {direction === "festival" && <span className="dp-sticker">CLEVER!</span>}
         </aside>
         <section className="dp-scoring-panel">
           <div className="dp-panel-title"><div><span className="dp-kicker">Weighted rubric</span><h2>{direction === "control" ? "Evaluation matrix" : "Rate each category"}</h2></div>{direction === "control" && <strong>73 / 100</strong>}</div>

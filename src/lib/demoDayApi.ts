@@ -141,7 +141,8 @@ async function executeTurnstile(): Promise<string> {
   }
 
   await loadTurnstileScript();
-  if (!window.turnstile) {
+  const turnstile = window.turnstile;
+  if (!turnstile) {
     throw new Error("Verification is unavailable");
   }
 
@@ -167,7 +168,7 @@ async function executeTurnstile(): Promise<string> {
       fn();
     };
 
-    widgetId = window.turnstile.render(container, {
+    widgetId = turnstile.render(container, {
       sitekey: siteKey,
       size: "invisible",
       action: "demo_day_appreciation",
@@ -177,7 +178,7 @@ async function executeTurnstile(): Promise<string> {
       "expired-callback": () =>
         settle(() => reject(new Error("Verification expired"))),
     });
-    window.turnstile.execute(widgetId);
+    turnstile.execute(widgetId);
   });
 }
 

@@ -4,6 +4,7 @@ import { CodeAndTellPreview } from "@/devRoutes";
 import { useMutation, useQuery } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { errorMessage } from "../lib/operationOutcome";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { JudgeCodeModal } from "./JudgeCodeModal";
@@ -122,7 +123,7 @@ export function LandingPage({
       toast.success("Successfully joined as judge!");
     } catch (error: unknown) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to join as judge",
+        errorMessage(error, "Failed to join as judge"),
       );
     } finally {
       setJoiningEvents((prev) => {

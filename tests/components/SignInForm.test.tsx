@@ -28,7 +28,7 @@ describe("SignInForm", () => {
     fireEvent.click(pending);
     expect(signIn).toHaveBeenCalledOnce();
     expect(signIn).toHaveBeenCalledWith("google", {
-      redirectTo: window.location.origin,
+      redirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}`,
     });
     resolve!();
     await waitFor(() =>

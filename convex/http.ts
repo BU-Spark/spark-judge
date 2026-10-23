@@ -126,6 +126,133 @@ async function verifyTurnstileToken({
   );
 }
 
+const MAX_ID_LENGTH = 64;
+const MAX_CLIENT_KEY_LENGTH = 128;
+const MAX_TURNSTILE_TOKEN_LENGTH = 2048;
+const MAX_USER_AGENT_LENGTH = 512;
+const MAX_SIGNAL_TEXT_LENGTH = 64;
+const LOCATION_STATUSES = [
+  "in_range",
+  "out_of_range",
+  "denied",
+  "unavailable",
+  "inaccurate",
+  "unknown",
+] as const;
+
+type LocationPayload = {
+  status: (typeof LOCATION_STATUSES)[number];
+  latitude?: number;
+  longitude?: number;
+  accuracyMeters?: number;
+};
+
+type ClientSignalsPayload = {
+  webdriver?: boolean;
+  isLikelyMobile?: boolean;
+  userAgentDataMobile?: boolean;
+  viewportWidth?: number;
+  viewportHeight?: number;
+  language?: string;
+  timezone?: string;
+};
+
+export type AppreciationRequestBody = {
+  eventId: string;
+  teamId: string;
+  attendeeId: string;
+  fingerprintKey: string;
+  turnstileToken?: string;
+  location?: LocationPayload;
+  clientSignals?: ClientSignalsPayload;
+};
+
+function boundedString(value: unknown, maxLength: number): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed && trimmed.length <= maxLength ? trimmed : undefined;
+}
+
+function finiteInRange(value: unknown, min: number, max: number): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max
+    ? value
+    : undefined;
+}
+
+function optionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
+/**
+ * Location coordinates come from the browser and cannot prove attendance.
+ * Out-of-range values are dropped so the server treats them as unavailable.
+ */
+function parseLocation(value: unknown): LocationPayload | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Record<string, unknown>;
+  const status = LOCATION_STATUSES.find((candidate) => candidate === raw.status);
+  if (!status) return undefined;
+  const latitude = finiteInRange(raw.latitude, -90, 90);
+  const longitude = finiteInRange(raw.longitude, -180, 180);
+  const accuracyMeters = finiteInRange(raw.accuracyMeters, 0, 1_000_000);
+  const hasCoordinates = latitude !== undefined && longitude !== undefined;
+  return {
+    status,
+    ...(hasCoordinates ? { latitude, longitude } : {}),
+    ...(accuracyMeters !== undefined ? { accuracyMeters } : {}),
+  };
+}
+
+function parseClientSignals(value: unknown): ClientSignalsPayload | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Record<string, unknown>;
+  const signals: ClientSignalsPayload = {
+    webdriver: optionalBoolean(raw.webdriver),
+    isLikelyMobile: optionalBoolean(raw.isLikelyMobile),
+    userAgentDataMobile: optionalBoolean(raw.userAgentDataMobile),
+    viewportWidth: finiteInRange(raw.viewportWidth, 0, 100_000),
+    viewportHeight: finiteInRange(raw.viewportHeight, 0, 100_000),
+    language: boundedString(raw.language, MAX_SIGNAL_TEXT_LENGTH),
+    timezone: boundedString(raw.timezone, MAX_SIGNAL_TEXT_LENGTH),
+  };
+  // Convex values cannot hold `undefined`, so drop unset fields.
+  return Object.fromEntries(
+    Object.entries(signals).filter(([, entry]) => entry !== undefined),
+  ) as ClientSignalsPayload;
+}
+
+/** Validates the untrusted request body, capping every client-supplied string. */
+export function parseAppreciationRequestBody(
+  body: unknown,
+): AppreciationRequestBody | null {
+  if (!body || typeof body !== "object") return null;
+  const raw = body as Record<string, unknown>;
+  const eventId = boundedString(raw.eventId, MAX_ID_LENGTH);
+  const teamId = boundedString(raw.teamId, MAX_ID_LENGTH);
+  const attendeeId = boundedString(raw.attendeeId, MAX_CLIENT_KEY_LENGTH);
+  const fingerprintKey = boundedString(raw.fingerprintKey, MAX_CLIENT_KEY_LENGTH);
+  if (!eventId || !teamId || !attendeeId || !fingerprintKey) return null;
+  if (
+    raw.turnstileToken !== undefined &&
+    raw.turnstileToken !== null &&
+    !boundedString(raw.turnstileToken, MAX_TURNSTILE_TOKEN_LENGTH)
+  ) {
+    return null;
+  }
+  const turnstileToken = boundedString(raw.turnstileToken, MAX_TURNSTILE_TOKEN_LENGTH);
+  const location = parseLocation(raw.location);
+  const clientSignals = parseClientSignals(raw.clientSignals);
+  return {
+    eventId,
+    teamId,
+    attendeeId,
+    fingerprintKey,
+    ...(turnstileToken ? { turnstileToken } : {}),
+    ...(location ? { location } : {}),
+    ...(clientSignals ? { clientSignals } : {}),
+  };
+}
+
 /**
  * POST /demo-day/appreciations
  * Create a new appreciation for a team in Demo Day mode.
@@ -157,7 +284,26 @@ http.route({
           { status: 401, headers },
         );
       }
-      const body = await req.json();
+      let body: unknown;
+      try {
+        body = await req.json();
+      } catch {
+        body = null;
+      }
+      const parsed = parseAppreciationRequestBody(body);
+      if (!parsed) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error:
+              "Invalid request: eventId, teamId, attendeeId and fingerprintKey are required",
+          }),
+          {
+            status: 400,
+            headers,
+          },
+        );
+      }
       const {
         eventId,
         teamId,
@@ -166,53 +312,14 @@ http.route({
         turnstileToken,
         location,
         clientSignals,
-      } = body as {
-        eventId: string;
-        teamId: string;
-        attendeeId: string;
-        fingerprintKey: string;
-        turnstileToken?: string;
-        location?: {
-          status:
-            | "in_range"
-            | "out_of_range"
-            | "denied"
-            | "unavailable"
-            | "inaccurate"
-            | "unknown";
-          latitude?: number;
-          longitude?: number;
-          accuracyMeters?: number;
-        };
-        clientSignals?: {
-          webdriver?: boolean;
-          isLikelyMobile?: boolean;
-          userAgentDataMobile?: boolean;
-          viewportWidth?: number;
-          viewportHeight?: number;
-          language?: string;
-          timezone?: string;
-        };
-      };
-
-      // Validate required fields
-      if (!eventId || !teamId || !attendeeId || !fingerprintKey) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error:
-              "Missing required fields: eventId, teamId, attendeeId, fingerprintKey",
-          }),
-          {
-            status: 400,
-            headers,
-          },
-        );
-      }
+      } = parsed;
 
       // Extract IP and User-Agent from request
-      const ipAddress = getClientIp(req);
-      const userAgent = req.headers.get("user-agent") || "unknown";
+      const ipAddress = getClientIp(req).slice(0, MAX_CLIENT_KEY_LENGTH);
+      const userAgent = (req.headers.get("user-agent") || "unknown").slice(
+        0,
+        MAX_USER_AGENT_LENGTH,
+      );
 
       let integrity = await ctx.runMutation(
         internal.demoDayIntegrity.evaluateAppreciationRequest,
@@ -236,7 +343,6 @@ http.route({
               success: false,
               error: "Verification required. Please try again.",
               requiresCaptcha: true,
-              captchaReason: integrity.captchaReason,
               remainingForTeam: 0,
               remainingTotal: 0,
             }),
@@ -330,14 +436,9 @@ http.route({
       );
 
       return new Response(
-        JSON.stringify({
-          ...result,
-          integrity: {
-            reviewStatus: integrity.reviewStatus,
-            riskScore: integrity.riskScore,
-            riskReasons: integrity.riskReasons,
-          },
-        }),
+        // Risk scores and reasons stay server-side so callers cannot learn
+        // which signals to change.
+        JSON.stringify(result),
         {
           status: result.success ? 200 : 400,
           headers,

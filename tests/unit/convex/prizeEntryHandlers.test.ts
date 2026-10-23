@@ -128,8 +128,20 @@ describe("effective prize entry handlers", () => {
     expect(ctx.db.patch).not.toHaveBeenCalled();
   });
 
-  it("saves multiple optional entries and derives the automatic entry on project readback", async () => {
+  it("rejects participant prize entry changes once scoring is locked", async () => {
     const { ctx } = fixture();
+    await expect(
+      (setMyTeamPrizeSubmissions as any)._handler(ctx, {
+        eventId: "event",
+        prizeIds: ["first"],
+      }),
+    ).rejects.toThrow("Prize selection is closed");
+  });
+
+  it("saves multiple optional entries and derives the automatic entry on project readback", async () => {
+    const { ctx, event } = fixture();
+    // Entrants choose prizes before the lock that winner selection requires.
+    delete (event as { scoringLockedAt?: number }).scoringLockedAt;
     await (setMyTeamPrizeSubmissions as any)._handler(ctx, {
       eventId: "event",
       prizeIds: ["first", "env", "sponsor"],

@@ -35,14 +35,8 @@ export interface AppreciationResult {
   success: boolean;
   error?: string;
   requiresCaptcha?: boolean;
-  captchaReason?: string;
   remainingForTeam: number;
   remainingTotal: number;
-  integrity?: {
-    reviewStatus: "accepted" | "flagged" | "rejected";
-    riskScore: number;
-    riskReasons: string[];
-  };
 }
 
 export interface AppreciationOptions {

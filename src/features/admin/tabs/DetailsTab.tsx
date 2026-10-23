@@ -424,10 +424,7 @@ export function DetailsTab({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium fi-ink">
-                  Judge Code{" "}
-                  <span className="fi-muted text-xs">
-                    (optional)
-                  </span>
+                  Judge Code
                 </label>
                 <input
                   type="text"
@@ -438,7 +435,7 @@ export function DetailsTab({
                   placeholder="Enter code required for judges"
                 />
                 <p className="text-xs fi-muted">
-                  Leave empty to allow judges without a code.
+                  Judges need this code to score. 6–32 letters, numbers, or hyphens. Leave it empty to close judging.
                 </p>
               </div>
               <div className="space-y-2">

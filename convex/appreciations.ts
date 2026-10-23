@@ -380,6 +380,15 @@ export const createAppreciationInternal = internalMutation({
         remainingTotal: 0,
       };
     }
+    // Hiding an event revokes voting, not just browsing.
+    if (event.hidden) {
+      return {
+        success: false,
+        error: "Event not found",
+        remainingForTeam: 0,
+        remainingTotal: 0,
+      };
+    }
     const { maxPerTeam, maxPerAttendee } = getEventLimits(event);
 
     // 2b. Enforce live status
@@ -462,23 +471,25 @@ export const createAppreciationInternal = internalMutation({
       };
     }
 
-    // 5. Soft IP rate limiting (100 per 10 minutes)
+    // 5. Soft IP rate limiting (100 per 10 minutes). A venue shares one
+    // network, so refusing would let one account block everyone behind it.
+    // Over-limit votes are accepted but flagged for organizer review instead.
     const windowStart = now - IP_RATE_LIMIT_WINDOW_MS;
     const recentIpAppreciations = await ctx.db
       .query("appreciations")
       .withIndex("by_ip_and_timestamp", (q) =>
         q.eq("ipAddress", args.ipAddress).gte("timestamp", windowStart),
       )
-      .collect();
-
-    if (recentIpAppreciations.length >= IP_RATE_LIMIT_MAX) {
-      return {
-        success: false,
-        error: "Too many requests from this network. Please try again later.",
-        remainingForTeam: maxPerTeam - attendeeTeamAppreciations.length,
-        remainingTotal: maxPerAttendee - attendeeAllAppreciations.length,
-      };
-    }
+      .take(IP_RATE_LIMIT_MAX);
+    const overIpLimit =
+      args.ipAddress !== "unknown" &&
+      recentIpAppreciations.length >= IP_RATE_LIMIT_MAX;
+    const requestedStatus = args.reviewStatus ?? "accepted";
+    const reviewStatus =
+      overIpLimit && requestedStatus === "accepted" ? "flagged" : requestedStatus;
+    const riskReasons = overIpLimit
+      ? [...(args.riskReasons ?? []).filter((reason) => reason !== "ip_rate_limit"), "ip_rate_limit"]
+      : args.riskReasons;
 
     // 6. Insert the appreciation
     const appreciationId = await ctx.db.insert("appreciations", {
@@ -491,15 +502,14 @@ export const createAppreciationInternal = internalMutation({
       userAgent: args.userAgent,
       timestamp: now,
       captchaPassId: args.captchaPassId,
-      reviewStatus: args.reviewStatus ?? "accepted",
+      reviewStatus,
       riskScore: args.riskScore,
-      riskReasons: args.riskReasons,
+      riskReasons,
     });
 
     // 7. Update denormalized score without a full recount query.
     const currentRawScore = team.rawScore ?? 0;
     const currentCleanScore = team.cleanScore ?? currentRawScore;
-    const reviewStatus = args.reviewStatus ?? "accepted";
     await ctx.db.patch(args.teamId, {
       rawScore: currentRawScore + 1,
       cleanScore:

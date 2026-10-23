@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { errorMessage } from "../../../lib/operationOutcome";
 import {
   codeAndTellPhase,
   type CodeAndTellPhase,
@@ -33,11 +34,7 @@ export function CodeAndTellStageControl({
             try {
               await setPhase({ eventId, phase });
             } catch (error) {
-              setError(
-                error instanceof Error
-                  ? error.message
-                  : "Could not change stage",
-              );
+              setError(errorMessage(error, "Could not change stage"));
             } finally {
               setPending(false);
             }

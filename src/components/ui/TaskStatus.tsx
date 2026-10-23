@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { RecoverableFailure } from "../../lib/operationOutcome";
+import { requestSignIn } from "../../lib/signIn";
 import "./task-status.css";
 
 /**
@@ -71,7 +72,13 @@ export function InlineFailure({
       {children}
       {(onRetry || onDismiss || failure) && (
         <div className="inline-failure-actions">
-          {onRetry && (
+          {/* An expired session can't be fixed by retrying; offer sign-in first. Drafts survive the redirect. */}
+          {failure?.category === "authentication" && (
+            <button type="button" className="fi-transport" onClick={requestSignIn}>
+              Sign in again
+            </button>
+          )}
+          {onRetry && failure?.category !== "authentication" && (
             <button type="button" className="fi-key" onClick={onRetry} disabled={busy}>
               {busy ? "Trying again…" : retryLabel}
             </button>

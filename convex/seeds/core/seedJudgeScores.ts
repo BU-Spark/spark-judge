@@ -30,7 +30,7 @@ export async function seedJudgeScoresHandler(ctx: MutationCtx) {
   for (const name of judgeNames) {
     const userId = await ctx.db.insert("users", {
       name,
-      email: `${name.toLowerCase().replace(/\s+/g, ".")}@judges.com`,
+      email: `${name.toLowerCase().replace(/\s+/g, ".")}@judges.example.com`,
       emailVerificationTime: Date.now(),
       isAnonymous: false,
     });

@@ -36,6 +36,11 @@ export type RecoverableFailure = {
   retryable: boolean;
 };
 
+/** Result of a handler that reports failure instead of throwing. */
+export type OperationResult =
+  | { ok: true }
+  | { ok: false; failure: RecoverableFailure };
+
 export type OperationOutcome =
   | "idle"
   | "pending"
@@ -140,6 +145,27 @@ export function toRecoverableFailure(error: unknown, operation: string): Recover
   reportFailure(operation, reference, error);
 
   return { code: category, category, operation, message, reference, retryable: RETRYABLE.has(category) };
+}
+
+/**
+ * The user-facing text of a caught error for call sites that show the message
+ * directly. Typed server rejections (`ConvexError` data with a `message`) use
+ * their safe message instead of the serialized error text; other errors keep
+ * their own message, or `fallback` when they have none.
+ */
+export function errorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ConvexError) {
+    const data = error.data as unknown;
+    if (typeof data === "string" && data) return data;
+    if (data && typeof data === "object") {
+      const message = (data as { message?: unknown }).message;
+      if (typeof message === "string" && message) return message;
+    }
+    return fallback;
+  }
+  // Plain server errors arrive wrapped with request IDs and stack lines; show only the application message.
+  if (error instanceof Error && error.message) return extractServerMessage(error.message) ?? fallback;
+  return fallback;
 }
 
 /**

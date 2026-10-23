@@ -129,7 +129,7 @@ export async function seedRegularJudgingDemoHandler(ctx: MutationCtx) {
   for (const name of judgeNames) {
     const judgeUserId = await ctx.db.insert("users", {
       name,
-      email: `${name.toLowerCase().replace(/[\s.]/g, "")}@demo.com`,
+      email: `${name.toLowerCase().replace(/[\s.]/g, "")}@demo.example.com`,
       emailVerificationTime: Date.now(),
       isAnonymous: false,
     });

@@ -11,7 +11,9 @@ export function SignInForm() {
     setPending(true);
     setError("");
     try {
-      await signIn("google", { redirectTo: window.location.origin });
+      // Return to the page the user was on so drafts and context resume there.
+      const { origin, pathname, search } = window.location;
+      await signIn("google", { redirectTo: `${origin}${pathname}${search}` });
     } catch {
       setError("Couldn’t sign in with Google. Please try again.");
     } finally {

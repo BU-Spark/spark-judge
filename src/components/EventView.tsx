@@ -16,6 +16,7 @@ import { formatDateTime } from "../lib/utils";
 import { pad2 } from "../lib/dateTimeInput";
 import { MODE_THEME } from "./home/modeTheme";
 import { toast } from "sonner";
+import { errorMessage } from "../lib/operationOutcome";
 import "./EventView.fi.css";
 import "./participation/participation.css";
 import { requestSignIn } from "../lib/signIn";
@@ -56,7 +57,7 @@ export function EventView({
   const joinAsJudge = useMutation(api.events.joinAsJudge);
   const [showWizard, setShowWizard] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
-  const [draftCompletedCount, setDraftCompletedCount] = useState(0);
+  const [draftCompletedIds, setDraftCompletedIds] = useState<string[]>([]);
   const [justSubmitted, setJustSubmitted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [trackFilter, setTrackFilter] = useState("");
@@ -83,13 +84,13 @@ export function EventView({
   useEffect(() => {
     if (!storageKey) {
       setHasDraft(false);
-      setDraftCompletedCount(0);
+      setDraftCompletedIds([]);
       return;
     }
     if (typeof window === "undefined") return;
     const summary = readScoringDraftSummary(storageKey);
     setHasDraft(summary.hasDraft);
-    setDraftCompletedCount(summary.completedCount);
+    setDraftCompletedIds(summary.completedTeamIds);
   }, [storageKey, showWizard, myScores?.length]);
 
   const enableCohorts = event?.enableCohorts || false;
@@ -111,11 +112,19 @@ export function EventView({
   );
 
   const totalTeams = teamsToJudge.length;
-  const completedCount = hasDraft
-    ? draftCompletedCount
-    : (myScores?.filter((score: any) =>
-        relevantTeamIds.has(String(score.teamId)),
-      ).length ?? 0);
+  // A draft can hold only the unsubmitted remainder of an earlier batch, so
+  // count teams scored on the server or completed in the draft.
+  const completedCount = useMemo(() => {
+    const scored = new Set<string>(
+      (myScores ?? []).map((score: any) => String(score.teamId)),
+    );
+    if (hasDraft) draftCompletedIds.forEach((id) => scored.add(id));
+    let count = 0;
+    scored.forEach((id) => {
+      if (relevantTeamIds.has(id)) count += 1;
+    });
+    return count;
+  }, [draftCompletedIds, hasDraft, myScores, relevantTeamIds]);
 
   const scoringComplete = totalTeams > 0 && completedCount >= totalTeams;
 
@@ -349,7 +358,7 @@ export function EventView({
       toast.success("Successfully joined as judge!");
     } catch (error: unknown) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to join as judge",
+        errorMessage(error, "Failed to join as judge"),
       );
     } finally {
       setJoining(false);

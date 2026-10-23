@@ -4,7 +4,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { ScoringWizard } from "../../../src/components/ScoringWizard";
 import { scoringDraftKey } from "../../../src/lib/scoringDraft";
-import { writeDraft as writeVersionedDraft } from "../../../src/lib/draftStorage";
+import {
+  readDraft,
+  writeDraft as writeVersionedDraft,
+} from "../../../src/lib/draftStorage";
 
 const mockSubmit = vi.hoisted(() => vi.fn());
 const toastError = vi.hoisted(() => vi.fn());
@@ -514,6 +517,115 @@ describe("ScoringWizard", () => {
     ).toBeInTheDocument();
     expectNothingPressed("Impact");
     expectNothingPressed("Craft");
+  });
+
+  it("keeps partial scores for unsubmitted teams after a successful submit", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const first = renderWizard();
+    // Alpha: complete. Beta: one category, then skipped. Gamma: untouched.
+    scoreAll(4, 4);
+    fireEvent.click(nextButton());
+    fireEvent.click(scoreKey(5, "Impact"));
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
+    fireEvent.click(screen.getByRole("button", { name: "Submit scores" }));
+
+    await waitFor(() =>
+      expect(first.props.onSubmitted).toHaveBeenCalledTimes(1),
+    );
+    expect(mockSubmit.mock.calls[0][0].scores).toHaveLength(1);
+    expect(toastSuccess).toHaveBeenCalledWith(
+      "Scores for 1 project saved. Your partial scores for 1 project are kept on this device.",
+    );
+    expect(toastWarning).not.toHaveBeenCalled();
+
+    const stored = readDraft<{
+      scores: Record<string, unknown>;
+      skipped: string[];
+      currentTeamId: string | null;
+      submittedAt?: number;
+    }>(DRAFT_KEY, 2);
+    expect(stored.status).toBe("found");
+    if (stored.status !== "found") return;
+    expect(Object.keys(stored.data.scores)).toEqual(["team_beta"]);
+    expect(stored.data.skipped).toEqual(["team_beta"]);
+    expect(stored.data.currentTeamId).toBe("team_beta");
+    expect(stored.data.submittedAt).toBeUndefined();
+    first.unmount();
+
+    // Next session: the submitted team comes from the server, the partial
+    // team from the kept draft.
+    render(
+      <ScoringWizard
+        eventId={EVENT_ID}
+        teams={defaultTeams}
+        categories={defaultCategories}
+        storageKey={STORAGE_KEY}
+        onClose={vi.fn()}
+        onSubmitted={vi.fn()}
+        existingScores={[
+          {
+            teamId: "team_alpha" as Id<"teams">,
+            categoryScores: [
+              { category: "Impact", score: 4, optedOut: false },
+              { category: "Craft", score: 4, optedOut: false },
+            ],
+          },
+        ]}
+      />,
+    );
+    expect(await screen.findByText("01 of 03 scored")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
+    expect(screen.getByText("Skipped")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+    expect(screen.getByRole("heading", { name: "Beta" })).toBeInTheDocument();
+    expect(scoreKey(5, "Impact")).toHaveAttribute("aria-pressed", "true");
+    expectNothingPressed("Craft");
+  });
+
+  it("clears the draft when skipped teams have no partial scores", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const { props } = renderWizard();
+    scoreAll(4, 4);
+    fireEvent.click(nextButton());
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
+    fireEvent.click(screen.getByRole("button", { name: "Submit scores" }));
+
+    await waitFor(() => expect(props.onSubmitted).toHaveBeenCalledTimes(1));
+    expect(toastSuccess).toHaveBeenCalledWith("Scores submitted to HackJudge.");
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+  });
+
+  it("warns and clears the draft when partial scores can't be kept", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const { props } = renderWizard();
+    scoreAll(4, 4);
+    fireEvent.click(nextButton());
+    fireEvent.click(scoreKey(5, "Impact"));
+    await waitFor(() =>
+      expect(window.localStorage.getItem(DRAFT_KEY)).toContain("team_beta"),
+    );
+    const setItem = vi
+      .spyOn(window.localStorage, "setItem")
+      .mockImplementation(() => {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      });
+    try {
+      fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
+      fireEvent.click(screen.getByRole("button", { name: "Submit scores" }));
+      await waitFor(() => expect(props.onSubmitted).toHaveBeenCalledTimes(1));
+    } finally {
+      setItem.mockRestore();
+    }
+    expect(toastSuccess).toHaveBeenCalledWith("Scores submitted to HackJudge.");
+    expect(toastWarning).toHaveBeenCalledWith(
+      expect.stringContaining("couldn't keep your partial scores for 1 project"),
+    );
+    // The stale full draft must not come back with already-submitted scores.
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 
   it("does not report a submission failure when onSubmitted throws", async () => {

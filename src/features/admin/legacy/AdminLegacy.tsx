@@ -48,7 +48,9 @@ import { InlineFailure } from "../../../components/ui/TaskStatus";
 import {
   outcomeForFailure,
   toRecoverableFailure,
+  type OperationResult,
   type RecoverableFailure,
+  errorMessage,
 } from "../../../lib/operationOutcome";
 import "../judging/judging.css";
 import { ScoringDashboard } from "../components/ScoringDashboard";
@@ -1410,10 +1412,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                     />
                     <div className="space-y-2">
                       <label className="block text-sm font-medium fi-ink">
-                        Judge Code{" "}
-                        <span className="fi-muted text-xs">
-                          (optional)
-                        </span>
+                        Judge Code
                       </label>
                       <input
                         type="text"
@@ -1425,8 +1424,11 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                           })
                         }
                         className="input"
-                        placeholder="Judge code (optional)"
+                        placeholder="e.g. SPRING-2026"
                       />
+                      <p className="text-xs fi-muted">
+                        Judges need this code to score. 6–32 letters, numbers, or hyphens. You can add it later, but nobody can judge until you do.
+                      </p>
                     </div>
                   </section>
 
@@ -1814,9 +1816,7 @@ function derivePrizeDrafts(eventPrizes: any[]): PrizeDraft[] {
   );
 }
 
-type ScoringLockResult =
-  | { ok: true }
-  | { ok: false; failure: RecoverableFailure };
+type ScoringLockResult = OperationResult;
 
 export function EventManagementModal({
   eventId,
@@ -2386,7 +2386,7 @@ export function EventManagementModal({
                                 );
                                 setTeamMenuOpen(null);
                               } catch (error: any) {
-                                toast.error(error.message);
+                                toast.error(errorMessage(error, "That change couldn’t be saved. Try again."));
                               }
                             }}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors"
@@ -2405,7 +2405,7 @@ export function EventManagementModal({
                                   toast.success(`${entityLabel} removed`);
                                   setTeamMenuOpen(null);
                                 } catch (error: any) {
-                                  toast.error(error.message);
+                                  toast.error(errorMessage(error, "That change couldn’t be saved. Try again."));
                                 }
                               }
                             }}
@@ -2527,7 +2527,7 @@ export function EventManagementModal({
         `Integrity scan complete: ${result.findingCount} finding${result.findingCount === 1 ? "" : "s"} from ${result.scannedCount} appreciations.`,
       );
     } catch (error: any) {
-      toast.error(error?.message || "Failed to run integrity scan");
+      toast.error(errorMessage(error, "Failed to run integrity scan"));
     } finally {
       setIsScanningIntegrity(false);
     }
@@ -2540,7 +2540,7 @@ export function EventManagementModal({
       await markIntegrityFindingReviewed({ findingId });
       toast.success("Finding marked reviewed");
     } catch (error: any) {
-      toast.error(error?.message || "Failed to update finding");
+      toast.error(errorMessage(error, "Failed to update finding"));
     }
   };
 
@@ -2555,7 +2555,7 @@ export function EventManagementModal({
       await rejectIntegrityFinding({ findingId });
       toast.success("Finding votes rejected from clean scoring");
     } catch (error: any) {
-      toast.error(error?.message || "Failed to reject finding");
+      toast.error(errorMessage(error, "Failed to reject finding"));
     }
   };
 
@@ -2566,7 +2566,7 @@ export function EventManagementModal({
       await restoreIntegrityFinding({ findingId });
       toast.success("Finding votes restored to clean scoring");
     } catch (error: any) {
-      toast.error(error?.message || "Failed to restore finding");
+      toast.error(errorMessage(error, "Failed to restore finding"));
     }
   };
 
@@ -2589,7 +2589,7 @@ export function EventManagementModal({
           : "Selected votes restored to clean scoring",
       );
     } catch (error: any) {
-      toast.error(error?.message || "Failed to update selected votes");
+      toast.error(errorMessage(error, "Failed to update selected votes"));
     }
   };
 
@@ -2871,7 +2871,7 @@ export function EventManagementModal({
       await updateEventStatus({ eventId, status });
       toast.success(`Event marked as ${status}`);
     } catch (error: any) {
-      toast.error(error?.message || "Failed to update event status");
+      toast.error(errorMessage(error, "Failed to update event status"));
     }
   };
 
@@ -3275,10 +3275,7 @@ export function EventManagementModal({
                 onNavigate={(target) =>
                   updateTab(target === "results" ? "winners" : target)
                 }
-                onLockScoring={async () => {
-                  const result = await handleSetScoringLock(true);
-                  if (!result.ok) toast.error(result.failure.message);
-                }}
+                onLockScoring={() => handleSetScoringLock(true)}
               />
             )}
 
@@ -3440,6 +3437,15 @@ export function EventManagementModal({
               />
             )}
 
+            {activeTab === "scores" && lockFailure && !scoringLocked && !confirmUnlock && (
+              <InlineFailure
+                failure={lockFailure}
+                title="Scoring is still unlocked"
+                busy={lockingScores}
+                onRetry={() => void handleSetScoringLock(true)}
+                onDismiss={() => setLockFailure(null)}
+              />
+            )}
             {activeTab === "scores" && (
               <ScoresTab
                 eventMode={eventMode}
@@ -3517,7 +3523,7 @@ export function EventManagementModal({
                 onPrizes={() => updateTab("prizes")}
                 onTeams={() => updateTab("teams")}
                 onFinish={async () => { await updateEventStatus({ eventId, status: "past" }); }}
-                onLock={async () => { await setScoringLock({ eventId, locked: true, reason: "Deliberation in progress" }); }}
+                onLock={() => handleSetScoringLock(true)}
                 locking={lockingScores}
                 onPublish={handleReleaseResults}
                 onWithdraw={async () => {

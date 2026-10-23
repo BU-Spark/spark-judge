@@ -847,7 +847,9 @@ export const generateQrCodeZip = action({
         const teamSlug = createSlug(displayTeamName);
 
         // Build filename (now SVG)
-        const coursePrefix: string = team.courseCode || "general";
+        // Course codes are participant-entered; slug them so a value like
+        // "../x" cannot write outside the ZIP folder when extracted.
+        const coursePrefix: string = createSlug(team.courseCode ?? "") || "general";
         const qrFilename: string = `${coursePrefix}_${teamSlug}_${team._id.slice(-4)}.svg`;
 
         // Build appreciation URL: /event/:eventId/team/:teamId

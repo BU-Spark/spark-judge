@@ -13,6 +13,7 @@ import { PrizeWinnerWizardPanel } from "../../../src/features/admin/panels/Prize
 import { ScoringDashboard } from "../../../src/features/admin/components/ScoringDashboard";
 import { CodeAndTellWinnerPanel } from "../../../src/features/admin/panels/CodeAndTellWinnerPanel";
 import type { ResultsInput } from "../../../shared/resultReadiness";
+import { toRecoverableFailure } from "../../../src/lib/operationOutcome";
 const input: ResultsInput = {
   mode: "hackathon",
   status: "past",
@@ -65,6 +66,31 @@ describe("Results workflow", () => {
     expect(screen.getByText("Garden")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Publish results" }));
     await waitFor(() => expect(publish).toHaveBeenCalledTimes(2));
+  });
+  it("shows a lock failure inline with retry and clears it on success", async () => {
+    const failure = toRecoverableFailure(
+      new Error("Failed to fetch"),
+      "lock scoring",
+    );
+    const onLock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, failure })
+      .mockResolvedValueOnce({ ok: true });
+    results({ onLock, input: { ...input, status: "active", scoringLocked: false } });
+    fireEvent.click(screen.getByRole("button", { name: "Lock scoring" }));
+
+    expect(
+      await screen.findByText("Scoring is still unlocked"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(failure.message)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(onLock).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Scoring is still unlocked"),
+      ).not.toBeInTheDocument(),
+    );
   });
   it("explains missing winners and cannot publish", () => {
     results({ input: { ...input, prizeWinners: [] } });

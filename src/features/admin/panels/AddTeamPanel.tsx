@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { toast } from "sonner";
+import { errorMessage } from "../../../lib/operationOutcome";
 import { isAutomaticPrize } from "../../../../shared/prizeEntries";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
@@ -328,7 +329,7 @@ export function AddTeamPanel({
         details: [],
       });
     } catch (error: any) {
-      const details = String(error?.message || "Failed to read CSV")
+      const details = errorMessage(error, "Failed to read CSV")
         .split("\n")
         .map((line) => line.trim())
         .filter(Boolean);
@@ -375,7 +376,7 @@ export function AddTeamPanel({
             })) as Id<"teams">;
           } catch (error: any) {
             failures.push(
-              `Row ${row.rowNumber} (${row.name}): ${error?.message || `Failed to create ${label}`}`,
+              `Row ${row.rowNumber} (${row.name}): ${errorMessage(error, `Failed to create ${label}`)}`,
             );
             failedRows.push(row);
             continue;
@@ -391,7 +392,7 @@ export function AddTeamPanel({
             });
           } catch (error: any) {
             partialFailures.push(
-              `Row ${row.rowNumber} (${row.name}): ${error?.message || "Failed to save prize entries"}`,
+              `Row ${row.rowNumber} (${row.name}): ${errorMessage(error, "Failed to save prize entries")}`,
             );
             failedRows.push({ ...row, createdTeamId: teamId });
             continue;
@@ -547,7 +548,7 @@ export function AddTeamPanel({
           } catch (error: any) {
             setCreatedTeamCheckpoint({
               teamId,
-              prizeError: error?.message || "Prize entries weren't saved.",
+              prizeError: errorMessage(error, "Prize entries weren't saved."),
             });
             return;
           }
@@ -558,7 +559,7 @@ export function AddTeamPanel({
       onClose();
     } catch (error: any) {
       toast.error(
-        error.message || `Failed to save ${entityLabel.toLowerCase()}`,
+        errorMessage(error, `Failed to save ${entityLabel.toLowerCase()}`),
       );
     } finally {
       setSubmitting(false);

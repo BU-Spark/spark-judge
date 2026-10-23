@@ -3,7 +3,9 @@ import { mutation, query, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import {
+  appError,
   canAccessEvent,
+  eventNotFound,
   computeEventStatus,
   isAdmin,
   requireAdmin,
@@ -86,15 +88,17 @@ export function validateRankedBallot({
   );
 
   if (uniqueRankedTeamIds.length !== rankedTeamIds.length) {
-    throw new Error("Ballots cannot include duplicate or unavailable projects");
+    throw appError("invalid_ballot_projects", "validation", "Ballots cannot include duplicate or unavailable projects");
   }
 
   if (uniqueRankedTeamIds.some((teamId) => ownProjectIds.has(teamId))) {
-    throw new Error("You cannot rank a project associated with your email");
+    throw appError("ballot_own_project", "validation", "You cannot rank a project associated with your email");
   }
 
   if (uniqueRankedTeamIds.length !== requiredRankCount) {
-    throw new Error(
+    throw appError(
+      "ballot_rank_count",
+      "validation",
       `Ballots must rank exactly ${requiredRankCount} project${
         requiredRankCount === 1 ? "" : "s"
       }`,
@@ -110,15 +114,13 @@ async function getEventAndVisibleTeams(
 ) {
   const event = await ctx.db.get(eventId);
   if (!event) {
-    throw new Error("Event not found");
+    throw eventNotFound();
   }
   if (!(await canAccessEvent(ctx, event))) {
-    throw new Error("Event not found");
+    throw eventNotFound();
   }
   if (!isCodeAndTellMode(event.mode)) {
-    throw new Error(
-      "Code & Tell voting is only available for Code & Tell events",
-    );
+    throw appError("voting_unsupported_mode", "validation", "Code & Tell voting is only available for Code & Tell events");
   }
 
   const teams = getVisibleTeams(
@@ -347,7 +349,7 @@ export const saveBallot = mutation({
     const user = await ctx.db.get(userId);
     const userEmail = normalizeEmail(user?.email);
     if (!userEmail) {
-      throw new Error("A verified account email is required to vote");
+      throw appError("voter_email_required", "permission", "A verified account email is required to vote");
     }
 
     const { event, teams } = await getEventAndVisibleTeams(ctx, args.eventId);
@@ -355,7 +357,7 @@ export const saveBallot = mutation({
       codeAndTellPhase({ ...event, status: computeEventStatus(event) }) !==
       "voting"
     ) {
-      throw new Error("Ballots can only be edited while the event is active");
+      throw appError("voting_closed", "lifecycle", "Ballots can only be edited while the event is active");
     }
 
     const visibleTeamIds = new Set(teams.map((team) => team._id));
@@ -366,7 +368,7 @@ export const saveBallot = mutation({
     const requiredRankCount = getRequiredRankCount(eligibleTeamIds.length);
 
     if (requiredRankCount === 0)
-      throw new Error("No eligible projects to rank yet");
+      throw appError("no_eligible_projects", "lifecycle", "No eligible projects to rank yet");
     const uniqueRankedTeamIds = validateRankedBallot({
       rankedTeamIds: args.rankedTeamIds,
       visibleTeamIds,
@@ -388,7 +390,7 @@ export const saveBallot = mutation({
         .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
         .collect();
       if (rows.length >= maxBallots) {
-        throw new Error("This event has reached its voting limit.");
+        throw appError("ballot_cap_reached", "lifecycle", "This event has reached its voting limit.");
       }
     }
 

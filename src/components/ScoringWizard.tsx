@@ -21,6 +21,7 @@ import { pad2 } from "../lib/dateTimeInput";
 import {
   SCORING_DRAFT_SCHEMA,
   isRecord,
+  draftAfterSubmit,
   isScoringDraft,
   parseLegacyDraft,
   scoringDraftKey,
@@ -314,6 +315,8 @@ export function ScoringSession({
     };
   }, [embedded]);
 
+  const draftScoresRef = useRef(draftScores);
+  draftScoresRef.current = draftScores;
   const focusNextPendingRef = useRef(false);
   const currentTeamScoresRef = useRef<
     Record<string, CategoryScoreValue> | undefined
@@ -394,17 +397,25 @@ export function ScoringSession({
         return acc;
       }, {});
     });
-    setDraftScores((prev) => (Object.keys(prev).length > 0 ? prev : seeded));
-
+    // Draft entries win per team. Teams the draft doesn't mention (e.g. ones
+    // submitted earlier while partial work for others was kept) show their
+    // server scores.
+    const draftTeams = new Set(Object.keys(draftScoresRef.current));
+    const unseen = Object.keys(seeded).filter((id) => !draftTeams.has(id));
+    if (unseen.length === 0) return;
+    setDraftScores((prev) => {
+      const next = { ...prev };
+      unseen.forEach((id) => {
+        if (!(id in next)) next[id] = seeded[id];
+      });
+      return next;
+    });
     setCompletedTeams((prev) => {
-      if (prev.size > 0) return prev;
-      return new Set(
-        existingScores
-          .map((score) => score.teamId as string)
-          .filter((id) =>
-            isTeamFullyAnswered(seeded[id], categoriesRef.current),
-          ),
-      );
+      const next = new Set(prev);
+      unseen.forEach((id) => {
+        if (isTeamFullyAnswered(seeded[id], categoriesRef.current)) next.add(id);
+      });
+      return next.size === prev.size ? prev : next;
     });
   }, [existingScores, draftLoaded]);
 
@@ -749,42 +760,89 @@ export function ScoringSession({
    * caller's callback are separate steps: neither can turn a confirmed
    * submission into a reported failure.
    */
-  const finishSubmitted = useCallback(() => {
-    submittedRef.current = true;
-    setSubmitFailure(null);
+  const finishSubmitted = useCallback(
+    (submitted: SubmitEntry[]) => {
+      submittedRef.current = true;
+      setSubmitFailure(null);
 
-    let cleanupFailed = false;
-    if (draftStorageKey) {
-      if (removeDraft(draftStorageKey).status !== "removed") {
-        // Removal failed: mark the draft as submitted so it is never restored.
-        const marker = writeDraft<ScoringDraft>(
-          draftStorageKey,
-          SCORING_DRAFT_SCHEMA,
+      const submittedCount = submitted.length;
+      let keptCount = 0;
+      let lostCount = 0;
+      let cleanupFailed = false;
+      if (draftStorageKey) {
+        // Keep the judge's unsubmitted partial work; drop only what was sent.
+        const remaining = draftAfterSubmit(
           {
-            scores: {},
-            completed: [],
-            skipped: [],
+            scores: draftScores,
+            completed: Array.from(completedTeams),
+            skipped: Array.from(skippedTeams),
             currentTeamId: null,
-            submittedAt: Date.now(),
           },
+          submitted.map((entry) => entry.teamId as string),
+          sortedTeams.map((team) => team._id as string),
         );
-        cleanupFailed = marker.status !== "saved";
+        if (remaining) {
+          const kept = writeDraft(
+            draftStorageKey,
+            SCORING_DRAFT_SCHEMA,
+            remaining,
+          );
+          const remainingCount = Object.keys(remaining.scores).length;
+          if (kept.status === "saved") keptCount = remainingCount;
+          else lostCount = remainingCount;
+        }
+        if (
+          keptCount === 0 &&
+          removeDraft(draftStorageKey).status !== "removed"
+        ) {
+          // Removal failed: mark the draft as submitted so it is never restored.
+          const marker = writeDraft<ScoringDraft>(
+            draftStorageKey,
+            SCORING_DRAFT_SCHEMA,
+            {
+              scores: {},
+              completed: [],
+              skipped: [],
+              currentTeamId: null,
+              submittedAt: Date.now(),
+            },
+          );
+          cleanupFailed = marker.status !== "saved";
+        }
       }
-    }
 
-    toast.success("Scores submitted to HackJudge.");
-    if (cleanupFailed) {
-      toast.warning(
-        "Your scores are saved. This browser couldn't clear its local draft, so an old draft may appear next time; your submitted scores are not affected.",
-      );
-    }
+      if (keptCount > 0) {
+        toast.success(
+          `Scores for ${submittedCount} ${submittedCount === 1 ? "project" : "projects"} saved. Your partial scores for ${keptCount} ${keptCount === 1 ? "project" : "projects"} are kept on this device.`,
+        );
+      } else {
+        toast.success("Scores submitted to HackJudge.");
+      }
+      if (lostCount > 0) {
+        toast.warning(
+          `Your submitted scores are saved, but this browser couldn't keep your partial scores for ${lostCount} ${lostCount === 1 ? "project" : "projects"} on this device.`,
+        );
+      } else if (cleanupFailed) {
+        toast.warning(
+          "Your scores are saved. This browser couldn't clear its local draft, so an old draft may appear next time; your submitted scores are not affected.",
+        );
+      }
 
-    try {
-      onSubmitted();
-    } catch (error) {
-      reportFailure("scoring_after_submit", "local", error);
-    }
-  }, [draftStorageKey, onSubmitted]);
+      try {
+        onSubmitted();
+      } catch (error) {
+        reportFailure("scoring_after_submit", "local", error);
+      }
+    },
+    [
+      completedTeams,
+      draftScores,
+      draftStorageKey,
+      onSubmitted,
+      skippedTeams,
+      sortedTeams,
+    ],
+  );
 
   const handleSubmitAll = useCallback(
     async (options: { skipConfirm?: boolean } = {}) => {
@@ -826,7 +884,7 @@ export function ScoringSession({
         return;
       }
       setSubmitting(false);
-      finishSubmitted();
+      finishSubmitted(payload);
     },
     [
       buildPayload,
@@ -855,7 +913,7 @@ export function ScoringSession({
     if (!serverHasSnapshot(submitFailure.snapshot, existingScores)) return;
     const current = buildPayload();
     if (JSON.stringify(current) === JSON.stringify(submitFailure.snapshot)) {
-      finishSubmitted();
+      finishSubmitted(current);
     } else {
       // The earlier batch landed, but the judge has edited since; keep the
       // newer changes and ask for another submit rather than clearing them.

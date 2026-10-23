@@ -1,5 +1,6 @@
 import { useAction, useMutation } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { errorMessage } from "../../../lib/operationOutcome";
 import { toast } from "sonner";
 
 import { api } from "../../../../convex/_generated/api";
@@ -521,7 +522,7 @@ export function DemoDaySetupPanel({
       setSemesterStatus({
         configured: false,
         semesters: [],
-        error: error?.message || "Failed to load Airtable semesters.",
+        error: errorMessage(error, "Failed to load Airtable semesters."),
       });
     } finally {
       setLoadingSemesters(false);
@@ -558,7 +559,7 @@ export function DemoDaySetupPanel({
       toast.success(successMessage);
       setCourseInput("");
     } catch (error: any) {
-      toast.error(error?.message || "Could not update course codes.");
+      toast.error(errorMessage(error, "Could not update course codes."));
     } finally {
       setCourseBusy(false);
     }
@@ -618,7 +619,7 @@ export function DemoDaySetupPanel({
         toast.success("Import preview ready.");
       }
     } catch (error: any) {
-      toast.error(error?.message || "Import preview failed.");
+      toast.error(errorMessage(error, "Import preview failed."));
     } finally {
       setImportBusy(false);
     }
@@ -639,7 +640,7 @@ export function DemoDaySetupPanel({
         );
       }
     } catch (error: any) {
-      toast.error(error?.message || "Import failed.");
+      toast.error(errorMessage(error, "Import failed."));
     } finally {
       setImportBusy(false);
     }
@@ -665,7 +666,7 @@ export function DemoDaySetupPanel({
         toast.error("Board CSV needs attention before applying.");
       }
     } catch (error: any) {
-      toast.error(error?.message || "Board preview failed.");
+      toast.error(errorMessage(error, "Board preview failed."));
     } finally {
       setBoardBusy(false);
     }
@@ -691,7 +692,7 @@ export function DemoDaySetupPanel({
         toast.error("Board assignments were not applied.");
       }
     } catch (error: any) {
-      toast.error(error?.message || "Board assignment import failed.");
+      toast.error(errorMessage(error, "Board assignment import failed."));
     } finally {
       setBoardBusy(false);
     }

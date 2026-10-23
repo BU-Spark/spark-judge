@@ -17,6 +17,11 @@ import {
   type ReadinessFixTarget,
 } from "../../../../shared/hackathonReadiness";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { InlineFailure } from "../../../components/ui/TaskStatus";
+import type {
+  OperationResult,
+  RecoverableFailure,
+} from "../../../lib/operationOutcome";
 import { EventLifecycle } from "../judging/EventLifecycle";
 import { HACKATHON_STEPS, getHackathonPhase } from "../judging/hackathonPhase";
 import { ReadinessChecklist } from "../judging/ReadinessChecklist";
@@ -60,7 +65,8 @@ export function HackathonOverviewTab({
   detailedScores: any;
   locking: boolean;
   onNavigate: (target: ReadinessFixTarget | "scores" | "results") => void;
-  onLockScoring: () => Promise<void>;
+  /** Resolves with a failure instead of throwing; the dialog stays open on failure. */
+  onLockScoring: () => Promise<OperationResult>;
 }) {
   const eventId = event._id as Id<"events">;
   // useQueries reports a missing or failing function as a value instead of
@@ -78,6 +84,15 @@ export function HackathonOverviewTab({
   const progressError = progressResult instanceof Error;
   const progress = progressError ? null : progressResult;
   const [confirmLock, setConfirmLock] = useState(false);
+  const [lockFailure, setLockFailure] = useState<RecoverableFailure | null>(
+    null,
+  );
+  const confirmLockScoring = async () => {
+    setLockFailure(null);
+    const result = await onLockScoring();
+    if (result.ok) setConfirmLock(false);
+    else setLockFailure(result.failure);
+  };
   const now = useNow();
 
   const scoringLocked = Boolean(event.scoringLockedAt);
@@ -504,10 +519,11 @@ export function HackathonOverviewTab({
         title="Lock scoring?"
         confirmLabel="Lock scoring"
         busy={locking}
-        onCancel={() => setConfirmLock(false)}
-        onConfirm={() => {
-          void onLockScoring().then(() => setConfirmLock(false));
+        onCancel={() => {
+          setConfirmLock(false);
+          setLockFailure(null);
         }}
+        onConfirm={() => void confirmLockScoring()}
       >
         <p>Judges won't be able to submit or change scores. You can unlock later if needed.</p>
         {(unassigned.length > 0 || missingScores > 0 || conflicts.length > 0) && (
@@ -529,6 +545,14 @@ export function HackathonOverviewTab({
               </li>
             )}
           </ul>
+        )}
+        {lockFailure && (
+          <InlineFailure
+            failure={lockFailure}
+            title="Scoring is still unlocked"
+            onRetry={() => void confirmLockScoring()}
+            busy={locking}
+          />
         )}
       </ConfirmDialog>
     </div>

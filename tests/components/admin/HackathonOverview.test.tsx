@@ -11,6 +11,7 @@ vi.mock("../../../convex/_generated/api", () => ({
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { HackathonOverviewTab } from "../../../src/features/admin/tabs/HackathonOverviewTab";
+import { toRecoverableFailure } from "../../../src/lib/operationOutcome";
 
 const NOW = Date.now();
 const teams = [
@@ -52,7 +53,7 @@ function renderOverview(overrides: Record<string, unknown> = {}) {
     detailedScores,
     locking: false,
     onNavigate: vi.fn(),
-    onLockScoring: vi.fn().mockResolvedValue(undefined),
+    onLockScoring: vi.fn().mockResolvedValue({ ok: true }),
     ...overrides,
   };
   render(<HackathonOverviewTab {...(props as any)} />);
@@ -128,6 +129,45 @@ describe("HackathonOverviewTab", () => {
     expect(dialog).toHaveTextContent("1 judge is listed on a team.");
     fireEvent.click(within(dialog).getByRole("button", { name: "Lock scoring", hidden: true }));
     await waitFor(() => expect(props.onLockScoring).toHaveBeenCalledTimes(1));
+  });
+
+  it("closes the lock dialog after a successful lock", async () => {
+    renderOverview();
+    fireEvent.click(screen.getByRole("button", { name: "Lock scoring" }));
+    const dialog = screen.getByRole("dialog", { hidden: true });
+    expect(dialog).toHaveAttribute("open");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Lock scoring", hidden: true }));
+    await waitFor(() => expect(dialog).not.toHaveAttribute("open"));
+  });
+
+  it("keeps the lock dialog open with the failure, retries, and clears it on cancel", async () => {
+    const failure = toRecoverableFailure(new Error("Failed to fetch"), "lock scoring");
+    const onLockScoring = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, failure })
+      .mockResolvedValueOnce({ ok: false, failure })
+      .mockResolvedValueOnce({ ok: true });
+    renderOverview({ onLockScoring });
+    fireEvent.click(screen.getByRole("button", { name: "Lock scoring" }));
+    const dialog = screen.getByRole("dialog", { hidden: true });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Lock scoring", hidden: true }));
+
+    expect(await within(dialog).findByText("Scoring is still unlocked")).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("open");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Try again", hidden: true }));
+    await waitFor(() => expect(onLockScoring).toHaveBeenCalledTimes(2));
+    expect(await within(dialog).findByText("Scoring is still unlocked")).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("open");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel", hidden: true }));
+    expect(dialog).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByRole("button", { name: "Lock scoring" }));
+    expect(within(dialog).queryByText("Scoring is still unlocked")).not.toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Lock scoring", hidden: true }));
+    await waitFor(() => expect(dialog).not.toHaveAttribute("open"));
+    expect(onLockScoring).toHaveBeenCalledTimes(3);
   });
 
   it("shows readiness blockers before the event and routes to the fix", () => {

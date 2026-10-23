@@ -215,9 +215,10 @@ function PreviewEvent({ mode }: { mode: ResultsMode }) {
           onFinish={async () =>
             setInput((current) => ({ ...current, status: "past" }))
           }
-          onLock={async () =>
-            setInput((current) => ({ ...current, scoringLocked: true }))
-          }
+          onLock={async () => {
+            setInput((current) => ({ ...current, scoringLocked: true }));
+            return { ok: true };
+          }}
           locking={false}
           onPublish={async () => {
             if (failNext) {

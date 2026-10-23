@@ -46,6 +46,9 @@ const VELOCITY_WINDOW_MS = 60 * 1000;
 const VELOCITY_RECHECK_COUNT = 12;
 const RECHECK_RISK_SCORE = 60;
 const FLAG_RISK_SCORE = 70;
+const IP_PASS_BURST_COUNT = 15;
+/** Distinct fingerprints a voter may accumulate failure rows for per event. */
+const MAX_PASS_ROWS_PER_VOTER = 5;
 
 type LocationStatus =
   | "in_range"
@@ -354,6 +357,28 @@ export const evaluateAppreciationRequest = internalMutation({
         riskReasons: [],
       };
     }
+    // Hidden events stop accepting votes, even from previously shared links.
+    // Checked before any CAPTCHA pass is written.
+    if (event.hidden) {
+      return {
+        allowed: false,
+        requiresCaptcha: false,
+        error: "Event not found",
+        reviewStatus: "accepted" as const,
+        riskScore: 0,
+        riskReasons: [],
+      };
+    }
+    if (computeEventStatus(event) !== "active") {
+      return {
+        allowed: false,
+        requiresCaptcha: false,
+        error: "Appreciations open once the event is live",
+        reviewStatus: "accepted" as const,
+        riskScore: 0,
+        riskReasons: [],
+      };
+    }
 
     const assessment = assessLocation(event, args.location);
     assessClientSignals(assessment, args.clientSignals);
@@ -392,16 +417,19 @@ export const evaluateAppreciationRequest = internalMutation({
       addRisk(assessment, 35, "high_velocity");
     }
 
+    // Newest first, bounded: only the burst threshold matters, and a full
+    // scan of a shared venue IP could exceed Convex read limits.
     const recentIpPasses = await ctx.db
       .query("demoDayCaptchaPasses")
       .withIndex("by_event_and_ip", (q) =>
         q.eq("eventId", args.eventId).eq("ipAddress", args.ipAddress),
       )
-      .collect();
+      .order("desc")
+      .take(IP_PASS_BURST_COUNT);
     const recentIpPassCount = recentIpPasses.filter(
       (pass) => pass.createdAt >= now - 10 * 60 * 1000,
     ).length;
-    if (recentIpPassCount >= 15) {
+    if (recentIpPassCount >= IP_PASS_BURST_COUNT) {
       addRisk(assessment, 35, "pass_creation_burst");
     }
 
@@ -521,6 +549,29 @@ export const recordCaptchaFailure = internalMutation({
       .first();
     const failureReason = `captcha_failure:${args.failureReason}`;
     if (!pass) {
+      // Each new fingerprint would otherwise add a row. Past the cap, record
+      // the failure on an existing row so junk tokens cannot grow the table.
+      const voterPasses = await ctx.db
+        .query("demoDayCaptchaPasses")
+        .withIndex("by_event_and_voter_fingerprint", (q) =>
+          q.eq("eventId", args.eventId).eq("voterUserId", args.voterUserId),
+        )
+        .take(MAX_PASS_ROWS_PER_VOTER);
+      if (voterPasses.length >= MAX_PASS_ROWS_PER_VOTER) {
+        const target = voterPasses[0];
+        await ctx.db.patch(target._id, {
+          updatedAt: now,
+          lastFailureAt: now,
+          failureCount: (target.failureCount ?? 0) + 1,
+          recheckRequired: true,
+          riskScore: clampRiskScore((target.riskScore ?? 0) + 20),
+          riskReasons: mergeReasons(target.riskReasons, [
+            failureReason,
+            "fingerprint_churn",
+          ]),
+        });
+        return null;
+      }
       await ctx.db.insert("demoDayCaptchaPasses", {
         eventId: args.eventId,
         attendeeId: args.attendeeId,
@@ -1129,12 +1180,12 @@ export const reviewAppreciations = mutation({
   handler: async (ctx, args) => {
     const adminId = await requireAdmin(ctx);
     const now = Date.now();
-    let eventId: Id<"events"> | null = null;
+    const eventIds = new Set<Id<"events">>();
 
     for (const appreciationId of args.appreciationIds) {
       const appreciation = await ctx.db.get(appreciationId);
       if (!appreciation) continue;
-      eventId = appreciation.eventId;
+      eventIds.add(appreciation.eventId);
       await ctx.db.patch(appreciationId, {
         reviewStatus: args.reviewStatus,
         reviewedAt: now,
@@ -1143,7 +1194,7 @@ export const reviewAppreciations = mutation({
       });
     }
 
-    if (eventId) {
+    for (const eventId of eventIds) {
       await recomputeEventAppreciationScores(ctx, eventId);
     }
     return null;

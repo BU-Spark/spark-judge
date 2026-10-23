@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { isHackathonMode } from "./eventModes";
 import { canAccessEvent, isAdmin, isJudgeVerifiedForEvent, requireAuth } from "./helpers";
+import { getOwnTeamPredicate } from "./teamMembership";
 
 export function assertCanRemoveTeamAssignment(hasSubmittedScore: boolean) {
   if (hasSubmittedScore) {
@@ -48,6 +49,10 @@ export const addTeamToAssignment = mutation({
     }
     if (event.scoringLockedAt) {
       throw new Error("Scoring is locked for this event");
+    }
+    const isOwnTeam = await getOwnTeamPredicate(ctx, userId);
+    if (isOwnTeam(team)) {
+      throw new Error("You cannot judge a project you are part of");
     }
 
     // Check if assignment already exists
@@ -115,6 +120,7 @@ export const addMultipleTeamsToAssignment = mutation({
       .collect();
 
     const existingTeamIds = new Set(existingAssignments.map((a) => a.teamId));
+    const isOwnTeam = await getOwnTeamPredicate(ctx, userId);
     let addedCount = 0;
 
     for (const teamId of args.teamIds) {
@@ -123,6 +129,7 @@ export const addMultipleTeamsToAssignment = mutation({
       // Verify team belongs to event
       const team = await ctx.db.get(teamId);
       if (!team || team.eventId !== args.eventId) continue;
+      if (isOwnTeam(team)) continue;
 
       await ctx.db.insert("judgeAssignments", {
         judgeId: judge._id,

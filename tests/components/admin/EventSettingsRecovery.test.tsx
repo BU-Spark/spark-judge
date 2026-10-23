@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { useState } from "react";
 
 const queryResults = vi.hoisted(() => new Map<string, unknown>());
 const mutations = vi.hoisted(() => new Map<string, ReturnType<typeof vi.fn>>());
@@ -49,6 +50,35 @@ vi.mock("../../../src/features/admin/tabs/ScoresTab", () => ({
   ),
 }));
 
+// Both stand-ins call the lock prop and render what it resolved with, so the
+// tests can check that each entry point uses the result-returning handler.
+function LockProbe({ label, onLock }: { label: string; onLock: () => Promise<any> }) {
+  const [outcome, setOutcome] = useState("");
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() =>
+          void onLock().then((result) =>
+            setOutcome(result.ok ? "locked" : `failed: ${result.failure.message}`),
+          )
+        }
+      >
+        {label}
+      </button>
+      <output>{outcome}</output>
+    </div>
+  );
+}
+vi.mock("../../../src/features/admin/tabs/HackathonOverviewTab", () => ({
+  HackathonOverviewTab: (props: any) => (
+    <LockProbe label="Overview lock" onLock={props.onLockScoring} />
+  ),
+}));
+vi.mock("../../../src/features/admin/tabs/ResultsTab", () => ({
+  ResultsTab: (props: any) => <LockProbe label="Results lock" onLock={props.onLock} />,
+}));
+
 import { EventManagementModal } from "../../../src/features/admin/legacy/AdminLegacy";
 
 const NOW = Date.now();
@@ -78,7 +108,9 @@ function setEvent(event: Record<string, unknown>) {
   queryResults.set("events.getEvent", event);
 }
 
-function renderWorkspace(initialTab: "details" | "scores" = "details") {
+function renderWorkspace(
+  initialTab: "details" | "scores" | "overview" | "winners" = "details",
+) {
   // A fresh element each time so React re-renders and re-reads the mocked queries.
   const ui = () => (
     <MemoryRouter>
@@ -196,5 +228,35 @@ describe("scoring lock confirmation (O06)", () => {
     });
     expect(setLock).toHaveBeenCalledTimes(2);
     await waitFor(() => expect(dialog).not.toHaveAttribute("open"));
+  });
+});
+
+describe("scoring lock entry points (O06)", () => {
+  it.each([
+    ["overview", "Overview lock"],
+    ["winners", "Results lock"],
+  ] as const)("%s tab locks through the shared handler and reports failure", async (tab, label) => {
+    const setLock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Failed to fetch"))
+      .mockResolvedValueOnce(null);
+    mutations.set("events.setScoringLock", setLock);
+    renderWorkspace(tab);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: label }));
+    });
+    expect(setLock).toHaveBeenCalledWith({
+      eventId: "event1",
+      locked: true,
+      reason: "Deliberation in progress",
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(/^failed: /);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: label }));
+    });
+    expect(setLock).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("status")).toHaveTextContent("locked");
   });
 });

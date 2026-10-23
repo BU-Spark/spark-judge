@@ -9,7 +9,7 @@ import {
   requireAdmin,
   requireAuth,
 } from "./helpers";
-import { shapeTeamForPublic } from "./helpers";
+import { appError, shapeTeamForPublic } from "./helpers";
 import { Doc, Id } from "./_generated/dataModel";
 import { isHackathonMode } from "./eventModes";
 import {
@@ -68,14 +68,14 @@ function isTeamEligibleForPrize(team: Doc<"teams">, prize: Doc<"prizes">) {
 function validatePrizeConfig(prize: any, event: any) {
   const name = prize.name?.trim();
   if (!name) {
-    throw new Error("Prize name is required");
+    throw appError("invalid_prize", "validation", "Prize name is required");
   }
   if (
     prize.entryMode === "automatic" &&
     prize.type !== "track" &&
     prize.type !== "track_sponsor"
   ) {
-    throw new Error(`Prize "${name}" must be track-linked for automatic entry`);
+    throw appError("invalid_prize", "validation", `Prize "${name}" must be track-linked for automatic entry`);
   }
 
   const eventTracks =
@@ -86,16 +86,16 @@ function validatePrizeConfig(prize: any, event: any) {
 
   if (prize.type === "track" || prize.type === "track_sponsor") {
     if (!prize.track || !prize.track.trim()) {
-      throw new Error(`Prize "${name}" must include a track`);
+      throw appError("invalid_prize", "validation", `Prize "${name}" must include a track`);
     }
     if (eventTracks.length > 0 && !eventTracks.includes(prize.track)) {
-      throw new Error(`Prize "${name}" has an invalid track: ${prize.track}`);
+      throw appError("invalid_prize", "validation", `Prize "${name}" has an invalid track: ${prize.track}`);
     }
   }
 
   if (prize.type === "sponsor" || prize.type === "track_sponsor") {
     if (!prize.sponsorName || !prize.sponsorName.trim()) {
-      throw new Error(`Prize "${name}" must include a sponsor`);
+      throw appError("invalid_prize", "validation", `Prize "${name}" must include a sponsor`);
     }
   }
 
@@ -105,11 +105,13 @@ function validatePrizeConfig(prize: any, event: any) {
     );
     const selectedCategories = (prize.scoreCategoryNames || []).filter(Boolean);
     if (selectedCategories.length === 0) {
-      throw new Error(`Prize "${name}" must select at least one scoring category`);
+      throw appError("invalid_prize", "validation", `Prize "${name}" must select at least one scoring category`);
     }
     for (const categoryName of selectedCategories) {
       if (!categoryNames.has(categoryName)) {
-        throw new Error(
+        throw appError(
+          "invalid_prize",
+          "validation",
           `Prize "${name}" references an unknown scoring category: ${categoryName}`
         );
       }
@@ -178,7 +180,7 @@ export async function insertInitialPrizes(
 ) {
   if (prizes.length === 0) return;
   if (!isHackathonMode(event.mode)) {
-    throw new Error("Prize workflows are only supported for hackathon events");
+    throw appError("wrong_event_mode", "lifecycle", "Prize workflows are only supported for hackathon events");
   }
   const now = Date.now();
   for (let index = 0; index < prizes.length; index += 1) {
@@ -232,6 +234,8 @@ export const saveEventPrizes = mutation({
   handler: async (ctx, args) => {
     const adminId = await requireAdmin(ctx);
     const event = await getHackathonEvent(ctx, args.eventId);
+    // Removing or retyping a prize can drop or invalidate published winners.
+    if (event.resultsReleased) throw new Error("Withdraw results before changing prizes");
 
     const existingPrizes = await ctx.db
       .query("prizes")
@@ -389,7 +393,9 @@ export const setMyTeamPrizeSubmissions = mutation({
     const userId = await requireAuth(ctx);
 
     const event = await getHackathonEvent(ctx, args.eventId);
-    if (computeEventStatus(event) === "past") {
+    // Scoring lock freezes entries too: dropping out of a prize after the
+    // lock would invalidate an already-chosen winner.
+    if (computeEventStatus(event) === "past" || event.scoringLockedAt || event.resultsReleased) {
       throw new Error("Prize selection is closed for this event");
     }
 
@@ -718,7 +724,17 @@ export const listPrizeWinners = query({
     const prizesById = new Map(prizes.map((prize) => [prize._id, prize]));
     const teamsById = new Map(teams.map((team) => [team._id, team]));
 
-    return winners
+    // Public results follow current visibility: hiding a team or
+    // deactivating a prize after release withdraws it from this list.
+    const listedWinners = admin
+      ? winners
+      : winners.filter((winner) => {
+          const prize = prizesById.get(winner.prizeId);
+          const team = teamsById.get(winner.teamId);
+          return !!team && !team.hidden && !!prize && prize.isActive !== false;
+        });
+
+    return listedWinners
       .map((winner) => {
         const prize = prizesById.get(winner.prizeId);
         const team = teamsById.get(winner.teamId);

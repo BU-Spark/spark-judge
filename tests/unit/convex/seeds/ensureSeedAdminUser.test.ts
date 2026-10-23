@@ -31,7 +31,7 @@ describe('ensureSeedAdminUser', () => {
       'users',
       expect.objectContaining({
         name: 'Demo Admin',
-        email: 'admin@demo.com',
+        email: 'admin@demo.example.com',
       })
     );
     expect(mockCtx.db.patch).toHaveBeenCalledWith('new_user', { isAdmin: true });
@@ -54,7 +54,7 @@ describe('ensureSeedAdminUser', () => {
     const { getAuthUserId } = await import('@convex-dev/auth/server');
     const authUserId = 'auth_user' as Id<'users'>;
     vi.mocked(getAuthUserId).mockResolvedValue(authUserId);
-    mockCtx.db.get.mockResolvedValue({ _id: authUserId, email: 'user@demo.com' });
+    mockCtx.db.get.mockResolvedValue({ _id: authUserId, email: 'user@demo.example.com' });
 
     const userId = await ensureSeedAdminUser(mockCtx);
 

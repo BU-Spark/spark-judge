@@ -78,8 +78,9 @@ describe("Convex security handlers", () => {
       endDate: Date.now() + 1_000,
       categories: [{ name: "Innovation", weight: 1 }],
       resultsReleased: false,
+      judgeCode: "CURRENT",
     };
-    const judge = { _id: "judge-1", userId: "user-1", eventId: "event-1" };
+    const judge = { _id: "judge-1", userId: "user-1", eventId: "event-1", judgeCodeVerifiedAt: 1 };
     const db = {
       get: vi.fn().mockResolvedValue(event),
       query: vi.fn().mockImplementation((table: string) =>
@@ -120,56 +121,94 @@ describe("Convex security handlers", () => {
       endDate: Date.now() + 1_000,
       judgeCode: "CURRENT",
     };
-    const judge: any = { _id: "judge-1", userId: "user-1", eventId: "event-1" };
+    let committed: any = { _id: "judge-1", userId: "user-1", eventId: "event-1" };
+    let patchCount = 0;
+
+    // Models Convex's transaction semantics: writes commit only when the
+    // handler returns, and a throw discards them. The earlier version of this
+    // test kept writes from throwing calls, which hid a rollback bug.
+    async function transaction(judgeCode: string) {
+      const pending = structuredClone(committed);
+      const db = {
+        get: async () => event,
+        query: () => ({ withIndex: () => ({ first: async () => pending }) }),
+        patch: async (_id: string, updates: any) => {
+          patchCount += 1;
+          for (const [key, value] of Object.entries(updates)) {
+            if (value === undefined) delete pending[key];
+            else pending[key] = value;
+          }
+        },
+      };
+      const result = await (verifyJudgeCodeAndStartJudging as any)._handler(
+        { db },
+        { eventId: "event-1", judgeCode },
+      );
+      committed = pending;
+      return result;
+    }
+
+    for (let attempt = 1; attempt < 5; attempt += 1) {
+      await expect(transaction("WRONG")).resolves.toMatchObject({
+        ok: false,
+        code: "invalid_judge_code",
+      });
+      expect(committed.judgeCodeFailedAttempts).toBe(attempt);
+    }
+    await expect(transaction("WRONG")).resolves.toMatchObject({
+      ok: false,
+      code: "judge_code_locked",
+      category: "rate_limit",
+    });
+    expect(committed.judgeCodeLockedUntil).toBeGreaterThan(Date.now());
+
+    // While locked, even the right code is refused without another write.
+    const lockedPatchCount = patchCount;
+    await expect(transaction("CURRENT")).resolves.toMatchObject({
+      ok: false,
+      code: "judge_code_locked",
+    });
+    expect(patchCount).toBe(lockedPatchCount);
+
+    committed.judgeCodeLockedUntil = Date.now() - 1;
+    await expect(transaction("WRONG")).resolves.toMatchObject({ ok: false });
+    expect(committed.judgeCodeFailedAttempts).toBe(1);
+    expect(committed.judgeCodeLockedUntil).toBeUndefined();
+
+    // Codes compare case-insensitively because judges type in uppercase.
+    await expect(transaction("current")).resolves.toEqual({ ok: true });
+    expect(committed.judgeCodeFailedAttempts).toBeUndefined();
+    expect(committed.judgeCodeLockedUntil).toBeUndefined();
+    expect(committed.judgeCodeVerifiedAt).toBeTypeOf("number");
+
+    const verifiedPatchCount = patchCount;
+    const verifiedState = { ...committed };
+    await expect(transaction("WRONG")).resolves.toMatchObject({
+      ok: false,
+      code: "invalid_judge_code",
+    });
+    expect(patchCount).toBe(verifiedPatchCount);
+    expect(committed).toEqual(verifiedState);
+  });
+
+  it("refuses judge verification when the event has no judge code", async () => {
+    vi.mocked(getAuthUserId).mockResolvedValue("user-1" as any);
+    const event = {
+      _id: "event-1",
+      mode: "hackathon",
+      startDate: Date.now() - 1_000,
+      endDate: Date.now() + 1_000,
+      judgeCode: "",
+    };
     const db = {
       get: vi.fn().mockResolvedValue(event),
-      query: vi.fn().mockReturnValue({
-        withIndex: () => ({ first: async () => judge }),
-      }),
-      patch: vi.fn().mockImplementation((_id: string, updates: any) => {
-        Object.assign(judge, updates);
-      }),
+      query: vi.fn(),
+      patch: vi.fn(),
     };
-
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      await expect(
-        (verifyJudgeCodeAndStartJudging as any)._handler(
-          { db },
-          { eventId: "event-1", judgeCode: "WRONG" },
-        ),
-      ).rejects.toThrow(/Invalid judge code|temporarily locked/);
-    }
-    expect(judge.judgeCodeLockedUntil).toBeGreaterThan(Date.now());
-
-    judge.judgeCodeVerifiedAt = undefined;
-    judge.judgeCodeLockedUntil = Date.now() - 1;
     await expect(
-      (verifyJudgeCodeAndStartJudging as any)._handler(
-        { db },
-        { eventId: "event-1", judgeCode: "WRONG" },
-      ),
-    ).rejects.toThrow("Invalid judge code");
-    expect(judge.judgeCodeFailedAttempts).toBe(1);
-    expect(judge.judgeCodeLockedUntil).toBeUndefined();
-
-    await (verifyJudgeCodeAndStartJudging as any)._handler(
-      { db },
-      { eventId: "event-1", judgeCode: "CURRENT" },
-    );
-    expect(judge.judgeCodeFailedAttempts).toBeUndefined();
-    expect(judge.judgeCodeLockedUntil).toBeUndefined();
-    expect(judge.judgeCodeVerifiedAt).toBeTypeOf("number");
-
-    const patchCount = db.patch.mock.calls.length;
-    const verifiedState = { ...judge };
-    await expect(
-      (verifyJudgeCodeAndStartJudging as any)._handler(
-        { db },
-        { eventId: "event-1", judgeCode: "WRONG" },
-      ),
-    ).rejects.toThrow("Invalid judge code");
-    expect(db.patch.mock.calls.length).toBe(patchCount);
-    expect(judge).toEqual(verifiedState);
+      (verifyJudgeCodeAndStartJudging as any)._handler({ db }, { eventId: "event-1", judgeCode: "" }),
+    ).rejects.toThrow("isn't accepting judges yet");
+    expect(db.patch).not.toHaveBeenCalled();
   });
 
   it("admin judge-code rotation clears existing verification state", async () => {

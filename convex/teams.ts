@@ -4,12 +4,15 @@ import {
   isAutomaticPrize,
   isPrizeEligibleForTrack,
 } from "../shared/prizeEntries";
-import { query, mutation, MutationCtx } from "./_generated/server";
+import { query, mutation, internalMutation, MutationCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
+  appError,
   canAccessEvent,
   computeEventStatus,
+  eventNotFound,
   isAdmin,
   requireAdmin,
   shapeTeamForPublic,
@@ -56,7 +59,7 @@ function validateGithubUrl(githubUrl: string | undefined) {
   const normalized = normalizeOptionalString(githubUrl);
   if (!normalized) return undefined;
   if (!normalized.startsWith("https://github.com/")) {
-    throw new Error("GitHub URL must start with https://github.com/");
+    throw appError("invalid_github_url", "validation", "GitHub URL must start with https://github.com/");
   }
   return normalized;
 }
@@ -89,17 +92,27 @@ export function shapeTeamsForViewer(
 }
 
 export function assertEditableTeamEvent(
-  event: { startDate: number; endDate: number; mode?: string },
+  event: {
+    startDate: number;
+    endDate: number;
+    mode?: string;
+    scoringLockedAt?: number;
+    resultsReleased?: boolean;
+  },
   hidden: boolean | undefined,
 ) {
   if (computeEventStatus(event) !== "active") {
-    throw new Error("Team edits are only available while the event is active");
+    throw appError("team_edits_closed", "lifecycle", "Team edits are only available while the event is active");
+  }
+  // Judges scored what they saw; edits after the lock would change it.
+  if (event.scoringLockedAt || event.resultsReleased) {
+    throw appError("team_edits_locked", "lifecycle", "Project edits are closed because scoring is locked");
   }
   if (hidden) {
-    throw new Error("Hidden teams cannot be edited");
+    throw appError("team_hidden", "lifecycle", "Hidden teams cannot be edited");
   }
   if (isCodeAndTellMode(event.mode)) {
-    throw new Error("Entrants cannot edit Code & Tell projects");
+    throw appError("code_and_tell_entrant_edit", "permission", "Entrants cannot edit Code & Tell projects");
   }
 }
 
@@ -268,15 +281,15 @@ async function insertSubmittedTeam(
   {
     // Verify event is active (computed from dates)
     const event = await ctx.db.get(args.eventId);
-    if (!event) throw new Error("Event not found");
-    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
+    if (!event) throw eventNotFound();
+    if (!(await canAccessEvent(ctx, event))) throw eventNotFound();
     if (isCodeAndTellMode(event.mode)) {
-      throw new Error("Project submission is admin-only for Code & Tell events");
+      throw appError("code_and_tell_submission_admin_only", "permission", "Project submission is admin-only for Code & Tell events");
     }
 
     const status = computeEventStatus(event);
     if (status !== "active") {
-      throw new Error("Can only submit teams to active events");
+      throw appError("submissions_closed", "lifecycle", "Can only submit teams to active events");
     }
 
     const isDemoDay = isDemoDayMode(event.mode);
@@ -289,7 +302,7 @@ async function insertSubmittedTeam(
       )
       .first();
 
-    if (judge) throw new Error("Judges cannot submit teams");
+    if (judge) throw appError("judge_cannot_submit", "permission", "Judges cannot submit teams");
 
     // Check if already submitted a team
     const existing = await ctx.db
@@ -299,7 +312,7 @@ async function insertSubmittedTeam(
       )
       .first();
 
-    if (existing) throw new Error("You have already submitted a team");
+    if (existing) throw appError("team_already_submitted", "conflict", "You have already submitted a team");
 
     // Check for duplicate team name in this event (excluding hidden teams)
     const allTeams = await ctx.db
@@ -313,38 +326,38 @@ async function insertSubmittedTeam(
     );
 
     if (duplicateName) {
-      throw new Error("A team with this name already exists for this event");
+      throw appError("duplicate_team_name", "conflict", "A team with this name already exists for this event");
     }
 
     // Validate based on event mode
     if (isDemoDay) {
       // Validate course code for Demo Day
       if (!args.courseCode) {
-        throw new Error("Course code is required for Demo Day events");
+        throw appError("course_code_required", "validation", "Course code is required for Demo Day events");
       }
       if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
-        throw new Error("Invalid course code");
+        throw appError("invalid_course_code", "validation", "Invalid course code");
       }
     } else {
       // Validate track for hackathon mode
       if (!args.track) {
-        throw new Error("Track is required");
+        throw appError("track_required", "validation", "Track is required");
       }
       const availableTracks =
         event.tracks ||
         event.categories.map((c: any) => (typeof c === "string" ? c : c.name));
       if (!availableTracks.includes(args.track)) {
-        throw new Error("Invalid track");
+        throw appError("invalid_track", "validation", "Invalid track");
       }
     }
 
     // Validate GitHub URL - required for hackathon, optional for Demo Day
     if (!isDemoDay) {
       if (!args.githubUrl || !args.githubUrl.trim()) {
-        throw new Error("GitHub URL is required");
+        throw appError("github_url_required", "validation", "GitHub URL is required");
       }
       if (!args.githubUrl.startsWith("https://github.com/")) {
-        throw new Error("GitHub URL must start with https://github.com/");
+        throw appError("invalid_github_url", "validation", "GitHub URL must start with https://github.com/");
       }
     } else if (
       args.githubUrl &&
@@ -352,7 +365,7 @@ async function insertSubmittedTeam(
       !args.githubUrl.startsWith("https://github.com/")
     ) {
       // For Demo Day, only validate format if URL is provided
-      throw new Error("GitHub URL must start with https://github.com/");
+      throw appError("invalid_github_url", "validation", "GitHub URL must start with https://github.com/");
     }
 
     if (
@@ -360,7 +373,11 @@ async function insertSubmittedTeam(
       args.devpostUrl.trim() &&
       !args.devpostUrl.startsWith("https://")
     ) {
-      throw new Error("Devpost URL must start with https://");
+      throw appError("invalid_devpost_url", "validation", "Devpost URL must start with https://");
+    }
+
+    if (args.logoStorageId) {
+      await assertAttachableLogo(ctx, args.logoStorageId, undefined);
     }
 
     // Register as participant if not already
@@ -420,7 +437,24 @@ export const getMyTeam = query({
       logoUrl = await ctx.storage.getUrl(team.logoStorageId);
     }
 
-    return { ...team, logoUrl };
+    // Explicit fields only: the raw document also holds live Demo Day tallies
+    // and integrity flags, which must not reach entrants before release.
+    return {
+      _id: team._id,
+      eventId: team.eventId,
+      name: team.name,
+      description: team.description,
+      members: team.members,
+      githubUrl: team.githubUrl,
+      projectUrl: team.projectUrl,
+      devpostUrl: team.devpostUrl,
+      track: team.track,
+      courseCode: team.courseCode,
+      hidden: team.hidden,
+      submittedBy: team.submittedBy,
+      submittedAt: team.submittedAt,
+      logoUrl,
+    };
   },
 });
 
@@ -442,15 +476,15 @@ async function patchOwnTeam(
 ): Promise<void> {
   {
     const team = await ctx.db.get(args.teamId);
-    if (!team) throw new Error("Team not found");
+    if (!team) throw appError("team_not_found", "not_found", "Team not found");
 
     if (team.submittedBy !== userId) {
-      throw new Error("Not authorized");
+      throw appError("not_team_owner", "permission", "Not authorized");
     }
 
     const event = await ctx.db.get(team.eventId);
-    if (!event) throw new Error("Event not found");
-    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
+    if (!event) throw eventNotFound();
+    if (!(await canAccessEvent(ctx, event))) throw eventNotFound();
     assertEditableTeamEvent(event, team.hidden);
 
     const isDemoDay = isDemoDayMode(event.mode);
@@ -461,21 +495,21 @@ async function patchOwnTeam(
         event.tracks ||
         event.categories.map((c: any) => (typeof c === "string" ? c : c.name));
       if (!availableTracks.includes(args.track)) {
-        throw new Error("Invalid track");
+        throw appError("invalid_track", "validation", "Invalid track");
       }
     }
 
     // Validate course code if provided (demo day mode)
     if (args.courseCode && isDemoDay) {
       if (event.courseCodes && !event.courseCodes.includes(args.courseCode)) {
-        throw new Error("Invalid course code");
+        throw appError("invalid_course_code", "validation", "Invalid course code");
       }
     }
 
     // Validate GitHub URL if provided
     const githubUrl = validateGithubUrl(args.githubUrl);
     if (args.devpostUrl && !args.devpostUrl.startsWith("https://")) {
-      throw new Error("Devpost URL must start with https://");
+      throw appError("invalid_devpost_url", "validation", "Devpost URL must start with https://");
     }
 
     const updates: any = {};
@@ -487,10 +521,16 @@ async function patchOwnTeam(
     if (args.devpostUrl !== undefined) updates.devpostUrl = args.devpostUrl;
     if (args.track !== undefined) updates.track = args.track;
     if (args.courseCode !== undefined) updates.courseCode = args.courseCode;
-    if (args.logoStorageId !== undefined)
+    const previousLogo = team.logoStorageId;
+    if (args.logoStorageId !== undefined && args.logoStorageId !== previousLogo) {
+      await assertAttachableLogo(ctx, args.logoStorageId, team._id);
       updates.logoStorageId = args.logoStorageId;
+    }
 
     await ctx.db.patch(args.teamId, updates);
+    if (updates.logoStorageId !== undefined && previousLogo) {
+      await deleteLogoIfUnreferenced(ctx, previousLogo);
+    }
   }
 }
 
@@ -506,12 +546,12 @@ async function replaceOwnPrizeEntries(
   prizeIds: Id<"prizes">[],
 ) {
   const event = await ctx.db.get(team.eventId);
-  if (!event) throw new Error("Event not found");
+  if (!event) throw eventNotFound();
   if (!isHackathonMode(event.mode)) {
-    throw new Error("Prize workflows are only supported for hackathon events");
+    throw appError("prizes_unsupported_mode", "validation", "Prize workflows are only supported for hackathon events");
   }
-  if (computeEventStatus(event) === "past") {
-    throw new Error("Prize selection is closed for this event");
+  if (computeEventStatus(event) === "past" || event.scoringLockedAt || event.resultsReleased) {
+    throw appError("prize_selection_closed", "lifecycle", "Prize selection is closed for this event");
   }
 
   const uniquePrizeIds = Array.from(new Set(prizeIds));
@@ -524,10 +564,10 @@ async function replaceOwnPrizeEntries(
   for (const prizeId of uniquePrizeIds) {
     const prize = eventPrizesById.get(prizeId);
     if (!prize) {
-      throw new Error("One or more prize selections are invalid for this event");
+      throw appError("invalid_prize_selection", "validation", "One or more prize selections are invalid for this event");
     }
     if (!isPrizeEligibleForTrack(prize, team.track)) {
-      throw new Error(`Your team is not eligible for the prize "${prize.name}"`);
+      throw appError("prize_not_eligible", "validation", `Your team is not eligible for the prize "${prize.name}"`);
     }
   }
 
@@ -562,6 +602,52 @@ async function replaceOwnPrizeEntries(
  * project already recorded for this user) is applied as an update instead of
  * failing or creating a duplicate.
  */
+const PROJECT_FIELD_LIMITS = {
+  name: 120,
+  description: 5000,
+  members: 25,
+  member: 120,
+  url: 2048,
+  label: 100,
+} as const;
+
+/**
+ * Participant text reaches every visitor through public team lists, so cap it
+ * well above real use but far below Convex's 1 MB document limit.
+ */
+export function assertProjectFieldLimits(args: {
+  name?: string;
+  description: string;
+  members: string[];
+  githubUrl?: string;
+  devpostUrl?: string;
+  track?: string;
+  courseCode?: string;
+}) {
+  const tooLong = (value: string | undefined, max: number) =>
+    value !== undefined && value.length > max;
+  const fieldErrors: Record<string, string> = {};
+  if (tooLong(args.name, PROJECT_FIELD_LIMITS.name)) {
+    fieldErrors.name = `Use ${PROJECT_FIELD_LIMITS.name} characters or fewer`;
+  }
+  if (tooLong(args.description, PROJECT_FIELD_LIMITS.description)) {
+    fieldErrors.description = `Use ${PROJECT_FIELD_LIMITS.description} characters or fewer`;
+  }
+  if (
+    args.members.length > PROJECT_FIELD_LIMITS.members ||
+    args.members.some((member) => tooLong(member, PROJECT_FIELD_LIMITS.member))
+  ) {
+    fieldErrors.members = `List up to ${PROJECT_FIELD_LIMITS.members} members, ${PROJECT_FIELD_LIMITS.member} characters each`;
+  }
+  if (tooLong(args.githubUrl, PROJECT_FIELD_LIMITS.url)) fieldErrors.githubUrl = "That link is too long";
+  if (tooLong(args.devpostUrl, PROJECT_FIELD_LIMITS.url)) fieldErrors.devpostUrl = "That link is too long";
+  if (tooLong(args.track, PROJECT_FIELD_LIMITS.label)) fieldErrors.track = "Invalid track";
+  if (tooLong(args.courseCode, PROJECT_FIELD_LIMITS.label)) fieldErrors.courseCode = "Invalid course code";
+  if (Object.keys(fieldErrors).length > 0) {
+    throw appError("project_fields_too_long", "validation", "Some project details are too long", { fieldErrors });
+  }
+}
+
 export const saveMyProject = mutation({
   args: {
     eventId: v.id("events"),
@@ -579,6 +665,7 @@ export const saveMyProject = mutation({
   returns: v.object({ teamId: v.id("teams"), created: v.boolean() }),
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx);
+    assertProjectFieldLimits(args);
 
     let teamId = args.teamId;
     if (!teamId) {
@@ -597,7 +684,7 @@ export const saveMyProject = mutation({
     let created = false;
     if (teamId) {
       const team = await ctx.db.get(teamId);
-      if (!team || team.eventId !== args.eventId) throw new Error("Team not found");
+      if (!team || team.eventId !== args.eventId) throw appError("team_not_found", "not_found", "Team not found");
       await patchOwnTeam(ctx, userId, {
         teamId,
         description: args.description,
@@ -610,7 +697,7 @@ export const saveMyProject = mutation({
       });
     } else {
       const name = args.name?.trim();
-      if (!name) throw new Error("Team name is required");
+      if (!name) throw appError("team_name_required", "validation", "Team name is required");
       teamId = await insertSubmittedTeam(ctx, userId, {
         eventId: args.eventId,
         name,
@@ -627,7 +714,7 @@ export const saveMyProject = mutation({
 
     if (args.prizeIds !== undefined) {
       const savedTeam = await ctx.db.get(teamId);
-      if (!savedTeam) throw new Error("Team not found");
+      if (!savedTeam) throw appError("team_not_found", "not_found", "Team not found");
       await replaceOwnPrizeEntries(ctx, userId, savedTeam, args.prizeIds);
     }
 
@@ -635,26 +722,127 @@ export const saveMyProject = mutation({
   },
 });
 
+export const LOGO_UPLOAD_WINDOW_MS = 60 * 60 * 1000;
+export const LOGO_UPLOADS_PER_WINDOW = 10;
+export const LOGO_MAX_BYTES = 5 * 1024 * 1024;
+/** SVG is excluded: it can carry script when opened from the storage URL. */
+export const LOGO_CONTENT_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
+
 export const generateUploadUrl = mutation({
   args: { eventId: v.id("events") },
   returns: v.string(),
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
+    const userId = await requireAuth(ctx);
 
     const event = await ctx.db.get(args.eventId);
     if (!event || !(await canAccessEvent(ctx, event))) {
-      throw new Error("Event not found");
+      throw eventNotFound();
     }
     if (computeEventStatus(event) !== "active") {
-      throw new Error("Uploads are only available while the event is active");
+      throw appError("uploads_closed", "lifecycle", "Uploads are only available while the event is active");
     }
     if (isCodeAndTellMode(event.mode)) {
-      throw new Error("Project uploads are not available for Code & Tell events");
+      throw appError("uploads_unsupported_mode", "permission", "Project uploads are not available for Code & Tell events");
     }
+    if (event.scoringLockedAt) {
+      throw appError("uploads_closed", "lifecycle", "Project edits are closed because scoring is locked");
+    }
+    // Judges cannot submit projects, so they have no reason to upload logos.
+    const judge = await ctx.db
+      .query("judges")
+      .withIndex("by_user_and_event", (q) =>
+        q.eq("userId", userId).eq("eventId", args.eventId)
+      )
+      .first();
+    if (judge) {
+      throw appError("judge_cannot_submit", "permission", "Judges cannot submit teams");
+    }
+
+    const now = Date.now();
+    const windowStart = now - LOGO_UPLOAD_WINDOW_MS;
+    const expired = await ctx.db
+      .query("logoUploadIssuances")
+      .withIndex("by_user_and_issued_at", (q) =>
+        q.eq("userId", userId).lt("issuedAt", windowStart)
+      )
+      .take(LOGO_UPLOADS_PER_WINDOW);
+    await Promise.all(expired.map((row) => ctx.db.delete(row._id)));
+
+    const recent = await ctx.db
+      .query("logoUploadIssuances")
+      .withIndex("by_user_and_issued_at", (q) =>
+        q.eq("userId", userId).gte("issuedAt", windowStart)
+      )
+      .take(LOGO_UPLOADS_PER_WINDOW);
+    if (recent.length >= LOGO_UPLOADS_PER_WINDOW) {
+      const oldest = Math.min(...recent.map((row) => row.issuedAt));
+      throw appError(
+        "logo_upload_rate_limited",
+        "rate_limit",
+        "Too many logo uploads. Try again later.",
+        { retryAfterMs: Math.max(0, oldest + LOGO_UPLOAD_WINDOW_MS - now) },
+      );
+    }
+    await ctx.db.insert("logoUploadIssuances", {
+      userId,
+      eventId: args.eventId,
+      issuedAt: now,
+    });
 
     return await ctx.storage.generateUploadUrl();
   },
 });
+
+/**
+ * Upload URLs accept any file, so check the stored file before a team may
+ * reference it: it must still exist (the sweep removes old unattached
+ * uploads), be a small raster image, and not already belong to another team.
+ * Rejected files are left for the abandoned-upload sweep to delete.
+ */
+async function assertAttachableLogo(
+  ctx: MutationCtx,
+  storageId: Id<"_storage">,
+  teamId: Id<"teams"> | undefined,
+) {
+  const file = await ctx.db.system.get(storageId);
+  if (!file) {
+    throw appError(
+      "logo_upload_missing",
+      "validation",
+      "That logo upload has expired. Choose the image again.",
+    );
+  }
+  if (!file.contentType || !LOGO_CONTENT_TYPES.has(file.contentType)) {
+    throw appError("logo_invalid_type", "validation", "Logos must be PNG, JPEG, WebP, or GIF images");
+  }
+  if (file.size > LOGO_MAX_BYTES) {
+    throw appError("logo_too_large", "validation", "Logos must be 5 MB or smaller");
+  }
+  const owner = await ctx.db
+    .query("teams")
+    .withIndex("by_logo_storage", (q) => q.eq("logoStorageId", storageId))
+    .first();
+  if (owner && owner._id !== teamId) {
+    throw appError("logo_in_use", "validation", "That logo upload belongs to another project");
+  }
+}
+
+/** Deletes a replaced logo unless another team still references it. */
+async function deleteLogoIfUnreferenced(ctx: MutationCtx, storageId: Id<"_storage">) {
+  const stillUsed = await ctx.db
+    .query("teams")
+    .withIndex("by_logo_storage", (q) => q.eq("logoStorageId", storageId))
+    .first();
+  if (stillUsed) return;
+  if (await ctx.db.system.get(storageId)) {
+    await ctx.storage.delete(storageId);
+  }
+}
 
 export const listTeams = query({
   args: {
@@ -858,5 +1046,68 @@ export const getTeamById = query({
         mode: event.mode,
       },
     };
+  },
+});
+
+/** Uploads younger than this may still be attached by a pending or retried save. */
+export const LOGO_UPLOAD_RETENTION_MS = 24 * 60 * 60 * 1000;
+/** Maximum files examined per sweep run; a full batch schedules a continuation. */
+export const LOGO_SWEEP_BATCH_SIZE = 100;
+
+/**
+ * Deletes stored files that no team references once they are older than the
+ * retention window: logos uploaded for a save that never completed, logos
+ * replaced by a newer upload, and logos left behind by `removeTeam`.
+ *
+ * `teams.logoStorageId` is the only reference to `_storage` in the schema. If
+ * another table starts storing file IDs, add its check here before deleting.
+ *
+ * Each run examines at most LOGO_SWEEP_BATCH_SIZE files in creation order.
+ * Referenced files are skipped, so a full batch continues after the last file
+ * examined rather than rescanning it. Re-running is safe: deleted files simply
+ * no longer appear in the scan.
+ */
+export const sweepAbandonedLogoUploads = internalMutation({
+  args: { afterCreationTime: v.optional(v.number()) },
+  returns: v.object({
+    scanned: v.number(),
+    deleted: v.number(),
+    continued: v.boolean(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ scanned: number; deleted: number; continued: boolean }> => {
+    const cutoff = Date.now() - LOGO_UPLOAD_RETENTION_MS;
+    const after = args.afterCreationTime;
+    const files = await ctx.db.system
+      .query("_storage")
+      .withIndex("by_creation_time", (q) =>
+        after === undefined
+          ? q.lt("_creationTime", cutoff)
+          : q.gt("_creationTime", after).lt("_creationTime", cutoff),
+      )
+      .order("asc")
+      .take(LOGO_SWEEP_BATCH_SIZE);
+
+    let deleted = 0;
+    for (const file of files) {
+      const referencingTeam = await ctx.db
+        .query("teams")
+        .withIndex("by_logo_storage", (q) => q.eq("logoStorageId", file._id))
+        .first();
+      if (referencingTeam) continue;
+      await ctx.storage.delete(file._id);
+      deleted += 1;
+    }
+
+    const continued = files.length === LOGO_SWEEP_BATCH_SIZE;
+    if (continued) {
+      await ctx.scheduler.runAfter(0, internal.teams.sweepAbandonedLogoUploads, {
+        afterCreationTime: files[files.length - 1]._creationTime,
+      });
+    }
+
+    return { scanned: files.length, deleted, continued };
   },
 });

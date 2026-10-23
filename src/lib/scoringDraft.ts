@@ -55,22 +55,33 @@ export function isScoringDraft(value: unknown): value is ScoringDraft {
  * Lightweight read used outside the wizard (e.g. "resume draft" prompts).
  * Never throws; ignores drafts already marked as submitted.
  */
-export function readScoringDraftSummary(
-  storageKey: string,
-): { hasDraft: boolean; completedCount: number } {
+export function readScoringDraftSummary(storageKey: string): {
+  hasDraft: boolean;
+  completedCount: number;
+  /** Teams the draft marks completed; may still need submitting. */
+  completedTeamIds: string[];
+} {
   const result = readDraft<ScoringDraft>(
     scoringDraftKey(storageKey),
     SCORING_DRAFT_SCHEMA,
     { isValid: isScoringDraft },
   );
   if (result.status === "found" && !result.data.submittedAt) {
-    return { hasDraft: true, completedCount: result.data.completed.length };
+    return {
+      hasDraft: true,
+      completedCount: result.data.completed.length,
+      completedTeamIds: result.data.completed,
+    };
   }
   const legacy = parseLegacyDraft(safeGetItem(storageKey));
   if (legacy) {
-    return { hasDraft: true, completedCount: legacy.completed.length };
+    return {
+      hasDraft: true,
+      completedCount: legacy.completed.length,
+      completedTeamIds: legacy.completed,
+    };
   }
-  return { hasDraft: false, completedCount: 0 };
+  return { hasDraft: false, completedCount: 0, completedTeamIds: [] };
 }
 
 export function parseLegacyDraft(
@@ -94,5 +105,34 @@ export function parseLegacyDraft(
     currentIndex:
       typeof parsed.currentIndex === "number" ? parsed.currentIndex : null,
     savedAt: typeof parsed.timestamp === "number" ? parsed.timestamp : null,
+  };
+}
+
+/**
+ * The part of a draft that is still unsubmitted after the server accepted a
+ * batch: every team not in `submittedTeamIds` that has at least one saved
+ * answer. Returns null when nothing is left to keep. The result never carries
+ * `submittedAt`, so it is restored like any other draft.
+ */
+export function draftAfterSubmit(
+  draft: ScoringDraft,
+  submittedTeamIds: Iterable<string>,
+  teamOrder: readonly string[] = [],
+): ScoringDraft | null {
+  const submitted = new Set(submittedTeamIds);
+  const scores: ScoringDraft["scores"] = {};
+  for (const [teamId, entry] of Object.entries(draft.scores)) {
+    if (submitted.has(teamId) || Object.keys(entry).length === 0) continue;
+    scores[teamId] = entry;
+  }
+  const remaining = Object.keys(scores);
+  if (remaining.length === 0) return null;
+  const keep = (id: string) => id in scores;
+  const ordered = teamOrder.filter(keep);
+  return {
+    scores,
+    completed: draft.completed.filter(keep),
+    skipped: draft.skipped.filter(keep),
+    currentTeamId: ordered[0] ?? remaining[0] ?? null,
   };
 }

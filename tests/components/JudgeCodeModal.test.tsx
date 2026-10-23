@@ -54,7 +54,7 @@ describe("JudgeCodeModal", () => {
     });
     verifyCode.mockImplementation(async () => {
       calls.push("verify");
-      return true;
+      return { ok: true };
     });
 
     const props = renderModal();
@@ -88,12 +88,48 @@ describe("JudgeCodeModal", () => {
 
   it("shows the verification error after a successful join", async () => {
     joinAsJudge.mockResolvedValue("judge_1");
-    verifyCode.mockRejectedValue(new Error("Invalid judge code"));
+    verifyCode.mockResolvedValue({
+      ok: false,
+      code: "invalid_judge_code",
+      category: "verification",
+      message: "Invalid judge code",
+    });
 
     const props = renderModal();
 
     expect(await screen.findByText("Invalid judge code")).toBeInTheDocument();
     expect(joinAsJudge).toHaveBeenCalledTimes(1);
+    expect(props.onSuccess).not.toHaveBeenCalled();
+  });
+
+  it("shows the lockout message returned by the server", async () => {
+    joinAsJudge.mockResolvedValue("judge_1");
+    verifyCode.mockResolvedValue({
+      ok: false,
+      code: "judge_code_locked",
+      category: "rate_limit",
+      message: "Too many incorrect codes. Try again in a few minutes.",
+      retryAfterMs: 60_000,
+    });
+
+    const props = renderModal();
+
+    expect(
+      await screen.findByText("Too many incorrect codes. Try again in a few minutes."),
+    ).toBeInTheDocument();
+    expect(props.onSuccess).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Verify & start judging" }),
+    ).toBeEnabled();
+  });
+
+  it("still shows errors the server throws", async () => {
+    joinAsJudge.mockResolvedValue("judge_1");
+    verifyCode.mockRejectedValue(new Error("Event is not currently active"));
+
+    const props = renderModal();
+
+    expect(await screen.findByText(/Event is not currently active|Invalid code/)).toBeInTheDocument();
     expect(props.onSuccess).not.toHaveBeenCalled();
   });
 });

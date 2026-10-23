@@ -11,13 +11,23 @@ export const hideSeedExamples = internalMutation({
     const examples = new Set([
       "Code & Tell: Fall Kickoff",
       "Code & Tell: AI Edition",
-      "Demo Day — Fall 2026",
-      "Demo Day — Spring 2027",
     ]);
     const events = await ctx.db.query("events").collect();
     const matches = events.filter((event) => examples.has(event.name));
     for (const event of matches) await ctx.db.patch(event._id, { hidden: true });
     return { hidden: matches.map((event) => event.name) };
+  },
+});
+
+/** Show or hide events on the public homepage by exact name. */
+export const setEventsHidden = internalMutation({
+  args: { names: v.array(v.string()), hidden: v.boolean() },
+  handler: async (ctx, { names, hidden }) => {
+    const wanted = new Set(names);
+    const events = await ctx.db.query("events").collect();
+    const matches = events.filter((event) => wanted.has(event.name));
+    for (const event of matches) await ctx.db.patch(event._id, { hidden });
+    return { updated: matches.map((event) => event.name) };
   },
 });
 

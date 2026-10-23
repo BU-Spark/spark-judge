@@ -132,7 +132,17 @@ const applicationTables = {
     demoDayCourseName: v.optional(v.string()), // Human-readable course name from board assignment sheet
   })
     .index("by_event", ["eventId"])
-    .index("by_event_and_submitter", ["eventId", "submittedBy"]),
+    .index("by_event_and_submitter", ["eventId", "submittedBy"])
+    // Used by the abandoned-upload sweep to keep files a team still references.
+    .index("by_logo_storage", ["logoStorageId"]),
+
+  // One row per upload URL issued to a participant; used to rate-limit
+  // issuance. Rows outside the window are deleted as the user issues more.
+  logoUploadIssuances: defineTable({
+    userId: v.id("users"),
+    eventId: v.id("events"),
+    issuedAt: v.number(),
+  }).index("by_user_and_issued_at", ["userId", "issuedAt"]),
 
   rankedVotes: defineTable({
     eventId: v.id("events"),

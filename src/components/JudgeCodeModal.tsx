@@ -3,7 +3,11 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { errorMessage } from "../lib/operationOutcome";
 import "./JudgeCodeModal.fi.css";
+
+/** Matches the server's JUDGE_CODE_MAX_LENGTH so long codes are never cut off. */
+const JUDGE_CODE_INPUT_MAX = 32;
 
 interface JudgeCodeModalProps {
   isOpen: boolean;
@@ -45,19 +49,26 @@ export function JudgeCodeModal({ isOpen, onClose, eventId, onSuccess }: JudgeCod
     try {
       await joinAsJudge({ eventId });
     } catch (err: any) {
-      setError(err?.message || "Could not register as a judge");
+      setError(errorMessage(err, "Could not register as a judge"));
       toast.error("Could not register as a judge");
       setIsSubmitting(false);
       return;
     }
 
     try {
-      await verifyCode({ eventId, judgeCode: judgeCode.trim() });
+      // Wrong and locked-out codes come back as a result, not an error, so
+      // the server can keep counting failed attempts.
+      const result = await verifyCode({ eventId, judgeCode: judgeCode.trim() });
+      if (!result.ok) {
+        setError(result.message);
+        toast.error(result.code === "judge_code_locked" ? "Too many attempts" : "Invalid judge code");
+        return;
+      }
       toast.success("Code verified — seat assigned");
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.message || "Invalid code");
+      setError(errorMessage(err, "Invalid code"));
       toast.error("Invalid judge code");
     } finally {
       setIsSubmitting(false);
@@ -109,7 +120,7 @@ export function JudgeCodeModal({ isOpen, onClose, eventId, onSuccess }: JudgeCod
               type="text"
               value={judgeCode}
               onChange={(e) => {
-                setJudgeCode(e.target.value.toUpperCase().slice(0, 8));
+                setJudgeCode(e.target.value.toUpperCase().slice(0, JUDGE_CODE_INPUT_MAX));
                 setError("");
               }}
               placeholder="······"
@@ -118,7 +129,7 @@ export function JudgeCodeModal({ isOpen, onClose, eventId, onSuccess }: JudgeCod
               autoComplete="off"
               autoCapitalize="characters"
               spellCheck={false}
-              maxLength={8}
+              maxLength={JUDGE_CODE_INPUT_MAX}
             />
           </div>
           {error && <p className="fi-jc-error">{error}</p>}

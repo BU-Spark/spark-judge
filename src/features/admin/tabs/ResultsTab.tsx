@@ -4,6 +4,12 @@ import {
   getResultReadiness,
   type ResultsInput,
 } from "../../../../shared/resultReadiness";
+import { InlineFailure } from "../../../components/ui/TaskStatus";
+import {
+  toRecoverableFailure,
+  type OperationResult,
+  type RecoverableFailure,
+} from "../../../lib/operationOutcome";
 
 export function ResultsTab({
   input,
@@ -37,7 +43,8 @@ export function ResultsTab({
   onPrizes: () => void;
   onTeams?: () => void;
   onFinish: () => Promise<void>;
-  onLock: () => Promise<void>;
+  /** Resolves with a failure instead of throwing. */
+  onLock: () => Promise<OperationResult>;
   locking: boolean;
   onPublish: () => Promise<unknown>;
   onWithdraw: () => Promise<unknown>;
@@ -46,6 +53,9 @@ export function ResultsTab({
   const [correcting, setCorrecting] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [lockFailure, setLockFailure] = useState<RecoverableFailure | null>(
+    null,
+  );
   const reviewHeading = useRef<HTMLHeadingElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
   const previous = useRef({ editing, published });
@@ -100,6 +110,21 @@ export function ResultsTab({
     }
   };
 
+  const lockScoring = async () => {
+    if (pending) return;
+    setPending(true);
+    setError("");
+    setLockFailure(null);
+    try {
+      const result = await onLock();
+      if (!result.ok) setLockFailure(result.failure);
+    } catch (failure) {
+      setLockFailure(toRecoverableFailure(failure, "lock scoring"));
+    } finally {
+      setPending(false);
+    }
+  };
+
   if (loading)
     return (
       <div className="admin-results" role="status">
@@ -138,6 +163,15 @@ export function ResultsTab({
         <p className="admin-result-error" role="alert">
           {error}
         </p>
+      )}
+      {lockFailure && !input.scoringLocked && (
+        <InlineFailure
+          failure={lockFailure}
+          title="Scoring is still unlocked"
+          onRetry={() => void lockScoring()}
+          busy={pending || locking}
+          onDismiss={() => setLockFailure(null)}
+        />
       )}
       {hidden && (
         <p className="admin-result-notice">
@@ -202,7 +236,7 @@ export function ResultsTab({
               {isHackathon && !input.scoringLocked && (
                 <button
                   className="fi-key"
-                  onClick={() => void perform(onLock)}
+                  onClick={() => void lockScoring()}
                   disabled={pending || locking}
                 >
                   {locking ? "Locking…" : "Lock scoring"}

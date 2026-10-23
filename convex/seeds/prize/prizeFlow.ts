@@ -43,7 +43,7 @@ async function seedPrizeJudgingScenario(
 ): Promise<SeedPrizeScenarioResult> {
   const adminUserId = await ensureSeedAdminUser(ctx, {
     name: "Prize Flow Seed Admin",
-    emailFactory: () => `prize-seed-admin+${Date.now()}@demo.com`,
+    emailFactory: () => `prize-seed-admin+${Date.now()}@demo.example.com`,
   });
 
   const now = Date.now();
@@ -91,7 +91,7 @@ async function seedPrizeJudgingScenario(
   for (const name of judgeNames) {
     const judgeUserId = await ctx.db.insert("users", {
       name,
-      email: `${slugifySeedValue(name)}+${runKey}@demo.com`,
+      email: `${slugifySeedValue(name)}+${runKey}@demo.example.com`,
       emailVerificationTime: now,
       isAnonymous: false,
     });

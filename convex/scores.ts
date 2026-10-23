@@ -2,7 +2,9 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
+  appError,
   canAccessEvent,
+  eventNotFound,
   computeEventStatus,
   isAdmin,
   isJudgeVerifiedForEvent,
@@ -11,6 +13,7 @@ import {
 } from "./helpers";
 import { isDemoDayMode, isHackathonMode } from "./eventModes";
 import { assertResultsReady } from "./resultPublication";
+import { getOwnTeamPredicate } from "./teamMembership";
 
 type EventCategory = {
   name: string;
@@ -30,39 +33,55 @@ export function validateCategoryScores(
 ) {
   const configured = new Map(eventCategories.map((category) => [category.name, category]));
   if (configured.size !== eventCategories.length) {
-    throw new Error("Event categories must have unique names");
+    throw appError("duplicate_event_categories", "validation", "Event categories must have unique names");
   }
 
   const seen = new Set<string>();
   for (const categoryScore of categoryScores) {
     const category = configured.get(categoryScore.category);
-    if (!category) throw new Error(`Unknown scoring category: ${categoryScore.category}`);
+    if (!category) throw appError("unknown_scoring_category", "validation", `Unknown scoring category: ${categoryScore.category}`);
     if (seen.has(categoryScore.category)) {
-      throw new Error(`Duplicate scoring category: ${categoryScore.category}`);
+      throw appError("duplicate_scoring_category", "validation", `Duplicate scoring category: ${categoryScore.category}`);
     }
     seen.add(categoryScore.category);
 
     if (categoryScore.score === null) {
       if (category.optOutAllowed !== true || categoryScore.optedOut !== true) {
-        throw new Error(`Category ${categoryScore.category} requires a score`);
+        throw appError("score_required", "validation", `Category ${categoryScore.category} requires a score`);
       }
       continue;
     }
 
     if (categoryScore.optedOut === true) {
-      throw new Error(`Category ${categoryScore.category} cannot be both scored and opted out`);
+      throw appError("score_opt_out_conflict", "validation", `Category ${categoryScore.category} cannot be both scored and opted out`);
     }
     if (
       !Number.isInteger(categoryScore.score) ||
       categoryScore.score < 1 ||
       categoryScore.score > 5
     ) {
-      throw new Error(`Scores for ${categoryScore.category} must be integers from 1 to 5`);
+      throw appError("score_out_of_range", "validation", `Scores for ${categoryScore.category} must be integers from 1 to 5`);
     }
   }
 
   if (seen.size !== configured.size) {
-    throw new Error("A score is required for every configured category");
+    throw appError("scores_incomplete", "validation", "A score is required for every configured category");
+  }
+
+  // An all-opt-out sheet totals 0, below any honest score (all 1s), so it
+  // could drag a rival's average down. Require at least one weighted score.
+  const hasWeightedCategory = eventCategories.some((category) => (category.weight ?? 0) > 0);
+  const hasWeightedScore = categoryScores.some(
+    (categoryScore) =>
+      categoryScore.score !== null &&
+      (configured.get(categoryScore.category)?.weight ?? 0) > 0,
+  );
+  if (hasWeightedCategory && !hasWeightedScore) {
+    throw appError(
+      "scores_all_opted_out",
+      "validation",
+      "Score at least one weighted category, or leave this project unscored",
+    );
   }
 
   return categoryScores.map((categoryScore) => ({
@@ -81,7 +100,7 @@ export function isTeamInJudgeCohort(
 
 export function assertUniqueScoreTeamIds(teamIds: string[]) {
   if (new Set(teamIds).size !== teamIds.length) {
-    throw new Error("Batch scores cannot contain duplicate teams");
+    throw appError("duplicate_score_teams", "validation", "Batch scores cannot contain duplicate teams");
   }
 }
 
@@ -90,10 +109,10 @@ export function assertScoringTarget(
   teamHidden: boolean | undefined,
 ) {
   if (computeEventStatus(event) !== "active") {
-    throw new Error("Scoring is only available while the event is active");
+    throw appError("scoring_closed", "lifecycle", "Scoring is only available while the event is active");
   }
   if (teamHidden) {
-    throw new Error("Hidden teams cannot be scored");
+    throw appError("team_hidden", "lifecycle", "Hidden teams cannot be scored");
   }
 }
 
@@ -162,19 +181,19 @@ export const submitBatchScores = mutation({
       )
       .first();
 
-    if (!judge) throw new Error("Not a judge for this event");
+    if (!judge) throw appError("not_a_judge", "permission", "Not a judge for this event");
 
     const event = await ctx.db.get(args.eventId);
-    if (!event) throw new Error("Event not found");
-    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
+    if (!event) throw eventNotFound();
+    if (!(await canAccessEvent(ctx, event))) throw eventNotFound();
     if (!isHackathonMode(event.mode)) {
-      throw new Error("Scoring is only available for hackathon events");
+      throw appError("scoring_unsupported_mode", "validation", "Scoring is only available for hackathon events");
     }
     if (!isJudgeVerifiedForEvent(event, judge)) {
-      throw new Error("Judge code verification required");
+      throw appError("judge_code_required", "verification", "Judge code verification required");
     }
     if (event.scoringLockedAt) {
-      throw new Error("Scoring is locked for this event");
+      throw appError("scoring_locked", "lifecycle", "Scoring is locked for this event");
     }
     assertScoringTarget(event, false);
 
@@ -186,13 +205,17 @@ export const submitBatchScores = mutation({
     assertUniqueScoreTeamIds(args.scores.map((entry) => entry.teamId.toString()));
 
     const teamIds = new Set(teamsForEvent.map((team) => team._id.toString()));
+    const isOwnTeam = await getOwnTeamPredicate(ctx, userId);
 
     for (const entry of args.scores) {
       if (!teamIds.has(entry.teamId.toString())) {
-        throw new Error("Invalid team for this event");
+        throw appError("invalid_score_team", "not_found", "Invalid team for this event");
       }
       const team = teamsForEvent.find((candidate) => candidate._id === entry.teamId);
       assertScoringTarget(event, team?.hidden);
+      if (team && isOwnTeam(team)) {
+        throw appError("score_own_team", "permission", "You cannot score a project you are part of");
+      }
     }
 
     const assignments = event.enableCohorts
@@ -206,7 +229,7 @@ export const submitBatchScores = mutation({
     const assignedTeamIds = new Set(assignments.map((assignment) => assignment.teamId.toString()));
     for (const entry of args.scores) {
       if (!isTeamInJudgeCohort(event.enableCohorts, assignedTeamIds, entry.teamId.toString())) {
-        throw new Error("One or more teams are outside your judging cohort");
+        throw appError("team_outside_cohort", "permission", "One or more teams are outside your judging cohort");
       }
     }
 

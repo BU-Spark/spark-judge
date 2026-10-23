@@ -2,13 +2,18 @@ import { v, type ObjectType } from "convex/values";
 import { query, mutation, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
+  appError,
   canAccessEvent,
+  eventNotFound,
   isAdmin,
   requireAdmin,
   computeEventStatus,
   getJudgeCodeFailureState,
   isJudgeCodeLocked,
   isJudgeVerifiedForEvent,
+  judgeCodesMatch,
+  normalizeJudgeCode,
+  parseJudgeCodeSetting,
   shapeEventForViewer,
   shouldInvalidateJudgeCodeState,
   requireAuth,
@@ -23,6 +28,7 @@ import {
 } from "./eventModes";
 import { insertInitialPrizes, PRIZE_INPUT_VALIDATOR } from "./prizes";
 import { EVENT_MODE_VALIDATOR } from "./validators";
+import { getOwnTeamPredicate } from "./teamMembership";
 
 async function invalidateJudgeCodeState(
   ctx: MutationCtx,
@@ -142,7 +148,7 @@ export const listEvents = query({
           judgeProgress,
           hasRankedVote: rankedVoteEventIds.has(event._id),
           requiresJudgeCode:
-            mode === "hackathon" && status === "active" && !!event.judgeCode,
+            mode === "hackathon" && status === "active",
         };
       }),
     );
@@ -187,12 +193,10 @@ export const joinAsJudge = mutation({
     const userId = await requireAuth(ctx);
 
     const event = await ctx.db.get(args.eventId);
-    if (!event) throw new Error("Event not found");
-    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
+    if (!event) throw eventNotFound();
+    if (!(await canAccessEvent(ctx, event))) throw eventNotFound();
     if (!isHackathonMode(event.mode)) {
-      throw new Error(
-        "Judge registration is only available for hackathon events",
-      );
+      throw appError("judging_unsupported_mode", "validation", "Judge registration is only available for hackathon events");
     }
 
     // Check if already a participant
@@ -204,7 +208,22 @@ export const joinAsJudge = mutation({
       .first();
 
     if (participant) {
-      throw new Error("You are already a participant for this event");
+      throw appError("already_participant", "conflict", "You are already a participant for this event");
+    }
+
+    // Teammates other than the submitter have no participant row, so check
+    // submissions and listed entrant emails directly.
+    const isOwnTeam = await getOwnTeamPredicate(ctx, userId);
+    const eventTeams = await ctx.db
+      .query("teams")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .collect();
+    if (eventTeams.some(isOwnTeam)) {
+      throw appError(
+        "judge_is_entrant",
+        "conflict",
+        "You are listed on a project in this event, so you can't judge it",
+      );
     }
 
     const existing = await ctx.db
@@ -225,26 +244,47 @@ export const joinAsJudge = mutation({
   },
 });
 
+const JUDGE_CODE_FAILURE_VALIDATOR = v.object({
+  ok: v.literal(false),
+  code: v.string(),
+  category: v.union(v.literal("verification"), v.literal("rate_limit")),
+  message: v.string(),
+  retryAfterMs: v.optional(v.number()),
+});
+
+/**
+ * Wrong and locked-out codes are returned, not thrown: Convex discards every
+ * write from a mutation that throws, and the failed-attempt counter must
+ * persist for the lockout to work. Clients treat `ok: false` like a typed
+ * `appError` with the same code/category/message shape.
+ */
 export const verifyJudgeCodeAndStartJudging = mutation({
   args: {
     eventId: v.id("events"),
     judgeCode: v.string(),
   },
-  returns: v.boolean(),
+  returns: v.union(v.object({ ok: v.literal(true) }), JUDGE_CODE_FAILURE_VALIDATOR),
   handler: async (ctx, args) => {
     const userId = await requireAuth(ctx);
 
     const event = await ctx.db.get(args.eventId);
-    if (!event) throw new Error("Event not found");
-    if (!(await canAccessEvent(ctx, event))) throw new Error("Event not found");
+    if (!event) throw eventNotFound();
+    if (!(await canAccessEvent(ctx, event))) throw eventNotFound();
     if (!isHackathonMode(event.mode)) {
-      throw new Error("Judging access is only available for hackathon events");
+      throw appError("judging_unsupported_mode", "validation", "Judging access is only available for hackathon events");
     }
 
     // Verify event is active (computed from dates)
     const status = computeEventStatus(event);
     if (status !== "active") {
-      throw new Error("Event is not currently active");
+      throw appError("event_not_active", "lifecycle", "Event is not currently active");
+    }
+    if (!normalizeJudgeCode(event.judgeCode)) {
+      throw appError(
+        "judge_code_not_set",
+        "lifecycle",
+        "This event isn't accepting judges yet. Ask an organizer to set a judge code.",
+      );
     }
 
     // Verify user is a judge
@@ -256,22 +296,49 @@ export const verifyJudgeCodeAndStartJudging = mutation({
       .first();
 
     if (!judge) {
-      throw new Error("You are not registered as a judge for this event");
+      throw appError("not_a_judge", "permission", "You are not registered as a judge for this event");
     }
 
     const now = Date.now();
     if (isJudgeCodeLocked(judge, now)) {
-      throw new Error("Judge code verification is temporarily locked");
+      return {
+        ok: false as const,
+        code: "judge_code_locked",
+        category: "rate_limit" as const,
+        message: "Too many incorrect codes. Try again in a few minutes.",
+        retryAfterMs: Math.max(0, (judge.judgeCodeLockedUntil ?? now) - now),
+      };
     }
 
-    // Validate judge code
-    if (event.judgeCode && event.judgeCode !== args.judgeCode) {
+    if (!judgeCodesMatch(event.judgeCode, args.judgeCode)) {
       // A verified judge already has valid access. A mistyped retry must not
       // revoke or lock that access; only unverified judges accrue failures.
-      if (typeof judge.judgeCodeVerifiedAt !== "number") {
-        await ctx.db.patch(judge._id, getJudgeCodeFailureState(judge, now));
+      if (typeof judge.judgeCodeVerifiedAt === "number") {
+        return {
+          ok: false as const,
+          code: "invalid_judge_code",
+          category: "verification" as const,
+          message: "Invalid judge code",
+        };
       }
-      throw new Error("Invalid judge code");
+      const failureState = getJudgeCodeFailureState(judge, now);
+      await ctx.db.patch(judge._id, failureState);
+      const lockedUntil = failureState.judgeCodeLockedUntil;
+      if (typeof lockedUntil === "number" && lockedUntil > now) {
+        return {
+          ok: false as const,
+          code: "judge_code_locked",
+          category: "rate_limit" as const,
+          message: "Too many incorrect codes. Try again in a few minutes.",
+          retryAfterMs: lockedUntil - now,
+        };
+      }
+      return {
+        ok: false as const,
+        code: "invalid_judge_code",
+        category: "verification" as const,
+        message: "Invalid judge code",
+      };
     }
 
     await ctx.db.patch(judge._id, {
@@ -280,7 +347,7 @@ export const verifyJudgeCodeAndStartJudging = mutation({
       judgeCodeLockedUntil: undefined,
     });
 
-    return true;
+    return { ok: true as const };
   },
 });
 
@@ -334,7 +401,7 @@ type CreateEventArgs = ObjectType<typeof CREATE_EVENT_ARGS>;
 
 async function insertEvent(ctx: MutationCtx, args: CreateEventArgs) {
   if (args.startDate >= args.endDate) {
-    throw new Error("End date must be after start date");
+    throw appError("invalid_date_range", "validation", "End date must be after start date");
   }
 
   const computedStatus = computeEventStatus({
@@ -342,8 +409,12 @@ async function insertEvent(ctx: MutationCtx, args: CreateEventArgs) {
     endDate: args.endDate,
   });
 
+  const judgeCode =
+    args.judgeCode === undefined ? undefined : parseJudgeCodeSetting(args.judgeCode);
+
   return await ctx.db.insert("events", {
     ...args,
+    ...(judgeCode !== undefined ? { judgeCode } : {}),
     description: args.description ?? "",
     status: computedStatus,
     resultsReleased: false,
@@ -367,12 +438,12 @@ export const createEventWithPrizes = mutation({
     const adminId = await requireAdmin(ctx);
     const { prizes, ...eventArgs } = args;
     if (prizes.length > 0 && !isHackathonMode(eventArgs.mode)) {
-      throw new Error("Prizes are only supported for hackathon events");
+      throw appError("prizes_unsupported_mode", "validation", "Prizes are only supported for hackathon events");
     }
     const eventId = await insertEvent(ctx, eventArgs);
     if (prizes.length > 0) {
       const event = await ctx.db.get(eventId);
-      if (!event) throw new Error("Event not found");
+      if (!event) throw eventNotFound();
       await insertInitialPrizes(ctx, event, prizes, adminId);
     }
     return eventId;
@@ -890,19 +961,19 @@ export const updateJudgingSettings = mutation({
     await requireAdmin(ctx);
 
     const event = await ctx.db.get(args.eventId);
-    if (!event) throw new Error("Event not found");
+    if (!event) throw eventNotFound();
     if (!isHackathonMode(event.mode)) {
-      throw new Error("Judging settings are only available for hackathon events");
+      throw appError("judging_unsupported_mode", "validation", "Judging settings are only available for hackathon events");
     }
     if (event.scoringLockedAt) {
-      throw new Error("Judging settings are locked while scoring is locked");
+      throw appError("scoring_locked", "lifecycle", "Judging settings are locked while scoring is locked");
     }
     const existingScore = await ctx.db
       .query("scores")
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .first();
     if (existingScore) {
-      throw new Error("Judging settings are locked once scoring has started");
+      throw appError("scoring_started", "lifecycle", "Judging settings are locked once scoring has started");
     }
 
     const categories = args.categories.map((category) => ({
@@ -910,17 +981,17 @@ export const updateJudgingSettings = mutation({
       name: category.name.trim(),
     }));
     if (categories.length === 0 || categories.some((category) => !category.name)) {
-      throw new Error("Every judging category must have a name");
+      throw appError("category_name_required", "validation", "Every judging category must have a name");
     }
     const names = new Set(categories.map((category) => category.name.toLowerCase()));
     if (names.size !== categories.length) {
-      throw new Error("Judging category names must be unique");
+      throw appError("duplicate_category_names", "validation", "Judging category names must be unique");
     }
     if (categories.some((category) => !Number.isFinite(category.weight) || category.weight < 0)) {
-      throw new Error("Judging category weights must be zero or more");
+      throw appError("invalid_category_weight", "validation", "Judging category weights must be zero or more");
     }
 
-    const judgeCode = args.judgeCode?.trim() ?? "";
+    const judgeCode = parseJudgeCodeSetting(args.judgeCode);
     await ctx.db.patch(args.eventId, {
       categories,
       enableCohorts: args.enableCohorts,
@@ -1144,8 +1215,8 @@ export const updateEventDetails = mutation({
           : Math.max(1, Math.round(args.venueRadiusMeters));
     }
     if (args.judgeCode !== undefined) {
-      // Treat null as a request to clear the judge code.
-      updates.judgeCode = args.judgeCode ?? "";
+      // Treat null as a request to clear the judge code, which closes judging.
+      updates.judgeCode = parseJudgeCodeSetting(args.judgeCode);
     }
     if (args.appreciationBudgetPerAttendee !== undefined) {
       updates.appreciationBudgetPerAttendee = Math.max(
@@ -1204,10 +1275,10 @@ export const setScoringLock = mutation({
     const adminId = await requireAdmin(ctx);
 
     const event = await ctx.db.get(args.eventId);
-    if (!event) throw new Error("Event not found");
+    if (!event) throw eventNotFound();
 
     if (!isHackathonMode(event.mode)) {
-      throw new Error("Scoring lock is only available for hackathon events");
+      throw appError("scoring_lock_unsupported_mode", "validation", "Scoring lock is only available for hackathon events");
     }
 
     if (args.locked) {
@@ -1217,6 +1288,11 @@ export const setScoringLock = mutation({
         scoringLockReason: args.reason?.trim() || undefined,
       });
     } else {
+      // Released results are computed live from scores, so reopening scoring
+      // would let published numbers change underneath readers.
+      if (event.resultsReleased) {
+        throw appError("results_released", "lifecycle", "Withdraw results before unlocking scoring");
+      }
       await ctx.db.patch(args.eventId, {
         scoringLockedAt: undefined,
         scoringLockedBy: undefined,

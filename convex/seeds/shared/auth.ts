@@ -3,7 +3,7 @@ import { Id } from "../../_generated/dataModel";
 import { MutationCtx } from "../../_generated/server";
 
 const DEFAULT_SEED_ADMIN_NAME = "Demo Admin";
-const DEFAULT_SEED_ADMIN_EMAIL = "admin@demo.com";
+const DEFAULT_SEED_ADMIN_EMAIL = "admin@demo.example.com";
 
 type EnsureSeedAdminUserOptions = {
   name?: string;

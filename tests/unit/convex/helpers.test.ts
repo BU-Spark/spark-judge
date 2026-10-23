@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ConvexError } from 'convex/values';
 import {
+  appError,
   isAdmin,
   escapeCsvCell,
   getJudgeCodeFailureState,
@@ -7,6 +9,9 @@ import {
   JUDGE_CODE_MAX_FAILED_ATTEMPTS,
   isJudgeVerifiedForEvent,
   isJudgeCodeLocked,
+  judgeCodesMatch,
+  JUDGE_CODE_MAX_LENGTH,
+  parseJudgeCodeSetting,
   requireAuth,
   requireAdmin,
   shapeEventForViewer,
@@ -104,8 +109,25 @@ describe('helpers', () => {
       expect(isJudgeVerifiedForEvent(event, judge)).toBe(true);
     });
 
-    it('preserves self-registration for events without a judge code', () => {
-      expect(isJudgeVerifiedForEvent({}, {})).toBe(true);
+    it('refuses judging for events without a judge code', () => {
+      expect(isJudgeVerifiedForEvent({}, {})).toBe(false);
+      expect(isJudgeVerifiedForEvent({ judgeCode: "  " }, { judgeCodeVerifiedAt: 1 })).toBe(false);
+    });
+
+    it('validates and normalizes admin-entered judge codes', () => {
+      expect(parseJudgeCodeSetting(" abc-123 ")).toBe("ABC-123");
+      expect(parseJudgeCodeSetting(null)).toBe("");
+      expect(parseJudgeCodeSetting("")).toBe("");
+      expect(() => parseJudgeCodeSetting("1234")).toThrow("Judge codes must be");
+      expect(() => parseJudgeCodeSetting("has space")).toThrow("Judge codes must be");
+      expect(() => parseJudgeCodeSetting("X".repeat(JUDGE_CODE_MAX_LENGTH + 1))).toThrow("Judge codes must be");
+    });
+
+    it('compares judge codes case-insensitively and never matches an empty code', () => {
+      expect(judgeCodesMatch("ABC123", " abc123 ")).toBe(true);
+      expect(judgeCodesMatch("ABC123", "ABC124")).toBe(false);
+      expect(judgeCodesMatch("", "")).toBe(false);
+      expect(judgeCodesMatch(undefined, "")).toBe(false);
     });
 
     it('locks after the bounded number of failed attempts', () => {
@@ -148,6 +170,50 @@ describe('helpers', () => {
     it('strips the judge code from public event data', () => {
       expect(stripJudgeCode({ name: 'Event', judgeCode: 'SECRET' })).toEqual({
         name: 'Event',
+      });
+    });
+  });
+
+  describe('appError', () => {
+    it('builds a ConvexError carrying the typed failure contract', () => {
+      const error = appError('scoring_locked', 'lifecycle', 'Scoring is locked for this event');
+      expect(error).toBeInstanceOf(ConvexError);
+      expect(error.data).toEqual({
+        code: 'scoring_locked',
+        category: 'lifecycle',
+        message: 'Scoring is locked for this event',
+      });
+    });
+
+    it('includes optional details only when provided', () => {
+      expect(
+        appError('judge_code_locked', 'rate_limit', 'Locked', { retryAfterMs: 0 }).data,
+      ).toMatchObject({ retryAfterMs: 0 });
+      expect(
+        appError('invalid', 'validation', 'Bad', { fieldErrors: { name: 'Required' } }).data,
+      ).toMatchObject({ fieldErrors: { name: 'Required' } });
+      expect(Object.keys(appError('x', 'validation', 'Bad', {}).data)).toEqual([
+        'code',
+        'category',
+        'message',
+      ]);
+    });
+
+    it('marks auth helper rejections as authentication and permission failures', async () => {
+      const { getAuthUserId } = await import('@convex-dev/auth/server');
+      vi.mocked(getAuthUserId).mockResolvedValue(null);
+      await expect(requireAuth(mockCtx)).rejects.toMatchObject({
+        data: { code: 'not_authenticated', category: 'authentication', message: 'Not authenticated' },
+      });
+
+      vi.mocked(getAuthUserId).mockResolvedValue('user123' as Id<'users'>);
+      mockCtx.db.get.mockResolvedValue({ _id: 'user123', isAdmin: false });
+      await expect(requireAdmin(mockCtx)).rejects.toMatchObject({
+        data: {
+          code: 'admin_required',
+          category: 'permission',
+          message: 'Not authorized - admin access required',
+        },
       });
     });
   });

@@ -8,6 +8,8 @@
     "dev:frontend": "vite --open",
     "dev:backend": "convex dev",
     "build": "vite build",
+    "build:live": "VITE_CONVEX_URL=https://mild-loris-998.convex.cloud vite build",
+    "deploy:backend:live": "bash scripts/deploy-live-backend.sh",
     "lint": "eslint . && tsc -p convex -noEmit --pretty false && tsc -p tsconfig.app.json -noEmit --pretty false && tsc -p tsconfig.test.json -noEmit --pretty false && convex dev --once && vite build",
     "test": "vitest run",
     "test:watch": "vitest",

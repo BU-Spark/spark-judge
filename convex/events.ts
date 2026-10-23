@@ -511,104 +511,111 @@ export const updateEventStatus = mutation({
   },
 });
 
+/** Deletes an event with everything that belongs to it. */
+export async function deleteEventCascade(
+  ctx: MutationCtx,
+  eventId: Id<"events">,
+) {
+  const event = await ctx.db.get(eventId);
+  if (!event) {
+    throw new Error("Event not found");
+  }
+
+  const [
+    scores,
+    teams,
+    judges,
+    participants,
+    prizes,
+    prizeSubmissions,
+    prizeWinners,
+    rankedVotes,
+    appreciations,
+    captchaPasses,
+    integrityFindings,
+  ] = await Promise.all([
+    ctx.db
+      .query("scores")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .collect(),
+    ctx.db
+      .query("teams")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .collect(),
+    ctx.db
+      .query("judges")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .collect(),
+    ctx.db
+      .query("participants")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .collect(),
+    ctx.db
+      .query("prizes")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .collect(),
+    ctx.db
+      .query("teamPrizeSubmissions")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .collect(),
+    ctx.db
+      .query("prizeWinners")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .collect(),
+    ctx.db
+      .query("rankedVotes")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .collect(),
+    ctx.db
+      .query("appreciations")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .collect(),
+    ctx.db
+      .query("demoDayCaptchaPasses")
+      .withIndex("by_event_and_ip", (q) => q.eq("eventId", eventId))
+      .collect(),
+    ctx.db
+      .query("demoDayIntegrityFindings")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .collect(),
+  ]);
+
+  await Promise.all(scores.map((score) => ctx.db.delete(score._id)));
+  await Promise.all(
+    appreciations.map((appreciation) => ctx.db.delete(appreciation._id)),
+  );
+  await Promise.all(captchaPasses.map((pass) => ctx.db.delete(pass._id)));
+  await Promise.all(
+    integrityFindings.map((finding) => ctx.db.delete(finding._id)),
+  );
+
+  for (const team of teams) {
+    if (team.logoStorageId) {
+      await ctx.storage.delete(team.logoStorageId);
+    }
+    await ctx.db.delete(team._id);
+  }
+
+  await Promise.all(judges.map((judge) => ctx.db.delete(judge._id)));
+  await Promise.all(
+    participants.map((participant) => ctx.db.delete(participant._id)),
+  );
+  await Promise.all(
+    prizeSubmissions.map((submission) => ctx.db.delete(submission._id)),
+  );
+  await Promise.all(prizeWinners.map((winner) => ctx.db.delete(winner._id)));
+  await Promise.all(rankedVotes.map((vote) => ctx.db.delete(vote._id)));
+  await Promise.all(prizes.map((prize) => ctx.db.delete(prize._id)));
+
+  await ctx.db.delete(eventId);
+}
+
 export const removeEvent = mutation({
   args: { eventId: v.id("events") },
   returns: v.null(),
   handler: async (ctx, { eventId }) => {
     await requireAdmin(ctx);
-
-    const event = await ctx.db.get(eventId);
-    if (!event) {
-      throw new Error("Event not found");
-    }
-
-    const [
-      scores,
-      teams,
-      judges,
-      participants,
-      prizes,
-      prizeSubmissions,
-      prizeWinners,
-      rankedVotes,
-      appreciations,
-      captchaPasses,
-      integrityFindings,
-    ] = await Promise.all([
-      ctx.db
-        .query("scores")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("teams")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("judges")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("participants")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("prizes")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("teamPrizeSubmissions")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("prizeWinners")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("rankedVotes")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("appreciations")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("demoDayCaptchaPasses")
-        .withIndex("by_event_and_ip", (q) => q.eq("eventId", eventId))
-        .collect(),
-      ctx.db
-        .query("demoDayIntegrityFindings")
-        .withIndex("by_event", (q) => q.eq("eventId", eventId))
-        .collect(),
-    ]);
-
-    await Promise.all(scores.map((score) => ctx.db.delete(score._id)));
-    await Promise.all(
-      appreciations.map((appreciation) => ctx.db.delete(appreciation._id)),
-    );
-    await Promise.all(captchaPasses.map((pass) => ctx.db.delete(pass._id)));
-    await Promise.all(
-      integrityFindings.map((finding) => ctx.db.delete(finding._id)),
-    );
-
-    for (const team of teams) {
-      if (team.logoStorageId) {
-        await ctx.storage.delete(team.logoStorageId);
-      }
-      await ctx.db.delete(team._id);
-    }
-
-    await Promise.all(judges.map((judge) => ctx.db.delete(judge._id)));
-    await Promise.all(
-      participants.map((participant) => ctx.db.delete(participant._id)),
-    );
-    await Promise.all(
-      prizeSubmissions.map((submission) => ctx.db.delete(submission._id)),
-    );
-    await Promise.all(prizeWinners.map((winner) => ctx.db.delete(winner._id)));
-    await Promise.all(rankedVotes.map((vote) => ctx.db.delete(vote._id)));
-    await Promise.all(prizes.map((prize) => ctx.db.delete(prize._id)));
-
-    await ctx.db.delete(eventId);
+    await deleteEventCascade(ctx, eventId);
     return null;
   },
 });

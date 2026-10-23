@@ -7,6 +7,7 @@ describe('seed module exports', () => {
       'clearAllData',
       'makeCurrentUserAdminForAllEvents',
       'makeUserAdminByEmail',
+      'removeSeedData',
       'seedCohortJudgingDemo',
       'seedDemoDayEvent',
       'seedEvents',
@@ -31,6 +32,7 @@ describe('seed module exports', () => {
       'clearAllData',
       'makeCurrentUserAdminForAllEvents',
       'makeUserAdminByEmail',
+      'removeSeedData',
       'seedEvents',
       'seedEverything',
     ] as const) {

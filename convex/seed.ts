@@ -1,5 +1,6 @@
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { deleteEventCascade } from "./events";
 import { clearAllDataHandler } from "./seeds/admin/clearAllData";
 import {
   makeCurrentUserAdminForAllEventsHandler,
@@ -176,4 +177,36 @@ export const seedCodeAndTellDemo = internalMutation({
     ballotsInserted: v.number(),
   }),
   handler: seedCodeAndTellDemoHandler,
+});
+
+/**
+ * Removes seeded test data: hidden events (with everything in them) and seed
+ * users. Refuses visible events and real accounts so a mistyped ID can't
+ * delete live data.
+ */
+export const removeSeedData = internalMutation({
+  args: {
+    eventIds: v.array(v.id("events")),
+    userIds: v.array(v.id("users")),
+  },
+  returns: v.object({ eventsRemoved: v.number(), usersRemoved: v.number() }),
+  handler: async (ctx, { eventIds, userIds }) => {
+    for (const eventId of eventIds) {
+      const event = await ctx.db.get(eventId);
+      if (!event) throw new Error(`Event ${eventId} not found`);
+      if (!event.hidden) {
+        throw new Error(`Refusing to remove visible event "${event.name}"`);
+      }
+    }
+    for (const userId of userIds) {
+      const user = await ctx.db.get(userId);
+      if (!user) throw new Error(`User ${userId} not found`);
+      if (!user.email?.endsWith("@demo.example.com")) {
+        throw new Error(`Refusing to remove non-seed user ${userId}`);
+      }
+    }
+    for (const eventId of eventIds) await deleteEventCascade(ctx, eventId);
+    for (const userId of userIds) await ctx.db.delete(userId);
+    return { eventsRemoved: eventIds.length, usersRemoved: userIds.length };
+  },
 });

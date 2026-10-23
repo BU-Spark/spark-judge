@@ -238,7 +238,7 @@ export function HackathonOverviewTab({
         </p>
       ) : (
         <p>
-          Ready. Judges can enter the code from{" "}
+          Ready. Judges can enter the code now. Scoring opens{" "}
           {new Date(event.startDate).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.
         </p>
       );

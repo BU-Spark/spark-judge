@@ -551,6 +551,13 @@ export function EventView({
             </span>
           </p>
 
+          {event.status === "upcoming" && (
+            <p className="fi-ev-progress">
+              You're checked in. Scoring opens{" "}
+              <b>{formatDateTime(event.startDate)}</b>.
+            </p>
+          )}
+
           {event.status === "active" && (
             <p className="fi-ev-progress">
               <b>{pad2(completedCount)}</b> of {pad2(totalTeams)} scored

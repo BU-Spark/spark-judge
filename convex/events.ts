@@ -274,10 +274,10 @@ export const verifyJudgeCodeAndStartJudging = mutation({
       throw appError("judging_unsupported_mode", "validation", "Judging access is only available for hackathon events");
     }
 
-    // Verify event is active (computed from dates)
-    const status = computeEventStatus(event);
-    if (status !== "active") {
-      throw appError("event_not_active", "lifecycle", "Event is not currently active");
+    // Judges may check in before the event starts; scoring itself stays
+    // gated on the start time (see assertScoringTarget).
+    if (computeEventStatus(event) === "past") {
+      throw appError("event_ended", "lifecycle", "Judging has closed for this event");
     }
     if (!normalizeJudgeCode(event.judgeCode)) {
       throw appError(

@@ -109,6 +109,13 @@ describe("scores business logic", () => {
         false,
       ),
     ).toThrow("only available while the event is active");
+    // Judges can check in early, but scores wait for the start time.
+    expect(() =>
+      assertScoringTarget(
+        { startDate: Date.now() + 60_000, endDate: Date.now() + 120_000 },
+        false,
+      ),
+    ).toThrow("only available while the event is active");
     expect(() =>
       assertScoringTarget(
         { startDate: Date.now() - 1_000, endDate: Date.now() + 1_000 },

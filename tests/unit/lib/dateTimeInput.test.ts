@@ -30,10 +30,19 @@ describe("dateTimeInput helpers", () => {
     ).toBe("2026-04-13T20:00");
   });
 
-  it("replaces an existing valid end time when the start changes", () => {
+  it("keeps an existing end time that is still after the new start", () => {
     expect(
       getAutoAdjustedEndDateTime("2026-04-13T16:00", "2026-04-13T17:00")
-    ).toBe("2026-04-13T18:00");
+    ).toBe("2026-04-13T17:00");
+    expect(
+      getAutoAdjustedEndDateTime("2026-10-25T11:00", "2026-10-25T15:00")
+    ).toBe("2026-10-25T15:00");
+  });
+
+  it("moves the end time when the new start equals it", () => {
+    expect(
+      getAutoAdjustedEndDateTime("2026-04-13T17:00", "2026-04-13T17:00")
+    ).toBe("2026-04-13T19:00");
   });
 
   it("populates the end time from an empty end value", () => {

@@ -67,6 +67,8 @@ async function seedPrizeJudgingScenario(
     startDate: now - day,
     endDate: now + day,
     status: "active",
+    // Seeds share a deployment with real events, so keep them admin-only.
+    hidden: true,
     enableCohorts: options.enableCohorts,
     categories,
     tracks: ["AI", "Climate", "Fintech"],

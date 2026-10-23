@@ -206,6 +206,42 @@ describe("typed application errors from user-facing mutations", () => {
     );
   });
 
+  it("verifyJudgeCodeAndStartJudging lets judges check in before the event starts but not after it ends", async () => {
+    vi.mocked(getAuthUserId).mockResolvedValue("user-1" as any);
+    const event: any = {
+      _id: "event-1",
+      mode: "hackathon",
+      judgeCode: "CURRENT",
+      startDate: Date.now() + 60_000,
+      endDate: Date.now() + 120_000,
+    };
+    const judge: any = { _id: "judge-1" };
+    const db = {
+      get: vi.fn().mockResolvedValue(event),
+      query: vi.fn().mockReturnValue(queryResult(judge)),
+      patch: vi.fn(),
+    };
+    const early = await (verifyJudgeCodeAndStartJudging as any)._handler(
+      { db },
+      { eventId: "event-1", judgeCode: "CURRENT" },
+    );
+    expect(early).toEqual({ ok: true });
+    expect(db.patch).toHaveBeenCalledWith(
+      "judge-1",
+      expect.objectContaining({ judgeCodeVerifiedAt: expect.any(Number) }),
+    );
+
+    event.startDate = Date.now() - 120_000;
+    event.endDate = Date.now() - 60_000;
+    const ended = await rejectionData(
+      (verifyJudgeCodeAndStartJudging as any)._handler(
+        { db },
+        { eventId: "event-1", judgeCode: "CURRENT" },
+      ),
+    );
+    expect(ended).toMatchObject({ code: "event_ended", category: "lifecycle" });
+  });
+
   it("admin event mutations reject non-admins and invalid input with typed errors", async () => {
     vi.mocked(getAuthUserId).mockResolvedValue("user-1" as any);
     const nonAdminDb = { get: vi.fn().mockResolvedValue({ _id: "user-1", isAdmin: false }) };

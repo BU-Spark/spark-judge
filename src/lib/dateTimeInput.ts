@@ -51,6 +51,12 @@ export function getAutoAdjustedEndDateTime(
     return endValue;
   }
 
+  // Keep an end the organizer already chose unless the new start passes it.
+  const endDate = parseDateTimeInput(endValue);
+  if (endDate && endDate > startDate) {
+    return endValue;
+  }
+
   const nextEnd = new Date(startDate);
   nextEnd.setMinutes(nextEnd.getMinutes() + durationMinutes);
 

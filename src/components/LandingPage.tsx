@@ -1,10 +1,8 @@
 import { CodeAndTellVoteView } from "./code-and-tell/CodeAndTellVoteView";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { CodeAndTellPreview } from "@/devRoutes";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { errorMessage } from "../lib/operationOutcome";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { JudgeCodeModal } from "./JudgeCodeModal";
@@ -40,7 +38,6 @@ export function LandingPage({
     api.auth.loggedInUser,
     demoMode ? "skip" : undefined,
   );
-  const joinAsJudge = useMutation(api.events.joinAsJudge);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const tick = () => setNow(Date.now());
@@ -76,9 +73,6 @@ export function LandingPage({
     ? preview.projects
     : teams;
   const [previewNotice, setPreviewNotice] = useState("");
-  const [joiningEvents, setJoiningEvents] = useState<Set<Id<"events">>>(
-    new Set(),
-  );
   const [judgeCodeModal, setJudgeCodeModal] = useState<{
     isOpen: boolean;
     eventId: Id<"events"> | null;
@@ -107,33 +101,6 @@ export function LandingPage({
     }
     onSelectEvent(id as Id<"events">);
   };
-  const handleJoinAsJudge = async (eventId: Id<"events">) => {
-    if (demoMode) {
-      setPreviewNotice("Preview only. No judge registration was sent.");
-      return;
-    }
-    if (!loggedInUser) {
-      requestSignIn();
-      return;
-    }
-    if (joiningEvents.has(eventId)) return;
-    setJoiningEvents((prev) => new Set(prev).add(eventId));
-    try {
-      await joinAsJudge({ eventId });
-      toast.success("Successfully joined as judge!");
-    } catch (error: unknown) {
-      toast.error(
-        errorMessage(error, "Failed to join as judge"),
-      );
-    } finally {
-      setJoiningEvents((prev) => {
-        const next = new Set(prev);
-        next.delete(eventId);
-        return next;
-      });
-    }
-  };
-
   const handleStartScoring = (event: LandingEvent) => {
     if (demoMode) {
       void navigate(`/participation-preview?mode=${getEventMode(event.mode)}`);
@@ -211,21 +178,6 @@ export function LandingPage({
           }
           void navigate(`/event/${focal.event._id}/team/${project._id}`);
         }}
-        extraAction={
-          focal &&
-          focal.phase === "live" &&
-          getEventMode(focal.event.mode) === "hackathon" &&
-          !focal.event.userRole
-            ? {
-                label: joiningEvents.has(focal.event._id as Id<"events">)
-                  ? "Joining…"
-                  : "Join as judge",
-                disabled: joiningEvents.has(focal.event._id as Id<"events">),
-                onClick: () =>
-                  void handleJoinAsJudge(focal.event._id as Id<"events">),
-              }
-            : undefined
-        }
         onAddTeams={
           focal && isAdmin && getEventMode(focal.event.mode) === "hackathon"
             ? () => handleAddTeam(focal.event)

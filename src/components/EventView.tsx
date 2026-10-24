@@ -16,7 +16,6 @@ import { formatDateTime } from "../lib/utils";
 import { pad2 } from "../lib/dateTimeInput";
 import { MODE_THEME } from "./home/modeTheme";
 import { toast } from "sonner";
-import { errorMessage } from "../lib/operationOutcome";
 import "./EventView.fi.css";
 import "./participation/participation.css";
 import { requestSignIn } from "../lib/signIn";
@@ -54,7 +53,6 @@ export function EventView({
   const removeTeamFromAssignment = useMutation(
     api.judgeAssignments.removeTeamFromAssignment,
   );
-  const joinAsJudge = useMutation(api.events.joinAsJudge);
   const [showWizard, setShowWizard] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [draftCompletedIds, setDraftCompletedIds] = useState<string[]>([]);
@@ -65,7 +63,6 @@ export function EventView({
   const [prizeFilter, setPrizeFilter] = useState("");
   const [myQueueOnly, setMyQueueOnly] = useState(false);
   const [judgeCodeOpen, setJudgeCodeOpen] = useState(false);
-  const [joining, setJoining] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const eventPrizesResult = useQuery(api.prizes.listEventPrizes, { eventId });
@@ -346,25 +343,6 @@ export function EventView({
     clearTeamParam();
   };
 
-  const handleJoinAsJudge = async () => {
-    if (!loggedInUser) {
-      requestSignIn();
-      return;
-    }
-    if (joining) return;
-    setJoining(true);
-    try {
-      await joinAsJudge({ eventId });
-      toast.success("Successfully joined as judge!");
-    } catch (error: unknown) {
-      toast.error(
-        errorMessage(error, "Failed to join as judge"),
-      );
-    } finally {
-      setJoining(false);
-    }
-  };
-
   const openJudgeCode = () => {
     if (!loggedInUser) {
       requestSignIn();
@@ -472,31 +450,14 @@ export function EventView({
                 Sign in
               </button>
             ) : (
-              <>
-                <button
-                  type="button"
-                  className="fi-transport"
-                  onClick={openJudgeCode}
-                >
-                  Enter judge code
-                </button>
-                <button
-                  type="button"
-                  className="fi-key"
-                  onClick={() => void handleJoinAsJudge()}
-                  disabled={joining}
-                >
-                  {joining ? "Joining..." : "Join as judge"}
-                </button>
-              </>
+              <button
+                type="button"
+                className="fi-transport"
+                onClick={openJudgeCode}
+              >
+                Enter judge code
+              </button>
             )}
-            <button
-              type="button"
-              className="fi-key fi-key--sm"
-              onClick={onBack}
-            >
-              Back to events
-            </button>
           </div>
         </div>
         <JudgeCodeModal

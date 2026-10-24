@@ -41,6 +41,7 @@ import type * as seeds_core_seedEverything from "../seeds/core/seedEverything.js
 import type * as seeds_core_seedJudgeScores from "../seeds/core/seedJudgeScores.js";
 import type * as seeds_core_seedLiveHackathon from "../seeds/core/seedLiveHackathon.js";
 import type * as seeds_core_seedSemester from "../seeds/core/seedSemester.js";
+import type * as seeds_core_seedTestLiveHackathon from "../seeds/core/seedTestLiveHackathon.js";
 import type * as seeds_demos_codeAndTell from "../seeds/demos/codeAndTell.js";
 import type * as seeds_demos_cohortJudging from "../seeds/demos/cohortJudging.js";
 import type * as seeds_demos_demoDay from "../seeds/demos/demoDay.js";
@@ -90,6 +91,7 @@ declare const fullApi: ApiFromModules<{
   "seeds/core/seedJudgeScores": typeof seeds_core_seedJudgeScores;
   "seeds/core/seedLiveHackathon": typeof seeds_core_seedLiveHackathon;
   "seeds/core/seedSemester": typeof seeds_core_seedSemester;
+  "seeds/core/seedTestLiveHackathon": typeof seeds_core_seedTestLiveHackathon;
   "seeds/demos/codeAndTell": typeof seeds_demos_codeAndTell;
   "seeds/demos/cohortJudging": typeof seeds_demos_cohortJudging;
   "seeds/demos/demoDay": typeof seeds_demos_demoDay;

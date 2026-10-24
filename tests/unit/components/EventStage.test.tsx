@@ -121,4 +121,11 @@ describe("participation labels respect event state", () => {
       ),
     ).toBe("Edit your ballot");
   });
+
+  it("asks judges to start judging and sends participants to the event", () => {
+    const hackathon = { ...event, mode: "hackathon" };
+    expect(stageAction({ ...hackathon, userRole: { role: "judge" } }, "live")).toBe("Start judging");
+    expect(stageAction({ ...hackathon, userRole: null }, "live")).toBe("Start judging");
+    expect(stageAction({ ...hackathon, userRole: { role: "participant" } }, "live")).toBe("Open event");
+  });
 });

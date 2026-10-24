@@ -83,6 +83,12 @@ describe("EventCard", () => {
     expect(screen.getByRole("link", { name: /Open event/ })).toHaveAttribute("href", "/event/event1");
   });
 
+  it("uses the viewer's live action as the main button label", () => {
+    renderCard(<EventCard event={fullEvent} phase="live" now={now} liveAction="Start judging" />);
+    expect(screen.getByRole("link", { name: /Start judging/ })).toHaveAttribute("href", "/event/event1");
+    expect(screen.queryByRole("link", { name: /Open event/ })).not.toBeInTheDocument();
+  });
+
   it("caps a long judging criteria list", () => {
     renderCard(
       <EventCard

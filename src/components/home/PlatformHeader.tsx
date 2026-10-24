@@ -3,7 +3,7 @@ import { useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Link } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
-import { DirectionIcon } from "../participation/ParticipationChrome";
+import { DirectionIcon, SignOutIcon } from "../participation/ParticipationChrome";
 import { SignInDialog } from "../auth/SignInDialog";
 import "./homepage-workspace.css";
 import { OPEN_SIGN_IN_EVENT } from "../../lib/signIn";
@@ -16,6 +16,7 @@ export function PlatformHeader({ homepage = false }: { homepage?: boolean }) {
   const [navOpen, setNavOpen] = useState(false);
   const navId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const accountRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     const open = () => setSignInOpen(true);
     window.addEventListener(OPEN_SIGN_IN_EVENT, open);
@@ -35,6 +36,27 @@ export function PlatformHeader({ homepage = false }: { homepage?: boolean }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [navOpen]);
+  // The account menu is a <details>, which only closes from its own summary; also close it on an outside click or Escape.
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      const menu = accountRef.current;
+      if (menu?.open && !menu.contains(event.target as Node)) menu.open = false;
+    };
+    const onKey = (event: KeyboardEvent) => {
+      const menu = accountRef.current;
+      if (event.key !== "Escape" || !menu?.open) return;
+      // Close just the menu; the mobile nav's own Escape handler would otherwise close it too.
+      event.stopPropagation();
+      menu.open = false;
+      menu.querySelector("summary")?.focus();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
   useEffect(() => {
     const media = window.matchMedia("(min-width: 761px)");
     const close = () => {
@@ -65,11 +87,13 @@ export function PlatformHeader({ homepage = false }: { homepage?: boolean }) {
           <span className="hp-nav-toggle-bars" aria-hidden="true" />
         </button>
         <nav id={navId} className="hp-header-actions" aria-label="Primary">
-          <a href={homepage ? "#past-events" : "/"} onClick={closeNav}>
-            {homepage ? "Past events" : "All events"}
-          </a>
+          {!homepage && (
+            <a href="/" onClick={closeNav}>
+              All events
+            </a>
+          )}
           {user ? (
-            <details className="hp-account-menu">
+            <details className="hp-account-menu" ref={accountRef}>
               <summary>
                 My account <DirectionIcon direction="down" />
               </summary>
@@ -83,7 +107,7 @@ export function PlatformHeader({ homepage = false }: { homepage?: boolean }) {
                     void signOut();
                   }}
                 >
-                  Sign out
+                  Sign out <SignOutIcon />
                 </button>
               </div>
             </details>

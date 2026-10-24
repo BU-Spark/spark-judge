@@ -65,6 +65,23 @@ export function DirectionIcon({
   );
 }
 
+/** A door with an arrow leaving it, for signing out. */
+export function SignOutIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      aria-hidden="true"
+    >
+      <path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9" />
+    </svg>
+  );
+}
+
 export function HeartIcon() {
   return (
     <svg

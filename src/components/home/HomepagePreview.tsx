@@ -40,7 +40,6 @@ export function HomepagePreview() {
           HackJudge
         </a>
         <div className="hp-header-actions">
-          <a href="#past-events">Past events</a>
           {signedIn ? (
             <details className="hp-account-menu">
               <summary>

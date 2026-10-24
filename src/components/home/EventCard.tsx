@@ -90,11 +90,14 @@ export function EventCard({
   phase,
   now,
   artVariant,
+  liveAction = "Open event",
 }: {
   event: CardEvent;
   phase: FocalHomepage["phase"];
   now: number;
   artVariant?: number;
+  /** Label for the main button while the event is live, e.g. "Start judging" for a judge. */
+  liveAction?: string;
 }) {
   const website = eventWebsites[event.name];
   const mode = getEventMode(event.mode);
@@ -197,7 +200,7 @@ export function EventCard({
           <div className="hp-event-card-actions">
             {phase === "live" && (
               <Link className="hp-event-card-primary" to={`/event/${event._id}`}>
-                Open event <DirectionIcon />
+                {liveAction} <DirectionIcon />
               </Link>
             )}
             {website && (

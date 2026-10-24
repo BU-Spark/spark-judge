@@ -451,7 +451,7 @@ export function HackathonOverviewTab({
                 </p>
               ) : judgeRows.length === 0 ? (
                 <p className="admin-muted">
-                  No judges have registered. Judges sign in, open the event, and choose “Join as judge.”
+                  No judges have registered. Judges sign in, open the event, and enter the judge code.
                 </p>
               ) : (
                 <div className="admin-judges-table">

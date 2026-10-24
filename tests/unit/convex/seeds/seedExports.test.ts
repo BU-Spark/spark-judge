@@ -19,6 +19,7 @@ describe('seed module exports', () => {
       'seedPrizeJudgingFlowLockedDemo',
       'seedRegularJudgingDemo',
       'seedSemester',
+      'seedTestLiveHackathon',
       'seedCodeAndTellDemo',
     ].sort());
   });

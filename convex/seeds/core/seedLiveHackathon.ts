@@ -7,7 +7,7 @@ import { MutationCtx } from "../../_generated/server";
  * October from the admin UI once wizard testing is done.
  */
 
-const TEAMS: {
+export const TEAMS: {
   name: string;
   description: string;
   track: string;

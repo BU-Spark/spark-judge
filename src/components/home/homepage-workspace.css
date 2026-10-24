@@ -322,23 +322,53 @@
   top: 100%;
   z-index: 10;
   display: grid;
-  gap: 12px;
   min-width: 230px;
   max-width: calc(100vw - 40px);
   overflow-wrap: anywhere;
   background: var(--hp-paper);
   color: var(--hp-ink);
   border: 1px solid var(--hp-line);
-  padding: 20px;
+  padding: 8px;
   box-shadow: 0 8px 24px #103c3b12;
 }
+/* The signed-in name is a label, not an action: smaller, muted, and set off from the menu items below it. */
 .hp-account-panel span {
   color: var(--hp-muted);
+  font-size: 13px;
+  padding: 8px 12px 12px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--hp-line);
+}
+.hp-account-panel :is(a, button) {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 4px;
+  color: var(--hp-ink);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hp-account-panel :is(a, button):hover {
+  background: color-mix(in srgb, var(--hp-ink) 8%, transparent);
+}
+.hp-account-panel :is(a, button):focus-visible {
+  outline: 2px solid var(--hp-ink);
+  outline-offset: -2px;
 }
 .hp-account-panel button {
-  text-align: left;
-  cursor: pointer;
-  text-decoration: underline;
+  position: relative;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 13px;
+}
+.hp-account-panel button::before {
+  content: "";
+  position: absolute;
+  inset: -7px -8px auto;
+  border-top: 1px solid var(--hp-line);
 }
 .hp-archive {
   background: #e9ede7;
@@ -366,6 +396,7 @@
 .hp-archive .hp-event-rows {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: start;
   column-gap: 40px;
 }
 .hp-archive .hp-event-rows summary {
@@ -608,11 +639,11 @@
   gap: 16px;
   align-items: start;
 }
-.hp-archive .hp-event-row:first-child {
+.hp-archive-column:first-child .hp-event-row:first-child {
   border-top: 0;
 }
 @media (min-width: 761px) {
-  .hp-archive .hp-event-row:nth-child(2) {
+  .hp-archive .hp-event-row:first-child {
     border-top: 0;
   }
 }

@@ -17,7 +17,7 @@ import {
   groupHomepageEvents,
   selectFocalHomepage,
 } from "../../lib/homepagePhase";
-import type { StageEvent } from "./EventStage";
+import { stageAction, type StageEvent } from "./EventStage";
 import { upcomingItems, type UpcomingItem } from "../../lib/upcomingEvents";
 import "./homepage-workspace.css";
 
@@ -54,6 +54,9 @@ export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
     focal ? { eventId: focal.event._id as Id<"events"> } : "skip",
   );
   const upcoming = groups.upcoming.filter((e) => e._id !== focal?.event._id);
+  // Newspaper order: the left column reads top to bottom, then the right column continues.
+  const pastSplit = Math.ceil(groups.past.length / 2);
+  const pastColumns = [groups.past.slice(0, pastSplit), groups.past.slice(pastSplit)];
   useEffect(() => {
     const root = homepageRef.current;
     const header = root?.querySelector<HTMLElement>(".hp-header");
@@ -75,7 +78,6 @@ export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
             HackJudge
           </Link>
           <div className="hp-header-actions">
-            <a href="#past-events">Past events</a>
             <button className="hp-sign-in" onClick={() => window.location.reload()}>Reset test</button>
           </div>
         </header>
@@ -108,6 +110,7 @@ export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
                 event={event}
                 phase={focal.phase}
                 now={now}
+                liveAction={stageAction(focal.event, focal.phase)}
                 artVariant={eventArtVariant(event._id, artSequence)}
               />
             )
@@ -129,8 +132,12 @@ export function Homepage({ voteTest = false }: { voteTest?: boolean }) {
               <h3>Past events</h3>
             </div>
             <div className="hp-event-rows">
-              {groups.past.map((event) => (
-                <EventRow key={event._id} event={event} />
+              {pastColumns.map((column, index) => (
+                <div className="hp-archive-column" key={index}>
+                  {column.map((event) => (
+                    <EventRow key={event._id} event={event} />
+                  ))}
+                </div>
               ))}
             </div>
             {groups.past.length === 0 && <p>No past events yet.</p>}

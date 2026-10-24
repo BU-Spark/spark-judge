@@ -915,8 +915,15 @@
   background: transparent;
   border: 0;
   border-radius: 0;
-  border-left: 1px solid var(--p-line);
+  padding: 0;
   box-shadow: none;
+}
+/* Spacing alone separates the items; rules would land at the start of each wrapped line. */
+.participation .fi-wiz-readouts {
+  gap: 0.5rem 1.75rem;
+}
+.participation .fi-wiz-readout-item .fi-readout {
+  font-size: 0.85rem;
 }
 .participation .fi-wiz-stamp {
   color: var(--platform-ink);

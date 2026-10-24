@@ -550,8 +550,16 @@
   color: var(--fi-ink-dim);
 }
 
+.fi-wiz-readout-item .fi-wiz-readout-weight,
+.fi-wiz-readout-item .fi-wiz-readout-dash {
+  color: var(--fi-ink-dim);
+  opacity: 0.75;
+}
+
 .fi-wiz-readout-item .fi-readout {
   color: var(--fi-ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .fi-wiz-readout-item.is-na .fi-readout {

@@ -1515,11 +1515,14 @@ function ReviewPanel({
                         isOptedOut && "is-na",
                       )}
                     >
-                      <span className="fi-engraved-sm">
-                        {category}{" "}
+                      <span className="fi-engraved-sm">{category}</span>
+                      <span className="fi-engraved-sm fi-wiz-readout-weight">
                         {formatRubricPercent(
                           rubricPercentByCategory.get(category) ?? 0,
                         )}
+                      </span>
+                      <span className="fi-engraved-sm fi-wiz-readout-dash" aria-hidden="true">
+                        –
                       </span>
                       <span className="fi-readout">{displayScore}</span>
                     </span>

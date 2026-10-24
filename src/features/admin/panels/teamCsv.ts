@@ -68,7 +68,7 @@ function splitList(value: string) {
     .filter(Boolean);
 }
 
-function parseCsvTable(text: string) {
+export function parseCsvTable(text: string) {
   const rows: string[][] = [];
   const source = text.replace(/^\uFEFF/, "");
 

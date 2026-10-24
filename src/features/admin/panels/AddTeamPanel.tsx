@@ -11,6 +11,7 @@ import {
   parseTeamCsv,
   type ParsedTeamCsvRow,
 } from "./teamCsv";
+import { DevpostImport } from "./DevpostImport";
 
 type PreparedTeamCsvRow = ParsedTeamCsvRow & {
   prizeIds: Id<"prizes">[];
@@ -74,6 +75,7 @@ export function AddTeamPanel({
   teamPrizeIdsByTeamId,
   courseCodes,
   editingTeam,
+  existingTeams,
   panelMode = "manual",
 }: {
   eventId: Id<"events">;
@@ -87,6 +89,7 @@ export function AddTeamPanel({
   teamPrizeIdsByTeamId?: Map<string, string[]>;
   courseCodes?: string[];
   editingTeam?: any;
+  existingTeams?: Array<{ _id: string; name: string; devpostUrl?: string }>;
   panelMode?: "manual" | "bulk";
 }) {
   const isDemoDay = eventMode === "demo_day";
@@ -307,6 +310,8 @@ export function AddTeamPanel({
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
+    // Clear the input so choosing the same file again still triggers a read.
+    event.target.value = "";
     if (!file) return;
 
     try {
@@ -639,6 +644,17 @@ export function AddTeamPanel({
           </p>
         </div>
         <div className="flex-1 overflow-y-auto">
+          {/* Outside the form: its confirmation dialog has a form of its own. */}
+          {isBulkImportMode && isHackathon && !prizesLoading && (
+            <div className="px-5 pt-5">
+              <DevpostImport
+                eventId={eventId}
+                tracks={tracks || []}
+                prizes={eventPrizes || []}
+                existingTeams={existingTeams || []}
+              />
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
             {isBulkImportMode && (
               <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-3">
@@ -664,6 +680,7 @@ export function AddTeamPanel({
                   ref={fileInputRef}
                   type="file"
                   accept=".csv,text/csv"
+                  aria-label="Team CSV file"
                   onChange={handleCsvFileChange}
                   className="hidden"
                 />

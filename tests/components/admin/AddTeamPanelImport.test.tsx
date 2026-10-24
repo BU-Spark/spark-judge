@@ -7,7 +7,10 @@ vi.mock("convex/react", () => ({
   useMutation: () => setPrizes,
 }));
 vi.mock("../../../convex/_generated/api", () => ({
-  api: { prizes: { setTeamPrizeSubmissionsAdmin: "setTeamPrizeSubmissionsAdmin" } },
+  api: {
+    prizes: { setTeamPrizeSubmissionsAdmin: "setTeamPrizeSubmissionsAdmin" },
+    teams: { createTeam: "createTeam", updateTeamAdmin: "updateTeamAdmin" },
+  },
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -28,7 +31,7 @@ function csvFile() {
 }
 
 async function loadCsv(container: HTMLElement) {
-  const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+  const input = container.querySelector('input[aria-label="Team CSV file"]') as HTMLInputElement;
   await act(async () => {
     fireEvent.change(input, { target: { files: [csvFile()] } });
   });

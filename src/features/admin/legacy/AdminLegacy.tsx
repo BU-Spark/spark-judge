@@ -3414,6 +3414,7 @@ export function EventManagementModal({
                     prizesLoading={eventPrizes === undefined}
                     teamPrizeIdsByTeamId={teamPrizeIdsByTeamId}
                     courseCodes={event.courseCodes || []}
+                    existingTeams={event.teams}
                   />
                 }
               />

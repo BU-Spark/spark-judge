@@ -1081,11 +1081,16 @@
   border-radius: 8px;
   transform: none;
 }
+/* The whole card is the link, so darken it rather than underlining every line. */
 .participation .fi-ev-key:hover,
 .participation .fi-ev-key:active {
-  background: var(--platform-paper);
+  background: color-mix(in srgb, var(--p-panel-ink) 6%, var(--p-panel));
   box-shadow: none;
   transform: none;
+  text-decoration: none;
+}
+.participation .fi-ev-key[aria-current="page"] {
+  box-shadow: inset 0 0 0 2px var(--p-focus);
 }
 .participation .fi-ev-key-top {
   justify-content: start;

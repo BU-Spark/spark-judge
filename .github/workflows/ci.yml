@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx eslint .
+      - run: npx tsc -p convex --noEmit --pretty false
+      - run: npx tsc -p tsconfig.app.json --noEmit --pretty false
+      - run: npx tsc -p tsconfig.test.json --noEmit --pretty false
+      - run: npx vitest run
+      # Only checks that the app builds; deploys build their own bundle.
+      - run: npx vite build
+        env:
+          VITE_CONVEX_URL: https://limitless-eagle-110.convex.cloud
+
+  # Mirrors `npm run deploy:frontend:dev` plus a push of convex/ to the dev
+  # backend, after checks pass on a push to dev.
+  deploy-dev:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
+    env:
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEV_DEPLOY_KEY }}
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: de19f9b8-0285-462c-a20e-fd628a6ce2aa
+    steps:
+      - name: Require deploy secrets
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ] || [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "::error::Add the CONVEX_DEV_DEPLOY_KEY and NETLIFY_AUTH_TOKEN repository secrets to deploy dev."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Push Convex functions to limitless-eagle-110
+        run: npx convex dev --once
+      - name: Build against the dev backend
+        run: npx vite build --outDir dist-dev
+        env:
+          VITE_CONVEX_URL: https://limitless-eagle-110.convex.cloud
+      - name: Publish to dev--hackjudge.netlify.app
+        run: npx --yes netlify-cli deploy --no-build --dir dist-dev --alias dev

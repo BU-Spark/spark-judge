@@ -701,7 +701,7 @@
   --ec-hole: var(--ec-bg);
 }
 .hp-event-card {
-  --ec-pad: clamp(28px, 4vw, 48px);
+  --ec-pad: clamp(24px, 3vw, 36px);
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -801,7 +801,7 @@
 .hp-event-card-art {
   grid-column: 2;
   grid-row: 1;
-  min-height: 480px;
+  min-height: 340px;
   margin: calc(-1 * var(--ec-pad)) calc(-1 * var(--ec-pad)) 0 0;
 }
 .hp-event-card-art svg {
@@ -825,17 +825,27 @@
 @keyframes hp-event-art-in {
   from { opacity: 0; transform: scale(0.9); }
 }
+/* Side-by-side, the text sets the card's height and the art fills it rather than growing to its square ratio. */
+@media (min-width: 861px) {
+  .hp-event-card > .hp-event-card-art {
+    position: relative;
+  }
+  .hp-event-card > .hp-event-card-art svg {
+    position: absolute;
+    inset: 0;
+  }
+}
 
 .hp-event-card-body {
   grid-column: 1;
   grid-row: 1;
   max-width: 720px;
-  padding-bottom: 36px;
+  padding-bottom: 20px;
 }
 .hp-event-card-eyebrow {
   display: flex;
   align-items: flex-start;
-  margin: 0 0 20px;
+  margin: 0 0 14px;
 }
 .hp-event-card-chip {
   display: inline-flex;
@@ -869,7 +879,7 @@
 }
 .hp-event-card h1 {
   margin: 0;
-  font-size: clamp(44px, 6vw, 80px);
+  font-size: clamp(40px, 5vw, 64px);
   font-weight: 600;
   line-height: 1.02;
   letter-spacing: -0.035em;
@@ -878,9 +888,9 @@
 }
 .hp-event-card-description {
   max-width: 52ch;
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   color: var(--ec-soft);
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1.55;
   white-space: pre-line;
   overflow-wrap: anywhere;
@@ -900,7 +910,7 @@
 }
 
 .hp-event-card-countdown {
-  margin-top: 32px;
+  margin-top: 24px;
 }
 .hp-event-card-countdown-value {
   display: flex;
@@ -915,7 +925,7 @@
 }
 .hp-event-card-countdown-part strong {
   display: block;
-  font-size: clamp(64px, 8.5vw, 116px);
+  font-size: clamp(52px, 6.5vw, 84px);
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.05em;
@@ -940,7 +950,7 @@
 
 .hp-event-card-schedule {
   max-width: 640px;
-  margin-top: 32px;
+  margin-top: 24px;
 }
 .hp-event-card-rail {
   height: 4px;
@@ -980,7 +990,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 36px;
+  margin-top: 24px;
 }
 .hp-event-card-actions a {
   display: inline-flex;
@@ -1017,8 +1027,8 @@
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
-  gap: 24px 48px;
-  padding-top: 24px;
+  gap: 20px 48px;
+  padding-top: 20px;
   border-top: 1px solid var(--ec-line);
 }
 .hp-event-card-group {
@@ -1057,7 +1067,7 @@
 }
 
 .hp-event-card--skeleton {
-  min-height: 560px;
+  min-height: 420px;
   background: var(--platform-workspace);
 }
 .hp-event-card--skeleton .hp-event-card-body {
@@ -1075,9 +1085,9 @@
   animation: hp-skeleton-fade 1.4s ease-in-out infinite alternate;
 }
 .hp-skeleton--chip { width: 120px; height: 26px; border-radius: 999px; }
-.hp-skeleton--title { width: 60%; height: clamp(48px, 6vw, 80px); margin-bottom: 8px; }
+.hp-skeleton--title { width: 60%; height: clamp(44px, 5vw, 64px); margin-bottom: 8px; }
 .hp-skeleton--short { width: 40%; }
-.hp-skeleton--count { width: 70%; height: clamp(64px, 9vw, 116px); margin-top: 20px; }
+.hp-skeleton--count { width: 70%; height: clamp(52px, 6.5vw, 84px); margin-top: 20px; }
 @keyframes hp-skeleton-fade {
   from { opacity: 1; }
   to { opacity: 0.45; }
@@ -1093,7 +1103,7 @@
   }
   /* Art band above the text: a row of whole square tiles, the event's own composition at the right edge. */
   .hp-event-card > .hp-event-card-art {
-    --band-h: clamp(200px, 64vw, 280px);
+    --band-h: clamp(160px, 48vw, 220px);
     position: relative;
     grid-column: 1;
     grid-row: 1;

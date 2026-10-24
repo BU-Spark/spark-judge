@@ -52,6 +52,16 @@ describe("automatic and selected prize entries", () => {
       true,
     );
   });
+  it("enters every team in an automatic general prize but never in a sponsor prize", () => {
+    const overall: EntryPrize = { ...first, _id: "overall", entryMode: "automatic" };
+    const autoSponsor: EntryPrize = { ...sponsor, entryMode: "automatic" };
+    const other = { _id: "other", eventId: "event", track: "Health" };
+    const entries = getEffectivePrizeSubmissions([overall, autoSponsor], [team, other], []);
+    expect(entries.map((row) => `${row.prizeId}:${row.teamId}`).sort()).toEqual([
+      "overall:other",
+      "overall:team",
+    ]);
+  });
   it("leaves legacy prizes opt-in until explicitly configured", () => {
     expect(
       getEffectivePrizeSubmissions(
@@ -84,15 +94,6 @@ describe("automatic and selected prize entries", () => {
         [env, first],
         [{ ...team, hidden: true }],
         [choice("first")],
-      ),
-    ).toEqual([]);
-  });
-  it("does not automatically enter a general prize even if its configuration is malformed", () => {
-    expect(
-      getEffectivePrizeSubmissions(
-        [{ ...first, entryMode: "automatic" }],
-        [team],
-        [],
       ),
     ).toEqual([]);
   });

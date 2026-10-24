@@ -15,6 +15,7 @@ import { isHackathonMode } from "./eventModes";
 import {
   getEffectivePrizeSubmissions,
   isAutomaticPrize,
+  supportsAutomaticEntry,
   isPrizeEligibleForTrack,
 } from "../shared/prizeEntries";
 import { normalizeOptionalString } from "./normalize";
@@ -70,12 +71,8 @@ function validatePrizeConfig(prize: any, event: any) {
   if (!name) {
     throw appError("invalid_prize", "validation", "Prize name is required");
   }
-  if (
-    prize.entryMode === "automatic" &&
-    prize.type !== "track" &&
-    prize.type !== "track_sponsor"
-  ) {
-    throw appError("invalid_prize", "validation", `Prize "${name}" must be track-linked for automatic entry`);
+  if (prize.entryMode === "automatic" && !supportsAutomaticEntry(prize.type)) {
+    throw appError("invalid_prize", "validation", `Sponsor prize "${name}" can't use automatic entry`);
   }
 
   const eventTracks =

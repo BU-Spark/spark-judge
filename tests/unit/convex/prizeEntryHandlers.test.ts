@@ -115,16 +115,16 @@ describe("effective prize entry handlers", () => {
     );
   });
 
-  it("rejects automatic entry without a track-linked prize", async () => {
+  it("rejects automatic entry for a sponsor prize", async () => {
     const { ctx } = fixture(true);
     await expect(
       (saveEventPrizes as any)._handler(ctx, {
         eventId: "event",
         prizes: [
-          { name: "First Hack", type: "general", entryMode: "automatic" },
+          { name: "Best Use of API", type: "sponsor", entryMode: "automatic" },
         ],
       }),
-    ).rejects.toThrow("track-linked");
+    ).rejects.toThrow("can't use automatic entry");
     expect(ctx.db.patch).not.toHaveBeenCalled();
   });
 

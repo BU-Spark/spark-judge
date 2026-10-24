@@ -71,6 +71,7 @@ export const getUserProfile = query({
       phoneVerificationTime?: number | undefined;
       isAnonymous?: boolean | undefined;
       bio?: string | undefined;
+      isAdmin?: boolean | undefined;
     } | null;
     if (!user) return null;
 
@@ -129,7 +130,7 @@ export const getUserProfile = query({
       ctx.db.query("teams").collect(),
     ]);
     const myProjects = allTeams.filter(team =>
-      !team.hidden && isProjectMember(team, userId, user.email),
+      !team.hidden && isProjectMember(team, userId, user.email, user.isAdmin === true),
     );
     const participantEventIds = new Set([
       ...participantRows.map(row => row.eventId),

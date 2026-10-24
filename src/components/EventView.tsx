@@ -419,6 +419,35 @@ export function EventView({
     ["--c-deep" as string]: theme.deep,
   } as CSSProperties;
 
+  // Published results are public; only judges get the scoring workspace.
+  if (!judgeStatus && event.status === "past" && event.resultsReleased) {
+    return (
+      <div className="fi-ev-page participation participation--hackathon">
+        <button
+          type="button"
+          onClick={onBack}
+          className="fi-key fi-key--sm fi-ev-back"
+        >
+          Back to events
+        </button>
+        <section className="fi-ev-face" aria-labelledby="fi-ev-event-name">
+          <div className="fi-module fi-ev-module" style={modeStyle}>
+            <div className="fi-ev-status">
+              <span className="fi-ev-chip">Results</span>
+              <span className="fi-ev-chip fi-ev-chip--mode">
+                {getEventDisplayLabel(event.mode)}
+              </span>
+            </div>
+            <h1 className="fi-ev-name" id="fi-ev-event-name">
+              {event.name}
+            </h1>
+          </div>
+        </section>
+        <ResultsView eventId={eventId} />
+      </div>
+    );
+  }
+
   if (!judgeStatus) {
     return (
       <div className="fi-ev-page participation participation--hackathon">

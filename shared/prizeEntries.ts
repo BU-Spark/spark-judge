@@ -28,13 +28,17 @@ export function isPrizeEligibleForTrack(
   return true;
 }
 
+/** Whether a prize type can enter teams automatically: every team for a
+ * general prize, every team in the track for track prizes. Sponsor prizes are
+ * always opt-in. */
+export function supportsAutomaticEntry(type: EntryPrize["type"]) {
+  return type !== "sponsor";
+}
+
 export function isAutomaticPrize(
   prize: Pick<EntryPrize, "type" | "entryMode">,
 ) {
-  return (
-    prize.entryMode === "automatic" &&
-    (prize.type === "track" || prize.type === "track_sponsor")
-  );
+  return prize.entryMode === "automatic" && supportsAutomaticEntry(prize.type);
 }
 
 /** Automatic entries are derived from the current track, so imports and track edits

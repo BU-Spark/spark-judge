@@ -27,6 +27,7 @@ import {
   getAutoAdjustedEndDateTime,
 } from "../../../lib/dateTimeInput";
 import { formatCodeAndTellDefaultTitle } from "../../../lib/eventTitles";
+import { supportsAutomaticEntry } from "../../../../shared/prizeEntries";
 import { formatDateTime } from "../../../lib/utils";
 import {
   formatRubricPercent,
@@ -129,7 +130,7 @@ function normalizePrizeDraftsForSave(prizes: PrizeDraft[]) {
       description: prize.description.trim() || undefined,
       type: prize.type,
       track: prize.track.trim() || undefined,
-      entryMode: prize.type === "track" || prize.type === "track_sponsor" ? prize.entryMode : "opt_in",
+      entryMode: supportsAutomaticEntry(prize.type) ? prize.entryMode : "opt_in",
       sponsorName: prize.sponsorName.trim() || undefined,
       scoreBasis: prize.scoreBasis,
       scoreCategoryNames:
@@ -568,7 +569,7 @@ function PrizeCatalogEditor({
                         updatePrize(selectedPrizeIndex, (item) => ({
                           ...item,
                           type: e.target.value as PrizeType,
-                          entryMode: e.target.value === "track" || e.target.value === "track_sponsor" ? item.entryMode : "opt_in",
+                          entryMode: supportsAutomaticEntry(e.target.value as PrizeType) ? item.entryMode : "opt_in",
                         }))
                       }
                       className="input"
@@ -611,15 +612,19 @@ function PrizeCatalogEditor({
                     </div>
                   )}
 
-                  {(selectedPrize.type === "track" || selectedPrize.type === "track_sponsor") && (
+                  {supportsAutomaticEntry(selectedPrize.type) && (
                     <div className="space-y-1">
                       <label htmlFor="prize-entry-mode" className="text-xs font-medium fi-muted">Entry</label>
                       <select id="prize-entry-mode" className="input" value={selectedPrize.entryMode} disabled={disabled}
                         onChange={e => updatePrize(selectedPrizeIndex, item => ({ ...item, entryMode: e.target.value as PrizeDraft["entryMode"] }))}>
                         <option value="opt_in">Team chooses entry</option>
-                        <option value="automatic">Automatic for this track</option>
+                        <option value="automatic">{selectedPrize.type === "general" ? "Automatic for every team" : "Automatic for this track"}</option>
                       </select>
-                      <p className="text-xs fi-muted">Automatic entry includes every eligible team in this track, including existing teams.</p>
+                      <p className="text-xs fi-muted">
+                        {selectedPrize.type === "general"
+                          ? "Automatic entry includes every team, including existing teams."
+                          : "Automatic entry includes every eligible team in this track, including existing teams."}
+                      </p>
                     </div>
                   )}
 

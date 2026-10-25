@@ -263,7 +263,9 @@ export function ScoringSession({
     initialIndexFor(teams, initialTeamId),
   );
   const [isReviewing, setIsReviewing] = useState(false);
-  const [browsingTeam, setBrowsingTeam] = useState(false);
+  const [browsingTeam, setBrowsingTeam] = useState(
+    () => findTeamIndex(teams, initialTeamId) >= 0,
+  );
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
   const [localState, setLocalState] = useState<
@@ -566,6 +568,7 @@ export function ScoringSession({
     const idx = findTeamIndex(sortedTeams, initialTeamId);
     if (idx >= 0) {
       setCurrentTeamIndex(idx);
+      setBrowsingTeam(true);
     }
     initialAppliedRef.current = true;
   }, [storageKey, draftLoaded, initialTeamId, sortedTeams]);
@@ -641,12 +644,7 @@ export function ScoringSession({
           !completedSet.has(t._id as string) &&
           !skippedSet.has(t._id as string),
       );
-      if (firstIncomplete !== -1) return firstIncomplete;
-      const firstSkipped = sortedTeams.findIndex((t) =>
-        skippedSet.has(t._id as string),
-      );
-      if (firstSkipped !== -1) return firstSkipped;
-      return -1;
+      return firstIncomplete;
     },
     [sortedTeams],
   );
@@ -712,7 +710,7 @@ export function ScoringSession({
   ]);
 
   useEffect(() => {
-    if (!hasTeams || browsingTeam) return;
+    if (!draftLoaded || !hasTeams || browsingTeam || isReviewing) return;
     const id = currentTeamId;
     const isPending = id && !completedTeams.has(id) && !skippedTeams.has(id);
     if (isPending) return;
@@ -726,7 +724,27 @@ export function ScoringSession({
     skippedTeams,
     computeNextIndex,
     browsingTeam,
+    draftLoaded,
+    isReviewing,
   ]);
+
+  const handleReview = useCallback(() => {
+    // Review is another way to finish the current scorecard. It must submit
+    // the same answers as Next, without requiring a navigation detour.
+    if (
+      currentTeamId &&
+      isTeamFullyAnswered(draftScores[currentTeamId], categories)
+    ) {
+      setCompletedTeams((prev) => new Set(prev).add(currentTeamId));
+      setSkippedTeams((prev) => {
+        const next = new Set(prev);
+        next.delete(currentTeamId);
+        return next;
+      });
+    }
+    setBrowsingTeam(true);
+    setIsReviewing(true);
+  }, [currentTeamId, draftScores, categories]);
 
   const handleGoToTeam = useCallback(
     (index: number) => {
@@ -1236,7 +1254,7 @@ export function ScoringSession({
           ) : (
             <button
               type="button"
-              onClick={() => setIsReviewing(true)}
+              onClick={handleReview}
               className="fi-key"
             >
               Review scores

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ComponentProps } from "react";
 
 import type { Id } from "../../../convex/_generated/dataModel";
 import { ScoringWizard } from "../../../src/components/ScoringWizard";
@@ -57,16 +58,7 @@ const defaultCategories = [
 ];
 
 function renderWizard(
-  overrides: Partial<{
-    eventId: Id<"events">;
-    teams: typeof defaultTeams;
-    rosterTeamIds: Id<"teams">[];
-    categories: typeof defaultCategories;
-    storageKey: string | null;
-    onClose: () => void;
-    onSubmitted: () => void;
-    initialTeamId: Id<"teams"> | null;
-  }> = {},
+  overrides: Partial<ComponentProps<typeof ScoringWizard>> = {},
 ) {
   const props = {
     eventId: EVENT_ID,
@@ -434,6 +426,103 @@ describe("ScoringWizard", () => {
     expect(screen.getByRole("heading", { name: "Beta" })).toBeInTheDocument();
     expect(screen.getByText("00 of 03 scored")).toBeInTheDocument();
   });
+
+  it("includes a fully answered project when going directly to review", async () => {
+    renderWizard({ teams: [defaultTeams[1]] });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Not comfortable judging this" }),
+    );
+    fireEvent.click(scoreKey(5, "Craft"));
+    fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
+    expect(screen.getByText("Done")).toBeInTheDocument();
+    expect(screen.queryByText("Incomplete")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Submit scores" }));
+    await waitFor(() => expect(mockSubmit).toHaveBeenCalledTimes(1));
+    expect(mockSubmit.mock.calls[0][0].scores).toEqual([
+      {
+        teamId: "team_alpha",
+        categoryScores: [
+          { category: "Impact", score: null, optedOut: true },
+          { category: "Craft", score: 5, optedOut: false },
+        ],
+      },
+    ]);
+  });
+
+  it("keeps a partially answered project out of direct review submission", () => {
+    renderWizard({ teams: [defaultTeams[1]] });
+    fireEvent.click(scoreKey(4, "Impact"));
+    fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
+    expect(screen.getByText("Incomplete")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Submit scores" }),
+    ).toBeDisabled();
+    expect(mockSubmit).not.toHaveBeenCalled();
+  });
+
+  it("opens review after skipping the last pending project without cycling through skipped ones", () => {
+    renderWizard();
+    scoreAll(4, 4);
+    fireEvent.click(nextButton());
+    fireEvent.click(scoreKey(5, "Impact"));
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    expect(
+      screen.getByRole("heading", { name: "Review scores" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Skipped")).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+    expect(screen.getByRole("heading", { name: "Beta" })).toBeInTheDocument();
+    expect(scoreKey(5, "Impact")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("stays on an explicitly selected completed project after server scores arrive", async () => {
+    const { rerender, props } = renderWizard({
+      initialTeamId: "team_alpha" as Id<"teams">,
+      existingScores: [],
+    });
+    rerender(
+      <ScoringWizard
+        {...props}
+        existingScores={[
+          {
+            teamId: "team_alpha" as Id<"teams">,
+            categoryScores: [
+              { category: "Impact", score: 4 },
+              { category: "Craft", score: 2 },
+            ],
+          },
+        ]}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByText("01 of 03 scored")).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+    expect(scoreKey(4, "Impact")).toHaveAttribute("aria-pressed", "true");
+    expect(scoreKey(2, "Craft")).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(nextButton());
+    expect(screen.getByRole("heading", { name: "Beta" })).toBeInTheDocument();
+  });
+
+  it("stays on an explicitly selected completed project restored from a draft", async () => {
+    writeVersionedDraft(DRAFT_KEY, 2, {
+      scores: {
+        team_alpha: {
+          Impact: { score: 4, optedOut: false },
+          Craft: { score: 2, optedOut: false },
+        },
+      },
+      completed: ["team_alpha"],
+      skipped: [],
+      currentTeamId: "team_beta",
+    });
+    renderWizard({ initialTeamId: "team_alpha" as Id<"teams"> });
+    expect(
+      await screen.findByRole("heading", { name: "Alpha" }),
+    ).toBeInTheDocument();
+    expect(scoreKey(4, "Impact")).toHaveAttribute("aria-pressed", "true");
+  });
   it("can revisit a completed project from review and retain its score", () => {
     renderWizard();
     scoreAll(5, 2);
@@ -603,7 +692,9 @@ describe("ScoringWizard", () => {
     fireEvent.click(scoreKey(5, "Impact"));
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
-    fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
+    expect(
+      screen.getByRole("heading", { name: "Review scores" }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Submit scores" }));
 
     await waitFor(() =>
@@ -666,7 +757,9 @@ describe("ScoringWizard", () => {
     fireEvent.click(nextButton());
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
-    fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
+    expect(
+      screen.getByRole("heading", { name: "Review scores" }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Submit scores" }));
 
     await waitFor(() => expect(props.onSubmitted).toHaveBeenCalledTimes(1));

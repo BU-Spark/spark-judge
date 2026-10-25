@@ -279,8 +279,7 @@ export function PrizeWinnerWizardPanel({
         <div>
           <h2>Choose prize winners</h2>
           <p>
-            {assignedCount} of {prizes.length} selected. Choose a prize, compare
-            its entrants, and save your selections.
+            {assignedCount} of {prizes.length} selected.
           </p>
         </div>
         <button className="fi-key" onClick={close} disabled={saving}>
@@ -367,11 +366,6 @@ export function PrizeWinnerWizardPanel({
                 <p>
                   <strong>Skill signals:</strong>{" "}
                   {(entry.prize.scoreCategoryNames ?? []).join(" · ")}
-                </p>
-                <p className="fi-muted">
-                  Prize scores use only these categories and their rubric
-                  weights. Overall scores are shown for context. Scores guide
-                  the comparison; you choose the winner.
                 </p>
                 {(!rubric || !categories.length) && (
                   <p role="status">Category scores are not available yet.</p>

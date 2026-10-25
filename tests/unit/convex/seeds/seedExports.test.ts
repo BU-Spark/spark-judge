@@ -13,6 +13,7 @@ describe('seed module exports', () => {
       'seedEvents',
       'seedEverything',
       'seedJudgeScores',
+      'seedJudgeTutorial',
       'seedLiveHackathon',
       'seedPrizeJudgingFlowCohortsDemo',
       'seedPrizeJudgingFlowDemo',
@@ -20,6 +21,7 @@ describe('seed module exports', () => {
       'seedRegularJudgingDemo',
       'seedSemester',
       'seedTestLiveHackathon',
+      'seedTestLifecycle',
       'seedCodeAndTellDemo',
     ].sort());
   });

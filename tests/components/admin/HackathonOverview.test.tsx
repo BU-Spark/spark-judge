@@ -100,15 +100,14 @@ beforeEach(() => {
 });
 
 describe("HackathonOverviewTab", () => {
-  it("lists unassigned teams, then teams waiting on named judges", () => {
+  it("reports teams without scores instead of requiring judge assignments", () => {
     renderOverview();
     const section = screen.getByRole("heading", { name: "Missing scores" }).closest("section")!;
-    expect(section).toHaveTextContent("1 team has no judges assigned · 2 scores outstanding");
+    expect(section).toHaveTextContent("2 teams have no scores.");
     const rows = within(section).getAllByRole("listitem").map((row) => row.textContent);
     expect(rows).toEqual([
-      "DeltaNo judges assigned",
-      expect.stringContaining("BetaWaiting on Ben Ortiz1 of 2 assigned judges scored"),
-      expect.stringContaining("GammaWaiting on Priya Nair0 of 1 assigned judges scored"),
+      "GammaNo scores yet",
+      "DeltaNo scores yet",
     ]);
   });
 
@@ -124,8 +123,8 @@ describe("HackathonOverviewTab", () => {
     const props = renderOverview();
     fireEvent.click(screen.getByRole("button", { name: "Lock scoring" }));
     const dialog = screen.getByRole("dialog", { hidden: true });
-    expect(dialog).toHaveTextContent("2 assigned scores are still missing across 2 teams.");
-    expect(dialog).toHaveTextContent("1 team has no judges assigned and no scores.");
+    expect(dialog).toHaveTextContent("2 teams have no scores yet.");
+    expect(dialog).not.toHaveTextContent("assigned");
     expect(dialog).toHaveTextContent("1 judge is listed on a team.");
     fireEvent.click(within(dialog).getByRole("button", { name: "Lock scoring", hidden: true }));
     await waitFor(() => expect(props.onLockScoring).toHaveBeenCalledTimes(1));

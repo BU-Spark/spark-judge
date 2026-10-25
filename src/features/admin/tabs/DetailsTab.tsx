@@ -37,8 +37,6 @@ export function DetailsTab({
   scoringLockedLabel,
   judgeCodeEdit,
   setJudgeCodeEdit,
-  enableCohorts,
-  setEnableCohorts,
   scoresLoaded,
   categoriesEdit,
   setCategoriesEdit,
@@ -436,18 +434,6 @@ export function DetailsTab({
                 />
                 <p className="text-xs fi-muted">
                   Judges need this code to score. 6–32 letters, numbers, or hyphens. Leave it empty to close judging.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <StyledCheckbox
-                  checked={enableCohorts}
-                  onCheckedChange={setEnableCohorts}
-                  disabled={!canEditJudgeSettings}
-                  label="Enable Multiple Judging Cohorts"
-                  labelClassName="text-sm font-medium fi-ink"
-                />
-                <p className="text-xs fi-muted">
-                  Judges pick their own teams (useful for large events).
                 </p>
               </div>
             </div>

@@ -90,14 +90,6 @@ export function validateCategoryScores(
   }));
 }
 
-export function isTeamInJudgeCohort(
-  cohortsEnabled: boolean | undefined,
-  assignedTeamIds: Set<string>,
-  teamId: string,
-) {
-  return !cohortsEnabled || assignedTeamIds.has(teamId);
-}
-
 export function assertUniqueScoreTeamIds(teamIds: string[]) {
   if (new Set(teamIds).size !== teamIds.length) {
     throw appError("duplicate_score_teams", "validation", "Batch scores cannot contain duplicate teams");
@@ -215,21 +207,6 @@ export const submitBatchScores = mutation({
       assertScoringTarget(event, team?.hidden);
       if (team && isOwnTeam(team)) {
         throw appError("score_own_team", "permission", "You cannot score a project you are part of");
-      }
-    }
-
-    const assignments = event.enableCohorts
-      ? await ctx.db
-          .query("judgeAssignments")
-          .withIndex("by_judge_and_event", (q) =>
-            q.eq("judgeId", judge._id).eq("eventId", args.eventId),
-          )
-          .collect()
-      : [];
-    const assignedTeamIds = new Set(assignments.map((assignment) => assignment.teamId.toString()));
-    for (const entry of args.scores) {
-      if (!isTeamInJudgeCohort(event.enableCohorts, assignedTeamIds, entry.teamId.toString())) {
-        throw appError("team_outside_cohort", "permission", "One or more teams are outside your judging cohort");
       }
     }
 

@@ -103,14 +103,14 @@ const names = () =>
 describe("prize skill signals in winner selection", () => {
   it("ranks on the selected weighted categories and keeps overall scores as context", () => {
     panel();
-    expect(screen.getByText(/Skill signals:/).closest("p")).toHaveTextContent(
-      "Design · Presentation",
-    );
     expect(
-      screen.getByRole("columnheader", { name: "Prize score / 6" }),
+      screen.getByText(/Prize categories:/).closest("p"),
+    ).toHaveTextContent("Design · Presentation");
+    expect(
+      screen.getByRole("columnheader", { name: "Prize score / 5" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("columnheader", { name: "Overall / 13.5" }),
+      screen.getByRole("columnheader", { name: "Overall / 5" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("columnheader", { name: "Technical" }),
@@ -119,15 +119,18 @@ describe("prize skill signals in winner selection", () => {
       screen.queryByLabelText("Minimum Technical"),
     ).not.toBeInTheDocument();
     expect(names()).toEqual(["Choose Beta", "Choose Alpha", "Choose Gamma"]);
-    expect(within(rows()[0]).getByText("5.70")).toBeInTheDocument();
-    expect(within(rows()[1]).getByText("2.40")).toBeInTheDocument();
-    expect(within(rows()[2]).getByText("No signal scores")).toBeInTheDocument();
-    expect(screen.getByLabelText("Minimum prize score")).toHaveAttribute(
+    expect(within(rows()[0]).getByText("4.75")).toBeInTheDocument();
+    expect(within(rows()[0]).getByText("2.67")).toBeInTheDocument();
+    expect(within(rows()[1]).getAllByRole("cell")[2]).toHaveTextContent("2.00");
+    expect(
+      within(rows()[2]).getByText("Unscored for this prize"),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Minimum prize score / 5")).toHaveAttribute(
       "max",
-      "6",
+      "5",
     );
-    fireEvent.change(screen.getByLabelText("Minimum prize score"), {
-      target: { value: "5" },
+    fireEvent.change(screen.getByLabelText("Minimum prize score / 5"), {
+      target: { value: "4.5" },
     });
     expect(names()).toEqual(["Choose Beta"]);
   });
@@ -148,17 +151,34 @@ describe("prize skill signals in winner selection", () => {
       ),
     });
     expect(names()[0]).toBe("Choose Gamma");
-    expect(within(rows()[0]).getByText("6.00")).toBeInTheDocument();
+    expect(within(rows()[0]).getAllByRole("cell")[2]).toHaveTextContent("5.00");
     fireEvent.change(screen.getByLabelText("Minimum judges"), {
       target: { value: "2" },
     });
     expect(names()).toEqual(["Choose Beta", "Choose Alpha"]);
   });
 
+  it("keeps a single-category prize on the same five-point scale", () => {
+    panel({
+      ...details,
+      categories: ["Design"],
+      categoryRubric: [rubric[0]],
+    });
+    expect(
+      screen.getByRole("columnheader", { name: "Prize score / 5" }),
+    ).toBeInTheDocument();
+    expect(names()).toEqual(["Choose Beta", "Choose Alpha", "Choose Gamma"]);
+    expect(within(rows()[0]).getAllByRole("cell")[2]).toHaveTextContent("5.00");
+    expect(within(rows()[1]).getAllByRole("cell")[2]).toHaveTextContent("2.00");
+    expect(
+      within(rows()[2]).getByText("Unscored for this prize"),
+    ).toBeInTheDocument();
+  });
+
   it("resets filters and restores the complete rubric for an overall prize", () => {
     panel();
-    fireEvent.change(screen.getByLabelText("Minimum prize score"), {
-      target: { value: "5" },
+    fireEvent.change(screen.getByLabelText("Minimum prize score / 5"), {
+      target: { value: "4.5" },
     });
     fireEvent.change(screen.getByLabelText("Prize"), {
       target: { value: "overall" },
@@ -167,10 +187,16 @@ describe("prize skill signals in winner selection", () => {
       screen.getByRole("columnheader", { name: "Technical" }),
     ).toBeInTheDocument();
     expect(names()).toEqual(["Choose Gamma", "Choose Alpha", "Choose Beta"]);
-    expect(screen.getByLabelText("Minimum overall score")).toHaveValue(null);
-    expect(screen.getByLabelText("Minimum overall score")).toHaveAttribute(
+    expect(
+      screen.getByRole("columnheader", { name: "Overall score / 5" }),
+    ).toBeInTheDocument();
+    expect(within(rows()[0]).getAllByRole("cell")[2]).toHaveTextContent("5.00");
+    expect(screen.getByLabelText("Minimum overall score / 5")).toHaveValue(
+      null,
+    );
+    expect(screen.getByLabelText("Minimum overall score / 5")).toHaveAttribute(
       "max",
-      "13.5",
+      "5",
     );
   });
 

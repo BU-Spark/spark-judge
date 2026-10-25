@@ -35,6 +35,7 @@ import {
 } from "../lib/operationOutcome";
 import { InlineFailure, TaskStatus, type TaskSaveState } from "./ui/TaskStatus";
 import "./ScoringWizard.fi.css";
+import { ExpandableProjectMarkdown } from "./ui/ExpandableProjectMarkdown";
 
 type Team = {
   _id: Id<"teams">;
@@ -1270,10 +1271,10 @@ export function ScoringSession({
                   Project {currentTeamIndex + 1} of {totalTeams}
                   {currentTeam.track ? ` · ${currentTeam.track}` : ""}
                 </div>
-                <p className="scoring-project-description">
+                <ExpandableProjectMarkdown key={currentTeam._id} className="scoring-project-description">
                   {currentTeam.description ||
                     "No project description provided."}
-                </p>
+                </ExpandableProjectMarkdown>
                 {currentTeam.members.length > 0 && (
                   <div className="scoring-members scoring-members--desktop">
                     <h3>The team</h3>

@@ -110,12 +110,11 @@
   letter-spacing: -0.02em;
   line-height: 1.25;
 }
-.project-about > p {
+.project-about > .project-markdown-disclosure {
   max-width: 65ch;
   margin: 0;
   font-size: 17px;
   line-height: 1.75;
-  white-space: pre-line;
   overflow-wrap: anywhere;
 }
 .project-sidebar {

@@ -1,4 +1,5 @@
 import "./project-description.css";
+import { ProjectMarkdown } from "./ProjectMarkdown";
 
 export function ProjectDescription({
   description,
@@ -14,7 +15,7 @@ export function ProjectDescription({
         <span className="project-description-show">Show description</span>
         <span className="project-description-hide">Hide description</span>
       </summary>
-      <p>{description}</p>
+      <ProjectMarkdown>{description}</ProjectMarkdown>
     </details>
   );
 }

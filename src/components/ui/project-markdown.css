@@ -1,0 +1,123 @@
+.project-markdown {
+  min-width: 0;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+.project-markdown :where(p, ul, ol, blockquote, pre, .project-markdown-table) {
+  margin: 0 0 1em;
+}
+.project-markdown :where(h3, h4, h5, h6) {
+  margin: 1.6em 0 0.55em;
+  color: var(--platform-ink, #103c3b);
+  font-size: 1.125em;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.project-markdown > :first-child {
+  margin-top: 0;
+}
+.project-markdown > :last-child {
+  margin-bottom: 0;
+}
+.project-markdown p {
+  white-space: pre-line;
+}
+.project-markdown :where(ul, ol) {
+  padding-left: 1.4em;
+}
+.project-markdown ul {
+  list-style: disc;
+}
+.project-markdown ol {
+  list-style: decimal;
+}
+.project-markdown li + li {
+  margin-top: 0.35em;
+}
+.project-markdown li > p {
+  margin-bottom: 0.4em;
+}
+.project-markdown strong {
+  font-weight: 600;
+}
+.project-markdown a {
+  color: var(--platform-teal, #087f78);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.project-markdown a:hover {
+  color: var(--platform-ink, #103c3b);
+}
+.project-markdown :where(a, [tabindex]):focus-visible {
+  outline: 3px solid var(--platform-teal, #087f78);
+  outline-offset: 4px;
+}
+.project-markdown blockquote {
+  padding-left: 1em;
+  border-left: 1px solid var(--platform-line, #ccd7d1);
+}
+.project-markdown code {
+  font-size: 0.9em;
+  background: var(--platform-workspace, #eaf1ec);
+  padding: 0.1em 0.25em;
+  border-radius: 6px;
+}
+.project-markdown pre {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 1em;
+  background: var(--platform-workspace, #eaf1ec);
+  border-radius: 6px;
+  white-space: pre;
+}
+.project-markdown pre code {
+  padding: 0;
+}
+.project-markdown-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.project-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.project-markdown :where(th, td) {
+  padding: 0.5em 0.75em;
+  border: 1px solid var(--platform-line, #ccd7d1);
+  text-align: left;
+}
+.project-markdown th {
+  font-weight: 600;
+}
+.project-markdown hr {
+  border: 0;
+  border-top: 1px solid var(--platform-line, #ccd7d1);
+  margin: 1.5em 0;
+}
+.project-markdown-disclosure {
+  min-width: 0;
+}
+.project-markdown-disclosure-viewport[data-collapsed] {
+  mask-image: linear-gradient(#000 calc(100% - 2rem), transparent);
+}
+.project-markdown-toggle {
+  display: block;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 8px 0;
+  color: var(--platform-teal, #087f78);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.project-markdown-toggle:hover {
+  color: var(--platform-ink, #103c3b);
+}
+.project-markdown-toggle:focus-visible {
+  outline: 3px solid var(--platform-teal, #087f78);
+  outline-offset: 4px;
+}

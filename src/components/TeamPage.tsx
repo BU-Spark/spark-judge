@@ -1,4 +1,5 @@
 import "./TeamPage.fi.css";
+import { ExpandableProjectMarkdown } from "./ui/ExpandableProjectMarkdown";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
@@ -191,10 +192,10 @@ export function TeamPageView({
           aria-labelledby="project-about-title"
         >
           <h2 id="project-about-title">About the project</h2>
-          <p>
+          <ExpandableProjectMarkdown>
             {team.description.trim() ||
               "The team hasn't added a project description yet."}
-          </p>
+          </ExpandableProjectMarkdown>
         </section>
         <aside className="project-sidebar" aria-label="Team and project links">
           {team.members.length > 0 && (

@@ -741,6 +741,7 @@
   font-size: 0.9rem;
 }
 .scoring-project-description {
+  margin-top: 1.25rem;
   color: var(--p-muted);
   font-size: 1.1rem;
   line-height: 1.6;

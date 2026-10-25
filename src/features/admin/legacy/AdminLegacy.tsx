@@ -2298,7 +2298,7 @@ export function EventManagementModal({
                   isSelected
                     ? "bg-teal-500/10 border-l-2 border-l-teal-500"
                     : "hover:bg-muted/20 border-l-2 border-l-transparent"
-                } ${team.hidden ? "opacity-50" : ""}`}
+                }`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">

@@ -6,8 +6,7 @@ import { TEAMS } from "./seedLiveHackathon";
  * homepage and judging flow without moving a real event's dates. It copies
  * DS+X 2026's rubric and tracks when that event exists. Running it again
  * re-centers the window on the current time and tops the roster up to
- * TEAM_COUNT. Cohorts are on, so each judge builds a queue from far more
- * teams than they could score.
+ * TEAM_COUNT. Judges choose projects directly from team selection.
  */
 
 const NAME = "Test Hackathon (dev)";
@@ -45,7 +44,7 @@ export async function seedTestLiveHackathonHandler(
   { hours = 8 }: { hours?: number },
 ) {
   const now = Date.now();
-  const window = { startDate: now - HOUR, endDate: now + hours * HOUR, status: "active" as const, enableCohorts: true };
+  const window = { startDate: now - HOUR, endDate: now + hours * HOUR, status: "active" as const, enableCohorts: false };
 
   const template = await ctx.db
     .query("events")
@@ -82,6 +81,8 @@ export async function seedTestLiveHackathonHandler(
     .withIndex("by_event", (q) => q.eq("eventId", eventId))
     .collect();
   const existingNames = new Set(existingTeams.map((team) => team.name));
+  const eventTracks = (await ctx.db.get(eventId))?.tracks ?? [];
+  const rosterTracks = [...new Set(TEAMS.map((team) => team.track))];
   let teamsCreated = 0;
   for (const team of roster()) {
     if (existingNames.has(team.name)) continue;
@@ -90,7 +91,9 @@ export async function seedTestLiveHackathonHandler(
       name: team.name,
       description: team.description,
       members: team.members,
-      track: team.track,
+      track: eventTracks.includes(team.track)
+        ? team.track
+        : eventTracks[rosterTracks.indexOf(team.track)] ?? team.track,
       submittedAt: now - HOUR,
     });
     teamsCreated++;

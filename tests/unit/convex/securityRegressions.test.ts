@@ -318,6 +318,23 @@ describe("Judges on their own projects", () => {
     expect(db.insert).not.toHaveBeenCalled();
   });
 
+  it("lets a verified judge score a selected team without an assignment, even on a legacy cohort event", async () => {
+    const judge = { _id: "judge", userId: "voter", eventId: "event", judgeCodeVerifiedAt: Date.now() };
+    const directEvent = { ...event, enableCohorts: true };
+    const db = {
+      get: vi.fn(async (id: string) => id === "event" ? directEvent : id === "voter" ? user : null),
+      query: vi.fn((table: string) => queryResult(table === "judges" ? [judge] : table === "teams" ? [otherTeam] : [])),
+      insert: vi.fn(),
+      patch: vi.fn(),
+    };
+    await (submitBatchScores as any)._handler({ db }, {
+      eventId: "event",
+      scores: [{ teamId: "other", categoryScores: [{ category: "Impact", score: 4 }] }],
+    });
+    expect(db.insert).toHaveBeenCalledWith("scores", expect.objectContaining({ teamId: "other", totalScore: 4 }));
+    expect(db.query).not.toHaveBeenCalledWith("judgeAssignments");
+  });
+
   it("refuses scores for the judge's own team", async () => {
     const judge = { _id: "judge", userId: "voter", eventId: "event", judgeCodeVerifiedAt: 1 };
     const db = {

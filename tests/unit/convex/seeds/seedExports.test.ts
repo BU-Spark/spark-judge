@@ -20,6 +20,7 @@ describe('seed module exports', () => {
       'seedRegularJudgingDemo',
       'seedSemester',
       'seedTestLiveHackathon',
+      'seedTestLifecycle',
       'seedCodeAndTellDemo',
     ].sort());
   });

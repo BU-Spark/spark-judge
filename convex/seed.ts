@@ -10,6 +10,7 @@ import { seedEventsHandler } from "./seeds/core/seedEvents";
 import { seedSemesterHandler } from "./seeds/core/seedSemester";
 import { seedLiveHackathonHandler } from "./seeds/core/seedLiveHackathon";
 import { seedTestLiveHackathonHandler } from "./seeds/core/seedTestLiveHackathon";
+import { seedTestLifecycleHandler } from "./seeds/core/seedTestLifecycle";
 import { seedEverythingHandler } from "./seeds/core/seedEverything";
 import { seedJudgeScoresHandler } from "./seeds/core/seedJudgeScores";
 import { seedCohortJudgingDemoHandler } from "./seeds/demos/cohortJudging";
@@ -67,6 +68,11 @@ export const seedJudgeScores = internalMutation({
     scoresCreated: v.number(),
   }),
   handler: seedJudgeScoresHandler,
+});
+
+export const seedTestLifecycle = internalMutation({
+  args: { eventId: v.id("events"), adminUserId: v.id("users"), reopen: v.optional(v.boolean()) },
+  handler: seedTestLifecycleHandler,
 });
 
 export const clearAllData = internalMutation({

@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  isTeamInJudgeCohort,
   assertScoringTarget,
   assertUniqueScoreTeamIds,
   validateCategoryScores,
@@ -85,14 +84,6 @@ describe("scores business logic", () => {
         { category: "Innovation", score: 5, optedOut: false },
         { category: "Execution", score: null, optedOut: true },
       ]);
-    });
-  });
-
-  describe("cohort authorization", () => {
-    it("requires assignment only when cohorts are enabled", () => {
-      expect(isTeamInJudgeCohort(true, new Set(["team-1"]), "team-1")).toBe(true);
-      expect(isTeamInJudgeCohort(true, new Set(["team-1"]), "team-2")).toBe(false);
-      expect(isTeamInJudgeCohort(false, new Set(), "team-2")).toBe(true);
     });
   });
 

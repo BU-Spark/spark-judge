@@ -1407,14 +1407,7 @@ export function CreateEventWorkspace({ onClose }: { onClose: () => void }) {
                     <h2 className="text-lg fi-zone font-semibold fi-ink">
                       Judge Access
                     </h2>
-                    <StyledCheckbox
-                      checked={formData.enableCohorts}
-                      onCheckedChange={(checked) =>
-                        setFormData({ ...formData, enableCohorts: checked })
-                      }
-                      label="Enable multiple judging cohorts"
-                      labelClassName="text-sm fi-ink"
-                    />
+                    <p className="text-sm fi-muted">Judges choose projects from the team selection screen.</p>
                     <div className="space-y-2">
                       <label className="block text-sm font-medium fi-ink">
                         Judge Code

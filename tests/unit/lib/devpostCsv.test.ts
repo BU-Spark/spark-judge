@@ -7,14 +7,14 @@ import {
 
 // Column layout of a real DS+X 2026 Devpost export (no data).
 const HEADER = [
-  "Opt-In Prize", "Project Title", "Submission Url", "Project Status",
+  "Project Title", "Submission Url", "Project Status",
   "Judging Status", "Highest Step Completed", "Project Created At",
   "Project Submitted At", "Submission Last Submitted At", "About The Project",
   '"Try it out" Links', "Video Demo Link", "Image Gallery URLs",
-  "Attached File S3 Key", "Built With", "Submitter First Name",
+  "Attached File S3 Key", "Opt-In Prizes", "Built With", "Submitter First Name",
   "Submitter Last Name", "Submitter Email", "Notes", "Lovable Opt In",
   "What Is Your Teams Track?", "Figma", "Bu Libraries",
-  "Team Colleges/Universities", "Additional Team Member Count",
+  "Data Ethics And Responsibility Statement", "Team Colleges/Universities", "Additional Team Member Count",
   "Team Member 1 First Name", "Team Member 1 Last Name", "Team Member 1 Email",
   "...",
 ];
@@ -100,12 +100,12 @@ describe("planDevpostImport", () => {
     const result = plan(
       exportOf(
         submitted("Opted", {
-          "Opt-In Prize": "Best Use of Lovable, Art & Design #1, Best Use of Figma",
+          "Opt-In Prizes": "Best Use of Lovable, Art & Design #1, Best Use of Figma",
           "Lovable Opt In": "Yes",
         }),
         submitted("Wrong Track", {
           "What Is Your Teams Track?": "CollegeHack",
-          "Opt-In Prize": "Art & Design #1",
+          "Opt-In Prizes": "Art & Design #1",
         }),
         submitted("No Opt-ins", { "Lovable Opt In": "Yes" }),
       ),
@@ -145,6 +145,36 @@ describe("planDevpostImport", () => {
       { _id: "t2", name: "quad finder" },
     ]);
     expect(result.teams.map((team) => team.existingTeamId)).toEqual(["t1", "t2", undefined]);
+  });
+
+  it("includes drafts only when requested, with the same track and prize checks", () => {
+    const csv = exportOf(
+      submitted("Early team", { "Project Status": "Draft", "Opt-In Prizes": "Best Use of Lovable, Art & Design #1" }),
+      submitted("No track yet", { "Project Status": "Draft", "What Is Your Teams Track?": "" }),
+      submitted("Withdrawn team", { "Project Status": "Withdrawn" }),
+    );
+    const result = planDevpostImport(csv, { tracks: TRACKS, prizes: PRIZES, existingTeams: [], includeDrafts: true });
+    expect(result.teams).toHaveLength(1);
+    expect(result.teams[0]).toMatchObject({ submissionStatus: "draft", name: "Early team", prizeIds: ["lovable", "art1"] });
+    expect(result.problems).toEqual([expect.objectContaining({ name: "No track yet", reason: expect.stringContaining("track question") })]);
+    expect(result.notSubmitted).toEqual({ Withdrawn: 1 });
+  });
+
+  it("matches a submitted project to its earlier draft import by Devpost URL", () => {
+    const result = plan(exportOf(submitted("Final title", { "Submission Url": "https://devpost.com/software/early-team" })), [
+      { _id: "early", name: "Early title", devpostUrl: "https://devpost.com/software/early-team" },
+    ]);
+    expect(result.teams[0]).toMatchObject({ existingTeamId: "early", submissionStatus: "submitted" });
+  });
+
+  it("also accepts a singular prize header", () => {
+    const csv = exportOf(submitted("Legacy", { "Opt-In Prizes": "Best Use of Lovable" }));
+    expect(plan(csv.replace("Opt-In Prizes", "Opt-In Prize")).teams[0].prizeIds).toEqual(["lovable"]);
+  });
+
+  it("rejects a missing prize column rather than silently clearing entries", () => {
+    const csv = exportOf(submitted("Existing"));
+    expect(() => plan(csv.replace("Opt-In Prizes", "Unrelated question"))).toThrow('no "Opt-In Prizes" column');
   });
 
   it("rejects files that aren't Devpost exports with a clear message", () => {

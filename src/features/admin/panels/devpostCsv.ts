@@ -6,7 +6,7 @@ import { parseCsvTable } from "./teamCsv";
  *
  * Nothing is inferred: a team's track comes from its answer to the track
  * question, and it is entered only for prizes listed in Devpost's "Opt-In
- * Prize" column. Automatic prizes (such as Top Overall) need no entry.
+ * Prizes" column. Automatic prizes (such as Top Overall) need no entry.
  */
 
 export type DevpostPrize = {
@@ -26,6 +26,7 @@ export type DevpostExistingTeam = {
 
 export type DevpostTeam = {
   rowNumber: number;
+  submissionStatus: "submitted" | "draft";
   name: string;
   track: string;
   description: string;
@@ -51,7 +52,7 @@ export type DevpostProblem = {
 
 export type DevpostImportPlan = {
   totalProjects: number;
-  /** Projects left out because they were not submitted, by status. */
+  /** Projects skipped by status; drafts can be included explicitly. */
   notSubmitted: Record<string, number>;
   teams: DevpostTeam[];
   problems: DevpostProblem[];
@@ -62,7 +63,7 @@ const STATUS = "Project Status";
 const SUBMISSION_URL = "Submission Url";
 const ABOUT = "About The Project";
 const LINKS = '"Try it out" Links';
-const OPT_IN = "Opt-In Prize";
+const OPT_IN = "Opt-In Prizes";
 const FIRST_MEMBER = "Team Member 1 First Name";
 
 function squash(value: string) {
@@ -100,6 +101,7 @@ export function planDevpostImport(
     tracks: readonly string[];
     prizes: readonly DevpostPrize[];
     existingTeams: readonly DevpostExistingTeam[];
+    includeDrafts?: boolean;
   },
 ): DevpostImportPlan {
   const rows = parseCsvTable(text).filter((row) =>
@@ -107,6 +109,9 @@ export function planDevpostImport(
   );
   const header = rows[0]?.map((cell) => cell.trim()) ?? [];
   const column = (name: string) => header.indexOf(name);
+  // Accept the singular label too. Never treat a missing column as
+  // empty selections: re-importing would erase existing prize entries.
+  const optInColumn = column(OPT_IN) >= 0 ? column(OPT_IN) : column("Opt-In Prize");
   const trackColumn = header.findIndex((name) =>
     /^what is your team'?s track/i.test(name),
   );
@@ -118,6 +123,11 @@ export function planDevpostImport(
   if (trackColumn < 0) {
     throw new Error(
       'The export has no "What is your team\'s track?" column, so teams can\'t be placed in tracks. Check that the track question still exists in Devpost.',
+    );
+  }
+  if (optInColumn < 0) {
+    throw new Error(
+      'The export has no "Opt-In Prizes" column. Download a new project export from Devpost so prize entries can be imported safely.',
     );
   }
 
@@ -147,7 +157,8 @@ export function planDevpostImport(
     const rowNumber = index + 2;
     const name = cell(row, column(TITLE));
     const status = cell(row, column(STATUS)) || "No status";
-    if (status.toLowerCase() !== "submitted") {
+    const submissionStatus = status.toLowerCase();
+    if (submissionStatus !== "submitted" && !(options.includeDrafts && submissionStatus === "draft")) {
       plan.notSubmitted[status] = (plan.notSubmitted[status] ?? 0) + 1;
       return;
     }
@@ -165,7 +176,7 @@ export function planDevpostImport(
       plan.problems.push({
         rowNumber,
         name,
-        reason: "Another submitted project in this export has the same title.",
+        reason: "Another project in this export has the same title.",
         fix: "Add this one with Create Team under a distinct name.",
       });
       return;
@@ -218,7 +229,7 @@ export function planDevpostImport(
     const prizeIds: string[] = [];
     const prizeNames: string[] = [];
     const skippedPrizes: string[] = [];
-    const optIns = cell(row, column(OPT_IN))
+    const optIns = cell(row, optInColumn)
       .split(/[,;\n]/)
       .map((value) => value.trim())
       .filter(Boolean);
@@ -244,6 +255,7 @@ export function planDevpostImport(
 
     plan.teams.push({
       rowNumber,
+      submissionStatus,
       name,
       track,
       description: cell(row, column(ABOUT)),

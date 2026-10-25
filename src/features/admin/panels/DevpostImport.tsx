@@ -68,8 +68,10 @@ export function DevpostImport({
   const setPrizes = useMutation(api.prizes.setTeamPrizeSubmissionsAdmin);
   const [loaded, setLoaded] = useState<{
     fileName: string;
+    text: string;
     plan: DevpostImportPlan;
   } | null>(null);
+  const [includeDrafts, setIncludeDrafts] = useState(false);
   const [readError, setReadError] = useState<string | null>(null);
   const [updateExisting, setUpdateExisting] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -83,18 +85,34 @@ export function DevpostImport({
     if (!file) return;
     setResult(null);
     try {
-      const plan = planDevpostImport(await file.text(), {
+      const text = await file.text();
+      const plan = planDevpostImport(text, {
         tracks,
         prizes,
         existingTeams,
+        includeDrafts,
       });
-      setLoaded({ fileName: file.name, plan });
+      setLoaded({ fileName: file.name, text, plan });
       setReadError(null);
       setUpdateExisting(true);
     } catch (error) {
       setLoaded(null);
       setReadError(errorMessage(error, "Couldn't read that file."));
     }
+  };
+
+  const toggleDrafts = (checked: boolean) => {
+    setIncludeDrafts(checked);
+    if (!loaded) return;
+    setLoaded({
+      ...loaded,
+      plan: planDevpostImport(loaded.text, {
+        tracks,
+        prizes,
+        existingTeams,
+        includeDrafts: checked,
+      }),
+    });
   };
 
   const newTeams = loaded?.plan.teams.filter((team) => !team.existingTeamId) ?? [];
@@ -175,6 +193,7 @@ export function DevpostImport({
   };
 
   const plan = loaded?.plan;
+  const includedDrafts = plan?.teams.filter((team) => team.submissionStatus === "draft").length ?? 0;
   const skippedDrafts = plan
     ? Object.entries(plan.notSubmitted)
         .map(([status, count]) => `${count} ${status.toLowerCase()}`)
@@ -192,9 +211,9 @@ export function DevpostImport({
         <h4 className="text-sm font-semibold fi-ink">Import from Devpost</h4>
         <p className="text-sm fi-muted">
           Upload the project export from Devpost (Manage Hackathon → Projects →
-          Export). Only submitted projects are imported. Teams are entered only
-          for the prizes they opted into on Devpost. Import again any time to
-          add late submissions.
+          Export). Import submitted projects, or include drafts to bring teams
+          in before submission. Teams are entered only for the prizes they
+          opted into on Devpost.
         </p>
       </div>
       <input
@@ -205,6 +224,21 @@ export function DevpostImport({
         onChange={(event) => void handleFile(event)}
         className="hidden"
       />
+      <div className="space-y-1">
+        <label className="inline-flex items-center gap-2 text-sm fi-ink">
+          <input
+            type="checkbox"
+            checked={includeDrafts}
+            disabled={running}
+            onChange={(event) => toggleDrafts(event.target.checked)}
+          />
+          Include draft projects
+        </label>
+        <p className="text-xs fi-muted">
+          Draft projects become teams in HackJudge immediately. Re-import after
+          submission to update their details and prize entries.
+        </p>
+      </div>
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
@@ -242,11 +276,25 @@ export function DevpostImport({
             <b>{loaded.fileName}</b>: {plural(plan.totalProjects, "project")}
             {skippedDrafts && ` (${skippedDrafts} not submitted, skipped)`}.
           </p>
+          {!includeDrafts && plan.totalProjects > 0 &&
+            Object.values(plan.notSubmitted).reduce((sum, count) => sum + count, 0) === plan.totalProjects && (
+              <p className="text-sm fi-ink">
+                No submitted projects in this export. Select "Include draft
+                projects" to import drafts now, or download a new export after
+                the teams submit.
+              </p>
+            )}
           <ul className="text-sm fi-muted space-y-1">
             <li>
               <b className="fi-ink">{newTeams.length}</b> new{" "}
               {newTeams.length === 1 ? "team" : "teams"} to add
             </li>
+            {includedDrafts > 0 && (
+              <li>
+                {plural(includedDrafts, "draft project")} included. These
+                projects have not been submitted on Devpost yet.
+              </li>
+            )}
             {matchedTeams.length > 0 && (
               <li>
                 <b className="fi-ink">{matchedTeams.length}</b> already in

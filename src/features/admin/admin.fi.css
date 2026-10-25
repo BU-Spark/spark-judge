@@ -26,7 +26,7 @@
 
 .admin-event-nav button { min-height: 44px; flex-shrink: 0; }
 .admin-event-nav [aria-current="page"] { background: var(--platform-selected, #d8e9e0); box-shadow: none; }
-.admin-results { max-width: 1080px; padding: 24px; background: var(--fi-key-white); border-radius: 12px; }
+.admin-results { width: 100%; min-width: 0; padding: 24px; background: var(--fi-key-white); border-radius: 12px; }
 .admin-results h2, .admin-winner-editor h2 { font-size: 24px; font-weight: 600; line-height: 1.25; }
 .admin-results h3, .admin-scores-toolbar h3 { font-size: 18px; font-weight: 600; }
 .admin-results p { line-height: 1.6; max-width: 72ch; }

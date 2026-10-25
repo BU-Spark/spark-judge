@@ -12,7 +12,7 @@ import { CodeAndTellVoteView } from "./code-and-tell/CodeAndTellVoteView";
 import { DemoDayBrowse } from "./demo-day";
 import { JudgeCodeModal } from "./JudgeCodeModal";
 import { getEventDisplayLabel, getEventMode } from "../lib/eventModes";
-import { formatDateTime } from "../lib/utils";
+import { formatDate, formatDateTime } from "../lib/utils";
 import { pad2 } from "../lib/dateTimeInput";
 import { MODE_THEME } from "./home/modeTheme";
 import { toast } from "sonner";
@@ -527,11 +527,7 @@ export function EventView({
 
           <p className="fi-ev-meta">
             <span>
-              Dates{" "}
-              <b>
-                {formatDateTime(event.startDate)} –{" "}
-                {formatDateTime(event.endDate)}
-              </b>
+              Judging <b>{formatDate(event.endDate)}</b>
             </span>
             <span>
               Your role <b>Judge</b>
@@ -570,7 +566,7 @@ export function EventView({
                 {transportLabel}
               </button>
               {scoringComplete && (
-                <button type="button" className="fi-ev-ghost" onClick={onBack}>
+                <button type="button" className="fi-key" onClick={onBack}>
                   Return to dashboard
                 </button>
               )}
@@ -964,15 +960,22 @@ function TeamSelectionSection({
                 <li key={team._id} className="fi-ev-key-wrap">
                   <Link
                     to={`/event/${eventId}?team=${team._id}`}
-                    className="fi-ev-key"
+                    className={`fi-ev-key${score ? " fi-ev-key--scored" : ""}`}
                     aria-label={`Score ${team.name}${score ? ", already scored" : ""}`}
                     aria-current={isActive ? "page" : undefined}
                   >
                     <span className="fi-ev-key-top">
-                      <span
-                        className={`fi-ev-key-led${score ? " is-lit" : ""}`}
-                        aria-hidden="true"
-                      />
+                      {score && (
+                        <svg
+                          className="fi-ev-key-check"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <circle cx="10" cy="10" r="10" fill="currentColor" />
+                          <path d="m5.5 10 3 3 6-6" />
+                        </svg>
+                      )}
                       <span className="fi-ev-key-num">
                         {score ? "Scored" : "To score"}
                       </span>

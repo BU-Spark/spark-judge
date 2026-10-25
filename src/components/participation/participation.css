@@ -1081,20 +1081,29 @@
   aspect-ratio: auto;
   min-height: 135px;
   padding: 1.3rem;
-  border: 0;
-  background: var(--p-panel);
+  border: 1px solid var(--p-line);
+  background: var(--p-bg);
   color: var(--p-panel-ink);
   box-shadow: none;
   border-radius: 8px;
   transform: none;
 }
+.participation .fi-ev-key--scored {
+  background: var(--p-light);
+  border-color: transparent;
+}
 /* The whole card is the link, so darken it rather than underlining every line. */
 .participation .fi-ev-key:hover,
 .participation .fi-ev-key:active {
-  background: color-mix(in srgb, var(--p-panel-ink) 6%, var(--p-panel));
+  background: var(--platform-hover);
   box-shadow: none;
   transform: none;
   text-decoration: none;
+}
+.participation .fi-ev-key--scored:hover,
+.participation .fi-ev-key--scored:active {
+  background: var(--platform-selected);
+  border-color: var(--p-focus);
 }
 .participation .fi-ev-key[aria-current="page"] {
   box-shadow: inset 0 0 0 2px var(--p-focus);
@@ -1102,8 +1111,20 @@
 .participation .fi-ev-key-top {
   justify-content: start;
 }
-.participation .fi-ev-key-led {
-  display: none;
+.participation .fi-ev-key-check {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--p-dark);
+}
+.participation .fi-ev-key-check path {
+  stroke: var(--p-light);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.participation .fi-ev-key--scored .fi-ev-key-num {
+  color: var(--p-ink);
 }
 .participation .fi-ev-key-num {
   color: var(--p-muted);

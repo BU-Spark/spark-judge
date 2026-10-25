@@ -18,6 +18,16 @@ export function formatDateTime(value: number | string | Date) {
   });
 }
 
+export function formatDate(value: number | string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Invalid date";
+  }
+
+  return date.toLocaleDateString(undefined, { dateStyle: "medium" });
+}
+
 export function formatDateRangeSimple(
   startValue: number | string | Date,
   endValue: number | string | Date

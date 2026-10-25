@@ -71,7 +71,7 @@ export function DevpostImport({
     text: string;
     plan: DevpostImportPlan;
   } | null>(null);
-  const [includeDrafts, setIncludeDrafts] = useState(false);
+  const [includeDrafts, setIncludeDrafts] = useState(true);
   const [readError, setReadError] = useState<string | null>(null);
   const [updateExisting, setUpdateExisting] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);

@@ -68,24 +68,10 @@ describe("Devpost import", () => {
     expect(screen.getByText(/added 1 team/)).toBeInTheDocument();
   });
 
-  it("explains why a draft-only export cannot be imported and makes no writes", async () => {
+  it("includes drafts by default and imports their prize opt-ins", async () => {
     render(<DevpostImport {...props} />);
     await upload(csv("Draft"));
-    expect(screen.getByRole("button", { name: "Nothing to import" })).toBeDisabled();
-    expect(screen.getByText(/No submitted projects in this export/)).toHaveTextContent(/Select "Include draft projects"/);
-    Object.values(mutations).forEach((fn) => expect(fn).not.toHaveBeenCalled());
-  });
-
-  it("re-plans the loaded file when drafts are enabled and imports their prize opt-ins", async () => {
-    render(<DevpostImport {...props} />);
-    await upload(csv("Draft"));
-    const toggle = screen.getByRole("checkbox", { name: "Include draft projects" });
-    fireEvent.click(toggle);
     expect(screen.getByText(/1 draft project included/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Import 1 team" })).toBeEnabled();
-    fireEvent.click(toggle);
-    expect(screen.getByRole("button", { name: "Nothing to import" })).toBeDisabled();
-    fireEvent.click(toggle);
     await click("Import 1 team");
     expect(mutations.createTeam).toHaveBeenCalledTimes(1);
     expect(mutations.setTeamPrizeSubmissionsAdmin).toHaveBeenCalledWith({
@@ -93,10 +79,22 @@ describe("Devpost import", () => {
     });
   });
 
-  it("can enable drafts before choosing a file", async () => {
+  it("explains a draft-only export when drafts are turned off and makes no writes", async () => {
     render(<DevpostImport {...props} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Include draft projects" }));
     await upload(csv("Draft"));
+    const toggle = screen.getByRole("checkbox", { name: "Include draft projects" });
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: "Nothing to import" })).toBeDisabled();
+    expect(screen.getByText(/No submitted projects in this export/)).toHaveTextContent(/Select "Include draft projects"/);
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: "Import 1 team" })).toBeEnabled();
+    Object.values(mutations).forEach((fn) => expect(fn).not.toHaveBeenCalled());
+  });
+
+  it("imports Devpost's Submitted (Gallery/Visible) status", async () => {
+    render(<DevpostImport {...props} />);
+    await upload(csv("Submitted (Gallery/Visible)"));
+    expect(screen.queryByText(/draft project included/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Import 1 team" })).toBeEnabled();
   });
 

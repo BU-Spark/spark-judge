@@ -87,6 +87,15 @@ export function matchTrack(answer: string, tracks: readonly string[]) {
   return partial.length === 1 ? partial[0] : null;
 }
 
+/**
+ * Devpost qualifies statuses, e.g. "Submitted (Gallery/Visible)" or
+ * "Submitted (Hidden)", so match on the leading word.
+ */
+function parseStatus(status: string): "submitted" | "draft" | null {
+  const word = status.trim().toLowerCase().match(/^[a-z]+/)?.[0];
+  return word === "submitted" || word === "draft" ? word : null;
+}
+
 function urlKey(value?: string) {
   return (value ?? "").trim().toLowerCase().replace(/\/+$/, "");
 }
@@ -157,8 +166,8 @@ export function planDevpostImport(
     const rowNumber = index + 2;
     const name = cell(row, column(TITLE));
     const status = cell(row, column(STATUS)) || "No status";
-    const submissionStatus = status.toLowerCase();
-    if (submissionStatus !== "submitted" && !(options.includeDrafts && submissionStatus === "draft")) {
+    const submissionStatus = parseStatus(status);
+    if (!submissionStatus || (submissionStatus === "draft" && !options.includeDrafts)) {
       plan.notSubmitted[status] = (plan.notSubmitted[status] ?? 0) + 1;
       return;
     }

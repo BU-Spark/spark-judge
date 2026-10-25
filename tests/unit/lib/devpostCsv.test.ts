@@ -160,6 +160,19 @@ describe("planDevpostImport", () => {
     expect(result.notSubmitted).toEqual({ Withdrawn: 1 });
   });
 
+  it("reads Devpost's qualified statuses such as Submitted (Gallery/Visible)", () => {
+    const csv = exportOf(
+      submitted("Visible", { "Project Status": "Submitted (Gallery/Visible)" }),
+      submitted("Hidden", { "Project Status": "Submitted (Hidden)" }),
+      submitted("Early", { "Project Status": "Draft" }),
+    );
+    const result = planDevpostImport(csv, { tracks: TRACKS, prizes: PRIZES, existingTeams: [], includeDrafts: true });
+    expect(result.teams.map((team) => [team.name, team.submissionStatus])).toEqual([
+      ["Visible", "submitted"], ["Hidden", "submitted"], ["Early", "draft"],
+    ]);
+    expect(result.notSubmitted).toEqual({});
+  });
+
   it("matches a submitted project to its earlier draft import by Devpost URL", () => {
     const result = plan(exportOf(submitted("Final title", { "Submission Url": "https://devpost.com/software/early-team" })), [
       { _id: "early", name: "Early title", devpostUrl: "https://devpost.com/software/early-team" },

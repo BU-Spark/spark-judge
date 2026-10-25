@@ -56,11 +56,31 @@ export type DevpostImportPlan = {
   notSubmitted: Record<string, number>;
   teams: DevpostTeam[];
   problems: DevpostProblem[];
+  /** Teammates' extra drafts, skipped because their team is imported. */
+  leftovers: Array<{ rowNumber: number; name: string; reason: string }>;
+};
+
+/** First name, last name, email. */
+type Person = [string, string, string];
+
+/** One Devpost project, possibly spread over several export rows. */
+type DevpostProject = {
+  rowNumber: number;
+  name: string;
+  status: string;
+  createdAt: string;
+  devpostUrl: string;
+  trackAnswer: string;
+  description: string;
+  links: string[];
+  optIns: string[];
+  people: Person[];
 };
 
 const TITLE = "Project Title";
 const STATUS = "Project Status";
 const SUBMISSION_URL = "Submission Url";
+const CREATED_AT = "Project Created At";
 const ABOUT = "About The Project";
 const LINKS = '"Try it out" Links';
 const OPT_IN = "Opt-In Prizes";
@@ -94,6 +114,67 @@ export function matchTrack(answer: string, tracks: readonly string[]) {
 function parseStatus(status: string): "submitted" | "draft" | null {
   const word = status.trim().toLowerCase().match(/^[a-z]+/)?.[0];
   return word === "submitted" || word === "draft" ? word : null;
+}
+
+function isUntitled(name: string) {
+  return !name || squash(name) === "untitled";
+}
+
+function emailsOf(project: DevpostProject) {
+  return new Set(
+    project.people.map(([, , email]) => email.toLowerCase()).filter(Boolean),
+  );
+}
+
+/**
+ * Rows are one project when they share a title and either the same
+ * creation time, the same Devpost link, or a teammate.
+ */
+function isSameProject(a: DevpostProject, b: DevpostProject) {
+  if (squash(a.name) !== squash(b.name)) return false;
+  if (a.createdAt && a.createdAt === b.createdAt) return true;
+  if (a.devpostUrl && urlKey(a.devpostUrl) === urlKey(b.devpostUrl)) return true;
+  const emails = emailsOf(a);
+  return [...emailsOf(b)].some((email) => emails.has(email));
+}
+
+function mergeProject(into: DevpostProject, row: DevpostProject) {
+  const rank = (status: string) => (parseStatus(status) === "submitted" ? 1 : 0);
+  if (rank(row.status) > rank(into.status)) into.status = row.status;
+  into.devpostUrl ||= row.devpostUrl;
+  into.trackAnswer ||= row.trackAnswer;
+  into.description ||= row.description;
+  if (into.links.length === 0) into.links = row.links;
+  into.optIns.push(...row.optIns.filter((optIn) => !into.optIns.includes(optIn)));
+  const emails = emailsOf(into);
+  const names = new Set(into.people.map(([first, last]) => squash(`${first} ${last}`)));
+  for (const person of row.people) {
+    const [first, last, email] = person;
+    const known = email
+      ? emails.has(email.toLowerCase())
+      : names.has(squash(`${first} ${last}`));
+    if (!known) into.people.push(person);
+  }
+}
+
+/**
+ * The project that already holds everyone on this draft, if one does:
+ * a larger team, a submitted one, or a titled one when this draft has
+ * no title.
+ */
+function coveringProject(project: DevpostProject, projects: DevpostProject[]) {
+  const emails = emailsOf(project);
+  if (emails.size === 0) return undefined;
+  return projects.find((other) => {
+    if (other === project) return false;
+    const otherEmails = emailsOf(other);
+    if (![...emails].every((email) => otherEmails.has(email))) return false;
+    return (
+      otherEmails.size > emails.size ||
+      parseStatus(other.status) === "submitted" ||
+      (isUntitled(project.name) && !isUntitled(other.name))
+    );
+  });
 }
 
 function urlKey(value?: string) {
@@ -152,34 +233,88 @@ export function planDevpostImport(
     existingByName.set(squash(team.name), team._id);
   }
 
-  const plan: DevpostImportPlan = {
-    totalProjects: rows.length - 1,
-    notSubmitted: {},
-    teams: [],
-    problems: [],
-  };
-  const seenNames = new Set<string>();
   const memberStart = column(FIRST_MEMBER);
   const trackList = options.tracks.join(", ");
 
+  // Devpost writes one row per prize opt-in, and teammates sometimes each
+  // start their own draft, so first collect the rows that are one project.
+  const projects: DevpostProject[] = [];
   rows.slice(1).forEach((row, index) => {
-    const rowNumber = index + 2;
-    const name = cell(row, column(TITLE));
-    const status = cell(row, column(STATUS)) || "No status";
-    const submissionStatus = parseStatus(status);
-    if (!submissionStatus || (submissionStatus === "draft" && !options.includeDrafts)) {
-      plan.notSubmitted[status] = (plan.notSubmitted[status] ?? 0) + 1;
-      return;
+    const people: Person[] = [
+      [
+        cell(row, column("Submitter First Name")),
+        cell(row, column("Submitter Last Name")),
+        cell(row, column("Submitter Email")),
+      ],
+    ];
+    if (memberStart >= 0) {
+      // Devpost labels only the first teammate's columns; later teammates
+      // follow as unlabeled first name / last name / email triples.
+      for (let i = memberStart; i < row.length; i += 3) {
+        const person: Person = [cell(row, i), cell(row, i + 1), cell(row, i + 2)];
+        if (person.some(Boolean)) people.push(person);
+      }
     }
-    const label = name || `Row ${rowNumber}`;
-    if (!name) {
+    const entry: DevpostProject = {
+      rowNumber: index + 2,
+      name: cell(row, column(TITLE)),
+      status: cell(row, column(STATUS)) || "No status",
+      createdAt: cell(row, column(CREATED_AT)),
+      devpostUrl: cell(row, column(SUBMISSION_URL)),
+      trackAnswer: cell(row, trackColumn),
+      description: cell(row, column(ABOUT)),
+      links: splitLinks(cell(row, column(LINKS))),
+      optIns: cell(row, optInColumn)
+        .split(/[,;\n]/)
+        .map((value) => value.trim())
+        .filter(Boolean),
+      people: people.filter(([first, last, email]) => first || last || email),
+    };
+    const same = projects.find((project) => isSameProject(project, entry));
+    if (same) mergeProject(same, entry);
+    else projects.push(entry);
+  });
+
+  const plan: DevpostImportPlan = {
+    totalProjects: projects.length,
+    notSubmitted: {},
+    teams: [],
+    problems: [],
+    leftovers: [],
+  };
+  const included = projects.filter((project) => {
+    const submissionStatus = parseStatus(project.status);
+    if (!submissionStatus || (submissionStatus === "draft" && !options.includeDrafts)) {
+      plan.notSubmitted[project.status] = (plan.notSubmitted[project.status] ?? 0) + 1;
+      return false;
+    }
+    return true;
+  });
+  const seenNames = new Set<string>();
+
+  for (const project of included) {
+    const { rowNumber, name } = project;
+    const submissionStatus = parseStatus(project.status) ?? "draft";
+    const label = isUntitled(name) ? `Row ${rowNumber} (untitled)` : name;
+
+    // A teammate's stray draft: everyone on it is on a fuller team.
+    const home = submissionStatus === "draft" ? coveringProject(project, included) : undefined;
+    if (home) {
+      plan.leftovers.push({
+        rowNumber,
+        name: label,
+        reason: `Everyone on it is already on ${isUntitled(home.name) ? "another project" : home.name}.`,
+      });
+      continue;
+    }
+    if (isUntitled(name)) {
       plan.problems.push({
         rowNumber,
         name: label,
-        reason: "The project has no title on Devpost.",
-        fix: "Ask the team to add a title on Devpost, then import again.",
+        reason: "The project has no title on Devpost yet.",
+        fix: "Ask the team to name it on Devpost, then import again.",
       });
-      return;
+      continue;
     }
     if (seenNames.has(squash(name))) {
       plan.problems.push({
@@ -188,11 +323,11 @@ export function planDevpostImport(
         reason: "Another project in this export has the same title.",
         fix: "Add this one with Create Team under a distinct name.",
       });
-      return;
+      continue;
     }
     seenNames.add(squash(name));
 
-    const answer = cell(row, trackColumn);
+    const answer = project.trackAnswer;
     const track = matchTrack(answer, options.tracks);
     if (!track) {
       plan.problems.push({
@@ -205,44 +340,20 @@ export function planDevpostImport(
           ? "Add the track in Settings → Event Tracks, or add this team with Create Team."
           : "Ask the team to pick a track on Devpost and import again, or add them with Create Team.",
       });
-      return;
+      continue;
     }
 
-    const people: Array<[string, string, string]> = [
-      [
-        cell(row, column("Submitter First Name")),
-        cell(row, column("Submitter Last Name")),
-        cell(row, column("Submitter Email")),
-      ],
-    ];
-    if (memberStart >= 0) {
-      // Devpost labels only the first teammate's columns; later teammates
-      // follow as unlabeled first name / last name / email triples.
-      for (let i = memberStart; i < row.length; i += 3) {
-        const person: [string, string, string] = [
-          cell(row, i),
-          cell(row, i + 1),
-          cell(row, i + 2),
-        ];
-        if (person.some(Boolean)) people.push(person);
-      }
-    }
-
-    const links = splitLinks(cell(row, column(LINKS)));
+    const links = project.links;
     const githubUrl =
       links.find((link) => /^https:\/\/(www\.)?github\.com\//i.test(link)) ?? "";
     const projectUrl =
       links.find((link) => link.startsWith("https://") && link !== githubUrl) ?? "";
-    const devpostUrl = cell(row, column(SUBMISSION_URL));
+    const devpostUrl = project.devpostUrl;
 
     const prizeIds: string[] = [];
     const prizeNames: string[] = [];
     const skippedPrizes: string[] = [];
-    const optIns = cell(row, optInColumn)
-      .split(/[,;\n]/)
-      .map((value) => value.trim())
-      .filter(Boolean);
-    for (const optIn of new Set(optIns)) {
+    for (const optIn of new Set(project.optIns)) {
       const prize = prizesByName.get(squash(optIn));
       if (!prize) {
         skippedPrizes.push(`"${optIn}" isn't a prize in HackJudge`);
@@ -256,7 +367,7 @@ export function planDevpostImport(
         skippedPrizes.push(
           `"${prize.name}" is only for the ${prize.track} track, and this team is in ${track}`,
         );
-      } else if (!isAutomaticPrize(prize)) {
+      } else if (!isAutomaticPrize(prize) && !prizeIds.includes(prize._id)) {
         prizeIds.push(prize._id);
         prizeNames.push(prize.name);
       }
@@ -267,11 +378,11 @@ export function planDevpostImport(
       submissionStatus,
       name,
       track,
-      description: cell(row, column(ABOUT)),
-      members: people
+      description: project.description,
+      members: project.people
         .map(([first, last]) => [first, last].filter(Boolean).join(" "))
         .filter(Boolean),
-      entrantEmails: [...new Set(people.map(([, , email]) => email.toLowerCase()).filter(Boolean))],
+      entrantEmails: [...emailsOf(project)],
       devpostUrl: devpostUrl.startsWith("https://") ? devpostUrl : "",
       projectUrl,
       githubUrl,
@@ -281,7 +392,7 @@ export function planDevpostImport(
       existingTeamId:
         existingByUrl.get(urlKey(devpostUrl)) ?? existingByName.get(squash(name)),
     });
-  });
+  }
 
   return plan;
 }

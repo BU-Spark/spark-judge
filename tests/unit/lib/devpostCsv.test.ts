@@ -126,7 +126,10 @@ describe("planDevpostImport", () => {
         { ...submitted("Draft One"), "Project Status": "Draft" },
         submitted("No Track", { "What Is Your Teams Track?": "" }),
         submitted("Odd Track", { "What Is Your Teams Track?": "MusicHack" }),
-        submitted("Good"),
+        submitted("Good", {
+          "Submission Url": "https://devpost.com/software/good-2",
+          "Submitter Email": "other@example.edu",
+        }),
       ),
     );
     expect(result.totalProjects).toBe(5);
@@ -136,6 +139,68 @@ describe("planDevpostImport", () => {
       ["No Track", "It didn't answer the track question on Devpost."],
       ["Odd Track", expect.stringContaining('"MusicHack" doesn\'t match')],
       ["Good", expect.stringContaining("same title")],
+    ]);
+  });
+
+  it("merges Devpost's one-row-per-prize rows into one team with every opt-in", () => {
+    const row = (prize: string) =>
+      submitted("Clear Cost", { "Project Created At": "10/24/2026 10:25:42", "Opt-In Prizes": prize });
+    const csv = exportOf(row("Best Use of Lovable"), row("Art & Design #1"), row("Best First-Time Hacker"));
+    const result = plan(csv);
+    expect(result.totalProjects).toBe(1);
+    expect(result.problems).toEqual([]);
+    expect(result.teams).toHaveLength(1);
+    expect(result.teams[0].prizeIds).toEqual(["lovable", "art1", "first"]);
+  });
+
+  it("merges teammates' same-title drafts into one team with everyone on it", () => {
+    const draft = (created: string, extra: Row) =>
+      submitted("Rhett's Resources", {
+        "Project Status": "Draft", "Submission Url": "", "Project Created At": created, ...extra,
+      });
+    const result = planDevpostImport(
+      exportOf(
+        draft("10/24/2026 11:00:00", {
+          "What Is Your Teams Track?": "",
+          members: [["Bob", "Two", "bob@example.edu"]],
+        }),
+        draft("10/24/2026 11:05:00", {
+          "Submitter First Name": "Cy", "Submitter Last Name": "Three", "Submitter Email": "cy@example.edu",
+          members: [["Bob", "Two", "BOB@example.edu"], ["Di", "Four", "di@example.edu"]],
+        }),
+      ),
+      { tracks: TRACKS, prizes: PRIZES, existingTeams: [], includeDrafts: true },
+    );
+    expect(result.problems).toEqual([]);
+    expect(result.teams).toHaveLength(1);
+    expect(result.teams[0]).toMatchObject({
+      track: "Art & Design",
+      members: ["Ann One", "Bob Two", "Cy Three", "Di Four"],
+      entrantEmails: ["ann@example.edu", "bob@example.edu", "cy@example.edu", "di@example.edu"],
+    });
+  });
+
+  it("skips a teammate's own draft when everyone on it is on another team", () => {
+    const result = planDevpostImport(
+      exportOf(
+        submitted("Postmark", { members: [["Bob", "Two", "bob@example.edu"]] }),
+        submitted("Untitled", {
+          "Project Status": "Draft", "Submission Url": "", "What Is Your Teams Track?": "",
+          "Submitter First Name": "Bob", "Submitter Last Name": "Two", "Submitter Email": "bob@example.edu",
+        }),
+        submitted("Untitled", {
+          "Project Status": "Draft", "Submission Url": "", "Project Created At": "later",
+          "Submitter Email": "solo@example.edu",
+        }),
+      ),
+      { tracks: TRACKS, prizes: PRIZES, existingTeams: [], includeDrafts: true },
+    );
+    expect(result.teams.map((team) => team.name)).toEqual(["Postmark"]);
+    expect(result.leftovers).toEqual([
+      { rowNumber: 3, name: "Row 3 (untitled)", reason: "Everyone on it is already on Postmark." },
+    ]);
+    expect(result.problems).toEqual([
+      expect.objectContaining({ name: "Row 4 (untitled)", reason: "The project has no title on Devpost yet." }),
     ]);
   });
 
@@ -164,7 +229,7 @@ describe("planDevpostImport", () => {
     const csv = exportOf(
       submitted("Visible", { "Project Status": "Submitted (Gallery/Visible)" }),
       submitted("Hidden", { "Project Status": "Submitted (Hidden)" }),
-      submitted("Early", { "Project Status": "Draft" }),
+      submitted("Early", { "Project Status": "Draft", "Submitter Email": "early@example.edu" }),
     );
     const result = planDevpostImport(csv, { tracks: TRACKS, prizes: PRIZES, existingTeams: [], includeDrafts: true });
     expect(result.teams.map((team) => [team.name, team.submissionStatus])).toEqual([

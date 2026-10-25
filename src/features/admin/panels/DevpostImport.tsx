@@ -319,6 +319,11 @@ export function DevpostImport({
             )}
           />
           <List
+            title={`Teammates' extra drafts skipped (${plan.leftovers.length})`}
+            hint="Teammates started their own drafts; their team is imported instead."
+            items={plan.leftovers.map((leftover) => `${leftover.name}: ${leftover.reason}`)}
+          />
+          <List
             title={`Prize opt-ins not entered (${prizeNotes.length})`}
             hint="The team is imported; only these prize entries are left out."
             items={prizeNotes}

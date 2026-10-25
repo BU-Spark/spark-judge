@@ -32,11 +32,6 @@ type PrizeEntry = {
   candidates: Candidate[];
 };
 
-// Keep the rubric's relative weights while displaying totals on the judge's 1–5 scale.
-function scoreOutOfFive(total: number, maximum: number | undefined) {
-  return maximum && maximum > 0 ? (total / maximum) * 5 : total;
-}
-
 export function PrizeWinnerWizardPanel({
   eventId,
   deliberationData,
@@ -102,25 +97,26 @@ export function PrizeWinnerWizardPanel({
       )
     : allCategories;
   const rubric = detailedScores?.categoryRubric;
+  // Each prize category contributes five points; event weights apply to overall scores.
   const signalRubric = useMemo(
     () =>
-      rubric?.filter((category) =>
-        entry?.prize.scoreCategoryNames?.includes(category.name),
-      ) ?? [],
+      rubric
+        ?.filter((category) =>
+          entry?.prize.scoreCategoryNames?.includes(category.name),
+        )
+        .map(({ name }) => ({ name, weight: 1 })) ?? [],
     [rubric, entry],
   );
   const overallMax = rubric?.reduce(
     (sum, category) => sum + category.weight * 5,
     0,
   );
-  const signalMax = signalRubric.reduce(
-    (sum, category) => sum + category.weight * 5,
-    0,
-  );
-  const weightedMaximum = usesSkills ? signalMax : overallMax;
-  const maximumScore = weightedMaximum && weightedMaximum > 0 ? 5 : undefined;
+  const signalMax = signalRubric.length * 5;
+  const maximumScore = usesSkills ? signalMax : overallMax;
   const scoreLabel = usesSkills ? "Prize score" : "Overall score";
-  const maximumLabel = maximumScore ? " / 5" : "";
+  const maximumLabel = maximumScore
+    ? ` / ${Number(maximumScore.toFixed(2))}`
+    : "";
   const signalScores = useMemo(
     () =>
       new Map(
@@ -132,18 +128,14 @@ export function PrizeWinnerWizardPanel({
             String(row.team._id),
             {
               score: totals.length
-                ? scoreOutOfFive(
-                    totals.reduce((sum, total) => sum + total, 0) /
-                      totals.length,
-                    signalMax,
-                  )
+                ? totals.reduce((sum, total) => sum + total, 0) / totals.length
                 : null,
               judgeCount: totals.length,
             },
           ];
         }),
       ),
-    [detailedScores, signalRubric, signalMax],
+    [detailedScores, signalRubric],
   );
   const categoryScores = new Map(
     (detailedScores?.teamRankings ?? []).map((row) => [
@@ -170,11 +162,10 @@ export function PrizeWinnerWizardPanel({
   const candidates = (entry?.candidates ?? [])
     .map((candidate) => ({
       ...candidate,
-      overallScore: scoreOutOfFive(candidate.averageScore, overallMax),
       score: usesSkills
         ? (signalScores.get(String(candidate.teamId))?.score ?? null)
         : candidate.judgeCount
-          ? scoreOutOfFive(candidate.averageScore, overallMax)
+          ? candidate.averageScore
           : null,
       countedJudges: usesSkills
         ? (signalScores.get(String(candidate.teamId))?.judgeCount ?? 0)
@@ -387,8 +378,7 @@ export function PrizeWinnerWizardPanel({
               </p>
             ) : (
               <p className="fi-muted">
-                Overall scores use all rubric categories and their weights
-                {overallMax ? ", shown out of 5." : "."}
+                Overall scores use all rubric categories and their weights.
               </p>
             )}
             <p className="fi-muted">
@@ -456,7 +446,7 @@ export function PrizeWinnerWizardPanel({
                 </label>
                 <label className="admin-search">
                   Minimum {scoreLabel.toLowerCase()}
-                  {maximumScore ? " / 5" : ""}
+                  {maximumLabel}
                   <input
                     type="number"
                     min="0"
@@ -516,8 +506,10 @@ export function PrizeWinnerWizardPanel({
                     </th>
                     {usesSkills && (
                       <th>
-                        Overall
-                        {overallMax ? " / 5" : ""}
+                        Overall score
+                        {overallMax
+                          ? ` / ${Number(overallMax.toFixed(2))}`
+                          : ""}
                       </th>
                     )}
                     <th>Judges</th>
@@ -563,7 +555,7 @@ export function PrizeWinnerWizardPanel({
                       {usesSkills && (
                         <td>
                           {candidate.judgeCount
-                            ? candidate.overallScore.toFixed(2)
+                            ? candidate.averageScore.toFixed(2)
                             : "Unscored"}
                         </td>
                       )}

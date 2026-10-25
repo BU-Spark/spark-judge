@@ -101,16 +101,16 @@ const names = () =>
   );
 
 describe("prize skill signals in winner selection", () => {
-  it("ranks on the selected weighted categories and keeps overall scores as context", () => {
+  it("totals the prize categories out of their combined maximum and keeps the weighted overall score separate", () => {
     panel();
     expect(
       screen.getByText(/Prize categories:/).closest("p"),
     ).toHaveTextContent("Design · Presentation");
     expect(
-      screen.getByRole("columnheader", { name: "Prize score / 5" }),
+      screen.getByRole("columnheader", { name: "Prize score / 10" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("columnheader", { name: "Overall / 5" }),
+      screen.getByRole("columnheader", { name: "Overall score / 13.5" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("columnheader", { name: "Technical" }),
@@ -119,18 +119,18 @@ describe("prize skill signals in winner selection", () => {
       screen.queryByLabelText("Minimum Technical"),
     ).not.toBeInTheDocument();
     expect(names()).toEqual(["Choose Beta", "Choose Alpha", "Choose Gamma"]);
-    expect(within(rows()[0]).getByText("4.75")).toBeInTheDocument();
-    expect(within(rows()[0]).getByText("2.67")).toBeInTheDocument();
-    expect(within(rows()[1]).getAllByRole("cell")[2]).toHaveTextContent("2.00");
+    expect(within(rows()[0]).getAllByRole("cell")[2]).toHaveTextContent("9.00");
+    expect(within(rows()[0]).getAllByRole("cell")[3]).toHaveTextContent("7.20");
+    expect(within(rows()[1]).getAllByRole("cell")[2]).toHaveTextContent("4.00");
     expect(
       within(rows()[2]).getByText("Unscored for this prize"),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Minimum prize score / 5")).toHaveAttribute(
+    expect(screen.getByLabelText("Minimum prize score / 10")).toHaveAttribute(
       "max",
-      "5",
+      "10",
     );
-    fireEvent.change(screen.getByLabelText("Minimum prize score / 5"), {
-      target: { value: "4.5" },
+    fireEvent.change(screen.getByLabelText("Minimum prize score / 10"), {
+      target: { value: "8" },
     });
     expect(names()).toEqual(["Choose Beta"]);
   });
@@ -151,14 +151,16 @@ describe("prize skill signals in winner selection", () => {
       ),
     });
     expect(names()[0]).toBe("Choose Gamma");
-    expect(within(rows()[0]).getAllByRole("cell")[2]).toHaveTextContent("5.00");
+    expect(within(rows()[0]).getAllByRole("cell")[2]).toHaveTextContent(
+      "10.00",
+    );
     fireEvent.change(screen.getByLabelText("Minimum judges"), {
       target: { value: "2" },
     });
     expect(names()).toEqual(["Choose Beta", "Choose Alpha"]);
   });
 
-  it("keeps a single-category prize on the same five-point scale", () => {
+  it("uses a five-point maximum for a prize with one available category", () => {
     panel({
       ...details,
       categories: ["Design"],
@@ -177,8 +179,8 @@ describe("prize skill signals in winner selection", () => {
 
   it("resets filters and restores the complete rubric for an overall prize", () => {
     panel();
-    fireEvent.change(screen.getByLabelText("Minimum prize score / 5"), {
-      target: { value: "4.5" },
+    fireEvent.change(screen.getByLabelText("Minimum prize score / 10"), {
+      target: { value: "8" },
     });
     fireEvent.change(screen.getByLabelText("Prize"), {
       target: { value: "overall" },
@@ -188,16 +190,17 @@ describe("prize skill signals in winner selection", () => {
     ).toBeInTheDocument();
     expect(names()).toEqual(["Choose Gamma", "Choose Alpha", "Choose Beta"]);
     expect(
-      screen.getByRole("columnheader", { name: "Overall score / 5" }),
+      screen.getByRole("columnheader", { name: "Overall score / 13.5" }),
     ).toBeInTheDocument();
-    expect(within(rows()[0]).getAllByRole("cell")[2]).toHaveTextContent("5.00");
-    expect(screen.getByLabelText("Minimum overall score / 5")).toHaveValue(
+    expect(within(rows()[0]).getAllByRole("cell")[2]).toHaveTextContent(
+      "13.50",
+    );
+    expect(screen.getByLabelText("Minimum overall score / 13.5")).toHaveValue(
       null,
     );
-    expect(screen.getByLabelText("Minimum overall score / 5")).toHaveAttribute(
-      "max",
-      "5",
-    );
+    expect(
+      screen.getByLabelText("Minimum overall score / 13.5"),
+    ).toHaveAttribute("max", "13.5");
   });
 
   it("treats an unscored manual award as a manual decision with contextual scores", () => {

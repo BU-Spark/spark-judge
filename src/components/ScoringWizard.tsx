@@ -69,6 +69,8 @@ type ScoringWizardProps = {
   eventName?: string;
   embedded?: boolean;
   teams: Team[];
+  /** Full event roster, so changing the queue never discards other draft scores. */
+  rosterTeamIds?: Id<"teams">[];
   categories: Category[];
   existingScores?: ExistingScore[];
   storageKey: string | null;
@@ -76,9 +78,8 @@ type ScoringWizardProps = {
   onSubmitted: () => void;
   /**
    * Opens the wizard on this team when found in the sorted list.
-   * Precedence: a stored draft's `currentIndex` wins if a draft actually exists
-   * in localStorage; otherwise `initialTeamId` wins. Unknown ids fall back to
-   * the normal first-incomplete / index-0 path.
+   * An explicit team choice takes precedence over a saved draft's position.
+   * Without a valid choice, resume the draft position as usual.
    */
   initialTeamId?: Id<"teams"> | null;
 };
@@ -88,7 +89,11 @@ const RECONCILE_WINDOW_MS = 5000;
 
 type SubmitEntry = {
   teamId: Id<"teams">;
-  categoryScores: { category: string; score: number | null; optedOut: boolean }[];
+  categoryScores: {
+    category: string;
+    score: number | null;
+    optedOut: boolean;
+  }[];
 };
 
 /** True when every submitted team/category is reflected in the server's scores. */
@@ -225,6 +230,7 @@ export function ScoringSession({
   eventId,
   eventName = "Hackathon judging",
   teams,
+  rosterTeamIds,
   categories,
   existingScores,
   storageKey,
@@ -258,14 +264,14 @@ export function ScoringSession({
   const [isReviewing, setIsReviewing] = useState(false);
   const [browsingTeam, setBrowsingTeam] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
-  const [hadStoredDraft, setHadStoredDraft] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
   const [localState, setLocalState] = useState<
     "clean" | "local" | "local-unavailable"
   >("clean");
   const [draftNotices, setDraftNotices] = useState<string[]>([]);
-  const [submitFailure, setSubmitFailure] =
-    useState<SubmitFailureState | null>(null);
+  const [submitFailure, setSubmitFailure] = useState<SubmitFailureState | null>(
+    null,
+  );
   const [submitting, setSubmitting] = useState(false);
   const submittedRef = useRef(false);
   const draftStorageKey = storageKey ? scoringDraftKey(storageKey) : null;
@@ -345,11 +351,16 @@ export function ScoringSession({
   // missing answers is shown as incomplete and never submitted.
   const effectiveCompleted = useMemo(() => {
     const next = new Set<string>();
+    const sessionTeamIds = new Set(sortedTeams.map((team) => String(team._id)));
     completedTeams.forEach((id) => {
-      if (isTeamFullyAnswered(draftScores[id], categories)) next.add(id);
+      if (
+        sessionTeamIds.has(id) &&
+        isTeamFullyAnswered(draftScores[id], categories)
+      )
+        next.add(id);
     });
     return next;
-  }, [categories, completedTeams, draftScores]);
+  }, [categories, completedTeams, draftScores, sortedTeams]);
   const completedCount = effectiveCompleted.size;
   const hasTeams = totalTeams > 0;
   const currentTeam =
@@ -413,7 +424,8 @@ export function ScoringSession({
     setCompletedTeams((prev) => {
       const next = new Set(prev);
       unseen.forEach((id) => {
-        if (isTeamFullyAnswered(seeded[id], categoriesRef.current)) next.add(id);
+        if (isTeamFullyAnswered(seeded[id], categoriesRef.current))
+          next.add(id);
       });
       return next.size === prev.size ? prev : next;
     });
@@ -472,7 +484,9 @@ export function ScoringSession({
     }
 
     if (draft) {
-      const teamIds = new Set(sortedTeams.map((team) => team._id as string));
+      const teamIds = new Set<string>(
+        rosterTeamIds ?? sortedTeams.map((team) => team._id),
+      );
       const categoryNames = new Set(categories.map((c) => c.name));
       // Only prune when the roster and rubric are actually loaded.
       const canPrune = teamIds.size > 0 && categoryNames.size > 0;
@@ -512,7 +526,6 @@ export function ScoringSession({
         ),
       );
       setSkippedTeams(new Set(draft.skipped.filter(keepTeam)));
-      setHadStoredDraft(true);
       if (savedAt !== null) setDraftSavedAt(savedAt);
       const restoredIndex = findTeamIndex(
         sortedTeams,
@@ -544,11 +557,6 @@ export function ScoringSession({
     if (initialAppliedRef.current) return;
     if (storageKey && !draftLoaded) return;
 
-    if (hadStoredDraft) {
-      initialAppliedRef.current = true;
-      return;
-    }
-
     if (!initialTeamId || sortedTeams.length === 0) {
       initialAppliedRef.current = true;
       return;
@@ -559,7 +567,7 @@ export function ScoringSession({
       setCurrentTeamIndex(idx);
     }
     initialAppliedRef.current = true;
-  }, [storageKey, draftLoaded, hadStoredDraft, initialTeamId, sortedTeams]);
+  }, [storageKey, draftLoaded, initialTeamId, sortedTeams]);
 
   useEffect(() => {
     if (!draftLoaded || !draftStorageKey) return;
@@ -1521,7 +1529,10 @@ function ReviewPanel({
                           rubricPercentByCategory.get(category) ?? 0,
                         )}
                       </span>
-                      <span className="fi-engraved-sm fi-wiz-readout-dash" aria-hidden="true">
+                      <span
+                        className="fi-engraved-sm fi-wiz-readout-dash"
+                        aria-hidden="true"
+                      >
                         –
                       </span>
                       <span className="fi-readout">{displayScore}</span>

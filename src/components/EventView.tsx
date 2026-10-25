@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
@@ -6,6 +6,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ScoringWizard } from "./ScoringWizard";
 import { readScoringDraftSummary } from "../lib/scoringDraft";
 import { LoadingState } from "./ui/LoadingState";
+import { ProjectDescription } from "./ui/ProjectDescription";
 import { ErrorState } from "./ui/ErrorState";
 import { CodeAndTellVoteView } from "./code-and-tell/CodeAndTellVoteView";
 import { DemoDayBrowse } from "./demo-day";
@@ -14,6 +15,7 @@ import { getEventDisplayLabel, getEventMode } from "../lib/eventModes";
 import { formatDate, formatDateTime } from "../lib/utils";
 import { pad2 } from "../lib/dateTimeInput";
 import { MODE_THEME } from "./home/modeTheme";
+import { toast } from "sonner";
 import "./EventView.fi.css";
 import "./participation/participation.css";
 import { requestSignIn } from "../lib/signIn";
@@ -38,7 +40,19 @@ export function EventView({
   const event = useQuery(api.events.getEvent, { eventId });
   const judgeStatus = useQuery(api.events.getJudgeStatus, { eventId });
   const myScores = useQuery(api.scores.getMyScores, { eventId });
+  const myAssignments = useQuery(api.judgeAssignments.getMyAssignments, {
+    eventId,
+  });
   const loggedInUser = useQuery(api.auth.loggedInUser);
+  const addTeamToAssignment = useMutation(
+    api.judgeAssignments.addTeamToAssignment,
+  );
+  const addMultipleTeamsToAssignment = useMutation(
+    api.judgeAssignments.addMultipleTeamsToAssignment,
+  );
+  const removeTeamFromAssignment = useMutation(
+    api.judgeAssignments.removeTeamFromAssignment,
+  );
   const [showWizard, setShowWizard] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [draftCompletedIds, setDraftCompletedIds] = useState<string[]>([]);
@@ -47,6 +61,7 @@ export function EventView({
   const [trackFilter, setTrackFilter] = useState("");
   const [sponsorFilter, setSponsorFilter] = useState("");
   const [prizeFilter, setPrizeFilter] = useState("");
+  const [myQueueOnly, setMyQueueOnly] = useState(false);
   const [judgeCodeOpen, setJudgeCodeOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -81,6 +96,7 @@ export function EventView({
     setDraftCompletedIds(summary.completedTeamIds);
   }, [storageKey, showWizard, myScores?.length]);
 
+  const enableCohorts = event?.enableCohorts || false;
   const scoringLocked = !!event?.scoringLockedAt;
 
   const visibleTeams = useMemo(
@@ -88,7 +104,10 @@ export function EventView({
     [event?.teams],
   );
 
-  const teamsToJudge = visibleTeams;
+  const teamsToJudge = useMemo(() => {
+    if (!enableCohorts || !myAssignments) return visibleTeams;
+    return visibleTeams.filter((team: any) => myAssignments.includes(team._id));
+  }, [enableCohorts, visibleTeams, myAssignments]);
 
   const relevantTeamIds = useMemo(
     () => new Set(teamsToJudge.map((team: any) => String(team._id))),
@@ -129,6 +148,69 @@ export function EventView({
   );
 
   const filteredTeams = useMemo(() => {
+    let baseTeams = visibleTeams;
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      baseTeams = baseTeams.filter(
+        (team: any) =>
+          team.name.toLowerCase().includes(q) ||
+          (typeof team.description === "string" &&
+            team.description.toLowerCase().includes(q)),
+      );
+    }
+
+    if (trackFilter) {
+      baseTeams = baseTeams.filter((team: any) => team.track === trackFilter);
+    }
+
+    if (sponsorFilter) {
+      const matchingPrizeIds = new Set(
+        eventPrizes
+          .filter((p: any) => p.sponsorName === sponsorFilter)
+          .map((p: any) => p._id),
+      );
+      const teamIdsWithSponsor = new Set(
+        eventPrizeSubmissions
+          .filter((s: any) => matchingPrizeIds.has(s.prizeId))
+          .map((s: any) => s.teamId),
+      );
+      baseTeams = baseTeams.filter((team: any) =>
+        teamIdsWithSponsor.has(team._id),
+      );
+    }
+
+    if (prizeFilter) {
+      const teamIdsWithPrize = new Set(
+        eventPrizeSubmissions
+          .filter((s: any) => s.prizeId === prizeFilter)
+          .map((s: any) => s.teamId),
+      );
+      baseTeams = baseTeams.filter((team: any) =>
+        teamIdsWithPrize.has(team._id),
+      );
+    }
+
+    return baseTeams.filter((team: any) => !myAssignments?.includes(team._id));
+  }, [
+    visibleTeams,
+    searchQuery,
+    trackFilter,
+    sponsorFilter,
+    prizeFilter,
+    myAssignments,
+    eventPrizes,
+    eventPrizeSubmissions,
+  ]);
+
+  const assignedTeams = useMemo(() => {
+    return visibleTeams.filter((team: any) =>
+      myAssignments?.includes(team._id),
+    );
+  }, [visibleTeams, myAssignments]);
+
+  const keyboardTeams = useMemo(() => {
+    if (enableCohorts) return assignedTeams;
     let base = visibleTeams;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -136,6 +218,7 @@ export function EventView({
         (team: any) =>
           team.name.toLowerCase().includes(q) ||
           (typeof team.description === "string" &&
+            typeof team.description === "string" &&
             team.description.toLowerCase().includes(q)),
       );
     }
@@ -165,6 +248,8 @@ export function EventView({
     }
     return base;
   }, [
+    enableCohorts,
+    assignedTeams,
     visibleTeams,
     searchQuery,
     trackFilter,
@@ -199,6 +284,64 @@ export function EventView({
   const closeWizard = () => {
     setShowWizard(false);
     clearTeamParam();
+  };
+
+  const handleToggleTeam = async (teamId: Id<"teams">, isAssigned: boolean) => {
+    if (scoringLocked) {
+      alert(
+        "Scoring has been locked by an admin. Team assignments can no longer be changed.",
+      );
+      return;
+    }
+
+    if (isAssigned) {
+      const teamHasBeenScored = myScores?.some((s: any) => s.teamId === teamId);
+      if (teamHasBeenScored) {
+        toast.error(
+          "You cannot remove a team after you have already submitted scores for them.",
+        );
+        return;
+      }
+    }
+
+    try {
+      if (isAssigned) {
+        await removeTeamFromAssignment({ eventId, teamId });
+        toast.success("Team removed from queue");
+      } else {
+        await addTeamToAssignment({ eventId, teamId });
+        toast.success("Team added to queue");
+      }
+    } catch (error) {
+      console.error("Failed to toggle team assignment:", error);
+      toast.error("Failed to update team assignment");
+    }
+  };
+
+  const handleAddAllTeams = async () => {
+    if (scoringLocked) {
+      alert(
+        "Scoring has been locked by an admin. Team assignments can no longer be changed.",
+      );
+      return;
+    }
+    try {
+      const teamIds = filteredTeams.map((t: any) => t._id);
+      const addedCount = await addMultipleTeamsToAssignment({
+        eventId,
+        teamIds,
+      });
+      if (addedCount > 0) {
+        toast.success(
+          `Added ${addedCount} team${addedCount === 1 ? "" : "s"} to your queue!`,
+        );
+      } else {
+        toast("All these teams are already in your queue.");
+      }
+    } catch (error) {
+      console.error("Failed to add all teams:", error);
+      toast.error("Failed to add teams.");
+    }
   };
 
   const handleWizardSubmitted = () => {
@@ -243,7 +386,11 @@ export function EventView({
     );
   }
 
-  if (judgeStatus === undefined || myScores === undefined) {
+  if (
+    judgeStatus === undefined ||
+    myScores === undefined ||
+    myAssignments === undefined
+  ) {
     return (
       <div className="fi-ev-loading" role="status" aria-live="polite">
         <div className="fi-ev-spinner" aria-hidden="true" />
@@ -331,7 +478,10 @@ export function EventView({
     );
   }
 
-  const canStart = totalTeams > 0 && !scoringLocked;
+  const canStart =
+    (!enableCohorts || myAssignments.length > 0) &&
+    totalTeams > 0 &&
+    !scoringLocked;
   const transportLabel = scoringLocked
     ? "Scoring locked"
     : scoringComplete
@@ -340,7 +490,9 @@ export function EventView({
         ? "Continue scoring"
         : completedCount > 0
           ? "Resume scoring"
-          : "Start scoring";
+          : enableCohorts && myAssignments.length === 0
+            ? "Select teams first"
+            : "Start scoring";
 
   const statusLabel = scoringLocked
     ? "Locked"
@@ -444,7 +596,9 @@ export function EventView({
       {event.status === "active" && (
         <TeamSelectionSection
           eventId={eventId}
+          enableCohorts={enableCohorts}
           teams={filteredTeams}
+          assignedTeams={keyboardTeams}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           trackFilter={trackFilter}
@@ -453,9 +607,16 @@ export function EventView({
           setSponsorFilter={setSponsorFilter}
           prizeFilter={prizeFilter}
           setPrizeFilter={setPrizeFilter}
+          myQueueOnly={myQueueOnly}
+          setMyQueueOnly={setMyQueueOnly}
           trackOptions={trackOptions as string[]}
           sponsorOptions={sponsorOptions as string[]}
           eventPrizes={eventPrizes}
+          onToggleTeam={(teamId, isAssigned) => {
+            void handleToggleTeam(teamId, isAssigned);
+          }}
+          onAddAllTeams={handleAddAllTeams}
+          locked={scoringLocked}
           myScores={myScores}
           activeTeamId={initialTeamId}
         />
@@ -470,6 +631,7 @@ export function EventView({
           eventId={eventId}
           eventName={event.name}
           teams={teamsToJudge}
+          rosterTeamIds={visibleTeams.map((team: any) => team._id)}
           categories={event.categories.map((c: any) => ({
             name: c.name,
             weight: c.weight,
@@ -624,7 +786,9 @@ function ResultsView({ eventId }: { eventId: Id<"events"> }) {
 
 function TeamSelectionSection({
   eventId,
+  enableCohorts,
   teams,
+  assignedTeams,
   searchQuery,
   setSearchQuery,
   trackFilter,
@@ -633,60 +797,94 @@ function TeamSelectionSection({
   setSponsorFilter,
   prizeFilter,
   setPrizeFilter,
+  myQueueOnly,
+  setMyQueueOnly,
   trackOptions,
   sponsorOptions,
   eventPrizes,
+  onToggleTeam,
+  onAddAllTeams,
+  locked,
   myScores,
   activeTeamId,
 }: {
   eventId: Id<"events">;
+  enableCohorts: boolean;
   teams: Array<any>;
+  assignedTeams: Array<any>;
   searchQuery: string;
-  setSearchQuery: (value: string) => void;
+  setSearchQuery: (query: string) => void;
   trackFilter: string;
-  setTrackFilter: (value: string) => void;
+  setTrackFilter: (f: string) => void;
   sponsorFilter: string;
-  setSponsorFilter: (value: string) => void;
+  setSponsorFilter: (f: string) => void;
   prizeFilter: string;
-  setPrizeFilter: (value: string) => void;
+  setPrizeFilter: (f: string) => void;
+  myQueueOnly: boolean;
+  setMyQueueOnly: (v: boolean) => void;
   trackOptions: string[];
   sponsorOptions: string[];
   eventPrizes: Array<any>;
+  onToggleTeam: (teamId: Id<"teams">, isAssigned: boolean) => void;
+  onAddAllTeams: () => void;
+  locked: boolean;
   myScores?: Array<any>;
   activeTeamId: Id<"teams"> | null;
 }) {
-  const getTeamScoreStatus = (teamId: Id<"teams">) =>
-    myScores?.find((score: any) => String(score.teamId) === String(teamId));
+  const getTeamScoreStatus = (teamId: Id<"teams">) => {
+    if (!myScores) return null;
+    return myScores.find(
+      (score: any) => String(score.teamId) === String(teamId),
+    );
+  };
+
   const prizeSelectOptions = eventPrizes.filter(
-    (prize: any) => prize.isActive !== false,
+    (p: any) => p.isActive !== false,
   );
+
+  const showFilters =
+    enableCohorts ||
+    assignedTeams.length > 0 ||
+    searchQuery ||
+    trackFilter ||
+    sponsorFilter ||
+    prizeFilter;
+  const showBrowse =
+    enableCohorts &&
+    !myQueueOnly &&
+    (teams.length > 0 ||
+      searchQuery ||
+      trackFilter ||
+      sponsorFilter ||
+      prizeFilter);
+
   return (
     <div>
-      <div className="fi-ev-filters">
-        <label className="fi-ev-control fi-ev-control--grow">
-          <span className="fi-engraved">Search</span>
-          <input
-            type="search"
-            placeholder="Find a team"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </label>
-        <label className="fi-ev-control">
-          <span className="fi-engraved">Track</span>
-          <select
-            value={trackFilter}
-            onChange={(e) => setTrackFilter(e.target.value)}
-          >
-            <option value="">All tracks</option>
-            {trackOptions.map((track) => (
-              <option key={track} value={track}>
-                {track}
-              </option>
-            ))}
-          </select>
-        </label>
-        {sponsorOptions.length > 0 && (
+      {showFilters && (
+        <div className="fi-ev-filters">
+          <label className="fi-ev-control fi-ev-control--grow">
+            <span className="fi-engraved">Search</span>
+            <input
+              type="search"
+              placeholder="Find a team"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </label>
+          <label className="fi-ev-control">
+            <span className="fi-engraved">Track</span>
+            <select
+              value={trackFilter}
+              onChange={(e) => setTrackFilter(e.target.value)}
+            >
+              <option value="">All tracks</option>
+              {trackOptions.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="fi-ev-control">
             <span className="fi-engraved">Sponsor</span>
             <select
@@ -694,43 +892,72 @@ function TeamSelectionSection({
               onChange={(e) => setSponsorFilter(e.target.value)}
             >
               <option value="">All sponsors</option>
-              {sponsorOptions.map((sponsor) => (
-                <option key={sponsor} value={sponsor}>
-                  {sponsor}
+              {sponsorOptions.map((t) => (
+                <option key={t} value={t}>
+                  {t}
                 </option>
               ))}
             </select>
           </label>
-        )}
-        {prizeSelectOptions.length > 0 && (
-          <label className="fi-ev-control">
-            <span className="fi-engraved">Prize</span>
-            <select
-              value={prizeFilter}
-              onChange={(e) => setPrizeFilter(e.target.value)}
-            >
-              <option value="">All prizes</option>
-              {prizeSelectOptions.map((prize: any) => (
-                <option key={prize._id} value={prize._id}>
-                  {prize.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
+          {prizeSelectOptions.length > 0 && (
+            <label className="fi-ev-control">
+              <span className="fi-engraved">Prize</span>
+              <select
+                value={prizeFilter}
+                onChange={(e) => setPrizeFilter(e.target.value)}
+              >
+                <option value="">All prizes</option>
+                {prizeSelectOptions.map((p: any) => (
+                  <option key={p._id} value={p._id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {enableCohorts && (
+            <div className="fi-ev-chips">
+              <button
+                type="button"
+                className="fi-ev-toggle"
+                aria-pressed={myQueueOnly}
+                onClick={() => setMyQueueOnly(!myQueueOnly)}
+              >
+                My queue
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <section className="fi-ev-zone" aria-labelledby="fi-ev-keys-h">
         <div className="fi-ev-zone-head">
           <h2 className="fi-zone" id="fi-ev-keys-h">
-            Projects
+            {enableCohorts ? "My queue" : "Projects"}
           </h2>
-          <span className="fi-engraved">{teams.length} teams</span>
+          <span className="fi-engraved">
+            {enableCohorts
+              ? `${assignedTeams.length} assigned`
+              : `${assignedTeams.length} teams`}
+          </span>
         </div>
-        {teams.length === 0 ? (
-          <p className="fi-engraved">No teams match these filters</p>
+
+        {assignedTeams.length === 0 ? (
+          enableCohorts ? (
+            <div className="fi-panel fi-ev-idle">
+              <IdleSteps count={4} />
+              <p className="fi-engraved fi-ev-idle-copy">
+                {locked
+                  ? "Scoring is locked · Team assignments are read-only"
+                  : "No teams queued · Browse below to add"}
+              </p>
+            </div>
+          ) : (
+            <p className="fi-engraved">No teams match these filters</p>
+          )
         ) : (
           <ul className="fi-ev-keys">
-            {teams.map((team: any) => {
+            {assignedTeams.map((team: any) => {
               const score = getTeamScoreStatus(team._id);
               const line = score
                 ? `Scored · ${Number(score.totalScore.toFixed(2))} pts`
@@ -767,12 +994,94 @@ function TeamSelectionSection({
                       <span className="fi-ev-key-team">{line}</span>
                     </span>
                   </Link>
+                  {enableCohorts && !locked && !score && (
+                    <button
+                      type="button"
+                      className="fi-ev-key-x"
+                      aria-label={`Remove ${team.name} from queue`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onToggleTeam(team._id, true);
+                      }}
+                    >
+                      <svg
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="square"
+                          strokeLinejoin="miter"
+                          strokeWidth={2}
+                          d="M6 6l12 12M18 6L6 18"
+                        />
+                      </svg>
+                    </button>
+                  )}
                 </li>
               );
             })}
           </ul>
         )}
       </section>
+
+      {showBrowse && (
+        <section className="fi-ev-zone" aria-labelledby="fi-ev-browse-h">
+          <div className="fi-ev-zone-head">
+            <h2 className="fi-zone" id="fi-ev-browse-h">
+              Browse teams
+            </h2>
+            {teams.length > 0 && !locked ? (
+              <button
+                type="button"
+                className="fi-key fi-key--sm"
+                onClick={onAddAllTeams}
+              >
+                Add all {teams.length} filtered{" "}
+                {teams.length === 1 ? "team" : "teams"}
+              </button>
+            ) : (
+              <span className="fi-engraved">
+                {locked ? "Read-only" : `${pad2(teams.length)} available`}
+              </span>
+            )}
+          </div>
+
+          {teams.length === 0 ? (
+            <p className="fi-engraved">No teams match your search</p>
+          ) : (
+            <div className="fi-ev-browse">
+              {teams.map((team: any) => (
+                <div key={team._id} className="fi-ev-browse-row">
+                  <div>
+                    <h3 className="fi-ev-browse-name">{team.name}</h3>
+                    <ProjectDescription
+                      description={team.description}
+                      projectName={team.name}
+                    />
+                    {team.track ? (
+                      <p className="fi-engraved-sm fi-ev-browse-meta">
+                        {team.track}
+                      </p>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    className="fi-key fi-key--sm"
+                    onClick={() => onToggleTeam(team._id, false)}
+                    disabled={locked}
+                    aria-label={`Add ${team.name} to queue`}
+                  >
+                    Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

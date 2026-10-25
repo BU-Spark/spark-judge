@@ -60,6 +60,7 @@ function renderWizard(
   overrides: Partial<{
     eventId: Id<"events">;
     teams: typeof defaultTeams;
+    rosterTeamIds: Id<"teams">[];
     categories: typeof defaultCategories;
     storageKey: string | null;
     onClose: () => void;
@@ -201,16 +202,86 @@ describe("ScoringWizard", () => {
     expect(screen.getByRole("heading", { name: "Gamma" })).toBeInTheDocument();
   });
 
-  it("lets a stored draft currentIndex take precedence over initialTeamId", async () => {
+  it("opens the explicitly selected team instead of the legacy draft position", async () => {
     writeLegacyDraft(2);
     renderWizard({ initialTeamId: "team_beta" as Id<"teams"> });
 
     expect(
-      await screen.findByRole("heading", { name: "Gamma" }),
+      await screen.findByRole("heading", { name: "Beta" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "Beta" }),
+      screen.queryByRole("heading", { name: "Gamma" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("opens each selected team while retaining saved scores for other teams", async () => {
+    writeVersionedDraft(DRAFT_KEY, 2, {
+      scores: { team_alpha: { Impact: { score: 4, optedOut: false } } },
+      completed: [],
+      skipped: [],
+      currentTeamId: "team_alpha",
+    });
+    const first = renderWizard({ initialTeamId: "team_beta" as Id<"teams"> });
+    expect(
+      await screen.findByRole("heading", { name: "Beta" }),
+    ).toBeInTheDocument();
+    fireEvent.click(scoreKey(5, "Craft"));
+    first.unmount();
+
+    const second = renderWizard({ initialTeamId: "team_gamma" as Id<"teams"> });
+    expect(
+      await screen.findByRole("heading", { name: "Gamma" }),
+    ).toBeInTheDocument();
+    second.unmount();
+
+    renderWizard({ initialTeamId: "team_alpha" as Id<"teams"> });
+    expect(
+      await screen.findByRole("heading", { name: "Alpha" }),
+    ).toBeInTheDocument();
+    expect(scoreKey(4, "Impact")).toHaveAttribute("aria-pressed", "true");
+    const draft = readDraft<any>(DRAFT_KEY, 2);
+    expect(draft.status).toBe("found");
+    if (draft.status === "found") {
+      expect(draft.data.scores.team_beta.Craft.score).toBe(5);
+    }
+    expect(mockSubmit).not.toHaveBeenCalled();
+  });
+
+  it("keeps scores outside the current cart without counting or submitting them", async () => {
+    writeVersionedDraft(DRAFT_KEY, 2, {
+      scores: {
+        team_alpha: {
+          Impact: { score: 4, optedOut: false },
+          Craft: { score: 3, optedOut: false },
+        },
+      },
+      completed: ["team_alpha"],
+      skipped: [],
+      currentTeamId: "team_alpha",
+    });
+    renderWizard({
+      teams: [defaultTeams[2]],
+      rosterTeamIds: defaultTeams.map((team) => team._id),
+      initialTeamId: "team_beta" as Id<"teams">,
+    });
+    expect(
+      await screen.findByRole("heading", { name: "Beta" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("00 of 01 scored")).toBeInTheDocument();
+    scoreAll(5, 5);
+    fireEvent.click(nextButton());
+    fireEvent.click(screen.getByRole("button", { name: "Submit scores" }));
+    await waitFor(() => expect(mockSubmit).toHaveBeenCalledTimes(1));
+    expect(
+      mockSubmit.mock.calls[0][0].scores.map(
+        (score: { teamId: string }) => score.teamId,
+      ),
+    ).toEqual(["team_beta"]);
+    const remaining = readDraft<any>(DRAFT_KEY, 2);
+    expect(remaining.status).toBe("found");
+    if (remaining.status === "found") {
+      expect(remaining.data.scores.team_alpha.Impact.score).toBe(4);
+    }
   });
 
   it("marks a clicked score key pressed and advances criterion on keyboard 1–5", () => {
@@ -399,7 +470,9 @@ describe("ScoringWizard", () => {
     expect(alert).toHaveTextContent("Scoring is locked for this event");
     expect(alert).toHaveTextContent("Your scores for 1 project are kept");
     expect(toastError).not.toHaveBeenCalled();
-    expect(screen.getByText("Save rejected; your changes are kept")).toBeInTheDocument();
+    expect(
+      screen.getByText("Save rejected; your changes are kept"),
+    ).toBeInTheDocument();
     expect(window.localStorage.getItem(DRAFT_KEY)).not.toBeNull();
     expect(props.onSubmitted).not.toHaveBeenCalled();
 
@@ -442,7 +515,9 @@ describe("ScoringWizard", () => {
     expect(
       await screen.findByText("Checking whether your scores saved…"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Submit scores" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Submit scores" }),
+    ).toBeDisabled();
     expect(onSubmitted).not.toHaveBeenCalled();
 
     rerender(
@@ -622,14 +697,18 @@ describe("ScoringWizard", () => {
     }
     expect(toastSuccess).toHaveBeenCalledWith("Scores submitted to HackJudge.");
     expect(toastWarning).toHaveBeenCalledWith(
-      expect.stringContaining("couldn't keep your partial scores for 1 project"),
+      expect.stringContaining(
+        "couldn't keep your partial scores for 1 project",
+      ),
     );
     // The stale full draft must not come back with already-submitted scores.
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 
   it("does not report a submission failure when onSubmitted throws", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     const onSubmitted = vi.fn(() => {
       throw new Error("navigation failed");
     });
@@ -767,7 +846,9 @@ describe("ScoringWizard", () => {
     expect(await screen.findByText("01 of 03 scored")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Review scores" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
-    expect(screen.getByRole("button", { name: "Marked N/A" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Marked N/A" }),
+    ).toBeInTheDocument();
     expect(scoreKey(2, "Craft")).toHaveAttribute("aria-pressed", "true");
     expect(nextButton()).toBeEnabled();
   });

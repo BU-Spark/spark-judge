@@ -1170,22 +1170,17 @@ export const getEventIntegritySummary = query({
   }),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    const [findings, flagged, rejected, teams] = await Promise.all([
+    // One range read for the event's appreciations rather than a get per
+    // affected row: a large cleanup can attach thousands of rows to findings,
+    // past the per-function limit on individual reads.
+    const [findings, appreciations, teams] = await Promise.all([
       ctx.db
         .query("demoDayIntegrityFindings")
         .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
         .collect(),
       ctx.db
         .query("appreciations")
-        .withIndex("by_event_and_review_status", (q) =>
-          q.eq("eventId", args.eventId).eq("reviewStatus", "flagged"),
-        )
-        .collect(),
-      ctx.db
-        .query("appreciations")
-        .withIndex("by_event_and_review_status", (q) =>
-          q.eq("eventId", args.eventId).eq("reviewStatus", "rejected"),
-        )
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
         .collect(),
       ctx.db
         .query("teams")
@@ -1193,23 +1188,14 @@ export const getEventIntegritySummary = query({
         .collect(),
     ]);
     const teamNames = new Map(teams.map((team) => [team._id, team.name]));
-    const affectedAppreciationIds = unique(
-      findings.flatMap((finding) => finding.affectedAppreciationIds),
-    );
-    const affectedAppreciations = (
-      await Promise.all(
-        affectedAppreciationIds.map((appreciationId) =>
-          ctx.db.get(appreciationId),
-        ),
-      )
-    ).filter((appreciation): appreciation is Doc<"appreciations"> =>
-      Boolean(appreciation),
-    );
     const appreciationsById = new Map(
-      affectedAppreciations.map((appreciation) => [
-        appreciation._id,
-        appreciation,
-      ]),
+      appreciations.map((appreciation) => [appreciation._id, appreciation]),
+    );
+    const flagged = appreciations.filter(
+      (appreciation) => appreciation.reviewStatus === "flagged",
+    );
+    const rejected = appreciations.filter(
+      (appreciation) => appreciation.reviewStatus === "rejected",
     );
 
     const sortedFindings = findings.sort((a, b) => {

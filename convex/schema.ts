@@ -38,6 +38,8 @@ const INTEGRITY_FINDING_TYPE_VALIDATOR = v.union(
   v.literal("location_risk"),
   v.literal("pass_metadata_change"),
   v.literal("captcha_failures"),
+  v.literal("identity_cycling"),
+  v.literal("ip_rotation"),
 );
 
 // Extend auth tables to add isAdmin field to users
@@ -281,7 +283,12 @@ const applicationTables = {
       "voterUserId",
     ])
     .index("by_ip_and_timestamp", ["ipAddress", "timestamp"])
-    .index("by_event_and_review_status", ["eventId", "reviewStatus"]),
+    .index("by_event_and_review_status", ["eventId", "reviewStatus"])
+    .index("by_event_and_fingerprint_and_timestamp", [
+      "eventId",
+      "fingerprintKey",
+      "timestamp",
+    ]),
 
   demoDayCaptchaPasses: defineTable({
     eventId: v.id("events"),

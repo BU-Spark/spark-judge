@@ -253,6 +253,49 @@ describe("Demo Day shared-network limit", () => {
   });
 });
 
+describe("Demo Day shared devices", () => {
+  function evaluateWithDeviceVoters(otherVoters: number, captchaEnabled = true) {
+    const deviceRows = Array.from({ length: otherVoters }, (_, index) => ({
+      voterUserId: `other-${index}`,
+      timestamp: Date.now(),
+    }));
+    const db = {
+      get: vi.fn(async () => activeEvent({ captchaEnabled })),
+      // Valid pass, no recent votes by this voter, quiet IP, then the device rows.
+      query: vi
+        .fn()
+        .mockReturnValueOnce(
+          queryResult([
+            { _id: "pass", expiresAt: Date.now() + 60_000, ipAddress: "192.0.2.1", userAgent: "test" },
+          ]),
+        )
+        .mockReturnValueOnce(queryResult([]))
+        .mockReturnValueOnce(queryResult([]))
+        .mockReturnValueOnce(queryResult(deviceRows)),
+      insert: vi.fn(),
+      patch: vi.fn(),
+    };
+    return (evaluateAppreciationRequest as any)._handler({ db }, baseIntegrityArgs);
+  }
+
+  it("allows a device that only this voter has used", async () => {
+    const result = await evaluateWithDeviceVoters(0);
+    expect(result).toMatchObject({ allowed: true, reviewStatus: "accepted" });
+  });
+
+  it("requires a fresh CAPTCHA once other accounts used the device", async () => {
+    const result = await evaluateWithDeviceVoters(2);
+    expect(result).toMatchObject({ allowed: false, requiresCaptcha: true });
+    expect(result.riskReasons).toContain("shared_device_accounts");
+  });
+
+  it("flags but still accepts votes from a device many accounts used", async () => {
+    const result = await evaluateWithDeviceVoters(5, false);
+    expect(result).toMatchObject({ allowed: true, reviewStatus: "flagged" });
+    expect(result.riskReasons).toContain("many_accounts_one_device");
+  });
+});
+
 describe("Judge self-assignment", () => {
   const hackathon = activeEvent({ mode: "hackathon", judgeCode: "JUDGE-2026" });
   const judge = { _id: "judge", userId: "voter", eventId: "event", judgeCodeVerifiedAt: 1 };

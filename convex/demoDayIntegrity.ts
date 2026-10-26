@@ -47,6 +47,12 @@ const VELOCITY_RECHECK_COUNT = 12;
 const RECHECK_RISK_SCORE = 60;
 const FLAG_RISK_SCORE = 70;
 const IP_PASS_BURST_COUNT = 15;
+const SHARED_DEVICE_WINDOW_MS = 10 * 60 * 1000;
+const SHARED_DEVICE_SCAN_LIMIT = 200;
+/** Other accounts on this device recently before a CAPTCHA recheck. */
+const SHARED_DEVICE_RECHECK_VOTERS = 2;
+/** Other accounts on this device recently before votes are flagged. */
+const SHARED_DEVICE_FLAG_VOTERS = 5;
 /** Distinct fingerprints a voter may accumulate failure rows for per event. */
 const MAX_PASS_ROWS_PER_VOTER = 5;
 
@@ -67,7 +73,9 @@ type FindingType =
   | "team_burst"
   | "location_risk"
   | "pass_metadata_change"
-  | "captcha_failures";
+  | "captcha_failures"
+  | "identity_cycling"
+  | "ip_rotation";
 
 type RiskAssessment = {
   score: number;
@@ -433,6 +441,32 @@ export const evaluateAppreciationRequest = internalMutation({
       addRisk(assessment, 35, "pass_creation_burst");
     }
 
+    // Quotas are per account, so a second account on the same device gets a
+    // fresh budget. Several accounts taking turns on one device forces a new
+    // CAPTCHA, and more than a handful flags the vote for review. Phones of
+    // the same model can share a fingerprint, so this never refuses a vote.
+    const recentDeviceAppreciations = await ctx.db
+      .query("appreciations")
+      .withIndex("by_event_and_fingerprint_and_timestamp", (q) =>
+        q
+          .eq("eventId", args.eventId)
+          .eq("fingerprintKey", args.fingerprintKey)
+          .gte("timestamp", now - SHARED_DEVICE_WINDOW_MS),
+      )
+      .order("desc")
+      .take(SHARED_DEVICE_SCAN_LIMIT);
+    const otherDeviceVoters = new Set(
+      recentDeviceAppreciations
+        .map((appreciation) => appreciation.voterUserId)
+        .filter((voter) => voter !== undefined && voter !== args.voterUserId),
+    ).size;
+    if (otherDeviceVoters >= SHARED_DEVICE_RECHECK_VOTERS) {
+      addRisk(assessment, RECHECK_RISK_SCORE, "shared_device_accounts");
+    }
+    if (otherDeviceVoters >= SHARED_DEVICE_FLAG_VOTERS) {
+      addRisk(assessment, 40, "many_accounts_one_device");
+    }
+
     const captchaConfigured =
       event.captchaEnabled === true || event.venueLocationEnabled === true;
     const needsCaptcha =
@@ -641,29 +675,131 @@ function getSeverity(score: number): FindingSeverity {
   return "low";
 }
 
-function buildFindingDrafts(
-  appreciations: Doc<"appreciations">[],
-  now: number,
-) {
+/** Signed-in voter when present, else the legacy client attendee ID. */
+function voterKey(appreciation: Doc<"appreciations">): string {
+  return appreciation.voterUserId ?? `legacy:${appreciation.attendeeId}`;
+}
+
+function groupRows(
+  rows: Doc<"appreciations">[],
+  keyFn: (appreciation: Doc<"appreciations">) => string,
+): Map<string, Doc<"appreciations">[]> {
+  const groups = new Map<string, Doc<"appreciations">[]>();
+  for (const row of rows) {
+    const key = keyFn(row);
+    const group = groups.get(key);
+    if (group) group.push(row);
+    else groups.set(key, [row]);
+  }
+  return groups;
+}
+
+/**
+ * Busiest `windowMs` stretch of `rows` by row count. Windows are anchored on
+ * the rows' own timestamps rather than the scan time, so a scan run after the
+ * event ends finds the same bursts a live scan would have.
+ */
+function densestWindow(
+  rows: Doc<"appreciations">[],
+  windowMs: number,
+): Doc<"appreciations">[] {
+  const ordered = [...rows].sort((a, b) => a.timestamp - b.timestamp);
+  let bestStart = 0;
+  let bestEnd = 0;
+  let start = 0;
+  for (let end = 0; end < ordered.length; end += 1) {
+    while (ordered[end].timestamp - ordered[start].timestamp > windowMs) {
+      start += 1;
+    }
+    if (end + 1 - start > bestEnd - bestStart) {
+      bestStart = start;
+      bestEnd = end + 1;
+    }
+  }
+  return ordered.slice(bestStart, bestEnd);
+}
+
+/** A new voter identity on the same device within this gap continues a chain. */
+const IDENTITY_CYCLE_GAP_MS = 3 * 60 * 1000;
+/** Identities in one chain (the first plus follow-ups) before it is reported. */
+const IDENTITY_CYCLE_MIN_IDENTITIES = 3;
+const IP_ROTATION_WINDOW_MS = 10 * 60 * 1000;
+const IP_ROTATION_MIN_IPS = 4;
+
+/**
+ * Same device, same project, a fresh voter identity starting shortly after
+ * the previous one stopped. This is the clear-storage-and-revote loop that
+ * inflated Spring 2026. Only follow-up identities are affected; the first
+ * identity in each chain is treated as the device's genuine voter.
+ */
+function buildIdentityCycleDrafts(
+  rows: Doc<"appreciations">[],
+): FindingDraft[] {
+  const drafts: FindingDraft[] = [];
+  for (const [key, deviceTeamRows] of groupRows(
+    rows,
+    (a) => `${a.fingerprintKey}|${a.teamId}`,
+  )) {
+    const sessions = Array.from(groupRows(deviceTeamRows, voterKey).values())
+      .map((sessionRows) => {
+        const timestamps = sessionRows.map((row) => row.timestamp);
+        return {
+          rows: sessionRows,
+          start: Math.min(...timestamps),
+          end: Math.max(...timestamps),
+        };
+      })
+      .sort((a, b) => a.start - b.start);
+    if (sessions.length < IDENTITY_CYCLE_MIN_IDENTITIES) continue;
+
+    const chains: Array<typeof sessions> = [];
+    let chainEnd = -Infinity;
+    for (const session of sessions) {
+      if (chains.length > 0 && session.start - chainEnd <= IDENTITY_CYCLE_GAP_MS) {
+        chains[chains.length - 1].push(session);
+      } else {
+        chains.push([session]);
+      }
+      chainEnd = Math.max(chainEnd, session.end);
+    }
+    const cycles = chains.filter(
+      (chain) => chain.length >= IDENTITY_CYCLE_MIN_IDENTITIES,
+    );
+    if (cycles.length === 0) continue;
+    const followUps = cycles.flatMap((chain) =>
+      chain.slice(1).flatMap((session) => session.rows),
+    );
+    const longestChain = Math.max(...cycles.map((chain) => chain.length));
+
+    const score = longestChain >= 5 ? 92 : 80;
+    drafts.push(
+      makeFinding(
+        "identity_cycling",
+        key,
+        getSeverity(score),
+        score,
+        ["same_device_new_identity_same_project"],
+        followUps,
+        `${longestChain} voter identities on one device took turns voting for the same project, each starting within ${IDENTITY_CYCLE_GAP_MS / 60000} minutes of the last.`,
+      ),
+    );
+  }
+  return drafts;
+}
+
+export function buildFindingDrafts(appreciations: Doc<"appreciations">[]) {
   const drafts: FindingDraft[] = [];
   const activeAppreciations = appreciations.filter(
     (appreciation) => (appreciation.reviewStatus ?? "accepted") !== "rejected",
   );
-
-  const groupBy = (keyFn: (appreciation: Doc<"appreciations">) => string) => {
-    const groups = new Map<string, Doc<"appreciations">[]>();
-    for (const appreciation of activeAppreciations) {
-      const key = keyFn(appreciation);
-      groups.set(key, [...(groups.get(key) ?? []), appreciation]);
-    }
-    return groups;
-  };
+  const groupBy = (keyFn: (appreciation: Doc<"appreciations">) => string) =>
+    groupRows(activeAppreciations, keyFn);
 
   for (const [key, rows] of groupBy((a) => `${a.ipAddress}|${a.userAgent}`)) {
-    const recentRows = rows.filter((a) => a.timestamp >= now - 10 * 60 * 1000);
-    const distinctAttendees = unique(recentRows.map((a) => a.attendeeId));
-    if (recentRows.length >= 20 && distinctAttendees.length >= 8) {
-      const score = distinctAttendees.length >= 15 ? 90 : 75;
+    const burstRows = densestWindow(rows, 10 * 60 * 1000);
+    const distinctVoters = unique(burstRows.map(voterKey));
+    if (burstRows.length >= 20 && distinctVoters.length >= 8) {
+      const score = distinctVoters.length >= 15 ? 90 : 75;
       drafts.push(
         makeFinding(
           "ip_ua_burst",
@@ -671,17 +807,17 @@ function buildFindingDrafts(
           getSeverity(score),
           score,
           ["many_attendees_same_ip_user_agent"],
-          recentRows,
-          `${recentRows.length} appreciations from ${distinctAttendees.length} attendee IDs on one IP/user-agent cluster.`,
+          burstRows,
+          `${burstRows.length} appreciations from ${distinctVoters.length} voters on one IP/user-agent cluster within 10 minutes.`,
         ),
       );
     }
   }
 
   for (const [fingerprint, rows] of groupBy((a) => a.fingerprintKey)) {
-    const distinctAttendees = unique(rows.map((a) => a.attendeeId));
-    if (distinctAttendees.length >= 4 && rows.length >= 12) {
-      const score = distinctAttendees.length >= 8 ? 90 : 70;
+    const distinctVoters = unique(rows.map(voterKey));
+    if (distinctVoters.length >= 4 && rows.length >= 12) {
+      const score = distinctVoters.length >= 8 ? 90 : 70;
       drafts.push(
         makeFinding(
           "fingerprint_reuse",
@@ -690,43 +826,35 @@ function buildFindingDrafts(
           score,
           ["same_fingerprint_many_attendees"],
           rows,
-          `${distinctAttendees.length} attendee IDs share one browser fingerprint.`,
+          `${distinctVoters.length} voters share one browser fingerprint.`,
         ),
       );
     }
   }
 
-  for (const [attendeeId, rows] of groupBy((a) => a.attendeeId)) {
-    const ordered = [...rows].sort((a, b) => a.timestamp - b.timestamp);
-    for (let start = 0; start < ordered.length; start += 1) {
-      const windowRows = ordered.filter(
-        (row) =>
-          row.timestamp >= ordered[start].timestamp &&
-          row.timestamp <= ordered[start].timestamp + VELOCITY_WINDOW_MS,
+  for (const [voter, rows] of groupBy(voterKey)) {
+    const windowRows = densestWindow(rows, VELOCITY_WINDOW_MS);
+    if (windowRows.length >= VELOCITY_RECHECK_COUNT) {
+      drafts.push(
+        makeFinding(
+          "high_velocity",
+          voter,
+          "medium",
+          70,
+          ["high_appreciation_velocity"],
+          windowRows,
+          `${windowRows.length} appreciations from one voter within 60 seconds.`,
+        ),
       );
-      if (windowRows.length >= VELOCITY_RECHECK_COUNT) {
-        drafts.push(
-          makeFinding(
-            "high_velocity",
-            attendeeId,
-            "medium",
-            70,
-            ["high_appreciation_velocity"],
-            windowRows,
-            `${windowRows.length} appreciations from one attendee ID within 60 seconds.`,
-          ),
-        );
-        break;
-      }
     }
   }
 
   for (const [key, rows] of groupBy(
     (a) => `${a.teamId}|${a.ipAddress}|${a.userAgent}`,
   )) {
-    const recentRows = rows.filter((a) => a.timestamp >= now - 2 * 60 * 1000);
-    const distinctAttendees = unique(recentRows.map((a) => a.attendeeId));
-    if (recentRows.length >= 8 && distinctAttendees.length >= 5) {
+    const burstRows = densestWindow(rows, 2 * 60 * 1000);
+    const distinctVoters = unique(burstRows.map(voterKey));
+    if (burstRows.length >= 8 && distinctVoters.length >= 5) {
       drafts.push(
         makeFinding(
           "team_burst",
@@ -734,8 +862,57 @@ function buildFindingDrafts(
           "medium",
           72,
           ["team_specific_burst"],
-          recentRows,
-          `${recentRows.length} appreciations hit one project from a single IP/user-agent cluster within 2 minutes.`,
+          burstRows,
+          `${burstRows.length} appreciations hit one project from a single IP/user-agent cluster within 2 minutes.`,
+        ),
+      );
+    }
+  }
+
+  drafts.push(...buildIdentityCycleDrafts(activeAppreciations));
+
+  // One device voting for one project from many networks in a short span is
+  // VPN or proxy hopping; a phone moving from wifi to cellular adds one or two.
+  for (const [key, rows] of groupBy((a) => `${a.fingerprintKey}|${a.teamId}`)) {
+    const ordered = [...rows].sort((a, b) => a.timestamp - b.timestamp);
+    const ipCounts = new Map<string, number>();
+    let start = 0;
+    let bestStart = 0;
+    let bestEnd = 0;
+    let bestIps = 0;
+    for (let end = 0; end < ordered.length; end += 1) {
+      ipCounts.set(
+        ordered[end].ipAddress,
+        (ipCounts.get(ordered[end].ipAddress) ?? 0) + 1,
+      );
+      while (
+        ordered[end].timestamp - ordered[start].timestamp >
+        IP_ROTATION_WINDOW_MS
+      ) {
+        const ip = ordered[start].ipAddress;
+        const remaining = (ipCounts.get(ip) ?? 1) - 1;
+        if (remaining === 0) ipCounts.delete(ip);
+        else ipCounts.set(ip, remaining);
+        start += 1;
+      }
+      if (ipCounts.size > bestIps) {
+        bestIps = ipCounts.size;
+        bestStart = start;
+        bestEnd = end + 1;
+      }
+    }
+    const best = ordered.slice(bestStart, bestEnd);
+    if (bestIps >= IP_ROTATION_MIN_IPS) {
+      const score = bestIps >= 8 ? 90 : 75;
+      drafts.push(
+        makeFinding(
+          "ip_rotation",
+          key,
+          getSeverity(score),
+          score,
+          ["same_device_many_networks_same_project"],
+          best,
+          `One device voted for the same project from ${bestIps} networks within ${IP_ROTATION_WINDOW_MS / 60000} minutes.`,
         ),
       );
     }
@@ -864,6 +1041,18 @@ async function upsertFinding(
   for (const appreciationId of draft.affectedAppreciationIds) {
     const appreciation = await ctx.db.get(appreciationId);
     if (!appreciation || appreciation.reviewStatus === "rejected") continue;
+    // An organizer's decision outlasts later scans, and the cron re-finds the
+    // same rows every run, so skip rows this finding already covers.
+    if (appreciation.reviewedAt !== undefined) continue;
+    if (
+      appreciation.reviewStatus === "flagged" &&
+      appreciation.integrityFindingId === findingId &&
+      draft.reasons.every((reason) =>
+        (appreciation.riskReasons ?? []).includes(reason),
+      )
+    ) {
+      continue;
+    }
     await ctx.db.patch(appreciationId, {
       reviewStatus: "flagged",
       integrityFindingId: findingId,
@@ -891,7 +1080,7 @@ async function scanEvent(ctx: any, eventId: Id<"events">) {
     .withIndex("by_event_and_ip", (q: any) => q.eq("eventId", eventId))
     .collect();
   const drafts = [
-    ...buildFindingDrafts(appreciations, now),
+    ...buildFindingDrafts(appreciations),
     ...buildCaptchaFailureDrafts(passes, now),
   ];
 

@@ -156,6 +156,7 @@ describe("schema validation logic", () => {
         by_event_and_team_and_voter: ["eventId", "teamId", "voterUserId"],
         by_ip_and_timestamp: ["ipAddress", "timestamp"],
         by_event_and_review_status: ["eventId", "reviewStatus"],
+        by_event_and_fingerprint_and_timestamp: ["eventId", "fingerprintKey", "timestamp"],
       });
     });
 
